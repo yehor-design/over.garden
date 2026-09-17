@@ -77,8 +77,7 @@ async function probeHydration(page: Page, path: string) {
       deepestHydrated: deepest
         ? `${deepest.tagName.toLowerCase()}${deepest.id ? `#${deepest.id}` : ""}`
         : null,
-      postponedTemplates:
-        document.querySelectorAll("template[id]").length,
+      postponedTemplates: document.querySelectorAll("template[id]").length,
       scriptCount: document.querySelectorAll("script[src]").length,
     };
   });
@@ -117,7 +116,9 @@ test.describe("public pages hydrate below the shell", () => {
     try {
       fixture = await seedOrganismFixture(pool, "ove389");
       await probeHydration(page, `/species/${fixture.speciesSlug}`);
-      await expect(page.locator("[data-organism-fact]")).toContainText("Solanum lycopersicum");
+      await expect(page.locator("[data-organism-fact]")).toContainText(
+        "Solanum lycopersicum",
+      );
       await expect(
         page.locator('details[data-organism-section="names-and-sources"]'),
       ).toHaveJSProperty("open", false);

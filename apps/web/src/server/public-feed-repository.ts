@@ -10,7 +10,10 @@ import {
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import { isCoarseRegionCode } from "@/lib/garden/regions";
-import type { PublicLocale } from "@/lib/public-localization";
+import {
+  normalizePublicContentLanguage,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import {
   searchProjectionQuality,
   type PublicProjectionQualityClass,
@@ -73,6 +76,12 @@ export interface PublicFeedEntry {
   id: string;
   title: string;
   excerpt: string;
+  /**
+   * The language of this entry's own words, so a card can carry `lang` when it
+   * is not the page's. A Bulgarian entry in a Ukrainian feed is read aloud in
+   * Bulgarian or it is read aloud wrong (WCAG 3.1.2).
+   */
+  sourceLanguage: PublicLocale;
   entryDate: Date | string;
   publishedAt: Date | string;
   publicPath: string;
@@ -103,6 +112,8 @@ export interface PublicFeedEntryRow {
   entryId: string;
   title: string;
   body: string;
+  /** The language the gardener wrote in. Never the reader's (ADR-0029 D10). */
+  sourceLanguage: string | null;
   entryDate: Date | string;
   publishedAt: Date | string;
   publicSlug: string;
@@ -267,6 +278,7 @@ export function buildPublicFeedEntriesQuery(
       "journal_entries.id as entryId",
       "journal_entries.title as title",
       "journal_entries.body as body",
+      "journal_entries.source_language as sourceLanguage",
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
@@ -277,7 +289,9 @@ export function buildPublicFeedEntriesQuery(
       "plant_objects.location_visibility as objectLocationVisibility",
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "user_public_profiles.handle as authorHandle",
-      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
     ])
@@ -292,7 +306,11 @@ export function buildPublicFeedEntriesQuery(
     // address at all (ADR-0029 D9), so it is not a row a listing can render.
     // The filter is what makes `addressHandle` non-null below rather than a
     // type assertion hoping it is.
-    .where(publicAuthorHandleSql("journal_entries.owner_user_id"), "is not", null)
+    .where(
+      publicAuthorHandleSql("journal_entries.owner_user_id"),
+      "is not",
+      null,
+    )
     .$narrowType<{
       publishedAt: Date;
       publicSlug: string;
@@ -555,6 +573,7 @@ export function serializePublicFeedPage(input: {
       id: row.entryId,
       title: row.title,
       excerpt: buildPublicFeedExcerpt(row.body),
+      sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
       publicPath: publicJournalEntryPath(row.addressHandle, row.publicSlug),

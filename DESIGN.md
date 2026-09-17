@@ -610,22 +610,35 @@ control's accessible name states the action and the count
 
 ## 6. Language and locale
 
-The `docs/INTERFACE_LOCALE_CONTRACT.md` contract stands: Ukraine is a
-Ukrainian-only market with unprefixed URLs and **no language control**; Bulgaria
-is a `bg`/`ru` market with exactly one control.
+The `docs/INTERFACE_LOCALE_CONTRACT.md` contract stands, in its current form:
+the interface language is the reader's on every address, **both markets offer
+all three languages**, and the market decides only which one a reader who has
+chosen nothing starts in.
 
-Production currently violates it in a way anyone can see: Ukrainian content
-renders under Bulgarian chrome, with a language control and a "this page is
-available in your language" banner on a Ukrainian page. **A redesigned screen
-must never ship a mixed-language chrome.** The design rule that follows:
+**This section said the opposite until 2026-09-17** — Ukraine as a
+Ukrainian-only market with no language control — and described a production
+defect anyone could see: Ukrainian content under Bulgarian chrome, with a banner
+offering the reader the language they were already reading. Both are gone. The
+rule that outlived them: **a redesigned screen must never ship a mixed-language
+chrome.** The design rules that follow:
 
 - Interface strings and content strings are two different things on screen.
   Content is never restyled to look translated.
 - `lang` is set on any element whose text is in a different language from the
-  document — scientific names, quoted sources, a Bulgarian entry inside a
-  Ukrainian feed.
-- The locale notice, where the market allows one, is a dismissible `Callout` in
-  the content column, not a full-width bar above every page.
+  document — a scientific name, a quoted source, a Bulgarian entry inside a
+  Ukrainian feed. A _species'_ canonical name is `lang="la"`; a variety's or a
+  breed's is a cultivar name in somebody's language and is left unmarked.
+- **Exactly one** language control per rendered document, in either market,
+  offering all three languages. Zero is a defect and two is a defect, and that
+  includes the raw `404`/`410` lifecycle HTML and the global error fallback,
+  which drew none for the Ukraine market until `OVE-446`. It lives in the
+  footer (§3.3).
+- There is **no** locale notice. It compared the reader's language with the
+  route's and offered the reader their own, which made sense only while an
+  unprefixed address was always Ukrainian.
+- A cross-locale link is a plain anchor, never a prefetching router link:
+  `proxy.ts` cannot tell a prefetch from a visit, so hovering an option once
+  rewrote the reader's saved language (ADR-0024 D4).
 
 ---
 

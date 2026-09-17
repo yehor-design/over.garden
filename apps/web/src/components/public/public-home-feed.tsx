@@ -19,7 +19,11 @@ import {
 } from "@/components/site-shell/site-shell-context-rail";
 import { buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import {
+  contentLanguageAttribute,
+  localizedPath,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { cn } from "@/lib/utils";
 import type {
   PublicFeedEntry,
@@ -289,7 +293,14 @@ function PublicFeedCard({
           </time>
         </div>
 
-        <div className="flex flex-col gap-2">
+        {/* The gardener's own words, in the gardener's own language. A
+            Bulgarian entry in a Ukrainian feed is read aloud in Bulgarian or it
+            is read aloud wrong (WCAG 3.1.2); the attribute appears only when
+            the two differ, so a Ukrainian page stays free of `lang="uk"`. */}
+        <div
+          {...contentLanguageAttribute(entry.sourceLanguage, locale)}
+          className="flex flex-col gap-2"
+        >
           <h2 className="text-lg font-semibold break-words text-foreground sm:text-xl">
             <Link href={entry.publicPath} className="hover:text-primary">
               {entry.title}

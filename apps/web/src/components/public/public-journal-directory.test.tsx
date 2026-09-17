@@ -68,6 +68,7 @@ const page: PublicJournalDirectoryPage = {
       title: "Відновлення після зміни режиму",
       excerpt:
         "Апетит повернувся до звичного рівня, активність стабільна, наступна перевірка запланована без додаткового втручання.",
+      sourceLanguage: "uk",
       entryDate: "2026-07-10",
       publishedAt: "2026-07-10T12:00:00.000Z",
       publicPath: "/journal/recovery-check",
@@ -127,6 +128,7 @@ const page: PublicJournalDirectoryPage = {
     {
       title: "Коротка перевірка без фото",
       excerpt: "Стан без різких змін.",
+      sourceLanguage: "uk",
       entryDate: "2026-06-20",
       publishedAt: "2026-06-20T12:00:00.000Z",
       publicPath: "/journal/no-media-check",
@@ -306,5 +308,43 @@ describe("public journal directory", () => {
         page: 1,
       }),
     ).toBe("/bg/journals");
+  });
+});
+
+describe("a card written in another language", () => {
+  it("carries its own lang, and marks nothing when the two agree", () => {
+    // The same rule as the feed (WCAG 3.1.2): the directory lists other
+    // gardeners' words untranslated, so the words keep their language while
+    // the filters and headings around them keep the reader's.
+    const bulgarianCard = {
+      ...page.cards[0]!,
+      sourceLanguage: "bg" as const,
+      title: "Възстановяване след смяна на режима",
+    };
+    const mixed = renderToStaticMarkup(
+      <PublicJournalDirectory
+        locale="uk"
+        copy={getPublicJournalDirectoryCopy("uk")}
+        page={{ ...page, cards: [bulgarianCard] }}
+        facets={facets}
+        state="ready"
+      />,
+    );
+    expect(mixed).toContain('lang="bg"');
+    expect(mixed).toContain("Възстановяване след смяна на режима");
+
+    const uniform = renderToStaticMarkup(
+      <PublicJournalDirectory
+        locale="uk"
+        copy={getPublicJournalDirectoryCopy("uk")}
+        page={page}
+        facets={facets}
+        state="ready"
+      />,
+    );
+    expect(uniform).not.toContain('lang="bg"');
+    expect(uniform).not.toContain('lang="ru"');
+    // One on the surface, none on a card.
+    expect(uniform.match(/lang="uk"/g)).toHaveLength(1);
   });
 });

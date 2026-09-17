@@ -495,6 +495,7 @@ function row(
     entryId: "00000000-0000-4000-8000-000000000001",
     title: "Ранкове спостереження",
     body: "Стан стабільний, наступний огляд за тиждень.",
+    sourceLanguage: "uk",
     entryDate: "2026-07-10",
     publishedAt: "2026-07-10T12:00:00.000Z",
     publicSlug: "after-cold-night",

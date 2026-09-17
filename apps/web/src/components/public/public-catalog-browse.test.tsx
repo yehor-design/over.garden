@@ -109,9 +109,7 @@ describe("the catalog browse page", () => {
     expect(html).toContain(
       'href="/bg/species?kingdom=plantae&amp;letter=s&amp;page=3"',
     );
-    expect(html).toContain(
-      'href="/bg/species?kingdom=plantae&amp;letter=s"',
-    );
+    expect(html).toContain('href="/bg/species?kingdom=plantae&amp;letter=s"');
     expect(html).toContain("Страница 2 от 3");
   });
 

@@ -134,6 +134,7 @@ function page(): PublicJournalDirectoryPage {
   const baseCard = {
     title: "Відновлення після поливу",
     excerpt: "Стан змінився після одного циклу спостереження.",
+    sourceLanguage: "uk" as const,
     entryDate: "2026-07-10",
     publishedAt: "2026-07-10T12:00:00.000Z",
     publicPath: "/journal/recovery-note",

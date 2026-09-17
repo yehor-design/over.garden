@@ -68,13 +68,20 @@ test.describe("OVE-387 catalog picker", () => {
 
     try {
       fixture = await seedFixture(pool);
-      userId = await createVerifiedCredentialSession({ baseURL, context, email, pool });
+      userId = await createVerifiedCredentialSession({
+        baseURL,
+        context,
+        email,
+        pool,
+      });
       await selectLocale(context, baseURL, "uk");
 
       // The organism card before any first-hand content (ADR-0026 D9):
       // reachable, noindex, nothing but the fact paragraph.
       const speciesPath = `/species/ove387-${fixture.suffix}-${fixture.speciesId.slice(0, 8)}`;
-      const before = await page.request.get(speciesPath, { headers: { accept: "text/html" } });
+      const before = await page.request.get(speciesPath, {
+        headers: { accept: "text/html" },
+      });
       expect(before.status()).toBe(200);
       const beforeHtml = await before.text();
       expect(beforeHtml).toContain("Публічних записів садівників ще немає.");
@@ -89,29 +96,54 @@ test.describe("OVE-387 catalog picker", () => {
       const listbox = pickerListbox(page);
       await expect(listbox).toBeVisible({ timeout: 10_000 });
       const options = listbox.getByRole("option");
-      await expect(options.first()).toHaveAttribute("data-catalog-option", "species");
+      await expect(options.first()).toHaveAttribute(
+        "data-catalog-option",
+        "species",
+      );
       await expect(options.first()).toContainText(/Помідор/u);
-      await expect(listbox.locator('[data-catalog-option="own_name"]')).toHaveCount(1);
+      await expect(
+        listbox.locator('[data-catalog-option="own_name"]'),
+      ).toHaveCount(1);
       await expect(combobox).toHaveAttribute("aria-expanded", "true");
-      await expect(combobox).toHaveAttribute("aria-controls", await listbox.getAttribute("id") ?? "");
+      await expect(combobox).toHaveAttribute(
+        "aria-controls",
+        (await listbox.getAttribute("id")) ?? "",
+      );
 
       await page.keyboard.press("ArrowDown");
       const firstOptionId = await options.first().getAttribute("id");
-      await expect(combobox).toHaveAttribute("aria-activedescendant", firstOptionId ?? "");
+      await expect(combobox).toHaveAttribute(
+        "aria-activedescendant",
+        firstOptionId ?? "",
+      );
       await page.keyboard.press("ArrowDown");
       const secondOptionId = await options.nth(1).getAttribute("id");
-      await expect(combobox).toHaveAttribute("aria-activedescendant", secondOptionId ?? "");
+      await expect(combobox).toHaveAttribute(
+        "aria-activedescendant",
+        secondOptionId ?? "",
+      );
       await page.keyboard.press("ArrowUp");
-      await expect(combobox).toHaveAttribute("aria-activedescendant", firstOptionId ?? "");
+      await expect(combobox).toHaveAttribute(
+        "aria-activedescendant",
+        firstOptionId ?? "",
+      );
       await page.keyboard.press("Enter");
-      await expect(page.locator("[data-catalog-availability='selected']")).toContainText(/Вид: Помідор/u);
-      await expect(page.locator("[data-catalog-picker='true']")).not.toContainText(
+      await expect(
+        page.locator("[data-catalog-availability='selected']"),
+      ).toContainText(/Вид: Помідор/u);
+      await expect(
+        page.locator("[data-catalog-picker='true']"),
+      ).not.toContainText(
         /Перевірено|Підтверджено джерелом|Кандидат|карантин|каталог продукту/iu,
       );
 
       await runAxeOnComposer(page);
 
-      const first = await publishEntry(page, `Помідор ${fixture.suffix}`, "Перший запис про помідор.");
+      const first = await publishEntry(
+        page,
+        `Помідор ${fixture.suffix}`,
+        "Перший запис про помідор.",
+      );
       expect(first.variety_state).toBe("selected");
       expect(await readItem(pool, first.catalog_item_id)).toMatchObject({
         node_kind: "taxon",
@@ -124,9 +156,16 @@ test.describe("OVE-387 catalog picker", () => {
       await page.goto(speciesPath, { waitUntil: "load" });
       // The site shell renders its own loading `main`s; the card is the one
       // carrying the fact paragraph.
-      const card = page.locator("main", { has: page.locator("[data-organism-fact]") });
-      await expect(card.locator("[data-organism-fact]")).toContainText("Публічні журнали ведуть 1 садівник");
-      await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
+      const card = page.locator("main", {
+        has: page.locator("[data-organism-fact]"),
+      });
+      await expect(card.locator("[data-organism-fact]")).toContainText(
+        "Публічні журнали ведуть 1 садівник",
+      );
+      await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
+        "content",
+        "index, follow",
+      );
       const cardHtml = await card.innerHTML();
       const sectionOrder = [
         'data-organism-section="facts"',
@@ -137,12 +176,16 @@ test.describe("OVE-387 catalog picker", () => {
       ].map((marker) => cardHtml.indexOf(marker));
       expect(sectionOrder.every((index) => index >= 0)).toBe(true);
       expect([...sectionOrder].sort((a, b) => a - b)).toEqual(sectionOrder);
-      const namesPanel = page.locator('details[data-organism-section="names-and-sources"]');
+      const namesPanel = page.locator(
+        'details[data-organism-section="names-and-sources"]',
+      );
       await expect(namesPanel).toHaveJSProperty("open", false);
       await namesPanel.locator("summary").click();
       await expect(namesPanel).toHaveJSProperty("open", true);
       await expect(namesPanel).toContainText("Solanum lycopersicum");
-      await expect(page.locator('[data-organism-relations="forms"]')).toContainText("Де Барао");
+      await expect(
+        page.locator('[data-organism-relations="forms"]'),
+      ).toContainText("Де Барао");
       await page.goto("/garden");
 
       // Outcome 2: a form, with its species implied in the row.
@@ -159,8 +202,14 @@ test.describe("OVE-387 catalog picker", () => {
       // may legitimately hold other organisms whose names begin the same way.
       await expect(cultivarOption).toContainText(/Сорт · Помідор/u);
       await cultivarOption.click();
-      await expect(page.locator("[data-catalog-availability='selected']")).toContainText(/Сорт: Де Барао/u);
-      const second = await publishEntry(page, `Де Барао ${fixture.suffix}`, "Перший запис про сорт.");
+      await expect(
+        page.locator("[data-catalog-availability='selected']"),
+      ).toContainText(/Сорт: Де Барао/u);
+      const second = await publishEntry(
+        page,
+        `Де Барао ${fixture.suffix}`,
+        "Перший запис про сорт.",
+      );
       expect(second).toMatchObject({
         variety_state: "selected",
         catalog_item_id: fixture.cultivarId,
@@ -171,13 +220,17 @@ test.describe("OVE-387 catalog picker", () => {
       await openComposer(page);
       const ownName = `Моя рідкісна ягода ${fixture.suffix}`;
       await pickerCombobox(page).fill(ownName);
-      const ownNameOption = pickerListbox(page).locator('[data-catalog-option="own_name"]');
-      await expect(ownNameOption).toBeVisible({ timeout: 10_000 });
-      await expect(pickerListbox(page).locator('[data-catalog-option="species"]')).toHaveCount(0);
-      await ownNameOption.click();
-      await expect(page.locator("[data-catalog-availability='selected']")).toContainText(
-        new RegExp(`Ваша назва: ${escapeRegExp(ownName)}`, "u"),
+      const ownNameOption = pickerListbox(page).locator(
+        '[data-catalog-option="own_name"]',
       );
+      await expect(ownNameOption).toBeVisible({ timeout: 10_000 });
+      await expect(
+        pickerListbox(page).locator('[data-catalog-option="species"]'),
+      ).toHaveCount(0);
+      await ownNameOption.click();
+      await expect(
+        page.locator("[data-catalog-availability='selected']"),
+      ).toContainText(new RegExp(`Ваша назва: ${escapeRegExp(ownName)}`, "u"));
       // No rename: the own name the gardener just declared is the object's
       // name, and publishing must carry exactly it.
       const third = await publishEntry(page, null, "Перший запис про ягоду.");
@@ -187,7 +240,9 @@ test.describe("OVE-387 catalog picker", () => {
         catalog_item_id: null,
       });
       await expect
-        .poll(async () => readSearchMiss(pool, ownName.toLowerCase()), { timeout: 10_000 })
+        .poll(async () => readSearchMiss(pool, ownName.toLowerCase()), {
+          timeout: 10_000,
+        })
         .toMatchObject({ locale: "uk", object_kind: "plant" });
 
       // The route stubbed to 503: only the own name remains, and it publishes.
@@ -201,10 +256,15 @@ test.describe("OVE-387 catalog picker", () => {
       await openComposer(page);
       const offlineName = `Без каталогу ${fixture.suffix}`;
       await pickerCombobox(page).fill(offlineName);
-      await expect(page.locator("[data-catalog-availability='unavailable']")).toBeVisible({ timeout: 10_000 });
+      await expect(
+        page.locator("[data-catalog-availability='unavailable']"),
+      ).toBeVisible({ timeout: 10_000 });
       const offlineOptions = pickerListbox(page).getByRole("option");
       await expect(offlineOptions).toHaveCount(1);
-      await expect(offlineOptions.first()).toHaveAttribute("data-catalog-option", "own_name");
+      await expect(offlineOptions.first()).toHaveAttribute(
+        "data-catalog-option",
+        "own_name",
+      );
       await offlineOptions.first().click();
       // Same as above: the declared own name is the object's name.
       const fourth = await publishEntry(page, null, "Запис без каталогу.");
@@ -219,18 +279,34 @@ test.describe("OVE-387 catalog picker", () => {
       await page.goto(`/garden/objects/${third.id}`);
       const resolveSection = page.locator("#passport-catalog");
       await expect(resolveSection).toBeVisible({ timeout: 10_000 });
-      await resolveSection.locator('[data-catalog-picker="true"] [role="combobox"]').fill("помідор");
-      const speciesOption = resolveSection.locator('[data-catalog-picker="true"] [role="listbox"]').locator('[data-catalog-option="species"]').first();
+      await resolveSection
+        .locator('[data-catalog-picker="true"] [role="combobox"]')
+        .fill("помідор");
+      const speciesOption = resolveSection
+        .locator('[data-catalog-picker="true"] [role="listbox"]')
+        .locator('[data-catalog-option="species"]')
+        .first();
       await expect(speciesOption).toBeVisible({ timeout: 10_000 });
       await speciesOption.click();
       await Promise.all([
-        page.waitForResponse((response) => response.request().method() === "POST" && response.status() < 400, { timeout: 15_000 }),
-        resolveSection.getByRole("button", { name: /Зберегти відповідність каталогу/u }).click(),
+        page.waitForResponse(
+          (response) =>
+            response.request().method() === "POST" && response.status() < 400,
+          { timeout: 15_000 },
+        ),
+        resolveSection
+          .getByRole("button", { name: /Зберегти відповідність каталогу/u })
+          .click(),
       ]);
       await expect
         .poll(
           async () =>
-            (await readItem(pool, (await readObject(pool, third.id))?.catalog_item_id ?? null))?.canonical_name ?? null,
+            (
+              await readItem(
+                pool,
+                (await readObject(pool, third.id))?.catalog_item_id ?? null,
+              )
+            )?.canonical_name ?? null,
           { timeout: 15_000 },
         )
         .toMatch(/^Solanum lycopersicum/u);
@@ -255,11 +331,15 @@ test.describe("OVE-387 catalog picker", () => {
 
 /** The picker's own combobox: the page has native selects with that role too. */
 function pickerCombobox(page: Page) {
-  return page.locator('#first-entry-composer [data-catalog-picker="true"] [role="combobox"]');
+  return page.locator(
+    '#first-entry-composer [data-catalog-picker="true"] [role="combobox"]',
+  );
 }
 
 function pickerListbox(page: Page) {
-  return page.locator('#first-entry-composer [data-catalog-picker="true"] [role="listbox"]');
+  return page.locator(
+    '#first-entry-composer [data-catalog-picker="true"] [role="listbox"]',
+  );
 }
 
 async function openComposer(page: Page) {
@@ -280,7 +360,11 @@ async function openComposer(page: Page) {
  * — the name field *is* the picker, so renaming after declaring an own name
  * would be declaring a different one.
  */
-async function publishEntry(page: Page, plantName: string | null, body: string) {
+async function publishEntry(
+  page: Page,
+  plantName: string | null,
+  body: string,
+) {
   const composer = page.locator("#first-entry-composer");
   const nameField = composer.locator('input[name="plantName"]');
   if (plantName !== null) {
@@ -298,14 +382,22 @@ async function publishEntry(page: Page, plantName: string | null, body: string) 
   if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
     await spaceName.fill("Сад OVE-387");
   }
-  const editor = composer.locator('[data-structured-journal-composer="true"] [contenteditable="true"]').first();
+  const editor = composer
+    .locator(
+      '[data-structured-journal-composer="true"] [contenteditable="true"]',
+    )
+    .first();
   await editor.click();
   await page.keyboard.type(body);
-  const disclosure = composer.locator('input[name="publicationDisclosureAccepted"]');
+  const disclosure = composer.locator(
+    'input[name="publicationDisclosureAccepted"]',
+  );
   if ((await disclosure.count()) > 0) await disclosure.check();
   const [response] = await Promise.all([
     page.waitForResponse(
-      (candidate) => candidate.url().includes("/api/garden/entries") && candidate.request().method() === "POST",
+      (candidate) =>
+        candidate.url().includes("/api/garden/entries") &&
+        candidate.request().method() === "POST",
       { timeout: 30_000 },
     ),
     composer.getByRole("button", { name: /Опублікувати/u }).click(),
@@ -317,7 +409,12 @@ async function publishEntry(page: Page, plantName: string | null, body: string) 
     const body = await response.text().catch(() => "(body unavailable)");
     throw new Error(`Publish answered ${response.status()}: ${body}`);
   }
-  await page.waitForURL((url) => !url.pathname.endsWith("/garden") || url.search.length > 0, { timeout: 30_000 }).catch(() => undefined);
+  await page
+    .waitForURL(
+      (url) => !url.pathname.endsWith("/garden") || url.search.length > 0,
+      { timeout: 30_000 },
+    )
+    .catch(() => undefined);
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   try {
     const row = await pool.query<{
@@ -349,11 +446,32 @@ async function runAxeOnComposer(page: Page) {
   );
   await page.evaluate(`(() => { ${axeSource} })()`);
   const violations = await page.evaluate(async () => {
-    const axe = (window as unknown as { axe: { run: (context: Element, options: unknown) => Promise<{ violations: Array<{ id: string; impact: string | null; nodes: unknown[] }> }> } }).axe;
+    const axe = (
+      window as unknown as {
+        axe: {
+          run: (
+            context: Element,
+            options: unknown,
+          ) => Promise<{
+            violations: Array<{
+              id: string;
+              impact: string | null;
+              nodes: unknown[];
+            }>;
+          }>;
+        };
+      }
+    ).axe;
     const composer = document.querySelector("#first-entry-composer");
     if (!composer) throw new Error("composer missing");
-    const result = await axe.run(composer, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } });
-    return result.violations.map((violation) => ({ id: violation.id, impact: violation.impact, nodes: violation.nodes.length }));
+    const result = await axe.run(composer, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+    });
+    return result.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      nodes: violation.nodes.length,
+    }));
   });
   expect(violations, JSON.stringify(violations)).toEqual([]);
 }
@@ -368,10 +486,21 @@ async function cleanupStaleRuns(pool: Pool) {
   );
   const userIds = staleUsers.rows.map((row) => row.id);
   if (userIds.length > 0) {
-    await pool.query(`delete from journal_entries where owner_user_id = any($1::uuid[])`, [userIds]);
-    await pool.query(`delete from plant_objects where owner_user_id = any($1::uuid[])`, [userIds]);
-    await pool.query(`delete from spaces where owner_user_id = any($1::uuid[])`, [userIds]);
-    await pool.query(`delete from public."user" where id = any($1::uuid[])`, [userIds]);
+    await pool.query(
+      `delete from journal_entries where owner_user_id = any($1::uuid[])`,
+      [userIds],
+    );
+    await pool.query(
+      `delete from plant_objects where owner_user_id = any($1::uuid[])`,
+      [userIds],
+    );
+    await pool.query(
+      `delete from spaces where owner_user_id = any($1::uuid[])`,
+      [userIds],
+    );
+    await pool.query(`delete from public."user" where id = any($1::uuid[])`, [
+      userIds,
+    ]);
   }
   const staleItems = await pool.query<{ id: string }>(
     `select id::text as id from catalog_items where public_slug like 'ove387-%' or source_id like '%:ove387:%'`,
@@ -383,16 +512,28 @@ async function cleanupStaleRuns(pool: Pool) {
        where catalog_item_id = any($1::uuid[])`,
       [itemIds],
     );
-    await pool.query(`delete from catalog_item_relations where from_catalog_item_id = any($1::uuid[]) or to_catalog_item_id = any($1::uuid[])`, [itemIds]);
-    await pool.query(`delete from catalog_item_identifiers where catalog_item_id = any($1::uuid[])`, [itemIds]);
-    await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [itemIds]);
+    await pool.query(
+      `delete from catalog_item_relations where from_catalog_item_id = any($1::uuid[]) or to_catalog_item_id = any($1::uuid[])`,
+      [itemIds],
+    );
+    await pool.query(
+      `delete from catalog_item_identifiers where catalog_item_id = any($1::uuid[])`,
+      [itemIds],
+    );
+    await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [
+      itemIds,
+    ]);
   }
   await pool.query(
     `delete from catalog_source_assertions where source_snapshot_id in
        (select id from catalog_source_snapshots where source_version like 'ove387-%')`,
   );
-  await pool.query(`delete from catalog_source_snapshots where source_version like 'ove387-%'`);
-  await pool.query(`delete from catalog_search_misses where query_normalized like '%ove387%' or query_normalized like 'моя рідкісна ягода%' or query_normalized like 'без каталогу%'`);
+  await pool.query(
+    `delete from catalog_source_snapshots where source_version like 'ove387-%'`,
+  );
+  await pool.query(
+    `delete from catalog_search_misses where query_normalized like '%ove387%' or query_normalized like 'моя рідкісна ягода%' or query_normalized like 'без каталогу%'`,
+  );
 }
 
 async function seedFixture(pool: Pool): Promise<Fixture> {
@@ -417,10 +558,24 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     [assertionId, snapshotId],
   );
   const items: Array<[string, string, string, string, string, string]> = [
-    [speciesId, "Solanum lycopersicum L.", "species_backbone", "la", "taxon", "Plantae"],
+    [
+      speciesId,
+      "Solanum lycopersicum L.",
+      "species_backbone",
+      "la",
+      "taxon",
+      "Plantae",
+    ],
     [cultivarId, "Де Барао", "ua_state_register", "uk", "cultivar", "Plantae"],
     [homonymId, "Де Барао", "manual", "uk", "cultivar", "Plantae"],
-    [animalTaxonId, "Apis mellifera", "species_backbone", "la", "taxon", "Animalia"],
+    [
+      animalTaxonId,
+      "Apis mellifera",
+      "species_backbone",
+      "la",
+      "taxon",
+      "Animalia",
+    ],
     [breedId, "Карпатська", "ua_official_bee_breed", "uk", "breed", "Animalia"],
   ];
   for (const [id, name, source, locale, nodeKind, kingdom] of items) {
@@ -428,7 +583,16 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
       `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
          source_id, locale, node_kind, kingdom, identity_state, search_weight)
        values ($1, $2, catalog_normalize_name($2), $3, $4, $5, $6, $7, $8, 'active', 5)`,
-      [id, name, `ove387-${suffix}-${id.slice(0, 8)}`, source, `${source}:ove387:${id}`, locale, nodeKind, kingdom],
+      [
+        id,
+        name,
+        `ove387-${suffix}-${id.slice(0, 8)}`,
+        source,
+        `${source}:ove387:${id}`,
+        locale,
+        nodeKind,
+        kingdom,
+      ],
     );
   }
   const names: Array<[string, string, string, boolean, string]> = [
@@ -487,22 +651,54 @@ async function cleanupFixture(pool: Pool, fixture: Fixture) {
   await pool.query(
     `update plant_objects set catalog_item_id = null, variety_state = 'unknown', variety_text = null
      where catalog_item_id = any($1::uuid[])`,
-    [[fixture.speciesId, fixture.cultivarId, fixture.homonymId, fixture.animalTaxonId, fixture.breedId]],
+    [
+      [
+        fixture.speciesId,
+        fixture.cultivarId,
+        fixture.homonymId,
+        fixture.animalTaxonId,
+        fixture.breedId,
+      ],
+    ],
   );
-  await pool.query(`delete from catalog_item_relations where assertion_id = $1`, [fixture.assertionId]);
-  await pool.query(`delete from catalog_item_identifiers where assertion_id = $1`, [fixture.assertionId]);
-  await pool.query(`delete from catalog_item_facts where assertion_id = $1`, [fixture.assertionId]);
-  await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [
-    [fixture.speciesId, fixture.cultivarId, fixture.homonymId, fixture.animalTaxonId, fixture.breedId],
+  await pool.query(
+    `delete from catalog_item_relations where assertion_id = $1`,
+    [fixture.assertionId],
+  );
+  await pool.query(
+    `delete from catalog_item_identifiers where assertion_id = $1`,
+    [fixture.assertionId],
+  );
+  await pool.query(`delete from catalog_item_facts where assertion_id = $1`, [
+    fixture.assertionId,
   ]);
-  await pool.query(`delete from catalog_source_assertions where id = $1`, [fixture.assertionId]);
-  await pool.query(`delete from catalog_source_snapshots where id = $1`, [fixture.snapshotId]);
-  await pool.query(`delete from catalog_search_misses where query_normalized like $1`, [`%${fixture.suffix.toLowerCase()}%`]);
+  await pool.query(`delete from catalog_items where id = any($1::uuid[])`, [
+    [
+      fixture.speciesId,
+      fixture.cultivarId,
+      fixture.homonymId,
+      fixture.animalTaxonId,
+      fixture.breedId,
+    ],
+  ]);
+  await pool.query(`delete from catalog_source_assertions where id = $1`, [
+    fixture.assertionId,
+  ]);
+  await pool.query(`delete from catalog_source_snapshots where id = $1`, [
+    fixture.snapshotId,
+  ]);
+  await pool.query(
+    `delete from catalog_search_misses where query_normalized like $1`,
+    [`%${fixture.suffix.toLowerCase()}%`],
+  );
 }
 
 async function readItem(pool: Pool, id: string | null) {
   if (!id) return null;
-  const result = await pool.query<{ node_kind: string; canonical_name: string }>(
+  const result = await pool.query<{
+    node_kind: string;
+    canonical_name: string;
+  }>(
     `select node_kind, canonical_name from catalog_items where id = $1::uuid`,
     [id],
   );
@@ -510,7 +706,10 @@ async function readItem(pool: Pool, id: string | null) {
 }
 
 async function readObject(pool: Pool, id: string) {
-  const result = await pool.query<{ catalog_item_id: string | null; variety_state: string }>(
+  const result = await pool.query<{
+    catalog_item_id: string | null;
+    variety_state: string;
+  }>(
     `select catalog_item_id::text as catalog_item_id, variety_state from plant_objects where id = $1::uuid`,
     [id],
   );
@@ -518,7 +717,11 @@ async function readObject(pool: Pool, id: string) {
 }
 
 async function readSearchMiss(pool: Pool, queryNormalized: string) {
-  const result = await pool.query<{ locale: string; object_kind: string; occurrences: number }>(
+  const result = await pool.query<{
+    locale: string;
+    object_kind: string;
+    occurrences: number;
+  }>(
     `select locale, object_kind, occurrences from catalog_search_misses where query_normalized = $1`,
     [queryNormalized],
   );
@@ -534,31 +737,54 @@ async function createVerifiedCredentialSession(input: {
   // The user and credential rows are written before the verification mail is
   // sent; on a database without a mail provider the request itself answers
   // 500 after the rows exist. The row is the fact this run needs.
-  const signUp = await input.context.request.post(`${input.baseURL}/api/auth/sign-up/email`, {
-    headers: { origin: input.baseURL },
-    data: { email: input.email, password: TEST_PASSWORD, name: PRIVATE_AUTH_COMPATIBILITY_NAME },
-  });
+  const signUp = await input.context.request.post(
+    `${input.baseURL}/api/auth/sign-up/email`,
+    {
+      headers: { origin: input.baseURL },
+      data: {
+        email: input.email,
+        password: TEST_PASSWORD,
+        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+      },
+    },
+  );
   const user = await input.pool.query<{ id: string }>(
     'select id::text as id from public."user" where email = $1::text',
     [input.email],
   );
   const userId = user.rows[0]?.id;
   if (!userId) {
-    throw new Error(`Synthetic auth user was not persisted (sign-up answered ${signUp.status()}).`);
+    throw new Error(
+      `Synthetic auth user was not persisted (sign-up answered ${signUp.status()}).`,
+    );
   }
-  await input.pool.query('update public."user" set "emailVerified" = true where id = $1::uuid', [userId]);
-  const signIn = await input.context.request.post(`${input.baseURL}/api/auth/sign-in/email`, {
-    headers: { origin: input.baseURL },
-    data: { email: input.email, password: TEST_PASSWORD },
-  });
+  await input.pool.query(
+    'update public."user" set "emailVerified" = true where id = $1::uuid',
+    [userId],
+  );
+  const signIn = await input.context.request.post(
+    `${input.baseURL}/api/auth/sign-in/email`,
+    {
+      headers: { origin: input.baseURL },
+      data: { email: input.email, password: TEST_PASSWORD },
+    },
+  );
   expect(signIn.ok()).toBe(true);
   return userId;
 }
 
-async function selectLocale(context: BrowserContext, baseURL: string, locale: "uk" | "bg" | "ru") {
+async function selectLocale(
+  context: BrowserContext,
+  baseURL: string,
+  locale: "uk" | "bg" | "ru",
+) {
   await context.addCookies([
     { name: INTERFACE_LOCALE_COOKIE, value: locale, url: baseURL },
-    { name: INTERFACE_MARKET_COOKIE, value: locale === "uk" ? "ukraine" : "bulgaria", url: baseURL },
+    {
+      name: INTERFACE_MARKET_COOKIE,
+      value: locale === "uk" ? "ukraine" : "bulgaria",
+      url: baseURL,
+    },
   ]);
 }
 

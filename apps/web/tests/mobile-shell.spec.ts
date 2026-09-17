@@ -1,11 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
 
-import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import {
+  removeSyntheticGardener,
+  signInSyntheticGardener,
+} from "./helpers/synthetic-gardener";
 import {
   cleanupOrganismFixture,
   cleanupStaleOrganismRuns,
@@ -379,11 +381,7 @@ test.describe("axe at 375 px", () => {
   });
 
   test.afterAll(async () => {
-    if (gardenerId) {
-      await pool.query('delete from public."user" where id = $1::uuid', [
-        gardenerId,
-      ]);
-    }
+    await removeSyntheticGardener(pool, gardenerId);
     await cleanupOrganismFixture(pool, fixture);
     await pool.end();
   });
@@ -413,33 +411,15 @@ test.describe("axe at 375 px", () => {
     }
 
     // The workspace, which only exists for somebody signed in.
-    const email = `${PREFIX}-${randomUUID()}@example.test`;
-    await context.request.post(`${baseURL}/api/auth/sign-up/email`, {
-      headers: { origin: baseURL },
-      data: {
-        email,
+    gardenerId = (
+      await signInSyntheticGardener({
+        baseURL,
+        context,
+        pool,
+        prefix: PREFIX,
         password: TEST_PASSWORD,
-        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-      },
-    });
-    const user = await pool.query<{ id: string }>(
-      'select id::text as id from public."user" where email = $1::text',
-      [email],
-    );
-    gardenerId = user.rows[0]?.id ?? null;
-    if (!gardenerId) throw new Error("Synthetic gardener was not persisted.");
-    await pool.query(
-      'update public."user" set "emailVerified" = true where id = $1::uuid',
-      [gardenerId],
-    );
-    const signIn = await context.request.post(
-      `${baseURL}/api/auth/sign-in/email`,
-      {
-        headers: { origin: baseURL },
-        data: { email, password: TEST_PASSWORD },
-      },
-    );
-    expect(signIn.ok()).toBe(true);
+      })
+    ).id;
 
     const workspace = await page.goto("/garden", { waitUntil: "load" });
 

@@ -37,18 +37,20 @@ describe("locale root layout", () => {
     ]);
   });
 
-  it("localizes fallback metadata from the route, never from the request", async () => {
-    await expect(
-      generateMetadata({ params: Promise.resolve({ locale: "bg" }) }),
-    ).resolves.toMatchObject({
-      title: "OverGarden",
-      other: { "overgarden-interface-context": "bulgaria:bg" },
-    });
-    await expect(
-      generateMetadata({ params: Promise.resolve({ locale: "uk" }) }),
-    ).resolves.toMatchObject({
-      other: { "overgarden-interface-context": "ukraine:uk" },
-    });
+  it("localizes fallback metadata from the route, and claims no market from it", async () => {
+    // The locale is the route's — that is what this subtree is for. The market
+    // is **not**: a prerendered document has no reader, and deriving one from
+    // the language told the error boundary that a Russian-reading gardener in
+    // Bulgaria was in Ukraine. Measured on production on 2026-09-17, which is
+    // how it was found.
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      await expect(
+        generateMetadata({ params: Promise.resolve({ locale }) }),
+      ).resolves.toMatchObject({
+        title: "OverGarden",
+        other: { "overgarden-interface-context": `ukraine:${locale}` },
+      });
+    }
   });
 
   it("sets the document language from the route and the shell from the reader", async () => {

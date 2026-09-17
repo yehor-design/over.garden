@@ -317,18 +317,46 @@ describe("the footer the product has never had", () => {
     expect(document.body.textContent).not.toContain("thiings");
   });
 
-  it("is the one home of the language control", () => {
-    const { container } = render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
-        <main>Стрічка</main>
-      </SiteShell>,
-    );
+  it("is the one home of the language control, in either market", () => {
+    // Exactly one per rendered document, in both markets and in all three
+    // languages (`docs/INTERFACE_LOCALE_CONTRACT.md`). Production served a
+    // Ukrainian page with Bulgarian chrome *and* a control offering Bulgarian
+    // to a reader it had just called Bulgarian; one control, named once, is
+    // what the contract asks for and what this counts.
+    for (const [locale, market] of [
+      ["uk", "ukraine"],
+      ["bg", "bulgaria"],
+      ["ru", "bulgaria"],
+      ["uk", "bulgaria"],
+      ["bg", "ukraine"],
+    ] as const) {
+      const { container, unmount } = render(
+        <SiteShell locale={locale} market={market} isAuthenticated={false}>
+          <main>Route content</main>
+        </SiteShell>,
+      );
 
-    const controls = container.querySelectorAll(
-      "[data-interface-language-control]",
-    );
-    expect(controls).toHaveLength(1);
-    expect(screen.getByRole("contentinfo").contains(controls[0]!)).toBe(true);
+      const controls = container.querySelectorAll(
+        "[data-interface-language-control]",
+      );
+      expect(controls, `${market}/${locale}`).toHaveLength(1);
+      expect(
+        controls[0]!.getAttribute("data-interface-market"),
+        `${market}/${locale}`,
+      ).toBe(market);
+      expect(
+        screen
+          .getAllByRole("contentinfo")[0]!
+          .contains(controls[0]!),
+        `${market}/${locale}`,
+      ).toBe(true);
+      // All three languages are offered in either market; the market decides
+      // only which one a reader who has chosen nothing starts in.
+      expect(
+        controls[0]!.querySelectorAll("[data-interface-locale]"),
+      ).toHaveLength(3);
+      unmount();
+    }
   });
 });
 

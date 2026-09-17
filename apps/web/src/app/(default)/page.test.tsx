@@ -36,6 +36,7 @@ const feedPage: PublicFeedPage = {
       id: "entry-1",
       title: "Ранкове спостереження",
       excerpt: "Новий приріст рівний, листя без плям.",
+      sourceLanguage: "uk",
       entryDate: "2026-07-10",
       publishedAt: "2026-07-10T12:00:00.000Z",
       publicPath: "/journal/morning-check",

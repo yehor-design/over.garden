@@ -1,11 +1,13 @@
-import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
 
-import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import {
+  removeSyntheticGardener,
+  signInSyntheticGardener,
+} from "./helpers/synthetic-gardener";
 import {
   cleanupOrganismFixture,
   cleanupStaleOrganismRuns,
@@ -103,46 +105,6 @@ async function selectLocale(context: BrowserContext, baseURL: string) {
   ]);
 }
 
-/**
- * The user and credential rows are written before the verification mail is
- * sent; without a mail provider the request answers 500 after the rows exist.
- * The row is the fact this run needs.
- */
-async function signInSynthetic(input: {
-  baseURL: string;
-  context: BrowserContext;
-  email: string;
-  pool: Pool;
-}) {
-  await input.context.request.post(`${input.baseURL}/api/auth/sign-up/email`, {
-    headers: { origin: input.baseURL },
-    data: {
-      email: input.email,
-      password: TEST_PASSWORD,
-      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-    },
-  });
-  const user = await input.pool.query<{ id: string }>(
-    'select id::text as id from public."user" where email = $1::text',
-    [input.email],
-  );
-  const userId = user.rows[0]?.id;
-  if (!userId) throw new Error("Synthetic gardener was not persisted.");
-  await input.pool.query(
-    'update public."user" set "emailVerified" = true where id = $1::uuid',
-    [userId],
-  );
-  const signIn = await input.context.request.post(
-    `${input.baseURL}/api/auth/sign-in/email`,
-    {
-      headers: { origin: input.baseURL },
-      data: { email: input.email, password: TEST_PASSWORD },
-    },
-  );
-  expect(signIn.ok()).toBe(true);
-  return userId;
-}
-
 /** Tabs until the given locator holds focus, or fails saying how far it got. */
 async function tabTo(
   page: Page,
@@ -198,12 +160,22 @@ async function publishFixtureEntry(page: Page, name: string): Promise<string> {
   );
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   try {
+    // Scoped to the entry this call just published, not to "the newest one".
+    // Playwright runs spec *files* in parallel, so another file publishing at
+    // the same moment used to hand this one its slug — which failed here and
+    // looked like a defect in whatever was being reviewed.
     const row = await pool.query<{ public_slug: string }>(
       `select public_slug from journal_entries
-       where public_slug is not null order by created_at desc limit 1`,
+       where public_slug is not null and title like $1::text
+       order by created_at desc limit 1`,
+      // The composer titles an entry "{plant name} - {date}", so the plant
+      // name this call passed is the prefix of exactly its own entry.
+      [`${name} - %`],
     );
     const slug = row.rows[0]?.public_slug;
-    if (!slug) throw new Error("The published entry has no public slug.");
+    if (!slug) {
+      throw new Error(`The published entry "${name}" has no public slug.`);
+    }
     return encodeURIComponent(slug);
   } finally {
     await pool.end();
@@ -222,11 +194,7 @@ test.describe("gate 7 — axe on the key screens", () => {
   });
 
   test.afterAll(async () => {
-    if (gardenerId) {
-      await pool.query('delete from public."user" where id = $1::uuid', [
-        gardenerId,
-      ]);
-    }
+    await removeSyntheticGardener(pool, gardenerId);
     await cleanupOrganismFixture(pool, fixture);
     await pool.end();
   });
@@ -254,12 +222,14 @@ test.describe("gate 7 — axe on the key screens", () => {
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
-    gardenerId = await signInSynthetic({
+    const gardener = await signInSyntheticGardener({
       baseURL,
       context,
-      email: `${PREFIX}-axe-${randomUUID()}@example.test`,
       pool,
+      prefix: `${PREFIX}-axe`,
+      password: TEST_PASSWORD,
     });
+    gardenerId = gardener.id;
     await scan(page, "/garden", "the workspace");
 
     // A public entry and a public profile are the two screens a stranger
@@ -270,13 +240,7 @@ test.describe("gate 7 — axe on the key screens", () => {
     // Sign-up already claimed a handle for this gardener in the registry, and
     // a profile's handle is a deferred foreign key into it — so the handle is
     // read rather than invented, and only the profile row is written.
-    const claimed = await pool.query<{ normalized_handle: string }>(
-      `select normalized_handle from user_handle_registry
-       where user_id = $1::uuid and lifecycle_state = 'current' limit 1`,
-      [gardenerId],
-    );
-    const handle = claimed.rows[0]?.normalized_handle;
-    if (!handle) throw new Error("The gardener holds no current handle.");
+    const handle = gardener.handle;
     await pool.query(
       `insert into user_public_profiles (user_id, handle, normalized_handle, display_name)
        values ($1::uuid, $2::text, $2::text, $3::text)
@@ -315,11 +279,7 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
   });
 
   test.afterAll(async () => {
-    if (gardenerId) {
-      await pool.query('delete from public."user" where id = $1::uuid', [
-        gardenerId,
-      ]);
-    }
+    await removeSyntheticGardener(pool, gardenerId);
     await pool.end();
   });
 
@@ -378,12 +338,15 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
   test("publish an entry", async ({ baseURL, context, page }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
-    gardenerId = await signInSynthetic({
-      baseURL,
-      context,
-      email: `${PREFIX}-publish-${randomUUID()}@example.test`,
-      pool,
-    });
+    gardenerId = (
+      await signInSyntheticGardener({
+        baseURL,
+        context,
+        pool,
+        prefix: `${PREFIX}-publish`,
+        password: TEST_PASSWORD,
+      })
+    ).id;
 
     await page.goto("/garden", { waitUntil: "load" });
     const composer = page.locator("#first-entry-composer");

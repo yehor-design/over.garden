@@ -1,63 +1,116 @@
 # Interface Locale Contract
 
-Status: OVE-205 shipped; extended by OVE-208 typography ownership and OVE-338 account-route ownership
-Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (shipped authority), OVE-208 (typography extension), OVE-338 (account-route extension), OVE-202/206/207 (downstream extension owners)
-Date: 2026-08-25
+Status: current. The market-and-locale model below was replaced on 2026-09-17
+(`OVE-460`, PR #398) and re-stated here on the same day (`OVE-446`). The
+sections after "Language-Control Ownership" are the OVE-205 text and are
+history unless this page says otherwise.
+Issues: OVE-205 (the market-before-locale resolver), OVE-208 (typography), OVE-338 (account routes), OVE-460 (the reader's language), OVE-446 (this restatement)
+Date: 2026-09-17, superseding 2026-08-25
 
 ## Purpose
 
 OverGarden resolves the visitor's interface market before it resolves an
-interface locale. OVE-205 supersedes the locale-first routing and universal
-language-choice assumptions in the OVE-164 through OVE-171 baseline. It does
-not replace the typed `uk`/`bg`/`ru` copy namespaces delivered by those issues.
+interface locale, and the locale it resolves is **the reader's**.
+
+**What changed on 2026-09-17, and why.** The previous contract gave Ukraine one
+language and no control, and Bulgaria two. Read literally, it meant a reader in
+Ukraine could not read the interface in Bulgarian or Russian, and a reader in
+Bulgaria who chose Ukrainian was moved into the Ukraine market by the prefix
+alone — and so lost the control that had got them there. On production this
+showed as `/journals` answering `Content-Language: bg` with `<html lang="uk">`,
+Ukrainian content under Bulgarian chrome, a language control the old contract
+forbade on that page, and a full-width bar offering the reader the language they
+were already reading. The owner's decision, taken that day and reaffirmed when
+the question was put again: **both markets offer all three languages, and the
+market decides only which language a reader who has chosen nothing starts in.**
 
 The current product contract is:
 
-- Ukraine is a Ukrainian-only interface market. Its public canonical URLs are
-  unprefixed and it renders no language control.
-- Bulgaria is a Bulgarian/Russian interface market. Bulgarian is the market
-  default, and exactly one Bulgarian/Russian language control is rendered on
-  every user-facing page and application-owned rendered state.
+- The interface language is the reader's, on every address. It lives in a
+  bounded cookie; the country sets it on a first visit; a locale prefix in an
+  address is an explicit choice and is written back to the cookie.
+- **Exactly one** language control is rendered on every user-facing document and
+  application-owned rendered state, in **both** markets, offering all three
+  languages. Zero is a defect and two is a defect.
+- An unprefixed public address renders from the reader's locale subtree with the
+  URL and the status unchanged. `isReaderLocalizedPublicPath` in
+  `src/lib/interface-route-policy.ts` says which addresses have a prefixed twin.
 - User-authored content, catalog identity, scientific names, official source
-  names, and literal evidence are never silently translated.
+  names, and literal evidence are never silently translated. An entry keeps the
+  language it was written in, and carries `lang` and `inLanguage` to say so —
+  including inside a feed or a directory somebody is reading in another language
+  (WCAG 3.1.2).
 
 Copy is typed per locale (`uk`, `bg`, `ru`), so typecheck proves every key
-exists in every language. The former coverage registry, its baseline document,
-and the browser matrix were retired by ADR-0022.
+exists in every language, and
+`src/lib/interface-locale-surface.test.ts` proves it again at runtime including
+nested records. The former coverage registry, its baseline document, and the
+browser matrix were retired by ADR-0022.
 
 ## Market And Locale Model
 
 The supported interface markets and their allowed locales are closed enums:
 
-| Market   | Allowed locales | Default locale | Public canonical form                      | Language control |
-| -------- | --------------- | -------------- | ------------------------------------------ | ---------------- |
-| Ukraine  | `uk`            | `uk`           | unprefixed, for example `/` and `/privacy` | none             |
-| Bulgaria | `bg`, `ru`      | `bg`           | `/bg/**` or `/ru/**`                       | exactly one      |
+| Market   | Allowed locales  | Default locale | Public canonical form                      | Language control |
+| -------- | ---------------- | -------------- | ------------------------------------------ | ---------------- |
+| Ukraine  | `uk`, `bg`, `ru` | `uk`           | unprefixed, for example `/` and `/privacy` | exactly one      |
+| Bulgaria | `uk`, `bg`, `ru` | `bg`           | unprefixed, the reader's language inside   | exactly one      |
 
-The resolver must determine the market first and only then validate a locale
-inside that market. A locale signal cannot silently move a visitor into a
-different market.
+The resolver determines the market first and only then validates a locale
+inside that market. **A locale signal never moves a visitor between markets** —
+that is the one rule the previous model broke, and it broke it through the
+locale prefix.
 
-1. An explicit localized public route under `/bg` or `/ru` establishes the
-   Bulgaria market and the corresponding locale for that document.
-2. For an unprefixed request, a trusted supported country signal establishes
-   `BG` -> Bulgaria or `UA` -> Ukraine. It wins over a conflicting persisted
-   market value.
-3. A bounded persisted market decision may establish the market only when the
+1. A trusted supported country signal establishes `BG` -> Bulgaria or
+   `UA` -> Ukraine. It wins over a conflicting persisted market value.
+2. A bounded persisted market decision may establish the market only when the
    country signal is absent, malformed, or unsupported.
-4. Missing, malformed, unsupported, or contradictory remaining market input
-   fails to the Ukraine market.
-5. Ukraine always resolves to `uk`; any stale `bg` or `ru` preference is
-   ignored/coerced and no language choice is offered.
-6. Bulgaria accepts only `bg` or `ru`. A valid explicit/persisted Bulgarian
-   market choice may select either; otherwise the deterministic default is
-   `bg`. `Accept-Language: ru` alone must not make Russian the Bulgaria-market
-   default.
+3. Missing, malformed, unsupported, or contradictory remaining market input
+   fails to the **Ukraine** market.
+4. The locale is taken from the first of: an explicit value, the route's locale
+   prefix, the persisted preference. Each is accepted only if it is one of the
+   three; otherwise the market's default locale is used.
+5. `Accept-Language` is **not** an input. A header the reader never set is not a
+   choice they made, and `resolveInterfaceLocalization` has no parameter for it.
+6. A locale prefix chooses a language and says nothing about the market. A
+   reader in Bulgaria reading `/uk/journals` is in the Bulgaria market reading
+   Ukrainian.
+
+`src/lib/interface-locale-surface.test.ts` walks the whole matrix — country
+signal x persisted market x URL prefix x persisted locale, 600 combinations —
+asserts every answer is a market-valid locale, and names the production failure
+above as its own case.
+
+**Cross-locale links are never prefetched.** Next strips
+`Next-Router-Prefetch` before middleware runs, so `proxy.ts` cannot tell a
+prefetch of `/ru/...` from a reader landing there and writes the preference
+either way; left prefetchable, merely _hovering_ an option rewrote the reader's
+saved language (ADR-0024 D4, reproduced in Chromium on 2026-09-04). Every
+option is a plain anchor. Three modules may build such an address — the route
+policy that declares the builder, the language control, and the raw
+`404`/`410` lifecycle document — and the same test fails if a fourth appears or
+if one of the three reaches for `next/link`.
 
 Legacy `/uk` public URLs permanently redirect to their corresponding
-unprefixed Ukrainian canonical URL. `/uk` is not a supported canonical prefix,
-must not be generated by navigation, metadata, sitemap, or hreflang, and must
-not create a second Ukraine language choice.
+unprefixed canonical URL. `/uk` is not a supported canonical prefix and must
+not be generated by navigation, metadata, sitemap, or hreflang.
+
+## What Is No Longer True
+
+Kept so that nobody re-derives a rule the product does not follow:
+
+- "Ukraine renders zero language controls, zero hidden placeholders, and zero
+  reserved spacing for such a control." **Superseded.** Every market renders
+  exactly one.
+- "Bulgaria's public canonical form is `/bg/**` or `/ru/**`." **Superseded.**
+  Every market's canonical form is unprefixed; the prefix is how a reader
+  states a choice, and the proxy folds it back.
+- "The locale notice offers a page in the reader's language." **Deleted**
+  (PR #400). It compared the reader's language with the route's and offered the
+  reader their own, which made sense only while an unprefixed address was always
+  Ukrainian. It now appears on a page already in the right language, so it is
+  gone along with the copy key it was the only reader of. The language control
+  is the one way to change a language, and it is on every page.
 
 Signed-in, authentication, garden, account, and operator routes remain
 canonical and unprefixed, including `/garden`, `/garden/objects/:id`,
@@ -69,15 +122,17 @@ entry points or compatibility redirects.
 
 ## Language-Control Ownership
 
-The rendered control invariant is market-specific, not route-specific:
+The rendered control invariant is the same in both markets:
 
-- Ukraine renders zero language controls, zero hidden placeholders, and zero
-  empty navigation landmarks or reserved spacing for such a control.
-- Bulgaria renders exactly one application-owned Bulgarian/Russian language
-  control on every user-facing document and state.
+- Every market renders **exactly one** application-owned language control on
+  every user-facing document and state, offering all three languages.
 - One shared control owner must be selected for each rendered tree. Nested
   layouts, pages, dialogs, and error boundaries must not introduce a second
   owner.
+- Since `OVE-443` that owner is the site footer, which is also the product's
+  `contentinfo` landmark. The routes with no shell keep their own owner:
+  `AuthenticatedUtilityRegion` for the erasure surfaces, and the raw lifecycle
+  document for `404`/`410` HTML.
 
 The Bulgaria invariant applies to public, authentication, garden, account, and
 operator pages; authorized and denied states; loading and error boundaries;
@@ -86,10 +141,10 @@ and the global error fallback. A sparse or exceptional state is not an
 exemption. Raw protocol/API responses that intentionally contain no product UI
 remain non-UI and must be classified as such in the coverage registry.
 
-The control exposes exactly the two allowed choices, `bg` and `ru`, identifies
-the current choice accessibly, supports keyboard and screen-reader operation,
-and does not change domain behavior, authorization, mutation payloads, or
-privacy rules.
+The control exposes exactly the three allowed choices, `uk`, `bg` and `ru`,
+identifies the current choice accessibly, supports keyboard and screen-reader
+operation, and does not change domain behavior, authorization, mutation
+payloads, or privacy rules.
 
 ## Typography Ownership
 

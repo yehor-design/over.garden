@@ -298,7 +298,16 @@ export async function renderPublicCatalogEvidenceRoute(
           <p className="text-sm font-medium text-muted-foreground">
             {routeCopy.title}
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          {/* A species' canonical name is a Latin binomial and is marked as
+              one (WCAG 3.1.2), so a screen reader does not read it with
+              Ukrainian or Bulgarian phonetics. A variety's or a breed's
+              canonical name is a cultivar or a breed name in somebody's
+              language and is deliberately left unmarked — claiming Latin for
+              it would be a different error in the same place. */}
+          <h1
+            {...(catalogKind === "species" ? { lang: "la" } : {})}
+            className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl"
+          >
             {page.catalog.canonicalName}
           </h1>
           <p
@@ -689,7 +698,9 @@ export async function renderPublicCatalogEvidenceRoute(
                   {page.card.acceptedNameClaims.map((claim) => (
                     <li key={`${claim.sourceName}:${claim.name}`}>
                       {claim.sourceName}:{" "}
-                      <span className="text-foreground italic">
+                      {/* A taxonomic source's accepted name is a scientific
+                          name whatever the card's own kind is. */}
+                      <span lang="la" className="text-foreground italic">
                         {claim.name}
                       </span>
                     </li>

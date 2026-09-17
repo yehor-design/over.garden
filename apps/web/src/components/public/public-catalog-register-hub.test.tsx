@@ -91,9 +91,9 @@ describe("a species' register hub", () => {
 
   it("reads a register identifier the way a reader would quote it", () => {
     expect(registerNumber("RegisterVarietis:09040016")).toBe("09040016");
-    expect(
-      registerNumber("EUR-Lex:ELI:C/2026/829:row:00607ae12761ac87"),
-    ).toBe("ELI:C/2026/829");
+    expect(registerNumber("EUR-Lex:ELI:C/2026/829:row:00607ae12761ac87")).toBe(
+      "ELI:C/2026/829",
+    );
     expect(registerNumber(null)).toBeNull();
     // Anything the two patterns do not describe is shown as stored rather than
     // silently truncated.

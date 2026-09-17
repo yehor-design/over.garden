@@ -6,7 +6,7 @@ import {
   resolveInterfaceLocalization,
   serializeInterfaceLocalizationHint,
 } from "@/lib/interface-localization";
-import { marketWithDefaultInterfaceLocale } from "@/lib/interface-market";
+import { DEFAULT_INTERFACE_MARKET } from "@/lib/interface-market";
 import {
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
@@ -76,9 +76,15 @@ function localizationForRoute(value: string) {
     ? value
     : DEFAULT_PUBLIC_LOCALE;
   const { locale } = resolveInterfaceLocalization({ routeLocale });
-  // A prerendered document has no reader, so its context hint carries the
-  // market this language is the default of. The reader's own market is a
-  // request fact and is resolved in the shell; this is the fallback the
-  // last-resort error document reads when there is nothing better.
-  return { locale, market: marketWithDefaultInterfaceLocale(locale) };
+  // A prerendered document has no reader, so the hint claims the fallback
+  // market and nothing cleverer.
+  //
+  // It used to claim "the market this language is the default of", which is a
+  // market read out of a language — the one move the contract forbids. It was
+  // wrong in the ordinary case and measurably so: a reader in Bulgaria whose
+  // language is Russian renders from the `/ru` subtree, and the document told
+  // the error boundary they were in Ukraine. The locale is still the route's,
+  // which is correct and is all this document knows; the reader's real market
+  // arrives from `/api/interface/context` if the boundary ever needs it.
+  return { locale, market: DEFAULT_INTERFACE_MARKET };
 }

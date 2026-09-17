@@ -112,6 +112,7 @@ const page: PublicFeedPage = {
       title: "Підсумок тижня для томата",
       excerpt:
         "Новий приріст рівний, листя тримає пружність, а після ранкового поливу ґрунт просихає передбачувано.",
+      sourceLanguage: "uk",
       entryDate: "2026-07-10",
       publishedAt: "2026-07-10T12:00:00.000Z",
       publicPath: "/journal/tomato-week",
@@ -166,6 +167,7 @@ const page: PublicFeedPage = {
       id: "entry-2",
       title: "Спокійний огляд сім'ї",
       excerpt: "Літ рівний, корму достатньо, закритого розплоду без змін.",
+      sourceLanguage: "uk",
       entryDate: "2026-07-09",
       publishedAt: "2026-07-09T12:00:00.000Z",
       publicPath: "/journal/apiary-check",
@@ -362,5 +364,53 @@ describe("public home feed", () => {
         topic: null,
       }),
     ).toBe("/");
+  });
+});
+
+describe("an entry written in another language", () => {
+  it("carries its own lang in a feed the reader is browsing in theirs", () => {
+    // WCAG 3.1.2, and the point of the product: a Bulgarian gardener's entry
+    // appears in a Ukrainian reader's feed untranslated, so the words are
+    // Bulgarian and are marked as Bulgarian. The reader's chrome around them
+    // stays Ukrainian.
+    const bulgarianEntry = {
+      ...page.entries[0]!,
+      id: "entry-bg",
+      sourceLanguage: "bg" as const,
+      title: "Седмичен преглед на доматите",
+    };
+    const html = renderToStaticMarkup(
+      <PublicHomeFeed
+        locale="uk"
+        copy={copy}
+        feed={{ ...page, entries: [bulgarianEntry] }}
+        request={{ cursor: null, kind: "all", topic: null }}
+        topics={topics}
+        isAuthenticated={false}
+        state="ready"
+      />,
+    );
+
+    expect(html).toContain('lang="bg"');
+    expect(html).toContain("Седмичен преглед на доматите");
+  });
+
+  it("marks nothing when the entry and the page agree", () => {
+    const html = renderToStaticMarkup(
+      <PublicHomeFeed
+        locale="uk"
+        copy={copy}
+        feed={page}
+        request={{ cursor: null, kind: "all", topic: null }}
+        topics={topics}
+        isAuthenticated={false}
+        state="ready"
+      />,
+    );
+
+    // One `lang` on the surface itself, and not one per card.
+    expect(html.match(/lang="uk"/g)).toHaveLength(1);
+    expect(html).not.toContain('lang="bg"');
+    expect(html).not.toContain('lang="ru"');
   });
 });

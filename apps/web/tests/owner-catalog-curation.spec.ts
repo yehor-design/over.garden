@@ -101,17 +101,24 @@ test.describe("OVE-391 owner curation", () => {
       // owner skipped past is still open when K brings them back.
       // The first press doubles as the hydration wait: the shortcuts are a
       // client effect, and a key pressed before it runs goes nowhere.
-      await pressUntil(page, "j", async () =>
-        (await item.getAttribute("data-catalog-queue-item")) ===
-        fixture!.queueIds.noScript,
+      await pressUntil(
+        page,
+        "j",
+        async () =>
+          (await item.getAttribute("data-catalog-queue-item")) ===
+          fixture!.queueIds.noScript,
       );
-      await expect(page).toHaveURL(new RegExp(`item=${fixture.queueIds.noScript}`, "u"));
+      await expect(page).toHaveURL(
+        new RegExp(`item=${fixture.queueIds.noScript}`, "u"),
+      );
       await page.keyboard.press("k");
       await expect(item).toHaveAttribute(
         "data-catalog-queue-item",
         fixture.queueIds.keyboard,
       );
-      expect(await readQueueState(pool, fixture.queueIds.noScript)).toBe("open");
+      expect(await readQueueState(pool, fixture.queueIds.noScript)).toBe(
+        "open",
+      );
 
       // 2. Y accepts. The proof is the gardener's object, not the page.
       await page.keyboard.press("y");
@@ -139,11 +146,13 @@ test.describe("OVE-391 owner curation", () => {
       await pressUntil(page, "u", () =>
         readActionReverted(pool, automaticActionId!),
       );
-      expect(await readObject(pool, fixture.objectIds.automatic)).toMatchObject({
-        catalog_item_id: null,
-        variety_state: "free_text",
-        variety_text: fixture.labels.automatic,
-      });
+      expect(await readObject(pool, fixture.objectIds.automatic)).toMatchObject(
+        {
+          catalog_item_id: null,
+          variety_state: "free_text",
+          variety_text: fixture.labels.automatic,
+        },
+      );
 
       // 4. The same decision with no JavaScript: read the form Next rendered,
       // post it as multipart, and read the outcome from the database.
@@ -183,9 +192,9 @@ test.describe("OVE-391 owner curation", () => {
       });
 
       // Every decision is audited under the owner who made it.
-      expect(await readOwnerActionCount(pool, fixture.speciesId)).toBeGreaterThan(
-        0,
-      );
+      expect(
+        await readOwnerActionCount(pool, fixture.speciesId),
+      ).toBeGreaterThan(0);
 
       // 5. The sources page enqueues exactly one refresh per idempotency key.
       await page.goto("/garden/catalog/sources", { waitUntil: "load" });
@@ -205,7 +214,9 @@ test.describe("OVE-391 owner curation", () => {
       // and a rename posted without JavaScript is audited and undoable.
       const cardPath = `/species/${fixture.speciesSlug}`;
       const guestCard = await (
-        await fetch(`${baseURL}${cardPath}`, { headers: { accept: "text/html" } })
+        await fetch(`${baseURL}${cardPath}`, {
+          headers: { accept: "text/html" },
+        })
       ).text();
       expect(guestCard).not.toContain('data-owner-card-controls="true"');
 
@@ -233,9 +244,14 @@ test.describe("OVE-391 owner curation", () => {
           reason: "browser proof",
         }),
       );
-      expect([200, 303].includes(renameStatus), `rename answered ${renameStatus}`).toBe(true);
+      expect(
+        [200, 303].includes(renameStatus),
+        `rename answered ${renameStatus}`,
+      ).toBe(true);
       await expect
-        .poll(() => readPrimaryName(pool, fixture!.speciesId), { timeout: 20_000 })
+        .poll(() => readPrimaryName(pool, fixture!.speciesId), {
+          timeout: 20_000,
+        })
         .toBe(renamed);
 
       const auditedCard = await (
@@ -249,9 +265,14 @@ test.describe("OVE-391 owner curation", () => {
         cookie,
         readProgressiveForm(auditedCard, "data-owner-card-undo="),
       );
-      expect([200, 303].includes(undoStatus), `undo answered ${undoStatus}`).toBe(true);
+      expect(
+        [200, 303].includes(undoStatus),
+        `undo answered ${undoStatus}`,
+      ).toBe(true);
       await expect
-        .poll(() => readPrimaryName(pool, fixture!.speciesId), { timeout: 20_000 })
+        .poll(() => readPrimaryName(pool, fixture!.speciesId), {
+          timeout: 20_000,
+        })
         .not.toBe(renamed);
     } finally {
       if (fixture) await cleanupFixture(pool, fixture);
@@ -327,7 +348,13 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
          source, source_id, locale, node_kind, kingdom, rank, identity_state, search_weight)
        values ($1, $2, catalog_normalize_name($2), $3, 'species_backbone', $4, 'la', $5,
                'Plantae', 'species', 'active', 5)`,
-      [id, name, `ove391-${suffix}-${id.slice(0, 8)}`, `ove391:${id}`, nodeKind],
+      [
+        id,
+        name,
+        `ove391-${suffix}-${id.slice(0, 8)}`,
+        `ove391:${id}`,
+        nodeKind,
+      ],
     );
   }
   await pool.query(
@@ -347,7 +374,13 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     await pool.query(
       `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, variety_text, variety_state)
        values ($1, $2::uuid, $3, $4, 'plant', $5, 'free_text')`,
-      [objectId, OWNER_BROWSER_FIXTURE.userId, spaceId, label.slice(0, 60), label],
+      [
+        objectId,
+        OWNER_BROWSER_FIXTURE.userId,
+        spaceId,
+        label.slice(0, 60),
+        label,
+      ],
     );
   }
   const queueRows: Array<[string, string, number]> = [
@@ -384,9 +417,14 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
 async function cleanupFixture(pool: Pool, fixture: Fixture) {
   const ids = Object.values(fixture.objectIds);
   await pool
-    .query("delete from journal_entries where plant_object_id = any($1::uuid[])", [ids])
+    .query(
+      "delete from journal_entries where plant_object_id = any($1::uuid[])",
+      [ids],
+    )
     .catch(() => undefined);
-  await pool.query("delete from plant_objects where id = any($1::uuid[])", [ids]);
+  await pool.query("delete from plant_objects where id = any($1::uuid[])", [
+    ids,
+  ]);
   await pool.query("delete from spaces where id = $1::uuid", [fixture.spaceId]);
   await pool.query(
     "delete from job_queue where payload->>'kind' = 'catalog_source_refresh' and payload->>'source_slug' = 'eppo'",

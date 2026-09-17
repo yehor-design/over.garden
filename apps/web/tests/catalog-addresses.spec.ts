@@ -70,7 +70,9 @@ test.describe("OVE-388 organism addresses", () => {
       expect(speciesHtml).toContain("Solanum lycopersicum");
       expect(speciesHtml).toMatch(canonicalLink(speciesPath));
       for (const locale of ["uk", "bg", "ru"]) {
-        expect(speciesHtml, `hreflang ${locale}`).toMatch(new RegExp(`hreflang="${locale}"`, "iu"));
+        expect(speciesHtml, `hreflang ${locale}`).toMatch(
+          new RegExp(`hreflang="${locale}"`, "iu"),
+        );
       }
       const speciesGraph = jsonLdGraph(speciesHtml);
       const speciesTaxon = nodeOfType(speciesGraph, "Taxon");
@@ -79,17 +81,23 @@ test.describe("OVE-388 organism addresses", () => {
         taxonRank: "species",
         dateModified: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/u),
       });
-      expect(String(speciesTaxon["@id"])).toMatch(new RegExp(`/id/${fixture.speciesId}$`, "u"));
+      expect(String(speciesTaxon["@id"])).toMatch(
+        new RegExp(`/id/${fixture.speciesId}$`, "u"),
+      );
       expect(speciesTaxon).not.toHaveProperty("parentTaxon");
       if (fixture.eppo.seeded) {
-        expect(speciesTaxon.sameAs).toEqual(["https://gd.eppo.int/taxon/LYPES"]);
+        expect(speciesTaxon.sameAs).toEqual([
+          "https://gd.eppo.int/taxon/LYPES",
+        ]);
       }
       expect(nodeOfType(speciesGraph, "WebPage")).toMatchObject({
         mainEntity: { "@id": speciesTaxon["@id"] },
       });
       const speciesCrumbs = breadcrumbItems(speciesGraph);
       expect(speciesCrumbs).toHaveLength(2);
-      expect(String(speciesCrumbs[1]!.item)).toMatch(new RegExp(`${escapeRegExp(speciesPath)}$`, "u"));
+      expect(String(speciesCrumbs[1]!.item)).toMatch(
+        new RegExp(`${escapeRegExp(speciesPath)}$`, "u"),
+      );
 
       // The form under its species: parentTaxon and a three-step trail.
       const form = await get(request, formPath);
@@ -100,11 +108,15 @@ test.describe("OVE-388 organism addresses", () => {
       const formGraph = jsonLdGraph(formHtml);
       const formTaxon = nodeOfType(formGraph, "Taxon");
       expect(formTaxon).toMatchObject({ taxonRank: "cultivar" });
-      expect(String(formTaxon["@id"])).toMatch(new RegExp(`/id/${fixture.formId}$`, "u"));
-      expect((formTaxon.parentTaxon as { name: string; url: string }).name).toMatch(/^Solanum lycopersicum/u);
-      expect((formTaxon.parentTaxon as { name: string; url: string }).url).toMatch(
-        new RegExp(`${escapeRegExp(speciesPath)}$`, "u"),
+      expect(String(formTaxon["@id"])).toMatch(
+        new RegExp(`/id/${fixture.formId}$`, "u"),
       );
+      expect(
+        (formTaxon.parentTaxon as { name: string; url: string }).name,
+      ).toMatch(/^Solanum lycopersicum/u);
+      expect(
+        (formTaxon.parentTaxon as { name: string; url: string }).url,
+      ).toMatch(new RegExp(`${escapeRegExp(speciesPath)}$`, "u"));
       expect(breadcrumbItems(formGraph)).toHaveLength(3);
 
       // A form without a species and without entries: rendered at its legacy
@@ -120,7 +132,12 @@ test.describe("OVE-388 organism addresses", () => {
       expect(orphanHtml).toMatch(/name="robots" content="noindex, nofollow"/u);
       expect(orphanHtml).not.toContain('type="application/ld+json"');
       expect(orphanHtml).not.toContain('data-organism-section="experience"');
-      await expectRedirect(request, baseURL, `/species/${fixture.orphanSlug}`, orphanPath);
+      await expectRedirect(
+        request,
+        baseURL,
+        `/species/${fixture.orphanSlug}`,
+        orphanPath,
+      );
 
       // The prefixed locale: its own canonical and document language.
       const localized = await get(request, `/bg${speciesPath}`);
@@ -128,18 +145,52 @@ test.describe("OVE-388 organism addresses", () => {
       const localizedHtml = await localized.text();
       expect(localizedHtml).toMatch(/<html[^>]*lang="bg"/u);
       expect(localizedHtml).toMatch(canonicalLink(`/bg${speciesPath}`));
-      expect(String(breadcrumbItems(jsonLdGraph(localizedHtml))[0]!.item)).toMatch(/\/bg$/u);
+      expect(
+        String(breadcrumbItems(jsonLdGraph(localizedHtml))[0]!.item),
+      ).toMatch(/\/bg$/u);
 
       // 2. Permanent redirects: legacy path, permalink, alias, wrong family.
-      await expectRedirect(request, baseURL, `/variety/${fixture.formSlug}`, formPath);
-      await expectRedirect(request, baseURL, `/variety/${fixture.formSlug}`, formPath, "HEAD");
-      await expectRedirect(request, baseURL, `/ru/variety/${fixture.formSlug}`, `/ru${formPath}`);
-      await expectRedirect(request, baseURL, `/id/${fixture.speciesId}`, speciesPath);
-      await expectRedirect(request, baseURL, `/bg/id/${fixture.formId}`, `/bg${formPath}`);
-      await expectRedirect(request, baseURL, `/breed/${fixture.speciesSlug}`, speciesPath);
+      await expectRedirect(
+        request,
+        baseURL,
+        `/variety/${fixture.formSlug}`,
+        formPath,
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/variety/${fixture.formSlug}`,
+        formPath,
+        "HEAD",
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/ru/variety/${fixture.formSlug}`,
+        `/ru${formPath}`,
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/id/${fixture.speciesId}`,
+        speciesPath,
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/bg/id/${fixture.formId}`,
+        `/bg${formPath}`,
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/breed/${fixture.speciesSlug}`,
+        speciesPath,
+      );
       const eppo = await get(request, "/eppo/lypes");
       expect(eppo.status()).toBe(308);
-      const eppoTarget = new URL(eppo.headers()["location"] ?? "", baseURL).pathname;
+      const eppoTarget = new URL(eppo.headers()["location"] ?? "", baseURL)
+        .pathname;
       if (fixture.eppo.seeded) {
         expect(eppoTarget).toBe(speciesPath);
       } else {
@@ -147,24 +198,67 @@ test.describe("OVE-388 organism addresses", () => {
       }
 
       // 3. Real 404 documents, localized, noindex.
-      const copy = { uk: getPublicSurfaceCopy("uk"), bg: getPublicSurfaceCopy("bg") };
-      await expectNotFound(request, `/species/ove388-no-such-organism-${fixture.suffix}`, copy.uk.organism.notFound);
-      await expectNotFound(request, `/bg/species/ove388-no-such-organism-${fixture.suffix}`, copy.bg.organism.notFound);
-      await expectNotFound(request, `${speciesPath}/ove388-no-such-form-${fixture.suffix}`, copy.uk.organism.notFound);
+      const copy = {
+        uk: getPublicSurfaceCopy("uk"),
+        bg: getPublicSurfaceCopy("bg"),
+      };
+      await expectNotFound(
+        request,
+        `/species/ove388-no-such-organism-${fixture.suffix}`,
+        copy.uk.organism.notFound,
+      );
+      await expectNotFound(
+        request,
+        `/bg/species/ove388-no-such-organism-${fixture.suffix}`,
+        copy.bg.organism.notFound,
+      );
+      await expectNotFound(
+        request,
+        `${speciesPath}/ove388-no-such-form-${fixture.suffix}`,
+        copy.uk.organism.notFound,
+      );
       await expectNotFound(request, "/eppo/ZZZZZ", copy.uk.organism.notFound);
-      await expectNotFound(request, "/ru/wikidata/Q999999999999", getPublicSurfaceCopy("ru").organism.notFound);
-      await expectNotFound(request, "/id/not-a-uuid", copy.uk.organism.notFound);
+      await expectNotFound(
+        request,
+        "/ru/wikidata/Q999999999999",
+        getPublicSurfaceCopy("ru").organism.notFound,
+      );
+      await expectNotFound(
+        request,
+        "/id/not-a-uuid",
+        copy.uk.organism.notFound,
+      );
 
       // A rename: the old slug answers 308 forever, the form follows its species.
       const renamedSlug = `${fixture.speciesSlug}-renamed`;
-      await pool.query(`update catalog_items set public_slug = $1 where id = $2::uuid`, [renamedSlug, fixture.speciesId]);
+      await pool.query(
+        `update catalog_items set public_slug = $1 where id = $2::uuid`,
+        [renamedSlug, fixture.speciesId],
+      );
       const renamedPath = `/species/${renamedSlug}`;
       await expectRedirect(request, baseURL, speciesPath, renamedPath);
-      await expectRedirect(request, baseURL, formPath, `${renamedPath}/${fixture.formSlug}`);
-      await expectRedirect(request, baseURL, `/id/${fixture.speciesId}`, renamedPath);
-      await expectRedirect(request, baseURL, `/bg${formPath}`, `/bg${renamedPath}/${fixture.formSlug}`);
+      await expectRedirect(
+        request,
+        baseURL,
+        formPath,
+        `${renamedPath}/${fixture.formSlug}`,
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/id/${fixture.speciesId}`,
+        renamedPath,
+      );
+      await expectRedirect(
+        request,
+        baseURL,
+        `/bg${formPath}`,
+        `/bg${renamedPath}/${fixture.formSlug}`,
+      );
       expect((await get(request, renamedPath)).status()).toBe(200);
-      expect((await get(request, `${renamedPath}/${fixture.formSlug}`)).status()).toBe(200);
+      expect(
+        (await get(request, `${renamedPath}/${fixture.formSlug}`)).status(),
+      ).toBe(200);
       const history = await pool.query<{ slug: string; closed: boolean }>(
         `select slug, valid_to is not null as closed from catalog_item_slug_history
          where catalog_item_id = $1::uuid order by valid_from`,
@@ -176,13 +270,17 @@ test.describe("OVE-388 organism addresses", () => {
       ]);
 
       // 4. The sitemap: the canonical address of the indexable species only.
-      const sitemap = await (await request()).get("/sitemaps/catalog.xml", { maxRedirects: 0 });
+      const sitemap = await (
+        await request()
+      ).get("/sitemaps/catalog.xml", { maxRedirects: 0 });
       expect(sitemap.status()).toBe(200);
       const sitemapXml = await sitemap.text();
       expect(sitemapXml).toContain(`${renamedPath}</loc>`);
       expect(sitemapXml).toContain(`${renamedPath}/${fixture.formSlug}</loc>`);
       expect(sitemapXml).not.toContain(`${speciesPath}</loc>`);
-      expect(sitemapXml).not.toContain(`${speciesPath}/${fixture.formSlug}</loc>`);
+      expect(sitemapXml).not.toContain(
+        `${speciesPath}/${fixture.formSlug}</loc>`,
+      );
       expect(sitemapXml).not.toContain(`/variety/${fixture.formSlug}</loc>`);
       expect(sitemapXml).not.toContain(`/variety/${fixture.orphanSlug}</loc>`);
 
@@ -214,7 +312,10 @@ test.describe("OVE-388 organism addresses", () => {
 type Fresh = () => Promise<APIRequestContext>;
 
 async function get(request: Fresh, path: string) {
-  return (await request()).get(path, { maxRedirects: 0, headers: DOCUMENT_HEADERS });
+  return (await request()).get(path, {
+    maxRedirects: 0,
+    headers: DOCUMENT_HEADERS,
+  });
 }
 
 async function expectRedirect(
@@ -226,18 +327,25 @@ async function expectRedirect(
 ) {
   const response =
     method === "HEAD"
-      ? await (await request()).head(path, { maxRedirects: 0, headers: DOCUMENT_HEADERS })
+      ? await (
+          await request()
+        ).head(path, { maxRedirects: 0, headers: DOCUMENT_HEADERS })
       : await get(request, path);
   expect(response.status(), `${method} ${path}`).toBe(308);
   const location = response.headers()["location"];
   expect(location, `${method} ${path} Location`).toBeTruthy();
-  expect(new URL(location ?? "", baseURL).pathname, `${method} ${path} target`).toBe(target);
+  expect(
+    new URL(location ?? "", baseURL).pathname,
+    `${method} ${path} target`,
+  ).toBe(target);
 }
 
 async function expectNotFound(request: Fresh, path: string, copyText: string) {
   const response = await get(request, path);
   expect(response.status(), path).toBe(404);
-  expect(response.headers()["x-robots-tag"], `${path} X-Robots-Tag`).toBe("noindex, nofollow");
+  expect(response.headers()["x-robots-tag"], `${path} X-Robots-Tag`).toBe(
+    "noindex, nofollow",
+  );
   expect(await response.text(), `${path} body`).toContain(copyText);
 }
 
@@ -246,10 +354,13 @@ function canonicalLink(path: string) {
 }
 
 function jsonLdGraph(html: string): Record<string, unknown>[] {
-  const match = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/u.exec(html);
+  const match =
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/u.exec(html);
   if (!match) throw new Error("The page carries no JSON-LD.");
   const parsed = JSON.parse(match[1]!) as Record<string, unknown>;
-  return (parsed["@graph"] as Record<string, unknown>[] | undefined) ?? [parsed];
+  return (
+    (parsed["@graph"] as Record<string, unknown>[] | undefined) ?? [parsed]
+  );
 }
 
 function nodeOfType(graph: Record<string, unknown>[], type: string) {
@@ -259,10 +370,12 @@ function nodeOfType(graph: Record<string, unknown>[], type: string) {
 }
 
 function breadcrumbItems(graph: Record<string, unknown>[]) {
-  return nodeOfType(graph, "BreadcrumbList").itemListElement as { position: number; item: string }[];
+  return nodeOfType(graph, "BreadcrumbList").itemListElement as {
+    position: number;
+    item: string;
+  }[];
 }
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-

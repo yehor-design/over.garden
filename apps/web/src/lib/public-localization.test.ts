@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   PUBLIC_LOCALES,
   buildLanguageAlternates,
+  contentLanguageAttribute,
   getLanguageSwitcherLocales,
   getRootLocaleRedirectPath,
   localizedPath,
+  normalizePublicContentLanguage,
   selectPublicLocaleFromAcceptLanguage,
   selectPublicLocaleFromRequestContext,
   stripLocalePrefix,
@@ -121,5 +123,34 @@ describe("hreflang reciprocity", () => {
     expect(buildLanguageAlternates("/communities")["x-default"]).toBe(
       "/communities",
     );
+  });
+});
+
+describe("a fragment in another language", () => {
+  it("is marked only when it differs from the document", () => {
+    // WCAG 3.1.2. The attribute is absent when the two agree, so a Ukrainian
+    // page does not fill up with `lang="uk"` — which would be noise a screen
+    // reader still has to walk through.
+    expect(contentLanguageAttribute("bg", "uk")).toEqual({ lang: "bg" });
+    expect(contentLanguageAttribute("uk", "uk")).toEqual({});
+    expect(contentLanguageAttribute("ru", "bg")).toEqual({ lang: "ru" });
+  });
+
+  it("says nothing when the content's language is unknown", () => {
+    // A guess is worse than silence: `lang` on the wrong language makes a
+    // screen reader read a passage with the wrong phonetics, confidently.
+    expect(contentLanguageAttribute(null, "uk")).toEqual({});
+    expect(contentLanguageAttribute(undefined, "uk")).toEqual({});
+    expect(contentLanguageAttribute("", "uk")).toEqual({});
+  });
+
+  it("reads a stored content language back inside the closed set", () => {
+    expect(normalizePublicContentLanguage("bg")).toBe("bg");
+    expect(normalizePublicContentLanguage("ru")).toBe("ru");
+    // A row from before the column existed, or a value nothing recognises,
+    // reads as the default rather than as "no language at all".
+    expect(normalizePublicContentLanguage(null)).toBe("uk");
+    expect(normalizePublicContentLanguage("en")).toBe("uk");
+    expect(normalizePublicContentLanguage(7)).toBe("uk");
   });
 });
