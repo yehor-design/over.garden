@@ -1,9 +1,21 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { Check, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+/**
+ * A list of actions on one object (DESIGN.md §5.5).
+ *
+ * **Menus are flat.** `base-ui` closes a controlled, trigger-less menu with
+ * reason `sibling-open` the moment a submenu opens inside it — found in Slice
+ * 26, still true — so this file exports no submenu trigger. A submenu is a
+ * defect, not a feature request: a nested action belongs on its own screen or
+ * behind its own control.
+ *
+ * A menu is never navigation between pages while a rail exists.
+ */
 
 function Menu(props: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="menu" {...props} />;
@@ -34,12 +46,12 @@ function MenuContent({
         anchor={anchor}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50 outline-hidden"
+        className="isolate z-popover outline-hidden"
       >
         <MenuPrimitive.Popup
           data-slot="menu-content"
           className={cn(
-            "min-w-40 origin-(--transform-origin) rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-hidden transition-[transform,scale,opacity] duration-100 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
+            "min-w-40 origin-(--transform-origin) rounded-lg border border-border bg-surface p-1 text-text shadow-popover outline-hidden transition-[transform,scale,opacity] duration-fast ease-out data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0",
             className,
           )}
           {...props}
@@ -50,7 +62,7 @@ function MenuContent({
 }
 
 const menuItemClassName =
-  "relative flex min-h-10 w-full cursor-default select-none items-center gap-2 rounded-sm px-2.5 py-2 text-sm outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-accent data-highlighted:text-accent-foreground";
+  "relative flex min-h-10 w-full cursor-default select-none items-center gap-2 rounded-md px-2.5 py-2 text-body-sm outline-hidden data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-action-subtle data-highlighted:text-action-subtle-text";
 
 function MenuItem({ className, ...props }: MenuPrimitive.Item.Props) {
   return (
@@ -117,28 +129,11 @@ function MenuGroupLabel({
     <MenuPrimitive.GroupLabel
       data-slot="menu-group-label"
       className={cn(
-        "px-2.5 py-1.5 text-xs font-medium text-muted-foreground",
+        "px-2.5 py-1.5 text-caption font-medium text-text-muted",
         className,
       )}
       {...props}
     />
-  );
-}
-
-function MenuSubTrigger({
-  className,
-  children,
-  ...props
-}: MenuPrimitive.SubmenuTrigger.Props) {
-  return (
-    <MenuPrimitive.SubmenuTrigger
-      data-slot="menu-sub-trigger"
-      className={cn(menuItemClassName, className)}
-      {...props}
-    >
-      {children}
-      <ChevronRight aria-hidden="true" className="ml-auto size-4" />
-    </MenuPrimitive.SubmenuTrigger>
   );
 }
 
@@ -152,6 +147,5 @@ export {
   MenuRadioGroup,
   MenuRadioItem,
   MenuSeparator,
-  MenuSubTrigger,
   MenuTrigger,
 };

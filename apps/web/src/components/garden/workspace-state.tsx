@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { AlertTriangle } from "lucide-react";
 
+import { ErrorState } from "@/components/ui/error-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   formatGardenWorkspaceTemplate,
@@ -94,15 +94,11 @@ export function WorkspaceShell({
           <div className="flex flex-wrap items-center gap-3">{navigation}</div>
         ) : null}
         {eyebrow ? (
-          <p className="text-xs font-semibold text-muted-foreground uppercase">
-            {eyebrow}
-          </p>
+          <p className="text-overline text-text-muted uppercase">{eyebrow}</p>
         ) : null}
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {title}
-        </h1>
+        <h1 className="text-h1 text-text-heading">{title}</h1>
         {description ? (
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-prose text-body-sm text-text-muted">
             {description}
           </p>
         ) : null}
@@ -134,11 +130,12 @@ export function WorkspaceSectionSkeleton({
   return (
     <section
       data-workspace-section="loading"
+      data-screen-state="loading"
       aria-busy="true"
       aria-label={title ?? copy.loading.label}
     >
       {title ? (
-        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        <h2 className="text-h2 text-text-heading">{title}</h2>
       ) : (
         <Skeleton className="h-6 w-40" />
       )}
@@ -193,33 +190,23 @@ export function WorkspaceSectionError({
   const copy = getGardenWorkspaceCopy(locale).workspace.sectionError;
 
   return (
-    <section
+    <ErrorState
       id={id}
-      data-section-failure={failure.failureClass}
-      className="scroll-mt-20 border-y border-border py-6"
-    >
-      <AlertTriangle className="size-5 text-destructive" aria-hidden="true" />
-      <h2 className="mt-2 text-lg font-semibold text-foreground">
-        {title ?? copy.title}
-      </h2>
-      <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-        {copy.description}
-      </p>
-      {technicalHint ? (
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {technicalHint}
-        </p>
-      ) : null}
-      <p className="mt-2 font-mono text-xs text-muted-foreground">
-        {formatGardenWorkspaceTemplate(copy.reference, {
-          digest: failure.digest,
-        })}
-      </p>
-      <WorkspaceSectionRetry
-        href={retryHref}
-        label={retryLabel ?? copy.retry}
-      />
-    </section>
+      failureClass={failure.failureClass}
+      digest={failure.digest}
+      title={title ?? copy.title}
+      description={copy.description}
+      technicalHint={technicalHint}
+      reference={formatGardenWorkspaceTemplate(copy.reference, {
+        digest: failure.digest,
+      })}
+      retry={
+        <WorkspaceSectionRetry
+          href={retryHref}
+          label={retryLabel ?? copy.retry}
+        />
+      }
+    />
   );
 }
 
@@ -246,13 +233,13 @@ export function WorkspaceMissingRecord({
       data-workspace-record="missing"
       className="border-y border-border py-6"
     >
-      <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-      <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+      <h2 className="text-h3 text-text-heading">{copy.title}</h2>
+      <p className="mt-1 max-w-prose text-body-sm text-text-muted">
         {copy.description}
       </p>
       <a
         href={backHref}
-        className="mt-4 inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+        className="text-link mt-4 inline-flex min-h-10 items-center text-body-sm font-medium underline-offset-4 hover:underline"
       >
         {copy.back}
       </a>
@@ -333,9 +320,7 @@ export function WorkspaceAccessPanel({
         {navigation ? (
           <div className="flex flex-wrap items-center gap-3">{navigation}</div>
         ) : null}
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {title}
-        </h1>
+        <h1 className="text-h1 text-text-heading">{title}</h1>
       </header>
       {failure ? (
         <WorkspaceSectionError
@@ -346,7 +331,7 @@ export function WorkspaceAccessPanel({
           technicalHint={workspaceSchemaMissingHint(locale, failure)}
         />
       ) : (
-        <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-border p-4 text-body-sm text-text-muted">
           {message}
         </p>
       )}
