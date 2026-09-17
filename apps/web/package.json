@@ -136,7 +136,8 @@
     "identity:apply": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode apply",
     "identity:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode verify",
     "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof",
-    "owner:seed-browser-fixture": "tsx scripts/seed-browser-owner-fixture.ts"
+    "owner:seed-browser-fixture": "tsx scripts/seed-browser-owner-fixture.ts",
+    "screen-states:render": "tsx scripts/render-screen-states.tsx"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

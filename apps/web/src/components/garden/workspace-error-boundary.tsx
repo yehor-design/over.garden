@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import { Button } from "@/components/ui/button";
+import { ErrorState } from "@/components/ui/error-state";
 import {
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
@@ -44,26 +45,29 @@ export function WorkspaceErrorPanel({
       data-garden-workspace="unexpected-error"
       className="mx-auto flex w-full max-w-4xl flex-col px-4 py-8 sm:px-6"
     >
-      <section className="border-y border-border py-8">
-        <AlertTriangle className="size-6 text-destructive" aria-hidden="true" />
-        <h1 className="mt-3 text-2xl font-semibold text-foreground">
-          {copy.error.title}
-        </h1>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-          {copy.error.description}
-        </p>
-        {error.digest ? (
-          <p className="mt-2 font-mono text-xs text-muted-foreground">
-            {formatGardenWorkspaceTemplate(copy.sectionError.reference, {
-              digest: error.digest,
-            })}
-          </p>
-        ) : null}
-        <Button type="button" onClick={() => retry()} className="mt-4">
-          <RefreshCw aria-hidden="true" />
-          {copy.error.retry}
-        </Button>
-      </section>
+      {/* The boundary has no bounded class to report: React hands it a
+          sanitized `Error` carrying a digest and nothing else, which is exactly
+          why a workspace read settles into a class instead of throwing. */}
+      <ErrorState
+        headingLevel={1}
+        failureClass="unknown"
+        digest={error.digest ?? ""}
+        title={copy.error.title}
+        description={copy.error.description}
+        reference={
+          error.digest
+            ? formatGardenWorkspaceTemplate(copy.sectionError.reference, {
+                digest: error.digest,
+              })
+            : null
+        }
+        retry={
+          <Button type="button" onClick={() => retry()} className="mt-4">
+            <RefreshCw aria-hidden="true" />
+            {copy.error.retry}
+          </Button>
+        }
+      />
     </main>
   );
 }
