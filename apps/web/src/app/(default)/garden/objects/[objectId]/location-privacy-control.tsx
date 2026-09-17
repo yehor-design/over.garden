@@ -8,6 +8,9 @@ import type { LocationVisibility } from "@/db/schema";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 
 interface LocationPrivacyControlProps {
   locale: InterfaceLocale;
@@ -46,33 +49,33 @@ export function LocationPrivacyControl({
         action={action}
         className="grid min-w-0 gap-3 sm:grid-cols-3"
       >
-        <input type="hidden" name="objectId" value={objectId} />
-        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          {copy.location}
-          <select
+        <HiddenField name="objectId" value={objectId} />
+        <Field
+          label={copy.location}
+          description={
+            locationVisibility === "region" ? copy.regionHelp : copy.hiddenHelp
+          }
+          className="min-w-0"
+        >
+          <Select
             name="locationVisibility"
             value={locationVisibility}
             onChange={(event) => updateLocationVisibility(event.target.value)}
-            className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="hidden">{copy.hidden}</option>
             <option value="region">{copy.region}</option>
-          </select>
-          <span className="text-xs leading-5 font-normal text-muted-foreground">
-            {locationVisibility === "region"
-              ? copy.regionHelp
-              : copy.hiddenHelp}
-          </span>
-        </label>
-        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          {copy.coarseRegion}
-          <select
+          </Select>
+        </Field>
+        <Field
+          label={copy.coarseRegion}
+          required={locationVisibility === "region"}
+          className="min-w-0"
+        >
+          <Select
             name="coarseRegionCode"
-            required={locationVisibility === "region"}
             disabled={locationVisibility === "hidden"}
             value={coarseRegionCode}
             onChange={(event) => setCoarseRegionCode(event.target.value)}
-            className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
             <option value="">{copy.chooseRegion}</option>
             {regionOptions.map((region) => (
@@ -80,8 +83,8 @@ export function LocationPrivacyControl({
                 {region.label}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
         <button
           type="submit"
           className={buttonVariants({ className: "self-start sm:mt-6" })}

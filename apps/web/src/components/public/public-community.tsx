@@ -43,6 +43,10 @@ import {
   publicCommunityPath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 
 export type PublicCommunityState = "ready" | "loading" | "error";
 
@@ -329,32 +333,31 @@ export function PublicCommunityView({
         aria-label={copy.searchLabel}
         className="grid gap-3 border-b border-border py-4 sm:flex sm:items-end"
       >
-        <label className="grid min-w-0 gap-1.5 text-sm font-medium sm:flex-1">
-          <span>{copy.searchLabel}</span>
-          <input
-            type="search"
+        <Field
+          label={copy.searchLabel}
+          id="community-search"
+          className="min-w-0 sm:flex-1"
+        >
+          <SearchInput
             name="q"
             defaultValue={query}
             maxLength={100}
             placeholder={copy.searchPlaceholder}
-            className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
           />
-        </label>
-        <label className="grid gap-1.5 text-sm font-medium sm:w-48 sm:shrink-0">
-          <span>{copy.kindLabel}</span>
-          <select
-            name="kind"
-            defaultValue={kind === "all" ? "" : kind}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-          >
+        </Field>
+        <Field
+          label={copy.kindLabel}
+          className="sm:w-48 sm:shrink-0"
+        >
+          <Select name="kind" defaultValue={kind === "all" ? "" : kind}>
             <option value="">{copy.allKinds}</option>
             {Object.entries(copy.kindLabels).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
             ))}
-          </select>
-        </label>
+          </Select>
+        </Field>
         <button type="submit" className={buttonVariants()}>
           <Search aria-hidden="true" />
           {copy.search}
@@ -397,7 +400,7 @@ export function PublicCommunityView({
             {query || kind !== "all" ? (
               <Link
                 href={communityPath}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.resetFilters}
               </Link>
@@ -426,7 +429,7 @@ export function PublicCommunityView({
               kind,
               cursor: community.contributions.nextCursor,
             })}`}
-            className={cn(buttonVariants({ variant: "outline" }), "my-4 w-fit")}
+            className={cn(buttonVariants({ variant: "secondary" }), "my-4 w-fit")}
           >
             {copy.showMore}
           </Link>
@@ -458,7 +461,7 @@ export function PublicCommunityView({
         <Link
           href={knowledgePath}
           className={buttonVariants({
-            variant: "outline",
+            variant: "secondary",
             size: "sm",
             className: "w-fit",
           })}
@@ -514,8 +517,7 @@ function CommunityMembershipAction({
   return (
     <OwnerScopedActionForm action={setCommunityMembershipAction}>
       <CommunityActionFields locale={locale} slug={community.slug} />
-      <input
-        type="hidden"
+      <HiddenField
         name="membershipState"
         value={active ? "left" : "active"}
       />
@@ -528,7 +530,7 @@ function CommunityMembershipAction({
         data-auth-intent-control="follow"
         data-auth-intent-control-ref={control}
         className={buttonVariants({
-          variant: active ? "outline" : "default",
+          variant: active ? "secondary" : "primary",
         })}
       >
         <UsersRound aria-hidden="true" />
@@ -565,20 +567,19 @@ function CommunityContributionForm({
           className="grid gap-3 sm:flex sm:items-end"
         >
           <CommunityActionFields locale={locale} slug={community.slug} />
-          <label className="grid min-w-0 gap-1.5 text-sm font-medium sm:flex-1">
-            <span>{copy.chooseJournal}</span>
-            <select
-              name="journalEntryId"
-              required
-              className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm"
-            >
+          <Field
+            label={copy.chooseJournal}
+            required
+            className="min-w-0 sm:flex-1"
+          >
+            <Select name="journalEntryId">
               {community.viewer.eligibleJournals.map((entry) => (
                 <option key={entry.id} value={entry.id}>
                   {entry.title} · {entry.objectDisplayName}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </Field>
           <button className={buttonVariants()}>{copy.contribute}</button>
         </OwnerScopedActionForm>
       ) : (
@@ -588,7 +589,7 @@ function CommunityContributionForm({
           </p>
           <Link
             href="/garden#first-entry-composer"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.createJournal}
           </Link>
@@ -657,7 +658,7 @@ function CommunityContributionRow({
         <div className="relative flex flex-wrap items-center gap-2">
           <Link
             href={item.href}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.readJournal}
           </Link>
@@ -787,20 +788,16 @@ function CommunitySafetyActions({
             className="absolute left-0 z-20 mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
           >
             <CommunityActionFields locale={locale} slug={community.slug} />
-            <input type="hidden" name="contributionId" value={item.id} />
-            <label className="grid gap-1.5 text-sm font-medium">
-              <span>{copy.reportReason}</span>
-              <select
-                name="reason"
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              >
+            <HiddenField name="contributionId" value={item.id} />
+            <Field label={copy.reportReason} id={`report-reason-${item.id}`}>
+              <Select name="reason">
                 {Object.entries(copy.reportReasons).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
                 ))}
-              </select>
-            </label>
+              </Select>
+            </Field>
             <button className={buttonVariants({ size: "sm" })}>
               {copy.sendReport}
             </button>
@@ -809,7 +806,7 @@ function CommunitySafetyActions({
       )}
       <OwnerScopedActionForm action={blockCommunityContributionAuthorAction}>
         <CommunityActionFields locale={locale} slug={community.slug} />
-        <input type="hidden" name="contributionId" value={item.id} />
+        <HiddenField name="contributionId" value={item.id} />
         <button
           id={
             resumeAction === "block" && resumeControl === blockControl
@@ -836,8 +833,8 @@ function CommunityActionFields({
 }) {
   return (
     <>
-      <input type="hidden" name="locale" value={locale} />
-      <input type="hidden" name="slug" value={slug} />
+      <HiddenField name="locale" value={locale} />
+      <HiddenField name="slug" value={slug} />
     </>
   );
 }

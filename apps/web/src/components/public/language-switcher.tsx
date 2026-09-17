@@ -22,6 +22,7 @@ import {
 } from "@/lib/public-localization";
 import { cn } from "@/lib/utils";
 import { setInterfaceLocaleAction } from "./locale-actions";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 /**
  * Choosing an interface language.
@@ -182,7 +183,7 @@ function LocalePreferenceOption({
   // workspace routes are `no-store`, so the new language is what comes back.
   return (
     <form action={formAction}>
-      <input type="hidden" name="locale" value={locale} />
+      <HiddenField name="locale" value={locale} />
       <button
         type="submit"
         lang={htmlLang}

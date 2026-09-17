@@ -19,6 +19,7 @@ import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { submitErasureRequestAction } from "./actions";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getTrustSurfaceCopy(await getRequestInterfaceLocale()).erasure;
@@ -130,15 +131,11 @@ export default async function ErasureRequestPage() {
               action={submitErasureRequestAction}
               className="grid gap-4"
             >
-              <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-                <input
-                  type="checkbox"
-                  name="erasureAcknowledgementAccepted"
-                  required
-                  className="mt-1 size-4 rounded border-border"
-                />
-                <span>{copy.acknowledgement}</span>
-              </label>
+              <Checkbox
+                name="erasureAcknowledgementAccepted"
+                required
+                label={copy.acknowledgement}
+              />
               <button
                 type="submit"
                 className={buttonVariants({ className: "self-start" })}

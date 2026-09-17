@@ -94,7 +94,7 @@ export function LineageClaimHandoff({ locale }: { locale: InterfaceLocale }) {
         </div>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           className="w-fit"
           onClick={() => {
             setState("preparing");

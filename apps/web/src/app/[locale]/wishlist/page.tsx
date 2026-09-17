@@ -31,6 +31,8 @@ import {
 } from "@/server/wishlist-repository";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { removeCatalogPublicSlugFromWishlistAction } from "@/app/(default)/wishlist/actions";
+import { iconButtonVariants } from "@/components/ui/icon-button";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 const PAGE_SIZE = 12;
 
@@ -126,7 +128,7 @@ export default async function LocalizedWishlistRoute({
           {currentPage > 1 ? (
             <Link
               href={wishlistHref(localeParam, filter, currentPage - 1)}
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               <ArrowLeft className="size-4" />
               {copy.common.previous}
@@ -137,7 +139,7 @@ export default async function LocalizedWishlistRoute({
           {currentPage < pageCount ? (
             <Link
               href={wishlistHref(localeParam, filter, currentPage + 1)}
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               {copy.common.next}
               <ArrowRight className="size-4" />
@@ -211,7 +213,7 @@ function WishlistRow({
           <Link
             href={item.activationPath}
             title={copy.wishlist.start}
-            className={buttonVariants({ size: "icon" })}
+            className={iconButtonVariants({ variant: "primary" })}
           >
             <Sprout className="size-4" />
             <span className="sr-only">{copy.wishlist.start}</span>
@@ -221,7 +223,7 @@ function WishlistRow({
           <Link
             href={item.publicPath}
             title={copy.common.open}
-            className={buttonVariants({ variant: "outline", size: "icon" })}
+            className={iconButtonVariants({ variant: "secondary" })}
           >
             <ExternalLink className="size-4" />
             <span className="sr-only">{copy.common.open}</span>
@@ -231,16 +233,15 @@ function WishlistRow({
           <OwnerScopedActionForm
             action={removeCatalogPublicSlugFromWishlistAction}
           >
-            <input
-              type="hidden"
+            <HiddenField
               name="catalogPublicSlug"
               value={item.catalog.publicSlug}
             />
-            <input type="hidden" name="locale" value={locale} />
+            <HiddenField name="locale" value={locale} />
             <button
               type="submit"
               title={copy.common.remove}
-              className={buttonVariants({ variant: "outline", size: "icon" })}
+              className={iconButtonVariants({ variant: "secondary" })}
             >
               <Trash2 className="size-4" />
               <span className="sr-only">{copy.common.remove}</span>

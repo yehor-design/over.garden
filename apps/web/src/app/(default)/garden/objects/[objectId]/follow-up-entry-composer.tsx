@@ -56,6 +56,10 @@ import {
   type ActiveMentionToken,
   type MentionTypeaheadStatus,
 } from "../../journal-mention-typeahead";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { FileDrop } from "@/components/ui/file-drop";
+import { Input } from "@/components/ui/input";
 
 interface FollowUpEntryComposerProps {
   ownerUserId: string;
@@ -498,7 +502,7 @@ export function FollowUpEntryComposer({
               {ownerCopy.composer.fields.whatChanged}
             </span>
           </div>
-          <input type="hidden" name="body" value={draft.body} required />
+          <HiddenField name="body" value={draft.body} required />
           <StructuredJournalComposer
             locale={locale}
             labels={getStructuredJournalComposerLabels(locale)}
@@ -611,20 +615,18 @@ export function FollowUpEntryComposer({
           <span className="text-sm font-medium text-foreground">
             {workspaceCopy.composer.fields.optionalPhoto}
           </span>
-          <input
+          <FileDrop
             ref={photoInputRef}
-            type="file"
             accept={COMPOSER_PHOTO_ACCEPT}
             capture="environment"
-            aria-label={workspaceCopy.composer.photo.choose}
+            label={workspaceCopy.composer.photo.choose}
             onChange={(event) =>
               handlePhotoChange(event.currentTarget.files?.[0])
             }
-            className="hidden"
           />
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             className="self-start"
             data-photo-picker-control="true"
             onClick={() => photoInputRef.current?.click()}
@@ -635,7 +637,7 @@ export function FollowUpEntryComposer({
           {hasSelectedPhoto ? (
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               className="self-start"
               onClick={() => clearPhotoSelection()}
             >
@@ -663,44 +665,41 @@ export function FollowUpEntryComposer({
           </summary>
           <div className="mt-4 grid gap-4">
             <div className="grid gap-3 sm:grid-cols-3">
-              <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-                {workspaceCopy.composer.fields.entryTitle}
-                <input
+              <Field
+                label={workspaceCopy.composer.fields.entryTitle}
+                required
+                className="sm:col-span-2"
+              >
+                <Input
                   name="title"
-                  required
                   maxLength={140}
                   value={draft.title}
                   onChange={(event) => updateTitle(event.target.value)}
-                  className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                   placeholder={ownerCopy.composer.fields.titlePlaceholder}
                 />
-              </label>
+              </Field>
 
-              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                {workspaceCopy.composer.fields.date}
-                <input
+              <Field label={workspaceCopy.composer.fields.date}>
+                <Input
                   type="date"
                   name="entryDate"
                   value={draft.entryDate}
                   onChange={(event) =>
                     updateDraft("entryDate", event.target.value)
                   }
-                  className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                 />
-              </label>
+              </Field>
             </div>
 
-            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              {workspaceCopy.composer.fields.tags}
-              <input
+            <Field label={workspaceCopy.composer.fields.tags}>
+              <Input
                 name="topicTags"
                 maxLength={160}
                 value={topicTagInput}
                 onChange={(event) => updateTopicTagInput(event.target.value)}
-                className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
                 placeholder={workspaceCopy.composer.fields.tagsPlaceholder}
               />
-            </label>
+            </Field>
           </div>
         </details>
 

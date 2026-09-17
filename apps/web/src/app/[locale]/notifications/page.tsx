@@ -35,6 +35,9 @@ import {
   type NotificationPreferences,
 } from "@/server/social-return-repository";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import { iconButtonVariants } from "@/components/ui/icon-button";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface LocalizedNotificationsRouteProps {
   params: Promise<{ locale: string }>;
@@ -260,17 +263,15 @@ function NotificationSettings({
         action="/api/notifications/preferences"
         className="mt-4 grid gap-3 sm:grid-cols-2"
       >
-        <input type="hidden" name="locale" value={locale} />
+        <HiddenField name="locale" value={locale} />
         {options.map(([key, label]) => (
-          <label key={key} className="flex min-h-9 items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              name={key}
-              defaultChecked={preferences[key]}
-              className="size-4 accent-primary"
-            />
-            {label}
-          </label>
+          <Checkbox
+            key={key}
+            name={key}
+            defaultChecked={preferences[key]}
+            label={label}
+            className="items-center"
+          />
         ))}
         <button
           type="submit"
@@ -362,14 +363,14 @@ function ReceiptForm({
   return (
     <form method="post" action="/api/notifications/receipts">
       {eventKeys.map((eventKey) => (
-        <input key={eventKey} type="hidden" name="eventKey" value={eventKey} />
+        <HiddenField key={eventKey} name="eventKey" value={eventKey} />
       ))}
-      <input type="hidden" name="receiptState" value={state} />
-      <input type="hidden" name="returnTo" value={returnTo} />
+      <HiddenField name="receiptState" value={state} />
+      <HiddenField name="returnTo" value={returnTo} />
       <button
         type="submit"
         title={label}
-        className={buttonVariants({ variant: "ghost", size: "icon" })}
+        className={iconButtonVariants({ variant: "ghost" })}
       >
         {icon}
         <span className="sr-only">{label}</span>

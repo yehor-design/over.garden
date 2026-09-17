@@ -34,7 +34,7 @@ export function WorkspaceSectionRetry({
       href={href}
       data-workspace-retry="section"
       className={buttonVariants({
-        variant: "outline",
+        variant: "secondary",
         size: "sm",
         className: "mt-4",
       })}
@@ -108,7 +108,7 @@ export function WorkspaceLoadingWatchdogView({
       {stage === "reload" ? (
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => window.location.reload()}
         >

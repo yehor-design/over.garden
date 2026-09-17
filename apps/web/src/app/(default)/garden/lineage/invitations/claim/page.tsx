@@ -241,7 +241,7 @@ function LineageInvitationClaimCard({
           <button
             type="submit"
             className={buttonVariants({
-              variant: "outline",
+              variant: "secondary",
               className: "self-start",
             })}
           >

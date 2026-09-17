@@ -189,7 +189,9 @@ describe("OwnerProfileEditor", () => {
     )?.[0];
 
     expect(handleInput).toBeDefined();
-    expect(handleInput).not.toContain("disabled");
+    // The attribute, not the string: `disabled:bg-surface-sunken` is a Tailwind
+    // variant in the control's class list and says nothing about its state.
+    expect(handleInput).not.toMatch(/\sdisabled(=|\s|\/?>)/);
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>[^<]*<svg/);
   });
 });

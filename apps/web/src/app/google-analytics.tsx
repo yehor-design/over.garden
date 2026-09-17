@@ -234,7 +234,7 @@ export function AnalyticsPrivacyControls({
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => setConsent("declined")}
         >
           {copy.turnOff}
@@ -300,7 +300,7 @@ function AnalyticsConsentBanner({
           onClick={onDecline}
           size="sm"
           type="button"
-          variant="outline"
+          variant="secondary"
         >
           {copy.decline}
         </Button>

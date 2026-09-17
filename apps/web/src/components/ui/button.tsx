@@ -1,58 +1,106 @@
-import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
+/**
+ * The five variants and three sizes of DESIGN.md §4.4 and §4.3. Both sets are
+ * closed: renaming one is a breaking change for every screen, so every other
+ * file consumes them by these names.
+ *
+ * This is a Server Component. It renders a real `<button>` and ships no client
+ * bundle, which is what lets a public form stay a `<form action={serverAction}>`
+ * that works before JavaScript does (ADR-0024 D3). A client file that imports it
+ * and hands it an `onClick` still works — the module is bundled with that file.
+ *
+ * Two details that are not decoration:
+ *
+ * - **Height is a floor, not a fixed value.** Ukrainian and Bulgarian labels run
+ *   10–15 % longer than English and Russian longer still (DESIGN.md §2.6), so a
+ *   label wraps rather than overflowing its button.
+ * - **The hit target is 44 × 44 on touch even at `sm`'s 32 px.** A `::before`
+ *   box inside the button extends the pointer area without moving a pixel of
+ *   the visual (DESIGN.md §4.3, WCAG 2.2 2.5.8).
+ */
 const buttonVariants = cva(
-  "group/button inline-flex max-w-full shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-center text-sm font-medium whitespace-normal break-words transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  [
+    "relative inline-flex max-w-full shrink-0 items-center justify-center gap-2",
+    "rounded-md border border-transparent text-center font-medium break-words whitespace-normal",
+    "transition-colors duration-instant ease-out outline-none select-none",
+    "before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2",
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+    "disabled:pointer-events-none disabled:opacity-50",
+    "aria-disabled:opacity-70",
+    "[&_svg]:pointer-events-none [&_svg]:shrink-0",
+  ].join(" "),
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/80",
-        outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
+        primary: "bg-action text-text-on-fill hover:bg-action-hover",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-surface-hover aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "border-border-control bg-surface text-text hover:bg-surface-hover aria-expanded:bg-surface-hover",
+        // The subtle fill is `action-subtle`; its hover is the same action
+        // colour at 15 %, so the state needs no token of its own.
+        subtle: "bg-action-subtle text-action-subtle-text hover:bg-action/15",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:border-destructive/40 focus-visible:ring-destructive/20",
-        link: "text-primary underline-offset-4 hover:underline",
+          "text-text-secondary hover:bg-surface-hover hover:text-text aria-expanded:bg-surface-hover",
+        // `danger-text` is the danger ramp's darker step; white on it measures
+        // 7.67, so it is the hover fill as well as the text colour.
+        danger: "bg-danger-fill text-text-on-fill hover:bg-danger-text",
       },
       size: {
-        default:
-          "min-h-11 gap-1.5 px-3 py-2 sm:min-h-8 sm:py-1 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "min-h-11 gap-1 rounded-[min(var(--radius-md),10px)] px-2 py-2 text-xs sm:min-h-6 sm:py-0 in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "min-h-11 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 py-2 text-[0.8rem] sm:min-h-7 sm:py-0 in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "min-h-11 gap-1.5 px-3 py-2 sm:min-h-9 sm:py-1 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-11 sm:size-8",
-        "icon-xs":
-          "size-11 rounded-[min(var(--radius-md),10px)] sm:size-6 in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm":
-          "size-11 rounded-[min(var(--radius-md),12px)] sm:size-7 in-data-[slot=button-group]:rounded-lg",
-        "icon-lg": "size-11 sm:size-9",
+        sm: "min-h-8 px-3 py-1 text-body-sm [&_svg]:size-4",
+        md: "min-h-10 px-4 py-2 text-body-sm [&_svg]:size-4",
+        lg: "min-h-12 px-5 py-3 text-body [&_svg]:size-5",
       },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+    defaultVariants: { variant: "primary", size: "md" },
   },
 );
 
+type ButtonProps = React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    /**
+     * Keeps the button's width, swaps the label for a spinner, marks it busy
+     * and leaves it focusable — it never disappears and never resizes
+     * (DESIGN.md §4.4). The label stays at `opacity-0` rather than
+     * `visibility: hidden`, because the latter would take the button's
+     * accessible name away exactly when a reader needs it most.
+     */
+    loading?: boolean;
+  };
+
 function Button({
   className,
-  variant = "default",
-  size = "default",
+  variant = "primary",
+  size = "md",
+  loading = false,
+  type = "button",
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
   return (
-    <ButtonPrimitive
+    <button
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      type={type}
+      className={cn(buttonVariants({ variant, size }), className)}
+      aria-busy={loading || undefined}
       {...props}
-    />
+    >
+      <span
+        className={cn("inline-flex items-center gap-2", loading && "opacity-0")}
+      >
+        {children}
+      </span>
+      {loading ? (
+        <Spinner
+          size={size === "lg" ? "md" : "sm"}
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+        />
+      ) : null}
+    </button>
   );
 }
 
 export { Button, buttonVariants };
+export type { ButtonProps };

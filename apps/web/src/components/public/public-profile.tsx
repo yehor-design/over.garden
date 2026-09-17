@@ -47,6 +47,10 @@ import {
   reportProfileAction,
   unfollowProfileAction,
 } from "@/app/[locale]/[profileHandle]/actions";
+import { iconButtonVariants } from "@/components/ui/icon-button";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { Select } from "@/components/ui/select";
 
 const OBJECT_PREVIEW_SIZE = 6;
 const JOURNAL_PREVIEW_SIZE = 8;
@@ -347,8 +351,8 @@ function ProfileActions({
   const target = { kind: "profile" as const, ref: profile.handle };
   const hiddenFields = (
     <>
-      <input type="hidden" name="handle" value={profile.handle} />
-      <input type="hidden" name="locale" value={locale} />
+      <HiddenField name="handle" value={profile.handle} />
+      <HiddenField name="locale" value={locale} />
     </>
   );
 
@@ -387,7 +391,7 @@ function ProfileActions({
           <button
             type="submit"
             data-auth-intent-control="follow"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <UserMinus aria-hidden="true" />
             {copy.unfollow}
@@ -416,7 +420,7 @@ function ProfileActions({
       >
         <summary
           className={cn(
-            buttonVariants({ variant: "outline", size: "icon" }),
+            iconButtonVariants({ variant: "secondary" }),
             "cursor-pointer list-none",
           )}
           aria-label={copy.moreActions}
@@ -458,13 +462,8 @@ function ProfileActions({
                 className="grid gap-2"
               >
                 {hiddenFields}
-                <label className="grid gap-1 text-xs font-medium text-foreground">
-                  {copy.reportTitle}
-                  <select
-                    name="reason"
-                    defaultValue="spam"
-                    className="h-9 rounded-md border border-input bg-background px-2 text-sm text-foreground"
-                  >
+                <Field label={copy.reportTitle} id="profile-report-reason">
+                  <Select name="reason" size="sm" defaultValue="spam">
                     {Object.entries(copy.reportReasons).map(
                       ([value, label]) => (
                         <option key={value} value={value}>
@@ -472,13 +471,13 @@ function ProfileActions({
                         </option>
                       ),
                     )}
-                  </select>
-                </label>
+                  </Select>
+                </Field>
                 <button
                   type="submit"
                   data-auth-intent-control="report"
                   className={buttonVariants({
-                    variant: "outline",
+                    variant: "secondary",
                     size: "sm",
                     className: "justify-start",
                   })}

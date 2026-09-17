@@ -181,7 +181,7 @@ function FeedFilters({
               })}
               aria-current={active ? "page" : undefined}
               className={buttonVariants({
-                variant: active ? "default" : "ghost",
+                variant: active ? "primary" : "ghost",
                 size: "sm",
                 className: "shrink-0",
               })}
@@ -226,7 +226,7 @@ function FeedFilters({
               })}
               aria-current={active ? "page" : undefined}
               className={buttonVariants({
-                variant: active ? "secondary" : "outline",
+                variant: active ? "subtle" : "secondary",
                 size: "sm",
               })}
             >
@@ -349,7 +349,7 @@ function PublicFeedCard({
           )}
           <Link
             href={entry.publicPath}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.readEntry}
             <ArrowRight data-icon="inline-end" aria-hidden="true" />
@@ -445,7 +445,7 @@ function PublicFeedEmpty({
       <div className="flex flex-wrap gap-2">
         <Link
           href={localizedPath(locale, "/")}
-          className={buttonVariants({ variant: "outline" })}
+          className={buttonVariants({ variant: "secondary" })}
         >
           {copy.emptyPrimary}
         </Link>
@@ -480,7 +480,7 @@ function PublicFeedError({
       <div className="flex flex-wrap gap-2">
         <Link
           href={buildPublicFeedHref(locale, { ...request, cursor: null })}
-          className={buttonVariants({ variant: "outline" })}
+          className={buttonVariants({ variant: "secondary" })}
         >
           {copy.retry}
         </Link>
@@ -514,7 +514,7 @@ function FeedPagination({
             ...request,
             cursor: feed.nextCursor,
           })}
-          className={buttonVariants({ variant: "outline" })}
+          className={buttonVariants({ variant: "secondary" })}
         >
           {copy.loadMore}
           <ArrowRight data-icon="inline-end" aria-hidden="true" />

@@ -94,14 +94,14 @@ export function SignOutProvider({
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={cancelSignOutConfirmation}
             >
               {copy.confirmationCancel}
             </Button>
             <Button
               type="button"
-              variant="destructive"
+              variant="danger"
               data-sign-out-confirm-action="true"
               onClick={confirmSignOut}
             >

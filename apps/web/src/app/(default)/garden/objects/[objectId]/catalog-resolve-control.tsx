@@ -26,6 +26,7 @@ import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 import { materializeCatalogNodeAction } from "../../catalog-full-catalogue-actions";
 import { recordCatalogPickEventAction } from "../../catalog-pick-event-actions";
 import { recordCatalogSearchMissAction } from "../../catalog-search-miss-actions";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 interface CatalogResolveControlProps {
   locale: InterfaceLocale;
@@ -91,14 +92,12 @@ export function CatalogResolveControl({
       </div>
 
       <OwnerScopedActionForm action={action} className="grid min-w-0 gap-3">
-        <input type="hidden" name="objectId" value={objectId} />
-        <input
-          type="hidden"
+        <HiddenField name="objectId" value={objectId} />
+        <HiddenField
           name="catalogItemId"
           value={catalogItemIdForSelection(selection) ?? ""}
         />
-        <input
-          type="hidden"
+        <HiddenField
           name="catalogLabel"
           value={catalogLabelForSelection(selection) ?? ""}
         />

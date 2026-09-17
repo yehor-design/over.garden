@@ -37,7 +37,7 @@ export function ErasureRequestsShell({
         navigation={
           <Link
             href="/garden"
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "secondary" })}
           >
             {operatorCopy.common.backToJournal}
           </Link>

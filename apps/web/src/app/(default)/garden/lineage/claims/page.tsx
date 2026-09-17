@@ -33,6 +33,7 @@ import {
   confirmLineageClaimAction,
   declineLineageClaimAction,
 } from "./actions";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOwnerLineageCopy(await getRequestInterfaceLocale());
@@ -215,7 +216,7 @@ function LineageClaimCard({
       {writeEnabled ? (
         <div className="flex flex-wrap gap-3 border-t border-border pt-3">
           <OwnerScopedActionForm action={confirmLineageClaimAction}>
-            <input type="hidden" name="edgeId" value={claim.id} />
+            <HiddenField name="edgeId" value={claim.id} />
             <button
               type="submit"
               className={buttonVariants({ className: "self-start" })}
@@ -224,11 +225,11 @@ function LineageClaimCard({
             </button>
           </OwnerScopedActionForm>
           <OwnerScopedActionForm action={declineLineageClaimAction}>
-            <input type="hidden" name="edgeId" value={claim.id} />
+            <HiddenField name="edgeId" value={claim.id} />
             <button
               type="submit"
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "self-start",
               })}
             >

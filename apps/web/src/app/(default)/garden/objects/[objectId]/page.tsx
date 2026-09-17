@@ -78,6 +78,11 @@ import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
 import { ObjectProgressMoment } from "./object-progress-moment";
 import { SaveProgressMoment } from "../../save-progress-moment";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 interface PlantObjectPageProps {
   params: Promise<{ objectId: string }>;
@@ -481,21 +486,17 @@ function OwnerEntryActions({
           action={deleteJournalEntryAction}
           className="flex w-full flex-col gap-3 pt-1"
         >
-          <input type="hidden" name="entryId" value={entry.id} />
-          <input type="hidden" name="objectId" value={objectId} />
-          <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-            <input
-              type="checkbox"
-              name="deleteAccepted"
-              required
-              className="mt-1 size-4 rounded border-border"
-            />
-            <span>{actionCopy.deleteDisclosure}</span>
-          </label>
+          <HiddenField name="entryId" value={entry.id} />
+          <HiddenField name="objectId" value={objectId} />
+          <Checkbox
+            name="deleteAccepted"
+            required
+            label={actionCopy.deleteDisclosure}
+          />
           <button
             type="submit"
             className={buttonVariants({
-              variant: "destructive",
+              variant: "danger",
               size: "sm",
               className: "self-start",
             })}
@@ -546,27 +547,25 @@ function ProvenanceSection({
               action={createProvenanceEdgeAction}
               className="grid min-w-0 gap-3 rounded-md border border-border p-3"
             >
-              <input type="hidden" name="objectId" value={objectId} />
-              <input type="hidden" name="sourceKind" value="own_object" />
-              <input
-                type="hidden"
+              <HiddenField name="objectId" value={objectId} />
+              <HiddenField name="sourceKind" value="own_object" />
+              <HiddenField
                 name="clientMutationId"
                 value={crypto.randomUUID()}
               />
-              <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-                {provenanceCopy.sourceObject}
-                <select
-                  name="sourcePlantObjectId"
-                  required
-                  className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
-                >
+              <Field
+                label={provenanceCopy.sourceObject}
+                required
+                className="min-w-0"
+              >
+                <Select name="sourcePlantObjectId">
                   {provenancePanel.sourceObjectOptions.map((option) => (
                     <option key={option.id} value={option.id}>
                       {lineageObjectOptionLabel(option, provenanceCopy)}
                     </option>
                   ))}
-                </select>
-              </label>
+                </Select>
+              </Field>
               <button
                 type="submit"
                 className={buttonVariants({ className: "justify-self-start" })}
@@ -584,21 +583,18 @@ function ProvenanceSection({
             action={createProvenanceEdgeAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
-            <input type="hidden" name="objectId" value={objectId} />
-            <input type="hidden" name="sourceKind" value="source_reference" />
-            <input
-              type="hidden"
+            <HiddenField name="objectId" value={objectId} />
+            <HiddenField name="sourceKind" value="source_reference" />
+            <HiddenField
               name="clientMutationId"
               value={crypto.randomUUID()}
             />
-            <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-              {provenanceCopy.sourceType}
-              <select
-                name="sourceReferenceKind"
-                required
-                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
-                defaultValue="person"
-              >
+            <Field
+              label={provenanceCopy.sourceType}
+              required
+              className="min-w-0"
+            >
+              <Select name="sourceReferenceKind" defaultValue="person">
                 <option value="person">
                   {provenanceCopy.sourceTypes.person}
                 </option>
@@ -614,18 +610,19 @@ function ProvenanceSection({
                 <option value="other">
                   {provenanceCopy.sourceTypes.other}
                 </option>
-              </select>
-            </label>
-            <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-              {provenanceCopy.privateSourceLabel}
-              <input
+              </Select>
+            </Field>
+            <Field
+              label={provenanceCopy.privateSourceLabel}
+              required
+              className="min-w-0"
+            >
+              <Input
                 name="sourceReferenceLabel"
-                required
                 maxLength={120}
-                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 placeholder={provenanceCopy.privateSourcePlaceholder}
               />
-            </label>
+            </Field>
             <p className="text-xs leading-5 text-muted-foreground">
               {provenanceCopy.contactFree}
             </p>
@@ -641,22 +638,22 @@ function ProvenanceSection({
             action={createLineageInvitationAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
-            <input type="hidden" name="objectId" value={objectId} />
-            <input
-              type="hidden"
+            <HiddenField name="objectId" value={objectId} />
+            <HiddenField
               name="clientMutationId"
               value={crypto.randomUUID()}
             />
-            <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-              {provenanceCopy.invitedSourceLabel}
-              <input
+            <Field
+              label={provenanceCopy.invitedSourceLabel}
+              required
+              className="min-w-0"
+            >
+              <Input
                 name="pendingSourceLabel"
-                required
                 maxLength={120}
-                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 placeholder={provenanceCopy.invitedSourcePlaceholder}
               />
-            </label>
+            </Field>
             <p className="text-xs leading-5 text-muted-foreground">
               {provenanceCopy.invitationHelp}
             </p>

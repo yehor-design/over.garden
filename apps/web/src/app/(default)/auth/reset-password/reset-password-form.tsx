@@ -12,6 +12,8 @@ import {
 import { authClient } from "@/lib/auth-client";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 export function ResetPasswordForm({
   locale = "uk",
@@ -84,37 +86,29 @@ export function ResetPasswordForm({
         <p className="text-sm text-muted-foreground">{copy.description}</p>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">{copy.newPassword}</span>
-        <input
+      <Field label={copy.newPassword} id="reset-new-password" required>
+        <Input
           type="password"
           autoComplete="new-password"
           value={password}
           onChange={(event) => {
             setPassword(event.target.value);
           }}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           minLength={8}
-          required
         />
-      </label>
+      </Field>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">
-          {copy.confirmPassword}
-        </span>
-        <input
+      <Field label={copy.confirmPassword} id="reset-confirm-password" required>
+        <Input
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
           onChange={(event) => {
             setConfirmPassword(event.target.value);
           }}
-          className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           minLength={8}
-          required
         />
-      </label>
+      </Field>
 
       <Button type="button" onClick={resetPassword} disabled={isPending}>
         {isPending ? copy.pending : copy.submit}

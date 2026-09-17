@@ -30,6 +30,7 @@ import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { unblockProfileAction } from "./actions";
 import { OwnerProfileEditor } from "./owner-profile-editor";
 import { COPY, GARDEN_PROFILE_PATH, ProfileShell } from "./profile-shell";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestInterfaceLocale();
@@ -216,11 +217,11 @@ async function ProfileSections({
                   </p>
                 </div>
                 <OwnerScopedActionForm action={unblockProfileAction}>
-                  <input type="hidden" name="blockId" value={profile.blockId} />
+                  <HiddenField name="blockId" value={profile.blockId} />
                   <button
                     type="submit"
                     className={buttonVariants({
-                      variant: "outline",
+                      variant: "secondary",
                       size: "sm",
                     })}
                   >

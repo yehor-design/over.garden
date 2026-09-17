@@ -182,7 +182,7 @@ function CatalogKindNavigation({
             })}
             aria-current={active ? "page" : undefined}
             className={buttonVariants({
-              variant: active ? "default" : "ghost",
+              variant: active ? "primary" : "ghost",
               size: "sm",
               className: "shrink-0",
             })}
@@ -225,7 +225,7 @@ function CatalogIdentityNavigation({
             })}
             aria-current={active ? "page" : undefined}
             className={buttonVariants({
-              variant: active ? "secondary" : "outline",
+              variant: active ? "subtle" : "secondary",
               size: "sm",
               className: "shrink-0",
             })}
@@ -328,7 +328,7 @@ function PublicObjectCatalogCardView({
         <footer className="mt-auto flex flex-wrap gap-2 border-t border-border pt-3">
           <Link
             href={card.representativeObject.path}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.openPassport}
           </Link>
@@ -365,7 +365,7 @@ function CatalogPagination({
             ...page.request,
             page: page.request.page - 1,
           })}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <ArrowLeft aria-hidden="true" />
           {copy.previousPage}
@@ -382,7 +382,7 @@ function CatalogPagination({
             ...page.request,
             page: page.request.page + 1,
           })}
-          className={buttonVariants({ variant: "outline", size: "sm" })}
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           {copy.nextPage}
           <ArrowRight aria-hidden="true" />
@@ -410,7 +410,7 @@ function CatalogEmpty({
       </p>
       <Link
         href={localizedPath(locale, "/objects")}
-        className={buttonVariants({ variant: "outline" })}
+        className={buttonVariants({ variant: "secondary" })}
       >
         {copy.resetFilters}
       </Link>
@@ -436,7 +436,7 @@ function CatalogError({
       </p>
       <Link
         href={buildPublicObjectCatalogHref(locale, request)}
-        className={buttonVariants({ variant: "outline" })}
+        className={buttonVariants({ variant: "secondary" })}
       >
         {copy.retry}
       </Link>

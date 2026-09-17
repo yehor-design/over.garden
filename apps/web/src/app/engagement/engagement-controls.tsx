@@ -20,6 +20,9 @@ import type {
   EngagementLikeState,
   EngagementToggleState,
 } from "./engagement-actions";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Field } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
 
 /**
  * The interactive half of the public engagement panel.
@@ -117,7 +120,7 @@ function LikeButton({
         type="submit"
         aria-pressed={liked}
         className={buttonVariants({
-          variant: liked ? "default" : "outline",
+          variant: liked ? "primary" : "secondary",
           className: "self-start",
         })}
       >
@@ -275,7 +278,7 @@ function ToggleButton({
       autoFocus={autoFocus}
       aria-pressed={shown}
       className={buttonVariants({
-        variant: "outline",
+        variant: "secondary",
         className: "self-start",
       })}
     >
@@ -334,14 +337,12 @@ export function EngagementCommentForm({
       key={state.submitted ? "sent" : "draft"}
     >
       <TargetFields targetKind={targetKind} targetRef={targetRef} />
-      <input type="hidden" name="clientMutationId" value={clientMutationId} />
+      <HiddenField name="clientMutationId" value={clientMutationId} />
       {parentCommentId ? (
-        <input type="hidden" name="parentCommentId" value={parentCommentId} />
+        <HiddenField name="parentCommentId" value={parentCommentId} />
       ) : null}
-      <label className="grid gap-2 text-sm font-medium text-foreground">
-        {labels.field}
-        <textarea
-          id={fieldId}
+      <Field label={labels.field} id={fieldId}>
+        <Textarea
           data-auth-intent-control="comment"
           data-auth-intent-control-ref={controlRef}
           autoFocus={autoFocus}
@@ -349,14 +350,14 @@ export function EngagementCommentForm({
           defaultValue=""
           maxLength={600}
           rows={compact ? 2 : 3}
-          className={`${compact ? "min-h-16" : "min-h-24"} rounded-md border border-border bg-background px-3 py-2 text-sm leading-6 text-foreground shadow-sm transition-colors outline-none placeholder:text-muted-foreground focus:border-primary`}
+          className={compact ? "min-h-16" : "min-h-24"}
         />
-      </label>
+      </Field>
       <button
         type="submit"
         className={buttonVariants({
-          variant: compact ? "outline" : "default",
-          size: compact ? "sm" : "default",
+          variant: compact ? "secondary" : "primary",
+          size: compact ? "sm" : "md",
           className: "self-start",
         })}
       >
@@ -392,7 +393,7 @@ export function EngagementCommentActionButton({
   commentId: string;
   label: string;
   icon: ReactNode;
-  variant?: "ghost" | "outline";
+  variant?: "ghost" | "secondary";
   children?: ReactNode;
   labels: {
     unavailable: string;
@@ -412,7 +413,7 @@ export function EngagementCommentActionButton({
   return (
     <form action={formAction} className="grid gap-2">
       <TargetFields targetKind={targetKind} targetRef={targetRef} />
-      <input type="hidden" name="commentId" value={commentId} />
+      <HiddenField name="commentId" value={commentId} />
       {children}
       <button
         type="submit"
@@ -441,8 +442,8 @@ function TargetFields({
 }) {
   return (
     <>
-      <input type="hidden" name="targetKind" value={targetKind} />
-      <input type="hidden" name="targetRef" value={targetRef} />
+      <HiddenField name="targetKind" value={targetKind} />
+      <HiddenField name="targetRef" value={targetRef} />
     </>
   );
 }

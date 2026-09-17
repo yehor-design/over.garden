@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -12,6 +12,12 @@ import type {
   PublicObjectCatalogIdentityState,
   PublicObjectCatalogKind,
 } from "@/server/public-object-catalog-repository";
+import { HiddenField } from "@/components/ui/hidden-field";
+import {
+  ComboboxClear,
+  ComboboxInput,
+  ComboboxRoot,
+} from "@/components/ui/combobox";
 
 interface PublicObjectSuggestion {
   key: string;
@@ -90,29 +96,21 @@ export function PublicObjectCatalogSearch({
       role="search"
       className="relative grid gap-2"
     >
-      {kind !== "all" ? <input type="hidden" name="kind" value={kind} /> : null}
+      {kind !== "all" ? <HiddenField name="kind" value={kind} /> : null}
       {identity !== "all" ? (
-        <input type="hidden" name="identity" value={identity} />
+        <HiddenField name="identity" value={identity} />
       ) : null}
       <label htmlFor={`${listboxId}-input`} className="text-sm font-medium">
         {copy.searchLabel}
       </label>
       <div className="flex min-w-0 gap-2">
-        <div className="relative min-w-0 flex-1">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <input
+        <ComboboxRoot className="min-w-0 flex-1">
+          <ComboboxInput
             id={`${listboxId}-input`}
             name="q"
-            type="search"
-            role="combobox"
-            aria-autocomplete="list"
             aria-expanded={suggestions.length > 0}
             aria-controls={listboxId}
             aria-busy={status === "loading"}
-            autoComplete="off"
             maxLength={120}
             value={value}
             onChange={(event) => {
@@ -124,21 +122,11 @@ export function PublicObjectCatalogSearch({
               }
             }}
             placeholder={copy.searchPlaceholder}
-            className="h-11 w-full rounded-md border border-input bg-background pr-14 pl-9 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10 sm:pr-10 sm:text-sm"
           />
           {value ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              onClick={clear}
-              aria-label={copy.clearSearch}
-              className="absolute top-1/2 right-0 -translate-y-1/2 sm:right-1.5"
-            >
-              <X aria-hidden="true" />
-            </Button>
+            <ComboboxClear type="button" onClick={clear} label={copy.clearSearch} />
           ) : null}
-        </div>
+        </ComboboxRoot>
         <Button
           type="submit"
           aria-label={copy.searchSubmit}

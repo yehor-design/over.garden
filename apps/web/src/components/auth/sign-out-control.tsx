@@ -22,7 +22,7 @@ export function SignOutControl({
   return (
     <Button
       type="button"
-      variant={presentation === "menu" ? "ghost" : "outline"}
+      variant={presentation === "menu" ? "ghost" : "secondary"}
       data-sign-out-control={presentation}
       data-sign-out-phase={phase}
       className={cn(

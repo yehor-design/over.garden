@@ -35,6 +35,9 @@ import type {
 } from "@/server/public-journal-directory-repository";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
+import { Field } from "@/components/ui/field";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 
 export { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 
@@ -101,26 +104,27 @@ export function PublicJournalDirectory({
         aria-label={copy.filtersLabel}
         className="grid gap-4 border-b border-border py-4"
       >
-        <label className="grid gap-1.5 text-sm font-medium text-foreground">
-          <span>{copy.searchLabel}</span>
-          <span className="flex min-w-0 gap-2">
-            <input
-              type="search"
+        <div className="grid items-end gap-2 sm:flex">
+          <Field
+            label={copy.searchLabel}
+            id="journal-directory-search"
+            className="min-w-0 flex-1"
+          >
+            <SearchInput
               name="q"
               defaultValue={page.request.query}
               maxLength={120}
               placeholder={copy.searchPlaceholder}
-              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
-            <button
-              type="submit"
-              className={buttonVariants({ variant: "default" })}
-            >
-              <Search aria-hidden="true" />
-              {copy.searchSubmit}
-            </button>
-          </span>
-        </label>
+          </Field>
+          <button
+            type="submit"
+            className={buttonVariants({ variant: "primary" })}
+          >
+            <Search aria-hidden="true" />
+            {copy.searchSubmit}
+          </button>
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <FilterSelect
@@ -192,7 +196,7 @@ export function PublicJournalDirectory({
         <button
           type="submit"
           className={buttonVariants({
-            variant: "outline",
+            variant: "secondary",
             className: "w-fit",
           })}
         >
@@ -297,20 +301,15 @@ function FilterSelect({
   options: Array<{ value: string; label: string }>;
 }) {
   return (
-    <label className="grid min-w-0 gap-1.5 text-xs font-medium text-muted-foreground">
-      <span>{label}</span>
-      <select
-        name={name}
-        defaultValue={value}
-        className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+    <Field label={label} className="min-w-0">
+      <Select name={name} defaultValue={value}>
         {options.map((option) => (
           <option key={`${name}:${option.value}`} value={option.value}>
             {option.label}
           </option>
         ))}
-      </select>
-    </label>
+      </Select>
+    </Field>
   );
 }
 
@@ -431,7 +430,7 @@ function JournalResult({
           )}
           <Link
             href={entryHref}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.readEntry}
             <ArrowRight data-icon="inline-end" aria-hidden="true" />
@@ -535,7 +534,7 @@ function DirectoryEmpty({
       </p>
       <Link
         href={buildPublicJournalDirectoryHref(locale, defaultRequest())}
-        className={buttonVariants({ variant: "outline" })}
+        className={buttonVariants({ variant: "secondary" })}
       >
         {copy.resetFilters}
       </Link>
@@ -562,7 +561,7 @@ function DirectoryError({
       </p>
       <Link
         href={buildPublicJournalDirectoryHref(locale, request)}
-        className={buttonVariants({ variant: "outline" })}
+        className={buttonVariants({ variant: "secondary" })}
       >
         {copy.retry}
       </Link>
@@ -611,7 +610,7 @@ function DirectoryPagination({
               ...page.request,
               page: page.request.page + 1,
             })}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.loadMore}
             <ArrowRight data-icon="inline-end" aria-hidden="true" />

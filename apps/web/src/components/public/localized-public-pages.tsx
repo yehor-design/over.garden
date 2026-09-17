@@ -165,7 +165,7 @@ export function LocalizedBlogIndexPage({
             <Link
               href={localizedPath(locale, post.path)}
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "self-start",
               })}
             >

@@ -37,7 +37,10 @@ export function ObjectShell({
       eyebrow={copy.object.gardenJournal}
       title={copy.object.livingObject}
       navigation={
-        <Link href="/garden" className={buttonVariants({ variant: "outline" })}>
+        <Link
+          href="/garden"
+          className={buttonVariants({ variant: "secondary" })}
+        >
           {copy.object.backToJournal}
         </Link>
       }

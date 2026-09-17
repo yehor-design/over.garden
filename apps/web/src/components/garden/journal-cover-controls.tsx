@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { SubjectAwareHtmlImage } from "@/components/media/subject-aware-media-image";
 import type { JournalImageUiState } from "./lexical-journal/journal-lexical-image-node";
+import { FileDrop } from "@/components/ui/file-drop";
 
 export interface JournalCoverControlsCopy {
   sectionLabel: string;
@@ -190,7 +191,7 @@ export function JournalCoverControls({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               disabled={disabled}
               onClick={() =>
                 onRetrySelectedLocal(selection.mediaAssetId!)
@@ -205,7 +206,7 @@ export function JournalCoverControls({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          variant={selection.mode === "automatic" ? "default" : "outline"}
+          variant={selection.mode === "automatic" ? "primary" : "secondary"}
           size="sm"
           disabled={disabled || uploading}
           onClick={() => onChange({ mode: "automatic" })}
@@ -214,7 +215,7 @@ export function JournalCoverControls({
         </Button>
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           size="sm"
           disabled={disabled || uploading}
           onClick={() => fileInputRef.current?.click()}
@@ -240,7 +241,7 @@ export function JournalCoverControls({
         )}
         <Button
           type="button"
-          variant={selection.mode === "none" ? "default" : "ghost"}
+          variant={selection.mode === "none" ? "primary" : "ghost"}
           size="sm"
           disabled={isJournalMediaWaitSafeControlDisabled(disabled)}
           onClick={() => onChange({ mode: "none" })}
@@ -249,14 +250,12 @@ export function JournalCoverControls({
         </Button>
       </div>
 
-      <input
+      <FileDrop
         ref={fileInputRef}
         id={inputId}
-        type="file"
         accept={COMPOSER_PHOTO_ACCEPT}
-        className="sr-only"
         disabled={disabled || uploading}
-        aria-label={copy.uploadSeparate}
+        label={copy.uploadSeparate}
         onChange={(event) => {
           const file = event.target.files?.[0] ?? null;
           event.target.value = "";
@@ -332,7 +331,7 @@ export function JournalCoverControls({
             <Button
               type="button"
               size="sm"
-              variant="outline"
+              variant="secondary"
               onClick={() => onResolveInlineRemoval("remove_everywhere")}
             >
               {copy.removeEverywhere}

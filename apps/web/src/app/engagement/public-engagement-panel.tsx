@@ -48,6 +48,8 @@ import type {
 } from "@/server/engagement-repository";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { publicProfileBasePath } from "@/lib/garden/public-paths";
+import { iconButtonVariants } from "@/components/ui/icon-button";
+import { Select } from "@/components/ui/select";
 
 interface PublicEngagementPanelProps {
   isAuthenticated: boolean;
@@ -98,7 +100,7 @@ export function EngagementFollowControl({
         target={engagementAuthIntentTarget(target)}
         label={label}
         icon={icon}
-        variant="outline"
+        variant="secondary"
       />
     );
   }
@@ -182,7 +184,7 @@ export function PublicEngagementPanel({
               target={intentTarget}
               label={copy.engagement.bookmark}
               icon={<Bookmark className="size-4" />}
-              variant="outline"
+              variant="secondary"
             />
           )}
           {target.kind === "lineage_object" || target.kind === "topic" ? (
@@ -323,7 +325,7 @@ export function PublicEngagementPanel({
                     control={replyControl}
                     label={copy.engagement.reply}
                     icon={<Reply className="size-4" />}
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     className="w-fit"
                   />
@@ -338,7 +340,7 @@ export function PublicEngagementPanel({
         <Link
           href={appendCommentCursor(returnTo, summary.nextCommentCursor)}
           className={buttonVariants({
-            variant: "outline",
+            variant: "secondary",
             className: "w-fit",
           })}
         >
@@ -434,9 +436,8 @@ function CommentActions({
     >
       <summary
         title={copy.engagement.moreActions}
-        className={buttonVariants({
+        className={iconButtonVariants({
           variant: "ghost",
-          size: "icon",
           className: "cursor-pointer list-none",
         })}
       >
@@ -459,11 +460,11 @@ function CommentActions({
               }}
               submit={reportCommentAction}
             >
-              <select
+              <Select
                 name="reason"
+                size="sm"
                 defaultValue="other"
                 aria-label={copy.engagement.reportComment}
-                className="h-9 border border-border bg-background px-2 text-sm"
               >
                 <option value="spam">
                   {copy.engagement.reportReasons.spam}
@@ -480,7 +481,7 @@ function CommentActions({
                 <option value="other">
                   {copy.engagement.reportReasons.other}
                 </option>
-              </select>
+              </Select>
             </EngagementCommentActionButton>
             <EngagementCommentActionButton
               targetKind={target.kind}

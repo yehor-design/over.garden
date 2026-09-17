@@ -70,7 +70,7 @@ export default async function ContributionDiscussionRoute({
         </p>
         <Link
           href={localizedPath(locale, publicCommunityPath(slug))}
-          className={buttonVariants({ variant: "outline", className: "w-fit" })}
+          className={buttonVariants({ variant: "secondary", className: "w-fit" })}
         >
           {copy.backToCommunity}
         </Link>

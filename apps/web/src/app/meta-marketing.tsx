@@ -128,7 +128,7 @@ export function MetaMarketingPrivacyControls({
         <Button
           type="button"
           size="sm"
-          variant="outline"
+          variant="secondary"
           onClick={() => setConsent("declined")}
         >
           {copy.turnOff}
@@ -213,7 +213,7 @@ function MetaMarketingConsentBanner({
         <Button onClick={onAccept} size="sm" type="button">
           {copy.allow}
         </Button>
-        <Button onClick={onDecline} size="sm" type="button" variant="outline">
+        <Button onClick={onDecline} size="sm" type="button" variant="secondary">
           {copy.keepOff}
         </Button>
       </div>

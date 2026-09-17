@@ -62,6 +62,7 @@ import { FirstEntryComposer } from "../first-entry-composer";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { GardenWorkspaceView } from "../garden-workspace-view";
 import { SaveProgressMoment } from "../save-progress-moment";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 type GardenSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
@@ -374,7 +375,7 @@ function GuestGardenEntry({
             <Link
               href={localizedPath(locale, "/journals")}
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "justify-start",
               })}
             >
@@ -384,7 +385,7 @@ function GuestGardenEntry({
             <Link
               href={localizedPath(locale, "/objects")}
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "justify-start",
               })}
             >
@@ -394,7 +395,7 @@ function GuestGardenEntry({
             <Link
               href={localizedPath(locale, "/knowledge")}
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "justify-start",
               })}
             >
@@ -674,14 +675,9 @@ function PendingWishlistIntentPanel({
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <OwnerScopedActionForm action={addCatalogPublicSlugToWishlistAction}>
-          <input
-            type="hidden"
-            name="catalogPublicSlug"
-            value={item.publicSlug}
-          />
-          <input type="hidden" name="locale" value={locale} />
-          <input
-            type="hidden"
+          <HiddenField name="catalogPublicSlug" value={item.publicSlug} />
+          <HiddenField name="locale" value={locale} />
+          <HiddenField
             name="returnTo"
             value={localizedPath(locale, "/wishlist")}
           />
@@ -691,7 +687,7 @@ function PendingWishlistIntentPanel({
         </OwnerScopedActionForm>
         <Link
           href={gardenFirstEntryPreselectionPath(item.publicSlug)}
-          className={buttonVariants({ variant: "outline" })}
+          className={buttonVariants({ variant: "secondary" })}
         >
           <CirclePlus aria-hidden="true" />
           {copy.startFirstEntry}

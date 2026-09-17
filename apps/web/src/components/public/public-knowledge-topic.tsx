@@ -60,7 +60,7 @@ export function PublicKnowledgeTopicPage({
         <Link
           href={knowledgeHubPath(locale)}
           className={buttonVariants({
-            variant: "outline",
+            variant: "secondary",
             size: "sm",
             className: "w-fit",
           })}

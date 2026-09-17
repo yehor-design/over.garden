@@ -61,7 +61,7 @@ export function PublicKnowledgeEvidenceList({
         {evidence.totalCount > 0 ? (
           <Link
             href={evidence.allEvidencePath}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.viewAllEvidence}
             <ArrowRight aria-hidden="true" />
@@ -91,7 +91,7 @@ export function PublicKnowledgeEvidenceList({
           <Link
             href={localizedPath(locale, "/knowledge")}
             className={buttonVariants({
-              variant: "outline",
+              variant: "secondary",
               size: "sm",
               className: "w-fit",
             })}

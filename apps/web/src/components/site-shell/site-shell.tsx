@@ -21,7 +21,8 @@ import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
 import { OtherLanguageNotice } from "@/components/public/other-language-notice";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { IconButton, iconButtonVariants } from "@/components/ui/icon-button";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -188,11 +189,11 @@ export function SiteShell({
                   <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                     <SheetTrigger
                       render={
-                        <Button
+                        <IconButton
                           variant="ghost"
-                          size="icon-lg"
+                          size="lg"
                           data-cwv-interaction-target="site-menu"
-                          aria-label={navigation.labels.openMenu}
+                          label={navigation.labels.openMenu}
                           className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
                         />
                       }
@@ -212,10 +213,9 @@ export function SiteShell({
                       </SheetHeader>
                       <SheetClose
                         render={
-                          <Button
+                          <IconButton
                             variant="ghost"
-                            size="icon"
-                            aria-label={navigation.labels.closeMenu}
+                            label={navigation.labels.closeMenu}
                             className="absolute top-3 right-3"
                           />
                         }
@@ -293,9 +293,8 @@ export function SiteShell({
                           <Link
                             href={navigation.searchHref}
                             aria-label={navigation.labels.search}
-                            className={buttonVariants({
+                            className={iconButtonVariants({
                               variant: "ghost",
-                              size: "icon",
                               className:
                                 "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
                             })}
@@ -323,9 +322,8 @@ export function SiteShell({
                                     (item) => item.key === "add-update",
                                   )?.label ?? ""
                                 }
-                                className={buttonVariants({
+                                className={iconButtonVariants({
                                   variant: "ghost",
-                                  size: "icon",
                                   className:
                                     "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
                                 })}
@@ -363,11 +361,10 @@ export function SiteShell({
                         >
                           <SheetTrigger
                             render={
-                              <Button
+                              <IconButton
                                 variant="ghost"
-                                size="icon"
                                 data-site-shell-account-menu-trigger="true"
-                                aria-label={signOutCopy.openAccountMenu}
+                                label={signOutCopy.openAccountMenu}
                                 className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
                               />
                             }
@@ -393,7 +390,7 @@ export function SiteShell({
                                   <Link
                                     href="/garden/profile"
                                     className={buttonVariants({
-                                      variant: "outline",
+                                      variant: "secondary",
                                       className: "justify-start",
                                     })}
                                   />
@@ -446,9 +443,8 @@ export function SiteShell({
                                 data-site-shell-action="sign-in-mobile"
                                 href={navigation.signIn.href}
                                 aria-label={navigation.signIn.label}
-                                className={buttonVariants({
+                                className={iconButtonVariants({
                                   variant: "ghost",
-                                  size: "icon",
                                   className:
                                     "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
                                 })}
@@ -467,7 +463,7 @@ export function SiteShell({
                           data-site-shell-action="sign-in"
                           href={navigation.signIn.href}
                           className={buttonVariants({
-                            variant: "outline",
+                            variant: "secondary",
                             size: "sm",
                             className:
                               "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
@@ -552,7 +548,7 @@ export function SiteShell({
                       <Link
                         href={context.secondaryHref}
                         className={buttonVariants({
-                          variant: "outline",
+                          variant: "secondary",
                           className: "justify-start",
                         })}
                       >
@@ -614,7 +610,7 @@ export function SiteShellOperatorMenu({
             <Link
               href={item.href}
               className={buttonVariants({
-                variant: "outline",
+                variant: "secondary",
                 className: "w-full justify-start",
               })}
               onClick={onNavigate}
@@ -647,7 +643,7 @@ function GuestMutationActions({
         returnTo="/garden"
         label={addObjectLabel}
         icon={<CirclePlus aria-hidden="true" />}
-        variant="outline"
+        variant="secondary"
         size="sm"
         formClassName="w-full"
         className="w-full justify-start"

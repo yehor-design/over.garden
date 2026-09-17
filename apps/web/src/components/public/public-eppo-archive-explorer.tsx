@@ -11,6 +11,9 @@ import type {
   EppoArchivePage,
   PublicEppoSourceRecord,
 } from "@/server/catalog-source/public-eppo-explorer-repository";
+import { Field } from "@/components/ui/field";
+import { SearchInput } from "@/components/ui/search-input";
+import { Select } from "@/components/ui/select";
 
 export type EppoArchiveExplorerState =
   | "loading"
@@ -106,7 +109,7 @@ export function EppoArchiveExplorer({
               ...page.request,
               cursor: page.nextCursor,
             })}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.next}
           </Link>
@@ -163,7 +166,7 @@ export function EppoArchiveDetail({
           data-eppo-canonical-card
           href={canonicalCard.publicPath}
           className={buttonVariants({
-            variant: "outline",
+            variant: "secondary",
             size: "sm",
             className: "mt-3 w-fit",
           })}
@@ -198,7 +201,7 @@ export function EppoArchiveNotFound({ locale }: { locale: PublicLocale }) {
         <form>
           <button
             type="submit"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.retry}
           </button>
@@ -229,33 +232,25 @@ function ExplorerSearch({
       method="get"
       className="grid gap-3 py-5 sm:grid-cols-3"
     >
-      <label className="grid gap-1 text-sm font-medium text-foreground">
-        {copy.searchLabel}
-        <input
+      <Field label={copy.searchLabel} id="eppo-archive-search">
+        <SearchInput
           name="q"
-          type="search"
           defaultValue={page.request.query}
           minLength={2}
           maxLength={120}
           placeholder={copy.searchPlaceholder}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
         />
-      </label>
-      <label className="grid gap-1 text-sm font-medium text-foreground">
-        {copy.kindLabel}
-        <select
-          name="kind"
-          defaultValue={page.request.kind}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-        >
+      </Field>
+      <Field label={copy.kindLabel}>
+        <Select name="kind" defaultValue={page.request.kind}>
           <option value="all">{copy.kinds.all}</option>
           <option value="plant">{copy.kinds.plant}</option>
           <option value="animal">{copy.kinds.animal}</option>
-        </select>
-      </label>
+        </Select>
+      </Field>
       <button
         type="submit"
-        className={buttonVariants({ size: "default", className: "self-end" })}
+        className={buttonVariants({ size: "md", className: "self-end" })}
       >
         {copy.searchButton}
       </button>
@@ -418,7 +413,7 @@ function ExplorerMessage({
       <p>{text}</p>
       <Link
         href={retryHref}
-        className={buttonVariants({ variant: "outline", size: "sm" })}
+        className={buttonVariants({ variant: "secondary", size: "sm" })}
       >
         {retryLabel}
       </Link>

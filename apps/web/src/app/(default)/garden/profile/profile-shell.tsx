@@ -67,7 +67,7 @@ export function ProfileShell({
         navigation={
           <Link
             href="/garden"
-            className={buttonVariants({ variant: "outline", size: "sm" })}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
             data-testid="profile-return-navigation"
           >
             <ArrowLeft aria-hidden="true" />

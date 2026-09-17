@@ -48,6 +48,7 @@ import {
   revertCatalogActionAction,
   skipCatalogQueueItemAction,
 } from "./actions";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export const CATALOG_QUEUE_PATH = "/garden/catalog/queue";
 
@@ -271,7 +272,7 @@ async function CatalogQueueSection({
               <Link
                 href={queueHref(previousItem.id)}
                 data-catalog-queue-nav="previous"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.queue.previousItem}
               </Link>
@@ -280,7 +281,7 @@ async function CatalogQueueSection({
               <Link
                 href={queueHref(nextItem.id)}
                 data-catalog-queue-nav="next"
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.queue.nextItem}
               </Link>
@@ -374,7 +375,7 @@ function CurrentDecision({
               </p>
               <Link
                 href={`${CATALOG_QUEUE_PATH}?confirm=merge`}
-                className={buttonVariants({ variant: "outline" })}
+                className={buttonVariants({ variant: "secondary" })}
                 data-catalog-queue-action="confirm"
               >
                 {copy.queue.confirmMerge}
@@ -382,16 +383,15 @@ function CurrentDecision({
             </>
           ) : (
             <OwnerScopedProgressiveForm action={acceptCatalogQueueItemAction}>
-              <input type="hidden" name="queueItemId" value={item.id} />
+              <HiddenField name="queueItemId" value={item.id} />
               {item.itemType === "node_merge" && item.subject ? (
-                <input
-                  type="hidden"
+                <HiddenField
                   name="mergeSubjectCatalogItemId"
                   value={item.subject.catalogItemId}
                 />
               ) : null}
               {confirmMerge ? (
-                <input type="hidden" name="confirmMerge" value="yes" />
+                <HiddenField name="confirmMerge" value="yes" />
               ) : null}
               <button
                 type="submit"
@@ -403,21 +403,21 @@ function CurrentDecision({
             </OwnerScopedProgressiveForm>
           )}
           <OwnerScopedProgressiveForm action={rejectCatalogQueueItemAction}>
-            <input type="hidden" name="queueItemId" value={item.id} />
+            <HiddenField name="queueItemId" value={item.id} />
             <button
               type="submit"
               data-catalog-queue-action="reject"
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               {copy.queue.reject}
             </button>
           </OwnerScopedProgressiveForm>
           <OwnerScopedProgressiveForm action={skipCatalogQueueItemAction}>
-            <input type="hidden" name="queueItemId" value={item.id} />
+            <HiddenField name="queueItemId" value={item.id} />
             <button
               type="submit"
               data-catalog-queue-action="skip"
-              className={buttonVariants({ variant: "outline" })}
+              className={buttonVariants({ variant: "secondary" })}
             >
               {copy.queue.skip}
             </button>
@@ -555,11 +555,11 @@ function AutomaticList({
                 </span>
               ) : canMutate ? (
                 <OwnerScopedProgressiveForm action={revertCatalogActionAction}>
-                  <input type="hidden" name="actionId" value={action.actionId} />
+                  <HiddenField name="actionId" value={action.actionId} />
                   <button
                     type="submit"
                     data-catalog-automatic-undo={action.actionId}
-                    className={buttonVariants({ variant: "outline", size: "sm" })}
+                    className={buttonVariants({ variant: "secondary", size: "sm" })}
                   >
                     {copy.queue.undo}
                   </button>

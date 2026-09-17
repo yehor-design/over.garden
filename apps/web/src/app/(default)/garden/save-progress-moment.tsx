@@ -84,7 +84,7 @@ export function SaveProgressMoment({
         {secondaryHref && secondaryLabel ? (
           <Link
             href={secondaryHref}
-            className={buttonVariants({ variant: "outline" })}
+            className={buttonVariants({ variant: "secondary" })}
           >
             {secondaryLabel}
           </Link>

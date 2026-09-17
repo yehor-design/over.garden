@@ -9,6 +9,7 @@ import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
 import { listEngagementCommentModerationQueue } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { HiddenField } from "@/components/ui/hidden-field";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOperatorCopy(await getRequestInterfaceLocale());
@@ -66,15 +67,11 @@ export default async function CommentModerationPage() {
                     key={action}
                     action={moderateCommentReportAction}
                   >
-                    <input
-                      type="hidden"
-                      name="reportId"
-                      value={item.reportId}
-                    />
-                    <input type="hidden" name="action" value={action} />
+                    <HiddenField name="reportId" value={item.reportId} />
+                    <HiddenField name="action" value={action} />
                     <button
                       className={buttonVariants({
-                        variant: "outline",
+                        variant: "secondary",
                         size: "sm",
                       })}
                     >

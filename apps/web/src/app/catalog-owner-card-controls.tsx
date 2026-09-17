@@ -16,6 +16,11 @@ import {
   setCatalogCardIndexableAction,
 } from "./catalog-owner-card-actions";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 /**
  * The example address in the merge field, built rather than typed.
@@ -67,30 +72,22 @@ export function CatalogOwnerCardControls({
           className="grid gap-2"
           data-owner-card-rename="true"
         >
-          <input type="hidden" name="catalogItemId" value={catalogItemId} />
-          <input type="hidden" name="locale" value={locale} />
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{copy.newName}</span>
-            <input
+          <HiddenField name="catalogItemId" value={catalogItemId} />
+          <HiddenField name="locale" value={locale} />
+          <Field label={copy.newName} required>
+            <Input
               name="displayName"
               defaultValue={canonicalName}
-              required
               maxLength={120}
-              className="rounded-md border border-border bg-background px-3 py-2"
             />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{copy.reason}</span>
-            <input
-              name="reason"
-              maxLength={240}
-              className="rounded-md border border-border bg-background px-3 py-2"
-            />
-          </label>
+          </Field>
+          <Field label={copy.reason} id="owner-card-rename-reason">
+            <Input name="reason" maxLength={240} />
+          </Field>
           <p className="text-xs text-muted-foreground">{copy.renameHint}</p>
           <button
             type="submit"
-            className={buttonVariants({ variant: "outline", size: "sm", className: "justify-self-start" })}
+            className={buttonVariants({ variant: "secondary", size: "sm", className: "justify-self-start" })}
           >
             {copy.rename}
           </button>
@@ -110,8 +107,8 @@ export function CatalogOwnerCardControls({
                 key={label}
                 action={setCatalogCardIndexableAction}
               >
-                <input type="hidden" name="catalogItemId" value={catalogItemId} />
-                <input type="hidden" name="indexable" value={value} />
+                <HiddenField name="catalogItemId" value={catalogItemId} />
+                <HiddenField name="indexable" value={value} />
                 <button
                   type="submit"
                   data-owner-card-indexable={value || "clear"}
@@ -120,7 +117,7 @@ export function CatalogOwnerCardControls({
                       ? indexableOverride === null
                       : indexableOverride === (value === "true")
                   }
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
+                  className={buttonVariants({ variant: "secondary", size: "sm" })}
                 >
                   {label}
                 </button>
@@ -135,33 +132,26 @@ export function CatalogOwnerCardControls({
             className="grid gap-2"
             data-owner-card-pin="true"
           >
-            <input type="hidden" name="catalogItemId" value={catalogItemId} />
-            <label className="grid gap-1 text-sm">
-              <span className="text-muted-foreground">{copy.pinName}</span>
-              <select
+            <HiddenField name="catalogItemId" value={catalogItemId} />
+            <Field label={copy.pinName}>
+              <Select
                 name="nameId"
                 defaultValue={names.find((name) => name.isPrimary)?.nameId ?? ""}
-                className="rounded-md border border-border bg-background px-3 py-2"
               >
                 {names.map((name) => (
                   <option key={name.nameId} value={name.nameId}>
                     {name.displayName} · {name.locale} · {name.nameType}
                   </option>
                 ))}
-              </select>
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span className="text-muted-foreground">{copy.reason}</span>
-              <input
-                name="reason"
-                maxLength={240}
-                className="rounded-md border border-border bg-background px-3 py-2"
-              />
-            </label>
+              </Select>
+            </Field>
+            <Field label={copy.reason} id="owner-card-pin-reason">
+              <Input name="reason" maxLength={240} />
+            </Field>
             <p className="text-xs text-muted-foreground">{copy.pinNameHint}</p>
             <button
               type="submit"
-              className={buttonVariants({ variant: "outline", size: "sm", className: "justify-self-start" })}
+              className={buttonVariants({ variant: "secondary", size: "sm", className: "justify-self-start" })}
             >
               {copy.save}
             </button>
@@ -173,33 +163,27 @@ export function CatalogOwnerCardControls({
           className="grid gap-2"
           data-owner-card-merge="true"
         >
-          <input type="hidden" name="catalogItemId" value={catalogItemId} />
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{copy.mergeTarget}</span>
-            <input
+          <HiddenField name="catalogItemId" value={catalogItemId} />
+          <Field label={copy.mergeTarget} required>
+            <Input
               name="targetAddress"
-              required
               maxLength={240}
               placeholder={MERGE_TARGET_PLACEHOLDER}
-              className="rounded-md border border-border bg-background px-3 py-2"
             />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{copy.reason}</span>
-            <input
-              name="reason"
-              maxLength={240}
-              className="rounded-md border border-border bg-background px-3 py-2"
-            />
-          </label>
+          </Field>
+          <Field label={copy.reason} id="owner-card-merge-reason">
+            <Input name="reason" maxLength={240} />
+          </Field>
           <p className="text-xs text-muted-foreground">{copy.mergeHint}</p>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" name="confirmMerge" value="yes" />
-            {copy.mergeConfirm}
-          </label>
+          <Checkbox
+            name="confirmMerge"
+            value="yes"
+            label={copy.mergeConfirm}
+            className="items-center"
+          />
           <button
             type="submit"
-            className={buttonVariants({ variant: "outline", size: "sm", className: "justify-self-start" })}
+            className={buttonVariants({ variant: "secondary", size: "sm", className: "justify-self-start" })}
           >
             {copy.merge}
           </button>
@@ -225,12 +209,12 @@ export function CatalogOwnerCardControls({
                     <OwnerScopedProgressiveForm
                       action={revertCatalogCardEditAction}
                     >
-                      <input type="hidden" name="catalogItemId" value={catalogItemId} />
-                      <input type="hidden" name="actionId" value={entry.actionId} />
+                      <HiddenField name="catalogItemId" value={catalogItemId} />
+                      <HiddenField name="actionId" value={entry.actionId} />
                       <button
                         type="submit"
                         data-owner-card-undo={entry.actionId}
-                        className={buttonVariants({ variant: "outline", size: "sm" })}
+                        className={buttonVariants({ variant: "secondary", size: "sm" })}
                       >
                         {copy.undo}
                       </button>

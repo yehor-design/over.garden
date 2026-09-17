@@ -12,6 +12,7 @@ import {
   type JournalTextSpan,
 } from "@/lib/garden/journal-document";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export interface JournalDocumentImageViewModel {
   mediaAssetId: string;
@@ -312,22 +313,18 @@ function ListItemView({
       <li data-checked={checked ? "true" : "false"}>
         {/* The label gives the disabled checkbox its accessible name, so the
             state is announced with the text it belongs to and no script runs. */}
-        <label className="flex items-start gap-2">
-          <input
-            type="checkbox"
-            checked={checked}
-            disabled
-            readOnly
-            className="mt-1.5 size-4 shrink-0 accent-primary"
-          />
-          <span
-            className={
-              checked ? "min-w-0 text-muted-foreground line-through" : "min-w-0"
-            }
-          >
-            <RichText spans={item.spans} />
-          </span>
-        </label>
+        <Checkbox
+          checked={checked}
+          disabled
+          readOnly
+          label={
+            <span
+              className={checked ? "text-muted-foreground line-through" : ""}
+            >
+              <RichText spans={item.spans} />
+            </span>
+          }
+        />
         {nested}
       </li>
     );

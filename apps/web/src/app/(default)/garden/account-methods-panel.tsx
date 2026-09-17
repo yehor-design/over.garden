@@ -33,6 +33,8 @@ import {
   setCurrentAccountPassword,
   type AccountMethodPasswordActionResult,
 } from "./profile/account-method-actions";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 
 type AccountMethodState = Pick<
   AccountMethodsPanelProps,
@@ -130,7 +132,7 @@ export function AccountMethodsPanel({
           <div>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={refreshMethods}
               data-testid="account-method-retry-button"
             >
@@ -397,7 +399,7 @@ export function AccountMethodsPanel({
                 <div className="grid gap-1">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="secondary"
                     onClick={(event) =>
                       openDisconnectDialog(event, provider.id, provider.label)
                     }
@@ -421,7 +423,7 @@ export function AccountMethodsPanel({
               ) : (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => linkProvider(provider.id, provider.label)}
                   disabled={isPending}
                   data-testid={`${provider.id}-link-button`}
@@ -457,20 +459,21 @@ export function AccountMethodsPanel({
               void setPassword();
             }}
           >
-            <label className="sr-only" htmlFor="account-method-password">
-              {copy.passwordLabel}
-            </label>
-            <input
+            <Field
+              label={copy.passwordLabel}
               id="account-method-password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPasswordValue(event.target.value)}
-              minLength={8}
               required
-              disabled={pendingAction === "password"}
-              className="min-w-0 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            />
+              className="min-w-0 flex-1"
+            >
+              <Input
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPasswordValue(event.target.value)}
+                minLength={8}
+                disabled={pendingAction === "password"}
+              />
+            </Field>
             <Button
               type="submit"
               disabled={pendingAction === "password"}
@@ -556,26 +559,23 @@ export function AccountMethodsPanel({
                   }}
                 >
                   <div className="grid gap-2">
-                    <label
-                      className="text-sm font-medium text-foreground"
-                      htmlFor="disconnect-account-method-password"
-                    >
-                      {copy.passwordLabel}
-                    </label>
-                    <input
-                      ref={disconnectPasswordRef}
+                    <Field
+                      label={copy.passwordLabel}
                       id="disconnect-account-method-password"
-                      type="password"
-                      autoComplete="new-password"
-                      value={disconnectPassword}
-                      onChange={(event) =>
-                        setDisconnectPassword(event.target.value)
-                      }
-                      minLength={8}
                       required
-                      disabled={pendingAction !== null}
-                      className="min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-                    />
+                    >
+                      <Input
+                        ref={disconnectPasswordRef}
+                        type="password"
+                        autoComplete="new-password"
+                        value={disconnectPassword}
+                        onChange={(event) =>
+                          setDisconnectPassword(event.target.value)
+                        }
+                        minLength={8}
+                        disabled={pendingAction !== null}
+                      />
+                    </Field>
                   </div>
                   <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                     <AlertDialogClose
@@ -614,7 +614,7 @@ export function AccountMethodsPanel({
                   {!disconnectIntent.requiresPassword ? (
                     <Button
                       type="button"
-                      variant="destructive"
+                      variant="danger"
                       onClick={() => void confirmDisconnect()}
                       disabled={pendingAction !== null}
                       data-testid="confirm-disconnect-button"
