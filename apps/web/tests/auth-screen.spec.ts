@@ -258,6 +258,52 @@ test.describe("the screens themselves", () => {
     expect(message).not.toContain("такого користувача");
   });
 
+  test("the reset screen refuses a bad token through the server, not the bundle", async ({
+    baseURL,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    // The success path needs a real one-time token and therefore a mail
+    // provider, so what is driven here is the refusal — which is the half that
+    // proves the action runs at all, end to end, and answers in the page.
+    await page.goto("/auth/reset-password?token=not-a-real-token", {
+      waitUntil: "load",
+    });
+    const field = page.locator('input[name="password"]');
+    await expect(field).toBeVisible();
+    await field.fill("OVE455-a-new-password-1!");
+    await page.locator('input[name="confirmPassword"]').fill(
+      "OVE455-a-new-password-1!",
+    );
+    await page.getByRole("button", { name: /Оновити|Обнов|Обновить/u }).click();
+
+    const alert = page.locator('[data-auth-message="error"]');
+    await expect(alert).toBeVisible({ timeout: 20_000 });
+    expect(await alert.getAttribute("role")).toBe("alert");
+    // It says the link did not work, and not why.
+    const message = (await alert.textContent()) ?? "";
+    expect(message.length).toBeGreaterThan(10);
+    expect(message.toLowerCase()).not.toContain("token");
+  });
+
+  test("the reset screen refuses two passwords that differ, before any call", async ({
+    baseURL,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    await page.goto("/auth/reset-password?token=not-a-real-token", {
+      waitUntil: "load",
+    });
+    await page.locator('input[name="password"]').fill("OVE455-first-one-1!");
+    await page
+      .locator('input[name="confirmPassword"]')
+      .fill("OVE455-second-one-1!");
+    await page.getByRole("button", { name: /Оновити|Обнов|Обновить/u }).click();
+    await expect(page.locator('[data-auth-message="error"]')).toBeVisible({
+      timeout: 20_000,
+    });
+  });
+
   test("the help screen answers three questions, each with its own heading", async ({
     baseURL,
     page,
