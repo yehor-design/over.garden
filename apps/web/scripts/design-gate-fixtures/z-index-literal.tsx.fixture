@@ -1,0 +1,4 @@
+// Gate 5 — a layer invented on the spot.
+export function ZIndexLiteral() {
+  return <div className="fixed inset-0 z-50">Виглядає правильно</div>;
+}

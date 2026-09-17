@@ -196,6 +196,13 @@ jobs:
       - name: Banned dependencies
         run: pnpm check:banned-dependencies
 
+      # DESIGN.md §10, gates 3 and 6. The other four mechanical gates are
+      # ESLint rules and ran in the Lint step above; gate 9 is the contrast
+      # contract inside `globals.test.ts` and runs with the suite; gates 7 and
+      # 8 need a browser and run in the proof step at the end of this job.
+      - name: Design system gates
+        run: pnpm check:design-tokens && pnpm check:component-tests
+
       - name: Test
         run: pnpm test
 
@@ -214,7 +221,7 @@ jobs:
       - name: Seal the browser proof's owner account
         run: pnpm owner:seed-browser-fixture
 
-      - name: Public hydration, catalog picker, organism address and owner curation proofs
+      - name: Public hydration, catalog picker, address, curation and accessibility proofs
         # The picker spec signs a synthetic gardener in over the API, and Better
         # Auth checks the request origin against BETTER_AUTH_URL: it must be the
         # origin the server answers on, not the build-time value. The address
@@ -222,7 +229,10 @@ jobs:
         # curation spec needs the sealed owner id the step above wrote. The
         # full-catalogue spec skips itself here: a Catalogue of Life release is
         # a gigabyte, so CI holds no snapshot and the Python database tests
-        # cover the ingest and the materialization instead.
+        # cover the ingest and the materialization instead. The three
+        # accessibility specs are gates 7 and 8 of DESIGN.md §10: axe over the
+        # nine key screens and a keyboard-only path through the primary flows,
+        # both against this production build rather than a dev server.
         env:
           BETTER_AUTH_URL: http://127.0.0.1:3179
           PUBLIC_SITE_URL: http://127.0.0.1:3179
@@ -234,7 +244,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts
 
   matching:
     name: Python matching tier

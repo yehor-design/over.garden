@@ -1,0 +1,4 @@
+// Gate 6 — a component whose test asserts everything except what a reader uses.
+export function UntestedComponent() {
+  return <button type="button">Зберегти</button>;
+}

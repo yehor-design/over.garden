@@ -14,9 +14,15 @@ describe("Accordion", () => {
         </AccordionItem>
       </Accordion>,
     );
-    const trigger = screen.getByText("Коли поливати").closest("summary");
-    expect(trigger?.tagName).toBe("SUMMARY");
-    expect(trigger?.closest("details")).toHaveProperty("open", false);
+    // `<details>` is a `group`. A browser takes the group's name from its
+    // `<summary>`; testing-library does not compute that, so the name is
+    // asserted through the summary itself.
+    const item = screen.getByRole("group");
+    expect(item.tagName).toBe("DETAILS");
+    expect(item).toHaveProperty("open", false);
+    expect(screen.getByText("Коли поливати").closest("summary")?.tagName).toBe(
+      "SUMMARY",
+    );
   });
 
   it("puts the trigger in the tab order and never removes its focus ring", async () => {

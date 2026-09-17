@@ -428,7 +428,7 @@ function ProfileActions({
         >
           <MoreHorizontal aria-hidden="true" />
         </summary>
-        <div className="absolute inset-x-0 top-11 z-20 grid w-auto gap-3 rounded-md border border-border bg-background p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64">
+        <div className="absolute inset-x-0 top-11 z-popover grid w-auto gap-3 rounded-md border border-border bg-background p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64">
           {viewer.kind === "guest" ? (
             <>
               <AuthIntentTrigger

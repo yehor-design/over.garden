@@ -124,7 +124,11 @@ export function PublicObjectCatalogSearch({
             placeholder={copy.searchPlaceholder}
           />
           {value ? (
-            <ComboboxClear type="button" onClick={clear} label={copy.clearSearch} />
+            <ComboboxClear
+              type="button"
+              onClick={clear}
+              label={copy.clearSearch}
+            />
           ) : null}
         </ComboboxRoot>
         <Button
@@ -151,7 +155,7 @@ export function PublicObjectCatalogSearch({
           id={listboxId}
           role="listbox"
           aria-label={copy.suggestionsLabel}
-          className="absolute top-full z-20 mt-1 grid w-full max-w-2xl gap-px overflow-hidden rounded-md border border-border bg-border shadow-lg"
+          className="absolute top-full z-popover mt-1 grid w-full max-w-2xl gap-px overflow-hidden rounded-md border border-border bg-border shadow-lg"
         >
           {suggestions.map((suggestion) => (
             <li key={suggestion.key} role="option" aria-selected="false">
@@ -207,9 +211,5 @@ function isObjectKind(
 function isIdentityState(
   value: unknown,
 ): value is PublicObjectCatalogIdentityState {
-  return (
-    value === "catalog" ||
-    value === "unknown" ||
-    value === "unavailable"
-  );
+  return value === "catalog" || value === "unknown" || value === "unavailable";
 }

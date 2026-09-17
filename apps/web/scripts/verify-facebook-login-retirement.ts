@@ -28,7 +28,7 @@ const META_RUNTIME_BASELINE_DIGESTS = {
   "src/app/api/meta/conversions/route.ts":
     "5d76a9e60683683f94ffa4c29253417f6fe6cb983c33d7812e5c837c00027724",
   "src/app/meta-marketing.tsx":
-    "cf88e18feffb42ba7c986d4a2295be57f4d68432d1f1f2f91841cc5df9d3ea64",
+    "9accc377befd06b4816db00a788858401ed620749621d189cbf86f2d8bd41030",
   "src/lib/meta-marketing/client.ts":
     "26bbaaa8f6dbf2e4ef102701e73a581316f48607d2720cd92c5b46563a97d98d",
   "src/lib/meta-marketing/events.ts":

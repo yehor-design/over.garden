@@ -444,7 +444,7 @@ function CommentActions({
         <MoreHorizontal className="size-4" />
         <span className="sr-only">{copy.engagement.moreActions}</span>
       </summary>
-      <div className="absolute top-full left-0 z-20 mt-1 grid min-w-56 gap-2 border border-border bg-popover p-2 text-popover-foreground shadow-md">
+      <div className="absolute top-full left-0 z-popover mt-1 grid min-w-56 gap-2 border border-border bg-popover p-2 text-popover-foreground shadow-md">
         {isAuthenticated ? (
           <>
             <EngagementCommentActionButton

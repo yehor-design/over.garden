@@ -279,7 +279,7 @@ function AnalyticsConsentBanner({
     <div
       aria-label={copy.label}
       data-analytics-consent-banner="true"
-      className="analytics-consent-banner fixed inset-x-3 z-50 mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:flex sm:items-center sm:gap-4"
+      className="analytics-consent-banner fixed inset-x-3 z-toast mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
       <p className="text-sm leading-6 text-muted-foreground">{copy.message}</p>

@@ -470,7 +470,7 @@ export function JournalEntryEditComposer({
               {editCopy.keepEditing}
             </AlertDialogClose>
             <AlertDialogClose
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-destructive px-3 py-2 text-sm font-medium text-white hover:bg-destructive/90 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-9"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-danger-fill px-3 py-2 text-body-sm font-medium text-text-on-fill hover:bg-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:min-h-9"
               onClick={() => {
                 local.abandon();
                 router.push(safeReturnTo);

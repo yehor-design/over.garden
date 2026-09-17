@@ -265,7 +265,7 @@ export function JournalSelectionToolbar({
       data-journal-selection-toolbar="true"
       aria-label={labels.tools.toolbar}
       hidden={position === null}
-      className="pointer-events-auto absolute top-0 left-0 z-30 flex items-center gap-0.5 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+      className="pointer-events-auto absolute top-0 left-0 z-popover flex items-center gap-0.5 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
     >
       {linkOpen ? (
         <div className="flex items-center gap-1">

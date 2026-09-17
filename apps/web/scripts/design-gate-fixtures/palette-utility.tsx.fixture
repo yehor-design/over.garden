@@ -1,0 +1,22 @@
+// Gate 1 — Tailwind's palette is not this product's palette.
+//
+// Three places className text lives, and the gate has to read all three: the
+// attribute, a `cva()` recipe, and a bare constant. `white` carries no step and
+// is the one a `<palette>-<step>` pattern misses.
+import { cva } from "class-variance-authority";
+
+const paletteVariants = cva("rounded-md", {
+  variants: { tone: { bad: "bg-emerald-600" } },
+});
+
+const PALETTE_CLASS_NAME = "border-gray-200";
+
+export function PaletteUtility() {
+  return (
+    <p className={paletteVariants({ tone: "bad" })}>
+      <span className={PALETTE_CLASS_NAME}>
+        <em className="text-white">Виглядає правильно</em>
+      </span>
+    </p>
+  );
+}

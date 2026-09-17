@@ -157,12 +157,9 @@ export function FollowUpEntryComposer({
   );
   const persistenceFrozen = local.readOnly;
 
+  function beginLocaleMutation() {}
 
-  function beginLocaleMutation() {
-  }
-
-  function endLocaleMutation() {
-  }
+  function endLocaleMutation() {}
 
   const photoHelp = localizedAtomicPhotoHelp(atomicCopy, {
     fileName: photoFile?.name ?? null,
@@ -723,7 +720,7 @@ export function FollowUpEntryComposer({
         {message}
       </p>
 
-      <div className="sticky bottom-2 z-10 flex items-center gap-2 border border-border bg-background p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-background p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"

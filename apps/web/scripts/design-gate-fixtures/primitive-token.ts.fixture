@@ -1,0 +1,2 @@
+// Gate 3 — a primitive outside globals.css.
+export const SHADE = "var(--og-neutral-600)";

@@ -41,6 +41,11 @@ describe("FileDrop", () => {
 
   it("as a zone, the control is a real file input in the tab order", async () => {
     render(<FileDrop presentation="zone" label="Додати фото" hint="WebP" />);
+    // A file input has no ARIA role of its own, so the control is found by its
+    // label, and the absence of a role is asserted rather than assumed: a zone
+    // that quietly became a button would be a different control.
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.queryAllByRole("textbox")).toHaveLength(0);
     const input = screen.getByLabelText("Додати фото");
     expect(input.tagName).toBe("INPUT");
     expect(input.getAttribute("type")).toBe("file");
