@@ -324,8 +324,14 @@ describe("CommandPalette", () => {
     await screen.findByRole("dialog");
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    expect(document.activeElement).toBe(
-      screen.getByRole("button", { name: "Пошук" }),
+    // Waited for, not asserted a frame later: the restore runs on the next
+    // animation frame — after `base-ui` has finished its own focus handling for
+    // the close — and a machine slower than this one needs more than one tick.
+    // Asserted immediately, this passed locally and failed in CI.
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Пошук" }),
+      ),
     );
   });
 });
