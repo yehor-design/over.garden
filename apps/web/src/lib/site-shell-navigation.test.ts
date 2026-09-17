@@ -18,26 +18,103 @@ describe("site shell navigation contract", () => {
       })),
     ).toEqual([
       { key: "feed", label: "Стрічка", href: "/" },
-      {
-        key: "living-objects",
-        label: "Живі об'єкти",
-        href: "/objects",
-      },
+      { key: "catalogue", label: "Каталог", href: "/objects" },
       { key: "journals", label: "Журнали", href: "/journals" },
       { key: "knowledge", label: "Знання", href: "/knowledge" },
     ]);
     expect(navigation.personalItems).toEqual([]);
     expect(navigation.searchHref).toBe("/journals");
-    expect(navigation.mobileItems.map((item) => item.key)).toEqual([
-      "feed",
-      "living-objects",
-      "journals",
-      "knowledge",
-      "sign-in",
-    ]);
     expect(JSON.stringify(navigation)).not.toMatch(
       /email|userId|sessionId|owner|draftCount/i,
     );
+  });
+
+  it("gives the catalogue one entrance for the five addresses it answers on", () => {
+    // `/objects`, `/species`, `/variety`, `/breed` and `/col` are five
+    // spellings of one graph, and the rail named it a sixth way. ADR-0031 D8
+    // merges the entrance; ADR-0029 keeps every address.
+    const navigation = getSiteShellNavigation("uk", false);
+    const catalogue = navigation.publicItems.filter((item) =>
+      ["/objects", "/species", "/variety", "/breed", "/col"].some((path) =>
+        isSiteShellItemActive(path, item),
+      ),
+    );
+
+    expect(catalogue).toHaveLength(1);
+    expect(catalogue[0]?.key).toBe("catalogue");
+    for (const path of [
+      "/objects",
+      "/objects/moss",
+      "/species",
+      "/species/rosa-canina",
+      "/variety/tomato",
+      "/breed/karpatka",
+      "/col/3W4WV",
+      "/lineage/objects/object-1",
+      "/garden/objects/object-1",
+    ]) {
+      expect(
+        catalogue[0] && isSiteShellItemActive(path, catalogue[0]),
+        `${path} should light the catalogue entrance`,
+      ).toBe(true);
+    }
+  });
+
+  it("carries exactly one primary action, and it is New entry", () => {
+    const guest = getSiteShellNavigation("uk", false);
+    const member = getSiteShellNavigation("uk", true);
+
+    for (const navigation of [guest, member]) {
+      expect(navigation.primaryAction).toMatchObject({
+        key: "new-entry",
+        label: "Новий запис",
+        href: "/garden#first-entry-composer",
+      });
+      // The action is not a rail item as well: one primary per screen region
+      // (DESIGN.md §4.4). It used to be two, one of them in the header.
+      expect(
+        [...navigation.publicItems, ...navigation.personalItems].some(
+          (item) => item.key === "new-entry",
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("names the footer's four links and localizes each one", () => {
+    expect(
+      getSiteShellNavigation("bg", false).footerLinks.map(
+        ({ key, href }) => [key, href] as const,
+      ),
+    ).toEqual([
+      ["catalogue", "/bg/objects"],
+      ["privacy", "/bg/privacy"],
+      ["support", "/bg/support"],
+      ["first-publication-disclosure", "/bg/first-publication-disclosure"],
+    ]);
+  });
+
+  it("gives every landmark the shell renders an accessible name", () => {
+    const { labels } = getSiteShellNavigation("uk", true);
+
+    for (const label of [
+      labels.siteNavigation,
+      labels.personalSection,
+      labels.mobileNavigation,
+      labels.footerNavigation,
+      labels.contextRail,
+      labels.accountRegion,
+    ]) {
+      expect(label.length).toBeGreaterThan(0);
+    }
+    // Two landmarks that read the same is the defect this replaces.
+    expect(
+      new Set([
+        labels.siteNavigation,
+        labels.personalSection,
+        labels.mobileNavigation,
+        labels.footerNavigation,
+      ]).size,
+    ).toBe(4);
   });
 
   it("adds communities to public navigation only after the server readiness gate passes", () => {
@@ -76,16 +153,6 @@ describe("site shell navigation contract", () => {
     ).toEqual([
       { key: "garden", label: "Моята градина", href: "/garden" },
       {
-        key: "add-object",
-        label: "Добавяне на обект",
-        href: "/garden#first-entry-composer",
-      },
-      {
-        key: "add-update",
-        label: "Нов запис",
-        href: "/garden#first-entry-composer",
-      },
-      {
         key: "followed-feed",
         label: "Следвани записи",
         href: "/bg/feed",
@@ -102,21 +169,18 @@ describe("site shell navigation contract", () => {
         label: "Заявки за произход",
         href: "/garden/lineage/claims",
       },
-      { key: "profile", label: "Профил", href: "/garden/profile" },
     ]);
-    expect(navigation.mobileItems.map((item) => item.key)).toEqual([
-      "feed",
-      "living-objects",
-      "garden",
-      "notifications",
-      "profile",
-    ]);
+    // The profile moved to the account block at the foot of the rail, which is
+    // where every product with a rail puts it.
+    expect(navigation.personalItems.some((item) => item.key === "profile")).toBe(
+      false,
+    );
   });
 
   it("matches active routes after removing locale prefixes and hashes", () => {
     const navigation = getSiteShellNavigation("ru", true);
-    const objects = navigation.publicItems.find(
-      (item) => item.key === "living-objects",
+    const catalogue = navigation.publicItems.find(
+      (item) => item.key === "catalogue",
     );
     const knowledge = navigation.publicItems.find(
       (item) => item.key === "knowledge",
@@ -124,18 +188,12 @@ describe("site shell navigation contract", () => {
     const garden = navigation.personalItems.find(
       (item) => item.key === "garden",
     );
-    const addObject = navigation.personalItems.find(
-      (item) => item.key === "add-object",
-    );
 
     expect(
-      objects && isSiteShellItemActive("/ru/variety/tomato", objects),
+      catalogue && isSiteShellItemActive("/ru/variety/tomato", catalogue),
     ).toBe(true);
     expect(
-      objects && isSiteShellItemActive("/lineage/objects/object-1", objects),
-    ).toBe(true);
-    expect(
-      objects && isSiteShellItemActive("/garden/objects/object-1", objects),
+      catalogue && isSiteShellItemActive("/lineage/objects/object-1", catalogue),
     ).toBe(true);
     expect(
       knowledge &&
@@ -146,8 +204,14 @@ describe("site shell navigation contract", () => {
     ).toBe(true);
     expect(garden && isSiteShellItemActive("/garden", garden)).toBe(true);
     expect(
-      addObject &&
-        isSiteShellItemActive("/garden#first-entry-composer", addObject),
+      garden && isSiteShellItemActive("/garden#first-entry-composer", garden),
+    ).toBe(true);
+    expect(
+      navigation.primaryAction &&
+        isSiteShellItemActive(
+          "/garden#first-entry-composer",
+          navigation.primaryAction,
+        ),
     ).toBe(false);
   });
 
@@ -156,11 +220,14 @@ describe("site shell navigation contract", () => {
     expect(getSiteShellRouteContext("/journal/entry-1", "uk").key).toBe(
       "journal",
     );
-    expect(
-      getSiteShellRouteContext("/lineage/objects/object-1", "uk").key,
-    ).toBe("living-object");
+    expect(getSiteShellRouteContext("/lineage/objects/object-1", "uk").key).toBe(
+      "catalogue",
+    );
     expect(getSiteShellRouteContext("/garden/objects/object-1", "uk").key).toBe(
-      "living-object",
+      "catalogue",
+    );
+    expect(getSiteShellRouteContext("/species/rosa-canina", "uk").key).toBe(
+      "catalogue",
     );
     expect(getSiteShellRouteContext("/garden", "bg")).toMatchObject({
       key: "garden",

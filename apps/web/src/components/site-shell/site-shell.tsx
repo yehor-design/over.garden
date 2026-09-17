@@ -2,15 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  CirclePlus,
-  LogIn,
-  Menu,
-  Search,
-  SquarePen,
-  UserRound,
-  X,
-} from "lucide-react";
+import { Menu as MenuIcon, Search, SquarePen, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
@@ -19,25 +11,25 @@ import { OwnerScopeProvider } from "@/components/auth/owner-scope";
 import { SessionSignalBoundary } from "@/components/auth/session-signal-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
-import { InterfaceLanguageControl } from "@/components/public/language-switcher";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { IconButton, iconButtonVariants } from "@/components/ui/icon-button";
+import {
+  Menu,
+  MenuContent,
+  MenuGroup,
+  MenuGroupLabel,
+  MenuSeparator,
+  MenuTrigger,
+} from "@/components/ui/menu";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   getInterfaceCopy,
   type InterfaceLocale,
@@ -54,10 +46,9 @@ import {
 import {
   getSiteShellNavigation,
   getSiteShellRouteContext,
+  type SiteShellNavigation,
   type SiteShellNavigationItem,
 } from "@/lib/site-shell-navigation";
-import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
-import { cn } from "@/lib/utils";
 import {
   SiteShellMobileNavigation,
   SiteShellMobileUtilities,
@@ -68,9 +59,30 @@ import {
   SiteShellContextRailProvider,
   type SiteShellContextRailModule,
 } from "./site-shell-context-rail";
+import { SiteShellFooter } from "./site-shell-footer";
 import { SiteShellLocaleProvider } from "./site-shell-locale-context";
 import { OverGardenLogo } from "./over-garden-logo";
 
+/**
+ * One shell for both halves of the product (ADR-0031 D4, DESIGN.md §3.2).
+ *
+ * ```
+ * < lg        [ header 56 ]  [ content ]  [ tab bar 56 ]
+ * lg → xl     [ rail 240 ]   [ content max 704 ]
+ * ≥ xl        [ rail 240 ]   [ content max 704 ]  [ context 300 ]
+ * ```
+ *
+ * The `<header>` element is one element in two shapes: a 56 px top bar below
+ * `lg`, the 240 px left rail at `lg` and above. That is what keeps the `banner`
+ * landmark present at every width while criterion 1 — exactly one top-level
+ * `<header>` — stays literally true. The `<main>` is the page's own; the shell
+ * renders the region it goes in and never a second one.
+ *
+ * The rail carries brand → navigation → **the one primary action** → account,
+ * the order X, Substack, Threads, Digg, Circle and Whop all arrived at. The
+ * action used to render in the rail *and* the header, which is two primaries on
+ * one screen (DESIGN.md §4.4).
+ */
 export function SiteShell({
   children,
   locale,
@@ -94,7 +106,6 @@ export function SiteShell({
     SiteShellContextRailModule[] | null
   >(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const languageControlPlacement =
     getInterfaceLanguageControlPlacement(pathname);
   if (isSessionConvergenceSafeExit) {
@@ -124,8 +135,6 @@ export function SiteShell({
 
   if (languageControlPlacement !== "site-shell") {
     // The utility region carries the control on the routes that have no shell.
-    // The market no longer gates it: every market has three languages to
-    // choose between.
     const showUtility = languageControlPlacement === "utility";
     const excludedShell = (
       <SiteShellLocaleProvider locale={locale}>
@@ -162,411 +171,168 @@ export function SiteShell({
     pathname,
   );
   const copy = getInterfaceCopy(locale);
-  const signOutCopy = getTrustSurfaceCopy(locale).signOut;
   const context = getSiteShellRouteContext(pathname, locale);
 
   const shell = (
     <SiteShellLocaleProvider locale={locale}>
       <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
       <SiteShellContextRailProvider setModules={setRouteContextModules}>
-        <TooltipProvider>
-          <div
-            data-site-shell="root"
-            className="flex min-h-dvh min-w-0 flex-1 flex-col bg-background"
+        <div
+          data-site-shell="root"
+          className="flex min-h-dvh min-w-0 flex-col bg-surface text-text"
+        >
+          <a
+            href="#main-content"
+            className="sr-only z-toast rounded-md border border-border bg-surface px-3 py-2 text-body-sm font-medium text-text focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-focus-ring"
           >
-            <a
-              href="#main-content"
-              className="sr-only z-toast rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-ring"
-            >
-              {copy.shell.skipToContent}
-            </a>
+            {copy.shell.skipToContent}
+          </a>
+
+          <div className="grid min-w-0 flex-1 lg:grid-cols-shell xl:grid-cols-shell-wide">
             <header
               data-site-shell-region="header"
-              className="sticky top-0 z-header border-b border-foreground/15 bg-foreground text-background"
+              className="sticky top-0 z-header flex min-h-14 min-w-0 items-center gap-1 border-b border-border bg-surface px-2 lg:h-dvh lg:flex-col lg:items-stretch lg:gap-0 lg:self-start lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-4"
             >
-              <div className="site-shell-header-inner mx-auto flex w-full max-w-7xl items-stretch">
-                <div className="flex items-center lg:hidden">
-                  <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                    <SheetTrigger
-                      render={
-                        <IconButton
-                          variant="ghost"
-                          size="lg"
-                          data-cwv-interaction-target="site-menu"
-                          label={navigation.labels.openMenu}
-                          className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
-                        />
-                      }
-                    >
-                      <Menu aria-hidden="true" />
-                    </SheetTrigger>
-                    <SheetContent
-                      side="left"
-                      showCloseButton={false}
-                      className="w-4/5 max-w-xs gap-0 p-0"
-                    >
-                      <SheetHeader className="border-b border-border pr-12">
-                        <SheetTitle>{navigation.labels.menuTitle}</SheetTitle>
-                        <SheetDescription>
-                          {navigation.labels.menuDescription}
-                        </SheetDescription>
-                      </SheetHeader>
-                      <SheetClose
-                        render={
-                          <IconButton
-                            variant="ghost"
-                            label={navigation.labels.closeMenu}
-                            className="absolute top-3 right-3"
-                          />
-                        }
-                      >
-                        <X aria-hidden="true" />
-                      </SheetClose>
-                      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-                        <NavigationSection
-                          label={navigation.labels.publicSection}
-                          items={navigation.publicItems}
-                          pathname={pathname}
-                          compact
-                        />
-                        {navigation.personalItems.length > 0 ? (
-                          <>
-                            <Separator className="my-3" />
-                            <NavigationSection
-                              label={navigation.labels.personalSection}
-                              items={navigation.personalItems}
-                              pathname={pathname}
-                              compact
-                            />
-                          </>
-                        ) : (
-                          <>
-                            <Separator className="my-3" />
-                            <GuestMutationActions
-                              addObjectLabel={copy.navigation.addObject}
-                              addEntryLabel={copy.navigation.addUpdate}
-                              compact
-                            />
-                          </>
-                        )}
-                      </div>
-                      <div className="mt-auto flex flex-col gap-3 border-t border-border p-4">
-                        <SiteShellMobileUtilities
-                          privacyHref={context.secondaryHref}
-                          privacyLabel={context.secondaryLabel}
-                        >
-                          {isAuthenticated ? (
-                            <SignOutControl
-                              presentation="menu"
-                              onBeforeRequest={() => setMobileMenuOpen(false)}
-                            />
-                          ) : null}
-                        </SiteShellMobileUtilities>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                </div>
+              <MobileMenuTrigger
+                navigation={navigation}
+                pathname={pathname}
+                open={mobileMenuOpen}
+                onOpenChange={setMobileMenuOpen}
+                isAuthenticated={isAuthenticated}
+              />
 
+              <Link
+                data-site-shell-brand="true"
+                href={navigation.publicItems[0]?.href ?? "/"}
+                className="flex min-w-0 shrink-0 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:mb-4 lg:px-2"
+              >
+                <OverGardenLogo className="h-7 w-auto shrink-0 lg:h-8" />
+                <span className="sr-only">OverGarden</span>
+              </Link>
+
+              {/* The rail's navigation, at `lg` and above. */}
+              <div className="hidden min-w-0 flex-col gap-4 lg:flex">
+                <SiteShellNavigationList
+                  items={navigation.publicItems}
+                  pathname={pathname}
+                  ariaLabel={navigation.labels.siteNavigation}
+                />
+                {navigation.personalItems.length > 0 ? (
+                  <SiteShellNavigationList
+                    items={navigation.personalItems}
+                    pathname={pathname}
+                    ariaLabel={navigation.labels.personalSection}
+                  />
+                ) : null}
+              </div>
+
+              {/* One element, both shapes. The action is a single control in
+                  the document — the right end of the bar below `lg`, the rail
+                  under the navigation above it — rather than one control per
+                  breakpoint, which is how the product came to render its
+                  primary action twice. */}
+              <div className="ml-auto shrink-0 lg:mt-4 lg:ml-0 lg:w-full">
+                <PrimaryAction
+                  item={navigation.primaryAction}
+                  isAuthenticated={isAuthenticated}
+                />
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1 lg:hidden">
                 <Link
-                  data-site-shell-brand="true"
-                  href={navigation.publicItems[0]?.href ?? "/"}
-                  className="site-shell-brand flex min-w-0 items-center bg-primary text-primary-foreground lg:ml-0 lg:w-56"
+                  href={navigation.searchHref}
+                  aria-label={navigation.labels.search}
+                  className={iconButtonVariants({ variant: "ghost" })}
                 >
-                  <OverGardenLogo className="site-shell-brand-logo w-auto shrink-0" />
-                  <span className="sr-only">OverGarden</span>
+                  <Search aria-hidden="true" />
                 </Link>
+                {isAuthenticated ? null : (
+                  <Link
+                    data-site-shell-action="sign-in-mobile"
+                    href={navigation.signIn.href}
+                    className={buttonVariants({
+                      variant: "secondary",
+                      size: "sm",
+                    })}
+                  >
+                    {navigation.signIn.label}
+                  </Link>
+                )}
+              </div>
 
-                <div className="site-shell-header-actions ml-auto flex items-center">
-                  {/* Every reader, every market. It was drawn for Bulgaria
-                      alone, so a reader in Ukraine had no way to change the
-                      interface language at all. */}
-                  <div className="rounded-md bg-background text-foreground">
-                    <InterfaceLanguageControl
-                      locale={locale}
-                      market={market}
-                      pathname={pathname}
-                    />
-                  </div>
-                  <span className="hidden sm:inline-flex">
-                    <Tooltip>
-                      <TooltipTrigger
-                        render={
-                          <Link
-                            href={navigation.searchHref}
-                            aria-label={navigation.labels.search}
-                            className={iconButtonVariants({
-                              variant: "ghost",
-                              className:
-                                "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
-                            })}
-                          />
-                        }
-                      >
-                        <Search aria-hidden="true" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {navigation.labels.search}
-                      </TooltipContent>
-                    </Tooltip>
-                  </span>
-                  {isAuthenticated ? (
-                    <>
-                      <span className="md:hidden">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Link
-                                data-site-shell-action="add-mobile"
-                                href="/garden#first-entry-composer"
-                                aria-label={
-                                  navigation.personalItems.find(
-                                    (item) => item.key === "add-update",
-                                  )?.label ?? ""
-                                }
-                                className={iconButtonVariants({
-                                  variant: "ghost",
-                                  className:
-                                    "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
-                                })}
-                              />
-                            }
-                          >
-                            <SquarePen aria-hidden="true" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {navigation.personalItems.find(
-                              (item) => item.key === "add-update",
-                            )?.label ?? ""}
-                          </TooltipContent>
-                        </Tooltip>
-                      </span>
-                      <span className="hidden md:contents">
-                        <Link
-                          data-site-shell-action="add-desktop"
-                          href="/garden#first-entry-composer"
-                          className={buttonVariants({ size: "sm" })}
-                        >
-                          <SquarePen
-                            data-icon="inline-start"
-                            aria-hidden="true"
-                          />
-                          {navigation.personalItems.find(
-                            (item) => item.key === "add-update",
-                          )?.label ?? ""}
-                        </Link>
-                      </span>
-                      <span className="inline-flex">
-                        <Sheet
-                          open={accountMenuOpen}
-                          onOpenChange={setAccountMenuOpen}
-                        >
-                          <SheetTrigger
-                            render={
-                              <IconButton
-                                variant="ghost"
-                                data-site-shell-account-menu-trigger="true"
-                                label={signOutCopy.openAccountMenu}
-                                className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
-                              />
-                            }
-                          >
-                            <UserRound aria-hidden="true" />
-                          </SheetTrigger>
-                          <SheetContent
-                            side="right"
-                            closeLabel={signOutCopy.closeAccountMenu}
-                            className="w-11/12 max-w-sm"
-                          >
-                            <SheetHeader className="border-b border-border">
-                              <SheetTitle>
-                                {signOutCopy.accountMenuTitle}
-                              </SheetTitle>
-                              <SheetDescription>
-                                {signOutCopy.accountMenuDescription}
-                              </SheetDescription>
-                            </SheetHeader>
-                            <div className="grid gap-2 p-4">
-                              <SheetClose
-                                render={
-                                  <Link
-                                    href="/garden/profile"
-                                    className={buttonVariants({
-                                      variant: "secondary",
-                                      className: "justify-start",
-                                    })}
-                                  />
-                                }
-                              >
-                                <UserRound
-                                  data-icon="inline-start"
-                                  aria-hidden="true"
-                                />
-                                {signOutCopy.openProfile}
-                              </SheetClose>
-                              {hasOperatorAccess ? (
-                                <SiteShellOperatorMenu
-                                  locale={locale}
-                                  onNavigate={() => setAccountMenuOpen(false)}
-                                />
-                              ) : null}
-                              <SignOutControl
-                                presentation="menu"
-                                onBeforeRequest={() =>
-                                  setAccountMenuOpen(false)
-                                }
-                              />
-                            </div>
-                          </SheetContent>
-                        </Sheet>
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span
-                        data-site-shell-action="add-guest"
-                        className="hidden md:inline-flex"
-                      >
-                        <AuthIntentTrigger
-                          action="create_entry"
-                          returnTo="/garden"
-                          label={copy.navigation.addUpdate}
-                          labelClassName="sr-only md:not-sr-only"
-                          icon={<SquarePen aria-hidden="true" />}
-                          size="sm"
-                          className="border-background/30 bg-background text-foreground hover:bg-background/90"
-                        />
-                      </span>
-                      <span className="md:hidden">
-                        <Tooltip>
-                          <TooltipTrigger
-                            render={
-                              <Link
-                                data-site-shell-action="sign-in-mobile"
-                                href={navigation.signIn.href}
-                                aria-label={navigation.signIn.label}
-                                className={iconButtonVariants({
-                                  variant: "ghost",
-                                  className:
-                                    "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
-                                })}
-                              />
-                            }
-                          >
-                            <LogIn aria-hidden="true" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {navigation.signIn.label}
-                          </TooltipContent>
-                        </Tooltip>
-                      </span>
-                      <span className="hidden md:inline-flex">
-                        <Link
-                          data-site-shell-action="sign-in"
-                          href={navigation.signIn.href}
-                          className={buttonVariants({
-                            variant: "secondary",
-                            size: "sm",
-                            className:
-                              "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
-                          })}
-                        >
-                          {navigation.signIn.label}
-                        </Link>
-                      </span>
-                    </>
-                  )}
-                </div>
+              <div className="mt-auto hidden w-full flex-col gap-2 pt-4 lg:flex">
+                <Separator />
+                <AccountRegion
+                  locale={locale}
+                  navigation={navigation}
+                  isAuthenticated={isAuthenticated}
+                  hasOperatorAccess={hasOperatorAccess}
+                />
               </div>
             </header>
 
-            <div className="site-shell-layout mx-auto grid w-full max-w-7xl flex-1">
-              <aside
-                data-site-shell-region="sidebar"
-                className="site-shell-viewport-rail sticky top-14 hidden overflow-y-auto border-r border-border px-3 py-5 lg:block"
-              >
-                <NavigationSection
-                  label={navigation.labels.publicSection}
-                  items={navigation.publicItems}
-                  pathname={pathname}
-                />
-                {navigation.personalItems.length > 0 ? (
-                  <>
-                    <Separator className="my-4" />
-                    <NavigationSection
-                      label={navigation.labels.personalSection}
-                      items={navigation.personalItems}
-                      pathname={pathname}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <Separator className="my-4" />
-                    <GuestMutationActions
-                      addObjectLabel={copy.navigation.addObject}
-                      addEntryLabel={copy.navigation.addUpdate}
-                    />
-                  </>
-                )}
-              </aside>
-
+            <div className="flex min-w-0 flex-col">
               <div
                 id="main-content"
                 data-interface-locale-fragment-safe="true"
                 data-site-shell-region="content"
                 tabIndex={-1}
-                className="site-shell-content-safe-bottom min-w-0 outline-none"
+                className="site-shell-content-safe-bottom mx-auto w-full max-w-content min-w-0 flex-1 outline-none"
               >
                 {children}
               </div>
 
-              <aside
-                data-site-shell-region="context"
-                className="site-shell-viewport-rail sticky top-14 hidden overflow-y-auto border-l border-border px-5 py-6 xl:block"
-              >
-                {routeContextModules ? (
-                  <SiteShellContextRailModules modules={routeContextModules} />
-                ) : (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">
-                      {navigation.labels.contextTitle}
-                    </p>
-                    <h2 className="text-lg font-semibold text-foreground">
-                      {context.title}
-                    </h2>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      {context.description}
-                    </p>
-                    <div className="flex flex-col gap-2 pt-1">
-                      <Link
-                        href={context.primaryHref}
-                        className={buttonVariants({
-                          className: "justify-start",
-                        })}
-                      >
-                        {context.primaryLabel}
-                      </Link>
-                      <Link
-                        href={context.secondaryHref}
-                        className={buttonVariants({
-                          variant: "secondary",
-                          className: "justify-start",
-                        })}
-                      >
-                        {context.secondaryLabel}
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </aside>
+              <SiteShellFooter
+                locale={locale}
+                market={market}
+                pathname={pathname}
+                links={navigation.footerLinks}
+                navigationLabel={navigation.labels.footerNavigation}
+                tagline={copy.shell.footerTagline}
+                sourcesTitle={copy.shell.sourcesTitle}
+                sourcesDescription={copy.shell.sourcesDescription}
+              />
             </div>
 
-            <SiteShellMobileNavigation
-              items={navigation.mobileItems}
-              pathname={pathname}
-              ariaLabel={navigation.labels.mobileNavigation}
-            />
+            <aside
+              data-site-shell-region="context"
+              aria-label={navigation.labels.contextRail}
+              className="sticky top-0 hidden h-dvh self-start overflow-y-auto border-l border-border px-5 py-6 xl:block"
+            >
+              {routeContextModules ? (
+                <SiteShellContextRailModules modules={routeContextModules} />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <p className="text-overline text-text-muted uppercase">
+                    {navigation.labels.contextTitle}
+                  </p>
+                  <h2 className="text-h4 text-text-heading">{context.title}</h2>
+                  <p className="text-body-sm text-text-secondary">
+                    {context.description}
+                  </p>
+                  <div className="flex flex-col gap-2 pt-1">
+                    <Link
+                      href={context.primaryHref}
+                      className={buttonVariants({
+                        variant: "secondary",
+                        size: "sm",
+                        className: "justify-start",
+                      })}
+                    >
+                      {context.primaryLabel}
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </aside>
           </div>
-        </TooltipProvider>
+
+          <SiteShellMobileNavigation
+            items={navigation.mobileItems}
+            pathname={pathname}
+            ariaLabel={navigation.labels.mobileNavigation}
+          />
+        </div>
       </SiteShellContextRailProvider>
     </SiteShellLocaleProvider>
   );
@@ -582,112 +348,213 @@ export function SiteShell({
   );
 }
 
-export function SiteShellOperatorMenu({
+/**
+ * The one primary action of the shell. A signed-out reader reaches the composer
+ * through the sign-in screen and comes back to it — never to the workspace
+ * around it, which is the extra press `OVE-378` removed once already.
+ */
+function PrimaryAction({
+  item,
+  isAuthenticated,
+}: {
+  item: SiteShellNavigationItem;
+  isAuthenticated: boolean;
+}) {
+  // Below `sm` the bar already carries a menu, a brand and a search control, so
+  // the label collapses and the icon keeps the action's accessible name. It is
+  // the same element throughout: nothing is duplicated per breakpoint.
+  const labelClassName = "sr-only sm:not-sr-only";
+
+  if (!isAuthenticated) {
+    return (
+      <span data-site-shell-action="new-entry" className="contents">
+        <AuthIntentTrigger
+          action="create_entry"
+          returnTo="/garden"
+          label={item.label}
+          labelClassName={labelClassName}
+          icon={<SquarePen aria-hidden="true" />}
+          formClassName="w-full"
+          className="w-full"
+        />
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      data-site-shell-action="new-entry"
+      href={item.href}
+      className={buttonVariants({ className: "w-full" })}
+    >
+      <SquarePen aria-hidden="true" />
+      <span className={labelClassName}>{item.label}</span>
+    </Link>
+  );
+}
+
+/** The foot of the rail: who you are, and the way out. */
+function AccountRegion({
   locale,
-  onNavigate,
+  navigation,
+  isAuthenticated,
+  hasOperatorAccess,
 }: {
   locale: InterfaceLocale;
-  onNavigate?: () => void;
+  navigation: SiteShellNavigation;
+  isAuthenticated: boolean;
+  hasOperatorAccess: boolean;
 }) {
-  const copy = getOperatorMenuCopy(locale);
+  const copy = getInterfaceCopy(locale);
+  const operatorCopy = getOperatorMenuCopy(locale);
 
-  return (
-    <section
-      data-site-shell-operator-menu="true"
-      aria-labelledby="site-shell-operator-menu-title"
-      className="grid gap-2"
-    >
-      <Separator />
-      <h3
-        id="site-shell-operator-menu-title"
-        className="px-1 text-xs font-semibold text-muted-foreground uppercase"
+  if (!isAuthenticated) {
+    return (
+      <Link
+        data-site-shell-action="sign-in"
+        href={navigation.signIn.href}
+        className={buttonVariants({
+          variant: "secondary",
+          className: "w-full justify-start",
+        })}
       >
-        {copy.sectionTitle}
-      </h3>
-      <ul className="grid gap-2">
-        {OPERATOR_MENU_LINKS.map((item) => (
-          <li key={item.href}>
-            <Link
-              href={item.href}
-              className={buttonVariants({
-                variant: "secondary",
-                className: "w-full justify-start",
-              })}
-              onClick={onNavigate}
-            >
-              {copy.links[item.key]}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+        <UserRound aria-hidden="true" />
+        {navigation.signIn.label}
+      </Link>
+    );
+  }
+
+  return (
+    <Menu>
+      <MenuTrigger
+        data-site-shell-account-menu-trigger="true"
+        render={
+          <Button variant="ghost" className="w-full justify-start">
+            <UserRound aria-hidden="true" />
+            {navigation.labels.accountRegion}
+          </Button>
+        }
+      />
+      <MenuContent
+        data-site-shell-account-menu="true"
+        align="start"
+        side="top"
+        className="min-w-56"
+      >
+        <MenuGroup>
+          <MenuGroupLabel>{navigation.labels.accountRegion}</MenuGroupLabel>
+          <AccountMenuLink href="/garden/profile">
+            {copy.navigation.profile}
+          </AccountMenuLink>
+        </MenuGroup>
+        {hasOperatorAccess ? (
+          <>
+            <MenuSeparator />
+            <MenuGroup data-site-shell-operator-menu="true">
+              <MenuGroupLabel>{operatorCopy.sectionTitle}</MenuGroupLabel>
+              {OPERATOR_MENU_LINKS.map((link) => (
+                <AccountMenuLink key={link.href} href={link.href}>
+                  {operatorCopy.links[link.key]}
+                </AccountMenuLink>
+              ))}
+            </MenuGroup>
+          </>
+        ) : null}
+        <MenuSeparator />
+        <SignOutControl presentation="menu" />
+      </MenuContent>
+    </Menu>
   );
 }
 
-function GuestMutationActions({
-  addObjectLabel,
-  addEntryLabel,
-  compact = false,
+function AccountMenuLink({
+  href,
+  children,
 }: {
-  addObjectLabel: string;
-  addEntryLabel: string;
-  compact?: boolean;
+  href: string;
+  children: React.ReactNode;
 }) {
   return (
-    <div
-      data-site-shell-guest-actions="true"
-      className={cn("grid gap-2", compact && "gap-1.5")}
+    <Link
+      href={href}
+      className="flex min-h-10 items-center gap-2 rounded-md px-2.5 py-2 text-body-sm text-text outline-none hover:bg-action-subtle hover:text-action-subtle-text focus-visible:bg-action-subtle focus-visible:text-action-subtle-text"
     >
-      <AuthIntentTrigger
-        action="create_object"
-        returnTo="/garden"
-        label={addObjectLabel}
-        icon={<CirclePlus aria-hidden="true" />}
-        variant="secondary"
-        size="sm"
-        formClassName="w-full"
-        className="w-full justify-start"
-      />
-      <AuthIntentTrigger
-        action="create_entry"
-        returnTo="/garden"
-        label={addEntryLabel}
-        icon={<SquarePen aria-hidden="true" />}
-        size="sm"
-        formClassName="w-full"
-        className="w-full justify-start"
-      />
-    </div>
+      {children}
+    </Link>
   );
 }
 
-function NavigationSection({
-  label,
-  items,
+function MobileMenuTrigger({
+  navigation,
   pathname,
-  compact = false,
+  open,
+  onOpenChange,
+  isAuthenticated,
 }: {
-  label: string;
-  items: SiteShellNavigationItem[];
+  navigation: SiteShellNavigation;
   pathname: string;
-  compact?: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  isAuthenticated: boolean;
 }) {
+  const privacy = navigation.footerLinks.find((link) => link.key === "privacy");
+
   return (
-    <section className="flex flex-col gap-2">
-      <p
-        className={cn(
-          "px-2.5 text-xs font-semibold text-muted-foreground uppercase",
-          compact && "text-xs",
-        )}
-      >
-        {label}
-      </p>
-      <SiteShellNavigationList
-        items={items}
-        pathname={pathname}
-        compact={compact}
-        ariaLabel={label}
-      />
-    </section>
+    <div className="flex shrink-0 items-center lg:hidden">
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetTrigger
+          render={
+            <IconButton
+              variant="ghost"
+              data-cwv-interaction-target="site-menu"
+              label={navigation.labels.openMenu}
+            />
+          }
+        >
+          <MenuIcon aria-hidden="true" />
+        </SheetTrigger>
+        <SheetContent
+          side="left"
+          closeLabel={navigation.labels.closeMenu}
+          className="w-4/5 max-w-xs gap-0 p-0"
+        >
+          <SheetHeader className="border-b border-border">
+            <SheetTitle>{navigation.labels.menuTitle}</SheetTitle>
+            <SheetDescription>
+              {navigation.labels.menuDescription}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
+            <SiteShellNavigationList
+              items={navigation.publicItems}
+              pathname={pathname}
+              compact
+              ariaLabel={navigation.labels.siteNavigation}
+            />
+            {navigation.personalItems.length > 0 ? (
+              <SiteShellNavigationList
+                items={navigation.personalItems}
+                pathname={pathname}
+                compact
+                ariaLabel={navigation.labels.personalSection}
+              />
+            ) : null}
+          </div>
+          <div className="mt-auto flex flex-col gap-3 border-t border-border p-4">
+            <SiteShellMobileUtilities
+              privacyHref={privacy?.href ?? "/privacy"}
+              privacyLabel={privacy?.label ?? ""}
+            >
+              {isAuthenticated ? (
+                <SignOutControl
+                  presentation="menu"
+                  onBeforeRequest={() => onOpenChange(false)}
+                />
+              ) : null}
+            </SiteShellMobileUtilities>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
   );
 }

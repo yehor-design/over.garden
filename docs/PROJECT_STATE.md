@@ -26,22 +26,22 @@ never override them.
 
 Verified on 2026-09-07 against `https://over.garden` and the live providers.
 
-| Area          | State                                                                                                                                                                                                       |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deploy        | `main` at `1c8d186`, Vercel production READY, functions in `fra1` beside the database                                                                                                                       |
-| Public pages  | Cache Components: shells answer `x-vercel-cache: HIT`, tags revalidate on every mutation, workspace and API stay `no-store`                                                                                 |
-| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, communities and catalog chunks. Under ADR-0026 D9 an organism card whose content comes only from sources stays `noindex` until a gardener publishes on it or the owner marks it: one of the 114,669 nodes is marked, carries `Taxon` JSON-LD with eight `sameAs`, and is the catalog chunk's only entry |
-| Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                     |
-| Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                          |
-| Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                       |
-| Admin         | Owner pages live in the account menu under the sealed owner role. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`) and the `/health` diagnostics page with them (ADR-0027, `OVE-410`, 2026-09-09), so `/health` now answers 404 for everyone; the menu carries five owner links |
-| Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                 |
-| Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw |
+| Area          | State                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy        | `main` at `1c8d186`, Vercel production READY, functions in `fra1` beside the database                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Public pages  | Cache Components: shells answer `x-vercel-cache: HIT`, tags revalidate on every mutation, workspace and API stay `no-store`                                                                                                                                                                                                                                                                                                                                                                                                |
+| Indexability  | Every live public page is `index, follow` with one canonical and one JSON-LD graph; sitemap index plus entries, profiles, communities and catalog chunks. Under ADR-0026 D9 an organism card whose content comes only from sources stays `noindex` until a gardener publishes on it or the owner marks it: one of the 114,669 nodes is marked, carries `Taxon` JSON-LD with eight `sameAs`, and is the catalog chunk's only entry                                                                                          |
+| Media         | Browser-made WebP: 2560 primary, 1280 and 480 variants, 16 px placeholder, served as plain `<img srcset>` from `media.over.garden`, immutable and CDN-cached. No Vercel image optimizer                                                                                                                                                                                                                                                                                                                                    |
+| Media upload  | One session capability per composer, uploads straight to the Cloudflare Worker, two-hour lease renewed every five minutes, parallel promotion, weekly orphan sweep                                                                                                                                                                                                                                                                                                                                                         |
+| Sessions      | Server-authoritative. The cookie-cached session decides at the moment of the mutation; no client gate                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Admin         | Owner pages live in the account menu under the sealed owner role. The Release Center, editions and extension packs are gone (ADR-0025, `OVE-385`) and the `/health` diagnostics page with them (ADR-0027, `OVE-410`, 2026-09-09), so `/health` now answers 404 for everyone; the menu carries five owner links                                                                                                                                                                                                             |
+| Workspace     | Every page under `/garden/**` renders its own shell first and streams its data; failures are designed states with a class, a digest, and a retry (ADR-0023)                                                                                                                                                                                                                                                                                                                                                                |
+| Server errors | Two JSON lines: `workspace_section_degraded` from `settleSection` for a section that failed and still rendered, and `workspace_server_error` from `src/instrumentation.ts` for anything that actually threw                                                                                                                                                                                                                                                                                                                |
 | Schema        | Migrations `0001`–`0047`, `0049`, `0051`–`0058` and `0060`–`0064` applied, minus the two deliberately skipped and the two not needed in production. Slice 24 landed `0054` (the graph foundation) through `0061` (the closeout, 2026-09-07): `catalog_items.catalog_kind` and `status` are gone, and so are `catalog_match_suggestions` and `catalog_fuzzy_duplicate_suggestions` with the 2,267 rows they held. `0064` indexes the five columns the reconciliation's cleanup reads. See `docs/PRODUCTION_SCHEMA_STATE.md` |
-| Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling |
-| Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                        |
-| Matching      | The worker on the droplet runs the sealed release of `7b0a287` since 2026-09-07 with a fresh heartbeat, declaring the manifest's six handlers exactly; the API container, its route, and `matching.over.garden` were retired on 2026-09-03. Its `MEILISEARCH_HOST` and Caddy's upstream both named a container that stopped on 2026-07-23 until the same day, so the worker could not reach Meilisearch for six and a half weeks |
-| Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                           |
+| Interaction   | Like, bookmark, follow and comment are Server Actions on a form with a real endpoint, so they work before hydration and with JavaScript off. A like is a permanent row owned by an account or by one signed visitor cookie, with no expiry and no ceiling                                                                                                                                                                                                                                                                  |
+| Sign-in       | One screen: `/auth/sign-in` and `/auth/sign-up` over one component and Server Actions. Every other page shows its own empty state and one link to it                                                                                                                                                                                                                                                                                                                                                                       |
+| Matching      | The worker on the droplet runs the sealed release of `7b0a287` since 2026-09-07 with a fresh heartbeat, declaring the manifest's six handlers exactly; the API container, its route, and `matching.over.garden` were retired on 2026-09-03. Its `MEILISEARCH_HOST` and Caddy's upstream both named a container that stopped on 2026-07-23 until the same day, so the worker could not reach Meilisearch for six and a half weeks                                                                                           |
+| Hosting       | Decided 2026-09-03: the DigitalOcean managed database and the `fra1` droplet stay                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 The seven owner requirements have one committed production receipt:
 `docs/OWNER_MVP_RESET_PROOF_2026-09.md`, regenerated by
@@ -97,7 +97,36 @@ for the boundary that identifies a control, on every input on the site. And the
 focus ring was `#a1a1a1` at **2.32:1**, which failed the same rule everywhere.
 All three are fixed and all three are now measured by a gate.
 
-The page families (`OVE-443`–`OVE-459`) are still in Backlog. The empty states
+**The shell is the fifth thing built** (`OVE-443`, 2026-09-17). One `<header>`
+in two shapes — a 56 px bar below `lg`, the 240 px rail above it — so the
+`banner` landmark exists at every width and the primary action cannot render
+twice; a 704 px content column; a 300 px context rail at `xl` that no screen
+depends on; and the `contentinfo` landmark the product had never had, carrying
+the catalogue, `/privacy`, `/support` and `/first-publication-disclosure` —
+three pages nothing linked — plus the one language control. The catalogue's four
+scattered entrances became one rail item; every address still answers (ADR-0029).
+`site-shell-*` left `globals.css` for tokens (`--container-rail`,
+`--container-content`, `--container-context`), except the two `env()` safe-area
+rules, which are not design decisions.
+
+Two things that measurement settled rather than code. The floating circular
+control "clipped at the right edge of every page" is **Vercel's toolbar feedback
+button**, injected at the edge for a browser carrying `__vercel_toolbar`; the
+served HTML names it nowhere and neither does this repository, so no reader has
+ever seen it (ADR-0031 D4, amended). And ADR-0031 D10's demand for a visible
+`thiings.co` credit in the footer was a draft that misrecorded the owner's
+decision; `DESIGN.md` §2.9 is the record, the footer carries no credit, and a
+test fails if one appears.
+
+A local trap worth one line, because it costs an hour: start the production
+server for a browser proof **without** `--hostname 127.0.0.1`. With it, Next's
+internal locale rewrite returns as `http://localhost:<port>/<locale>/…`, the
+proxy runs again on the prefixed path, and ADR-0029 D9's "an entry carries no
+locale prefix" rule 308s it back — a public entry then self-redirects forever.
+It reproduces on `main` and on any branch; CI and Vercel bind differently and
+never see it.
+
+The remaining page families (`OVE-444`–`OVE-459`) are still in Backlog. The empty states
 have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module
 (`src/lib/illustrations.ts`), on the owner's position of 2026-09-17 — the free
@@ -125,7 +154,7 @@ over a candidate set resolved through the organism graph, and publishing
 registers a mention that the organism card shows and the pipeline reuses as its
 memory against repeating itself. ADR-0026 D9 stands unchanged — an editorial
 mention does not make a source-only card indexable, and the measure of success
-is how many cards get a first *gardener* entry after a reader was sent to them.
+is how many cards get a first _gardener_ entry after a reader was sent to them.
 Nothing is implemented: every issue of Slice 23 and Slice 25 is still in
 Backlog. The eight Slice 25 issues were rewritten against the ADR the same day
 and two were created for the linking work no task described. The owner also cut
@@ -185,7 +214,7 @@ because the header read the navigation item's label and hard-coded its own href;
 every sign-in link is built by one function now, and an intent control returns
 the reader to the composer rather than to the workspace around it.
 
-The other: merely *hovering* a language option rewrote the reader's saved language.
+The other: merely _hovering_ a language option rewrote the reader's saved language.
 The proxy reads the preference from the locale prefix a request lands on, and
 Next strips `Next-Router-Prefetch` before middleware runs, so the guard written
 to exclude prefetches never fired. Cross-locale links now carry
@@ -235,7 +264,7 @@ distribution behind that number.
 cultivar and breed is attached to its species. The three register importers
 already wrote what a register says — a source row, a catalog item, its names
 and a link — but none of them wrote the one fact a gardener sees: that this
-denomination is a form *of* something. One pass now turns a row from any of the
+denomination is a form _of_ something. One pass now turns a row from any of the
 registers into the same claim (which species, under which denomination,
 registered where and when) and writes a `form_of` relation, a denomination, a
 register identifier, a `registration_status` fact with the market and the year,
@@ -528,23 +557,23 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    `503`, as it did before — the composer falls back to the own-name outcome
    by design; and the 26.6 ms in `OVE-387`'s original receipt was measured on
    a loopback database of about 15,900 nodes, never comparable.
-0a. **A species can display its genus's name, because equal weights are
+   0a. **A species can display its genus's name, because equal weights are
    broken by import date.** Found on 2026-09-09 from the live product: typing
-   `соняшник` offers **Соняхи** first — the Ukrainian name of the *genus*
-   *Helianthus*, in the plural — for a node that is correctly *Helianthus
-   annuus* (`/species/helianthus-annuus-species-backbone`). A gardener looking
+   `соняшник` offers **Соняхи** first — the Ukrainian name of the _genus_
+   _Helianthus_, in the plural — for a node that is correctly _Helianthus
+   annuus_ (`/species/helianthus-annuus-species-backbone`). A gardener looking
    for a sunflower is shown a category.
 
    The card and the picker take a node's display name from the first uk
    vernacular by `is_primary desc, weight desc, created_at, id`. That node has
    four, and the top two are tied:
 
-   | name | weight | source | created |
-   | -- | -- | -- | -- |
-   | соняхи | 2.0 | wikidata | 2026-09-06 |
-   | соняшник однорічний | 2.0 | eppo-codes | 2026-09-07 |
-   | сонях | 0.0 | — | 2026-07-02 |
-   | соняшник | 0.0 | — | 2026-07-02 |
+   | name                | weight | source     | created    |
+   | ------------------- | ------ | ---------- | ---------- |
+   | соняхи              | 2.0    | wikidata   | 2026-09-06 |
+   | соняшник однорічний | 2.0    | eppo-codes | 2026-09-07 |
+   | сонях               | 0.0    | —          | 2026-07-02 |
+   | соняшник            | 0.0    | —          | 2026-07-02 |
 
    So the tie is decided by `created_at`, and **which name a reader sees is
    decided by which import ran first** — a day apart, in this case. The genus
@@ -570,14 +599,14 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    header still renders its signed-out state ("sign in"). The page is honest;
    the chrome is not yet, and it sits outside `/garden/**`.
 3. **The slice's browser proofs are partial, and one of them was overstated.**
-   Like, language and sign-in each had their *endpoint* proved with a real
+   Like, language and sign-in each had their _endpoint_ proved with a real
    no-JavaScript POST against a production build, and all three were then
    verified end to end on production in a real browser. That is not the same as
    working with JavaScript off, and the earlier wording here said it was: every
    public page renders inside streamed Suspense boundaries, so with scripts
    disabled it shows nothing at all and no control is reachable. See ADR-0024
    D3 for the measurement and for why the crawler cases are nonetheless
-   covered. A *successful* sign-in was never
+   covered. A _successful_ sign-in was never
    walked through in a browser — only the refusal path — so the `next`
    round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
    than observed. CI runs `tests/public-hydration.spec.ts` against a real
@@ -654,8 +683,7 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
     invocation since the schedule was added answered 405. Observed on
     2026-09-05: `media_lifecycle_retention_runs` held zero rows ever, nine queue
     rows sat at `attempts = 0` unclaimed, and the five derivatives of five
-    deleted journal entries were still served from `media.over.garden` with HTTP
-    200. An unauthenticated GET returned 405 for this path and 401 for the three
+    deleted journal entries were still served from `media.over.garden` with HTTP 200. An unauthenticated GET returned 405 for this path and 401 for the three
     cron routes that export GET, which is the whole difference. Fixed by
     exporting GET, and `src/app/api/cron/vercel-cron-contract.test.ts` now fails
     when any scheduled path has no GET, when a cron route is unscheduled, or

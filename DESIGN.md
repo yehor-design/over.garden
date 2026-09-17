@@ -91,21 +91,21 @@ luminance.
 **Neutral — the interface.** Hue 150 at chroma 0.002–0.008: a grey that carries a
 whisper of the product without ever reading as green.
 
-| Token | OKLCH | Hex | Contrast on white | Allowed use |
-| --- | --- | --- | --- | --- |
-| `--og-neutral-0` | `oklch(1 0 0)` | `#ffffff` | — | page and card surface |
-| `--og-neutral-25` | `oklch(0.990 0.002 150)` | `#fbfcfb` | 1.03 | raised surface |
-| `--og-neutral-50` | `oklch(0.976 0.003 150)` | `#f6f8f6` | 1.07 | sunken surface, rails |
-| `--og-neutral-100` | `oklch(0.955 0.004 150)` | `#eef1ef` | 1.14 | hover fill |
-| `--og-neutral-200` | `oklch(0.917 0.005 150)` | `#e1e4e2` | 1.28 | **decorative** divider only |
-| `--og-neutral-300` | `oklch(0.863 0.006 150)` | `#cfd3d0` | 1.51 | disabled fill |
-| `--og-neutral-400` | `oklch(0.715 0.007 150)` | `#a0a4a1` | 2.52 | disabled text, icon on fill |
-| `--og-neutral-500` | `oklch(0.585 0.008 150)` | `#797d79` | 4.18 | **control border**, placeholder |
-| `--og-neutral-600` | `oklch(0.487 0.008 150)` | `#5c615d` | 6.32 | muted text |
-| `--og-neutral-700` | `oklch(0.395 0.008 150)` | `#434844` | 9.34 | secondary text |
-| `--og-neutral-800` | `oklch(0.285 0.007 150)` | `#282b28` | 14.32 | heading |
-| `--og-neutral-900` | `oklch(0.205 0.006 150)` | `#151816` | 17.89 | body text |
-| `--og-neutral-950` | `oklch(0.145 0.005 150)` | `#090b09` | 19.75 | inverse surface |
+| Token              | OKLCH                    | Hex       | Contrast on white | Allowed use                     |
+| ------------------ | ------------------------ | --------- | ----------------- | ------------------------------- |
+| `--og-neutral-0`   | `oklch(1 0 0)`           | `#ffffff` | —                 | page and card surface           |
+| `--og-neutral-25`  | `oklch(0.990 0.002 150)` | `#fbfcfb` | 1.03              | raised surface                  |
+| `--og-neutral-50`  | `oklch(0.976 0.003 150)` | `#f6f8f6` | 1.07              | sunken surface, rails           |
+| `--og-neutral-100` | `oklch(0.955 0.004 150)` | `#eef1ef` | 1.14              | hover fill                      |
+| `--og-neutral-200` | `oklch(0.917 0.005 150)` | `#e1e4e2` | 1.28              | **decorative** divider only     |
+| `--og-neutral-300` | `oklch(0.863 0.006 150)` | `#cfd3d0` | 1.51              | disabled fill                   |
+| `--og-neutral-400` | `oklch(0.715 0.007 150)` | `#a0a4a1` | 2.52              | disabled text, icon on fill     |
+| `--og-neutral-500` | `oklch(0.585 0.008 150)` | `#797d79` | 4.18              | **control border**, placeholder |
+| `--og-neutral-600` | `oklch(0.487 0.008 150)` | `#5c615d` | 6.32              | muted text                      |
+| `--og-neutral-700` | `oklch(0.395 0.008 150)` | `#434844` | 9.34              | secondary text                  |
+| `--og-neutral-800` | `oklch(0.285 0.007 150)` | `#282b28` | 14.32             | heading                         |
+| `--og-neutral-900` | `oklch(0.205 0.006 150)` | `#151816` | 17.89             | body text                       |
+| `--og-neutral-950` | `oklch(0.145 0.005 150)` | `#090b09` | 19.75             | inverse surface                 |
 
 Two consequences you must not forget:
 
@@ -114,34 +114,34 @@ Two consequences you must not forget:
 - **`neutral-200` cannot carry a control boundary.** At 1.28 it fails WCAG 2.2
   1.4.11 (3:1 for the boundary that identifies a component). An input, a
   checkbox, a select and a bordered button use `neutral-500`. `neutral-200` is
-  for dividers *inside* a surface, which identify nothing.
+  for dividers _inside_ a surface, which identify nothing.
 
 **Green — brand and primary action.** Hue 151, anchored on the existing
 `oklch(0.39 0.105 151)`, which becomes `green-700`.
 
-| Token | OKLCH | Hex | On white | Use |
-| --- | --- | --- | --- | --- |
-| `--og-green-50` | `oklch(0.968 0.024 151)` | `#e9f9ec` | 1.09 | success surface |
-| `--og-green-100` | `oklch(0.930 0.048 151)` | `#d2f2d8` | 1.20 | selected chip |
-| `--og-green-200` | `oklch(0.872 0.072 151)` | `#b3e3bd` | 1.43 | chip border |
-| `--og-green-300` | `oklch(0.790 0.093 151)` | `#8ecc9c` | 1.86 | decoration |
-| `--og-green-400` | `oklch(0.680 0.110 151)` | `#61ac75` | 2.74 | decoration |
-| `--og-green-500` | `oklch(0.575 0.115 151)` | `#3d8c55` | 4.13 | non-text accent |
-| `--og-green-600` | `oklch(0.487 0.110 151)` | `#24713e` | 5.99 | focus ring, hover |
-| `--og-green-700` | `oklch(0.390 0.105 151)` | `#005425` | **9.15** | primary fill, link |
-| `--og-green-800` | `oklch(0.320 0.085 151)` | `#013e1a` | 12.31 | link hover, pressed |
-| `--og-green-900` | `oklch(0.262 0.065 151)` | `#042d13` | 15.11 | on-green text |
+| Token            | OKLCH                    | Hex       | On white | Use                 |
+| ---------------- | ------------------------ | --------- | -------- | ------------------- |
+| `--og-green-50`  | `oklch(0.968 0.024 151)` | `#e9f9ec` | 1.09     | success surface     |
+| `--og-green-100` | `oklch(0.930 0.048 151)` | `#d2f2d8` | 1.20     | selected chip       |
+| `--og-green-200` | `oklch(0.872 0.072 151)` | `#b3e3bd` | 1.43     | chip border         |
+| `--og-green-300` | `oklch(0.790 0.093 151)` | `#8ecc9c` | 1.86     | decoration          |
+| `--og-green-400` | `oklch(0.680 0.110 151)` | `#61ac75` | 2.74     | decoration          |
+| `--og-green-500` | `oklch(0.575 0.115 151)` | `#3d8c55` | 4.13     | non-text accent     |
+| `--og-green-600` | `oklch(0.487 0.110 151)` | `#24713e` | 5.99     | focus ring, hover   |
+| `--og-green-700` | `oklch(0.390 0.105 151)` | `#005425` | **9.15** | primary fill, link  |
+| `--og-green-800` | `oklch(0.320 0.085 151)` | `#013e1a` | 12.31    | link hover, pressed |
+| `--og-green-900` | `oklch(0.262 0.065 151)` | `#042d13` | 15.11    | on-green text       |
 
 `white on green-700` = **9.15:1**. The primary button clears AAA.
 
 **Status ramps.** Each has a 50 (surface), 100 (border), and a text/fill step.
 
-| Role | Surface | Text | Fill (white text) | Measured |
-| --- | --- | --- | --- | --- |
-| success | `green-50` | `green-700` | `green-700` | text on surface 8.38 |
-| danger | `red-50` `#fff1f0` | `red-700` `#a7111a` (7.67) | `red-600` `#c91a23` | white on fill 5.74 |
-| warning | `amber-50` `#fff7e2` | `amber-700` `#9c5313` (5.74) | — | ink on surface 16.74 |
-| info | `blue-50` `#eef7ff` | `blue-700` `#00529c` (7.82) | `blue-600` `#0069c1` | white on fill 5.54 |
+| Role    | Surface              | Text                         | Fill (white text)    | Measured             |
+| ------- | -------------------- | ---------------------------- | -------------------- | -------------------- |
+| success | `green-50`           | `green-700`                  | `green-700`          | text on surface 8.38 |
+| danger  | `red-50` `#fff1f0`   | `red-700` `#a7111a` (7.67)   | `red-600` `#c91a23`  | white on fill 5.74   |
+| warning | `amber-50` `#fff7e2` | `amber-700` `#9c5313` (5.74) | —                    | ink on surface 16.74 |
+| info    | `blue-50` `#eef7ff`  | `blue-700` `#00529c` (7.82)  | `blue-600` `#0069c1` | white on fill 5.54   |
 
 **Warning has no white-on-fill variant.** `white on amber-600` is 3.22 and fails
 for text. A warning is a surface with ink text and an `amber-600` accent edge,
@@ -209,13 +209,13 @@ Chips, avatars and pills `full`. Media keeps `lg` and clips with
 ### 2.5 Elevation
 
 This is a **bordered** system, not a shadowed one — Linear, Notion and GitHub
-are the reference. Shadow marks *what floats above the page*, and nothing else.
+are the reference. Shadow marks _what floats above the page_, and nothing else.
 
-| Level | Token | Value | Used by |
-| --- | --- | --- | --- |
-| 0 | — | none | cards, rails, page sections. Separation is a border. |
-| 1 | `--shadow-popover` | `0 1px 2px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0 0 0 / 0.08)` | menu, popover, tooltip, combobox list |
-| 2 | `--shadow-overlay` | `0 8px 32px oklch(0 0 0 / 0.12)` | dialog, sheet, command palette |
+| Level | Token              | Value                                                           | Used by                                              |
+| ----- | ------------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
+| 0     | —                  | none                                                            | cards, rails, page sections. Separation is a border. |
+| 1     | `--shadow-popover` | `0 1px 2px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0 0 0 / 0.08)` | menu, popover, tooltip, combobox list                |
+| 2     | `--shadow-overlay` | `0 8px 32px oklch(0 0 0 / 0.12)`                                | dialog, sheet, command palette                       |
 
 A card does not get a shadow on hover. Hover changes `--color-surface-hover` and
 nothing else.
@@ -228,19 +228,19 @@ is the only typography wiring (ADR-0022 D7). (`AGENTS.md` said `next/font/local`
 until 2026-09-17; the code has always been `next/font/google`, and the page was
 corrected rather than the code.)
 
-| Token | Size / line-height | Weight | Use |
-| --- | --- | --- | --- |
-| `--text-display` | 40 / 44 | 700 | public entry title, organism card title |
-| `--text-h1` | 32 / 38 | 700 | page title |
-| `--text-h2` | 24 / 30 | 600 | section |
-| `--text-h3` | 19 / 26 | 600 | card title, subsection |
-| `--text-h4` | 16 / 22 | 600 | list-row title, label heading |
-| `--text-body-lg` | 18 / 29 | 400 | reading column prose |
-| `--text-body` | 16 / 24 | 400 | interface default |
-| `--text-body-sm` | 14 / 20 | 400 | secondary, dense rows |
-| `--text-caption` | 13 / 18 | 400 | metadata, timestamps |
-| `--text-overline` | 12 / 16 | 600, +0.04em, uppercase | eyebrow labels |
-| `--text-mono` | 14 / 22 | 400 | codes, identifiers, EPPO/COL ids |
+| Token             | Size / line-height | Weight                  | Use                                     |
+| ----------------- | ------------------ | ----------------------- | --------------------------------------- |
+| `--text-display`  | 40 / 44            | 700                     | public entry title, organism card title |
+| `--text-h1`       | 32 / 38            | 700                     | page title                              |
+| `--text-h2`       | 24 / 30            | 600                     | section                                 |
+| `--text-h3`       | 19 / 26            | 600                     | card title, subsection                  |
+| `--text-h4`       | 16 / 22            | 600                     | list-row title, label heading           |
+| `--text-body-lg`  | 18 / 29            | 400                     | reading column prose                    |
+| `--text-body`     | 16 / 24            | 400                     | interface default                       |
+| `--text-body-sm`  | 14 / 20            | 400                     | secondary, dense rows                   |
+| `--text-caption`  | 13 / 18            | 400                     | metadata, timestamps                    |
+| `--text-overline` | 12 / 16            | 600, +0.04em, uppercase | eyebrow labels                          |
+| `--text-mono`     | 14 / 22            | 400                     | codes, identifiers, EPPO/COL ids        |
 
 Below `md`, `display` is 30/36 and `h1` is 26/32. Nothing else changes.
 
@@ -259,15 +259,15 @@ Below `md`, `display` is 30/36 and `h1` is 26/32. Nothing else changes.
 
 ### 2.7 Motion
 
-| Token | Value | Use |
-| --- | --- | --- |
-| `--duration-instant` | 80 ms | hover, focus, colour |
-| `--duration-fast` | 140 ms | menu, tooltip, chip |
-| `--duration-base` | 200 ms | popover, accordion, sheet |
-| `--duration-slow` | 280 ms | dialog, page-level transition |
-| `--ease-out` | `cubic-bezier(0.2, 0, 0, 1)` | entering |
-| `--ease-in` | `cubic-bezier(0.4, 0, 1, 1)` | leaving |
-| `--ease-spring` | `cubic-bezier(0.2, 0, 0, 1.2)` | one, deliberate, emphasis |
+| Token                | Value                          | Use                           |
+| -------------------- | ------------------------------ | ----------------------------- |
+| `--duration-instant` | 80 ms                          | hover, focus, colour          |
+| `--duration-fast`    | 140 ms                         | menu, tooltip, chip           |
+| `--duration-base`    | 200 ms                         | popover, accordion, sheet     |
+| `--duration-slow`    | 280 ms                         | dialog, page-level transition |
+| `--ease-out`         | `cubic-bezier(0.2, 0, 0, 1)`   | entering                      |
+| `--ease-in`          | `cubic-bezier(0.4, 0, 1, 1)`   | leaving                       |
+| `--ease-spring`      | `cubic-bezier(0.2, 0, 0, 1.2)` | one, deliberate, emphasis     |
 
 Motion animates `opacity` and `transform` only. Never `height`, `width`, `top`
 or `left`. Nothing moves more than 16 px on entry. There is no decorative,
@@ -278,8 +278,7 @@ implemented in `globals.css` and it stays.
 
 ### 2.8 Icons
 
-Lucide, and only Lucide (`components.json` already fixes this). Sizes 16, 20,
-24. Stroke 1.5 at 16/20, 2 at 24. An icon is `aria-hidden` when beside a label
+Lucide, and only Lucide (`components.json` already fixes this). Sizes 16, 20, 24. Stroke 1.5 at 16/20, 2 at 24. An icon is `aria-hidden` when beside a label
 and carries an accessible name when alone. **An icon-only control always has a
 tooltip and an `aria-label` saying the same thing.**
 
@@ -377,7 +376,10 @@ lg → xl       [ rail 240 ]   [ content max 704 ]
 ```
 
 - **Left rail** (≥ lg, 240 px): brand → primary navigation with icon + label →
-  the one primary action → account at the foot. Sticky, its own scroll.
+  the one primary action → account at the foot. Sticky, its own scroll. It is
+  the `<header>` element itself, in its wide shape: one `banner` landmark at
+  every width, and the primary action therefore cannot be rendered in a rail
+  _and_ a header, which is how the product came to have two.
 - **Content**: 704 px maximum for reading and feeds; a catalogue grid or a table
   may use the full remaining width and says so explicitly.
 - **Context rail** (≥ xl, 300 px): related, secondary, discardable. **Every
@@ -386,15 +388,31 @@ lg → xl       [ rail 240 ]   [ content max 704 ]
   Feed, Catalogue, **New entry**, Journals and You. Authentication is not a tab;
   a signed-out visitor sees "You", which leads to sign-in.
 
-The floating circular control currently clipped at the right edge of every page
-is removed. The context rail opens from the header on mobile or not at all.
+The context rail opens from the header on mobile or not at all.
+
+**The floating circular control clipped at the right edge of every page is not
+the product's.** Measured on production on 2026-09-17: it is Vercel's toolbar
+feedback button, injected at the edge for any browser carrying the
+`__vercel_toolbar` cookie, from `vercel.live/_next-live/feedback/feedback.js`.
+The served HTML contains no reference to it and neither does this repository, so
+a reader never sees it and there is nothing here to delete. It goes by turning
+the toolbar off, not by a change to the shell.
 
 ### 3.3 Landmarks
 
 Exactly one `<header>` at top level (`banner`), one `<main>`, one `<footer>`
-(`contentinfo`, which the product does not have today and gains), and **every**
-`<nav>` and `<aside>` carries an `aria-label`. Two unlabelled `complementary`
-landmarks, which is what the site ships today, is a defect.
+(`contentinfo`, which the product did not have at all until `OVE-443`), and
+**every** `<nav>` and `<aside>` carries an `aria-label`. Two unlabelled
+`complementary` landmarks, which is what the site shipped before that, is a
+defect.
+
+The `<main>` is the **page's**, never the shell's. The shell renders the region
+it goes in (`#main-content`, the skip link's target) and would otherwise give
+every page two.
+
+The footer carries the four links nothing else linked — the catalogue, `/privacy`,
+`/support`, `/first-publication-disclosure` — and the one language control of
+§6. It does **not** carry a `thiings.co` credit; §2.9 records why.
 
 The skip link is the first focusable element and is visible on focus.
 
@@ -476,13 +494,13 @@ by growing the visual.
 
 ### 4.4 Button
 
-| Variant | Fill | Text | Border | Use |
-| --- | --- | --- | --- | --- |
-| `primary` | `action` | `text-on-fill` | none | the one action of the screen |
-| `secondary` | `surface` | `text` | `border-control` | everything beside it |
-| `subtle` | `action-subtle` | `action-subtle-text` | none | low-emphasis, in-context |
-| `ghost` | transparent | `text-secondary` | none | toolbars, rails, cards |
-| `danger` | `danger-fill` | `text-on-fill` | none | destructive confirmation only |
+| Variant     | Fill            | Text                 | Border           | Use                           |
+| ----------- | --------------- | -------------------- | ---------------- | ----------------------------- |
+| `primary`   | `action`        | `text-on-fill`       | none             | the one action of the screen  |
+| `secondary` | `surface`       | `text`               | `border-control` | everything beside it          |
+| `subtle`    | `action-subtle` | `action-subtle-text` | none             | low-emphasis, in-context      |
+| `ghost`     | transparent     | `text-secondary`     | none             | toolbars, rails, cards        |
+| `danger`    | `danger-fill`   | `text-on-fill`       | none             | destructive confirmation only |
 
 **One `primary` per screen region.** Two primaries side by side is a defect. A
 destructive action is never `primary`; it is `danger` and it lives behind an
@@ -543,14 +561,14 @@ Grounded in the Plain, Twenty, Gorgias and Workable references.
 
 ### 5.4 Empty, loading, error
 
-| State | Shape |
-| --- | --- |
-| **Empty (nothing yet)** | illustration slot · `h3` sentence · one muted line · one primary action |
-| **Empty (no results)** | no illustration · "Nothing matched" · the active filters as chips · "Clear filters" |
-| **Loading** | skeleton matching the real layout's boxes, never a spinner on a page |
-| **Partial / degraded** | the section renders its settled failure class with a reason, a reference code and a Retry (ADR-0023) |
-| **Error** | `ErrorState`: what happened in one sentence, what to do, the digest, a Retry |
-| **Signed out** | the real page behind it where possible, with one `Callout` and one link to `/auth/sign-in` |
+| State                   | Shape                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Empty (nothing yet)** | illustration slot · `h3` sentence · one muted line · one primary action                              |
+| **Empty (no results)**  | no illustration · "Nothing matched" · the active filters as chips · "Clear filters"                  |
+| **Loading**             | skeleton matching the real layout's boxes, never a spinner on a page                                 |
+| **Partial / degraded**  | the section renders its settled failure class with a reason, a reference code and a Retry (ADR-0023) |
+| **Error**               | `ErrorState`: what happened in one sentence, what to do, the digest, a Retry                         |
+| **Signed out**          | the real page behind it where possible, with one `Callout` and one link to `/auth/sign-in`           |
 
 A skeleton must not outlive its data by design: a section that can fail settles
 into a failure class instead of a permanent skeleton — the framework defect in
@@ -621,11 +639,13 @@ Target: **WCAG 2.2 level AA**, on every public and workspace screen. These are
 checks, not aspirations.
 
 **Colour and contrast**
+
 - Text ≥ 4.5:1; large text (≥ 24 px, or ≥ 18.66 px bold) ≥ 3:1.
 - Any boundary that identifies a control, and any meaningful icon, ≥ 3:1.
 - Colour is never the only signal: a status carries an icon or a word too.
 
 **Keyboard**
+
 - Every interactive element reachable and operable by keyboard, in DOM order.
 - Focus visible on everything: 2 px `focus-ring` outline, 2 px offset. Never
   `outline: none` without an equal replacement.
@@ -633,6 +653,7 @@ checks, not aspirations.
 - Skip link first. Roving tabindex in tab lists, menus and toolbars.
 
 **Structure**
+
 - Exactly one `h1`; heading levels never skip.
 - One `main`, one `banner`, one `contentinfo`; every `nav` and `aside` named.
 - Lists are lists, tables are tables with `<caption>` and scoped headers.
@@ -677,17 +698,17 @@ The public pages are the product's distribution. Budgets per public page:
 A rule that is not enforced is a suggestion. Each of these lands with the slice
 that needs it.
 
-| Rule | Gate | Runs in |
-| --- | --- | --- |
-| No Tailwind palette utility, no hex, no `oklch()` in a component | ESLint rule | `pnpm lint` |
-| No arbitrary value except a `data-*`/`has-*`/`[&…]` selector, a property list, or a `calc()` over a token | ESLint rule | `pnpm lint` |
-| No primitive `--og-*` outside `globals.css` | `scripts/check-design-tokens.ts` | `pnpm test` |
-| No raw `<input>/<select>/<textarea>` outside `ui/` | ESLint rule | `pnpm lint` |
-| No z-index literal | ESLint rule | `pnpm lint` |
-| Every `ui/` component has a test asserting role + accessible name | `scripts/check-component-tests.ts` | `pnpm test` |
-| Axe has zero violations on the nine key screens | `tests/accessibility.spec.ts` | `pnpm gates:browser` |
-| Keyboard path through the primary flows | `tests/accessibility.spec.ts` | `pnpm gates:browser` |
-| Contrast of every semantic pair | `src/app/globals.test.ts` | `pnpm test` |
+| Rule                                                                                                      | Gate                               | Runs in              |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------- |
+| No Tailwind palette utility, no hex, no `oklch()` in a component                                          | ESLint rule                        | `pnpm lint`          |
+| No arbitrary value except a `data-*`/`has-*`/`[&…]` selector, a property list, or a `calc()` over a token | ESLint rule                        | `pnpm lint`          |
+| No primitive `--og-*` outside `globals.css`                                                               | `scripts/check-design-tokens.ts`   | `pnpm test`          |
+| No raw `<input>/<select>/<textarea>` outside `ui/`                                                        | ESLint rule                        | `pnpm lint`          |
+| No z-index literal                                                                                        | ESLint rule                        | `pnpm lint`          |
+| Every `ui/` component has a test asserting role + accessible name                                         | `scripts/check-component-tests.ts` | `pnpm test`          |
+| Axe has zero violations on the nine key screens                                                           | `tests/accessibility.spec.ts`      | `pnpm gates:browser` |
+| Keyboard path through the primary flows                                                                   | `tests/accessibility.spec.ts`      | `pnpm gates:browser` |
+| Contrast of every semantic pair                                                                           | `src/app/globals.test.ts`          | `pnpm test`          |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.

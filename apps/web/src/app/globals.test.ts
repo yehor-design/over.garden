@@ -395,13 +395,28 @@ describe("global responsive floor", () => {
     expect(globals).not.toContain("min-width: 20rem");
   });
 
-  it("lets the site header grow around 200% text without shrinking controls", () => {
-    expect(globals).toContain(
-      ".site-shell-header-inner {\n  min-height: 56px;",
-    );
-    expect(globals).not.toContain(
-      ".site-shell-header-inner {\n  height: 56px;",
-    );
+  it("no longer positions the shell from this file", () => {
+    // The `site-shell-*` block went with the markup it styled (`OVE-443`). The
+    // shell's geometry is tokens now — `--container-rail`, `--container-content`,
+    // `--container-context` — and the rule this test used to guard (a header
+    // that grows rather than clips at 200 % text) is asserted on the markup in
+    // `site-shell.test.tsx`. Only the safe-area pair stays, because `env()` is
+    // a browser value and not a design decision.
+    for (const retired of [
+      ".site-shell-header-inner",
+      ".site-shell-header-icon",
+      ".site-shell-brand",
+      ".site-shell-header-actions",
+      ".site-shell-layout",
+      ".site-shell-viewport-rail",
+      ".site-shell-mobile-label",
+    ]) {
+      expect(globals, `${retired} outlived its markup`).not.toContain(retired);
+    }
+    expect(globals).toContain("--container-rail: 15rem;");
+    expect(globals).toContain("--container-content: 44rem;");
+    expect(globals).toContain("--container-context: 18.75rem;");
+    expect(globals).toContain(".site-shell-safe-bottom");
   });
 
   it("still collapses every duration for a reader who asked for less motion", () => {

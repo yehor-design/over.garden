@@ -7,14 +7,12 @@ import { localizedPath, stripLocalePrefix } from "./public-localization";
 
 export type SiteShellNavigationKey =
   | "feed"
-  | "living-objects"
+  | "catalogue"
   | "journals"
   | "communities"
   | "knowledge"
   | "garden"
-  | "add-object"
-  | "add-update"
-  | "drafts"
+  | "new-entry"
   | "followed-feed"
   | "notifications"
   | "bookmarks"
@@ -32,13 +30,28 @@ export interface SiteShellNavigationItem {
   matchPaths: readonly string[];
 }
 
+export interface SiteShellFooterLink {
+  key: "privacy" | "support" | "first-publication-disclosure" | "catalogue";
+  label: string;
+  href: string;
+}
+
 export interface SiteShellNavigation {
   publicItems: SiteShellNavigationItem[];
   personalItems: SiteShellNavigationItem[];
   mobileItems: SiteShellNavigationItem[];
+  /**
+   * The one action of the shell (DESIGN.md §3.2, ADR-0031 D4). It lives in the
+   * rail and nowhere else: the header rendered it a second time until this
+   * rewrite, which is two primaries on one screen.
+   */
+  primaryAction: SiteShellNavigationItem;
+  /** The screen the primary action reaches once the reader has an account. */
+  primaryActionHref: string;
   /** The sign-in screen, with the reader's current page as its return path. */
   signIn: SiteShellNavigationItem;
   searchHref: string;
+  footerLinks: SiteShellFooterLink[];
   labels: {
     publicSection: string;
     personalSection: string;
@@ -48,15 +61,19 @@ export interface SiteShellNavigation {
     openMenu: string;
     closeMenu: string;
     account: string;
+    openAccount: string;
     siteNavigation: string;
     mobileNavigation: string;
+    footerNavigation: string;
+    contextRail: string;
+    accountRegion: string;
     contextTitle: string;
   };
 }
 
 export type SiteShellRouteContextKey =
   | "feed"
-  | "living-object"
+  | "catalogue"
   | "journal"
   | "community"
   | "knowledge"
@@ -73,6 +90,27 @@ export interface SiteShellRouteContext {
   secondaryHref: string;
   secondaryLabel: string;
 }
+
+/** Where a reader who presses the primary action ends up once signed in. */
+export const SITE_SHELL_COMPOSER_PATH = "/garden#first-entry-composer";
+
+/**
+ * The catalogue's addresses. `/objects`, `/species`, `/variety`, `/breed` and
+ * `/col` are five spellings of one graph of 114,669 organisms, and the rail
+ * offered a sixth name for it ("Living objects") as though it were something
+ * else again. One entrance now; the addresses themselves are untouched, because
+ * ADR-0029 says a redesign never moves a permalink. Merging the *pages* behind
+ * them is `OVE-451`.
+ */
+const CATALOGUE_MATCH_PATHS = [
+  "/objects",
+  "/species",
+  "/variety",
+  "/breed",
+  "/col",
+  "/lineage/objects",
+  "/garden/objects",
+] as const;
 
 export function getSiteShellNavigation(
   locale: InterfaceLocale,
@@ -91,14 +129,11 @@ export function getSiteShellNavigation(
       paths: ["/"],
     }),
     item(
-      "living-objects",
-      copy.navigation.livingObjects,
+      "catalogue",
+      copy.navigation.catalogue,
       localizedPath(locale, "/objects"),
       "public",
-      {
-        match: "prefix",
-        paths: ["/objects", "/lineage/objects", "/garden/objects", "/variety"],
-      },
+      { match: "prefix", paths: CATALOGUE_MATCH_PATHS },
     ),
     item(
       "journals",
@@ -150,18 +185,6 @@ export function getSiteShellNavigation(
           paths: ["/garden"],
         }),
         item(
-          "add-object",
-          copy.navigation.addObject,
-          "/garden#first-entry-composer",
-          "personal",
-        ),
-        item(
-          "add-update",
-          copy.navigation.addUpdate,
-          "/garden#first-entry-composer",
-          "personal",
-        ),
-        item(
           "followed-feed",
           copy.navigation.followedFeed,
           localizedPath(locale, "/feed"),
@@ -196,13 +219,6 @@ export function getSiteShellNavigation(
           "personal",
           { match: "prefix", paths: ["/garden/lineage/claims"] },
         ),
-        item(
-          "profile",
-          copy.navigation.profile,
-          "/garden/profile",
-          "personal",
-          { match: "prefix", paths: ["/garden/profile"] },
-        ),
       ]
     : [];
 
@@ -216,24 +232,61 @@ export function getSiteShellNavigation(
     buildSignInHref({ returnTo: currentPath }),
     "utility",
   );
+  const primaryAction = item(
+    "new-entry",
+    copy.shell.primaryAction,
+    SITE_SHELL_COMPOSER_PATH,
+    "personal",
+  );
   const findItem = (key: SiteShellNavigationKey) =>
     [...publicItems, ...personalItems].find((entry) => entry.key === key);
+  const profileItem = item(
+    "profile",
+    copy.navigation.profile,
+    "/garden/profile",
+    "personal",
+    { match: "prefix", paths: ["/garden/profile"] },
+  );
   const mobileKeys: SiteShellNavigationKey[] = isAuthenticated
-    ? ["feed", "living-objects", "garden", "notifications", "profile"]
-    : ["feed", "living-objects", "journals", "knowledge"];
+    ? ["feed", "catalogue", "garden", "notifications"]
+    : ["feed", "catalogue", "journals", "knowledge"];
   const mobileItems = mobileKeys.flatMap((key) => {
     const entry = findItem(key);
     return entry ? [entry] : [];
   });
 
-  if (!isAuthenticated) mobileItems.push(signInItem);
+  mobileItems.push(isAuthenticated ? profileItem : signInItem);
 
   return {
     publicItems,
     personalItems,
     mobileItems,
+    primaryAction,
+    primaryActionHref: SITE_SHELL_COMPOSER_PATH,
     signIn: signInItem,
     searchHref: localizedPath(locale, "/journals"),
+    footerLinks: [
+      {
+        key: "catalogue",
+        label: copy.navigation.catalogue,
+        href: localizedPath(locale, "/objects"),
+      },
+      {
+        key: "privacy",
+        label: copy.shell.privacy,
+        href: localizedPath(locale, "/privacy"),
+      },
+      {
+        key: "support",
+        label: copy.shell.support,
+        href: localizedPath(locale, "/support"),
+      },
+      {
+        key: "first-publication-disclosure",
+        label: copy.shell.firstPublicationDisclosure,
+        href: localizedPath(locale, "/first-publication-disclosure"),
+      },
+    ],
     labels: {
       publicSection: copy.shell.exploreSection,
       personalSection: copy.shell.mySection,
@@ -243,8 +296,12 @@ export function getSiteShellNavigation(
       openMenu: copy.shell.openMenu,
       closeMenu: copy.shell.closeMenu,
       account: copy.shell.account,
+      openAccount: copy.shell.openAccount,
       siteNavigation: copy.shell.siteNavigation,
       mobileNavigation: copy.shell.mobileNavigation,
+      footerNavigation: copy.shell.footerNavigation,
+      contextRail: copy.shell.contextRail,
+      accountRegion: copy.shell.accountRegion,
       contextTitle: copy.shell.contextTitle,
     },
   };
@@ -283,21 +340,22 @@ export function getSiteShellRouteContext(
       ...base,
       key: "garden",
       title: copy.navigation.myGarden,
-      primaryHref: "/garden#first-entry-composer",
-      primaryLabel: copy.navigation.addUpdate,
+      primaryHref: SITE_SHELL_COMPOSER_PATH,
+      primaryLabel: copy.shell.primaryAction,
     };
   }
 
   if (
-    normalizedPath.startsWith("/lineage/objects/") ||
-    normalizedPath.startsWith("/garden/objects/") ||
-    normalizedPath.startsWith("/variety/") ||
-    normalizedPath.startsWith("/objects")
+    CATALOGUE_MATCH_PATHS.some(
+      (matchPath) =>
+        normalizedPath === matchPath ||
+        normalizedPath.startsWith(`${matchPath}/`),
+    )
   ) {
     return {
       ...base,
-      key: "living-object",
-      title: copy.navigation.livingObjects,
+      key: "catalogue",
+      title: copy.navigation.catalogue,
       primaryHref: publicHref("/journals"),
       primaryLabel: copy.navigation.journals,
     };
@@ -325,7 +383,7 @@ export function getSiteShellRouteContext(
       key: "journal",
       title: copy.navigation.journals,
       primaryHref: publicHref("/objects"),
-      primaryLabel: copy.navigation.livingObjects,
+      primaryLabel: copy.navigation.catalogue,
     };
   }
 
@@ -352,7 +410,7 @@ export function getSiteShellRouteContext(
       key: "profile",
       title: copy.navigation.profile,
       primaryHref: publicHref("/objects"),
-      primaryLabel: copy.navigation.livingObjects,
+      primaryLabel: copy.navigation.catalogue,
     };
   }
 
