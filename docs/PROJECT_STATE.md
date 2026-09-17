@@ -148,7 +148,35 @@ four pixels of it is the difference between "Дневници" on one line and o
 axe at 375 px on the home page, the journals directory, an organism card and the
 workspace.
 
-The remaining page families (`OVE-445`–`OVE-459`) are still in Backlog. The empty states
+**Search stopped being an icon** (`OVE-445`, 2026-09-17). `⌘K`, `Ctrl+K`, `/`
+and the rail's own control open one palette over journals, organisms,
+gardeners, communities and actions, grouped in that order, with the shortcuts
+in its footer and recent searches when the field is empty. The read is
+`src/server/public-palette-search.ts` behind `/api/public/search/palette`:
+public data only, no cookie and no session, and `no-store` all the same,
+because the one caching exception in rule 5 is `/api/public/catalog/` and this
+is a different route. The catalogue group goes through the picker's own
+statement, untouched — `git diff` against `main` on that route and repository is
+empty, and its P95 measured 7.88 ms of server time over 200 fresh URLs after
+the change.
+
+The palette is an enhancement and the test suite says so: a scripts-disabled
+run asserts `/journals` and the catalogue still answer 200, still carry a real
+`GET` search form, and still link each other. Gate 8's "the command palette
+flow is declared, not skipped" placeholder is now the flow.
+
+Three defects came out of driving it. **Mounted twice**, `⌘K` opened two
+dialogs and a screen reader saw two comboboxes; the palette is a provider with
+context-read triggers now. **`EmptyState` already carries
+`data-screen-state`**, so the wrapper repeating it gave the document two of the
+same marker. And the organism fixture's `read-then-insert` of the EPPO code
+`LYPES` **raced** once a third spec started seeding it: two specs read "no row"
+in the same instant, the second insert failed a unique constraint, `beforeAll`
+aborted, and teardown then failed on an undefined fixture — so the error named
+neither cause. One `on conflict do nothing` statement now.
+
+The remaining page families (`OVE-446` is done; `OVE-447`–`OVE-459`) are still
+in Backlog. The empty states
 have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module
 (`src/lib/illustrations.ts`), on the owner's position of 2026-09-17 — the free

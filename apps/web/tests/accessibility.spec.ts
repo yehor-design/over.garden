@@ -406,12 +406,42 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     expect(persisted.rows[0]?.id).toBeTruthy();
   });
 
-  test("the command palette flow is declared, not skipped", () => {
-    // DESIGN.md §5.2's palette is `OVE-445`; it does not exist yet, so there
-    // is nothing to drive. Recording that here rather than leaving a silent
-    // gap: a flow nobody wrote is not a flow that passed.
-    expect(
-      "open the palette and reach a result — blocked on OVE-445",
-    ).toContain("OVE-445");
+  test("open the command palette and reach a result", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    // The gap this used to declare is closed: `OVE-445` built the palette, and
+    // `tests/command-palette.spec.ts` drives it across all five groups. What
+    // stays here is gate 8's own question — can this flow be reached from a
+    // page by keyboard alone — so the gate stops depending on another file.
+    await selectLocale(context, baseURL);
+    await page.goto("/journals", { waitUntil: "load" });
+    await expect(
+      page.locator('[data-site-shell-region="header"]'),
+    ).toBeVisible();
+
+    await page.keyboard.press("ControlOrMeta+k");
+    const palette = page.locator('[data-command-palette="true"]');
+    await expect(palette).toBeVisible();
+    const field = page.locator('[data-command-palette-input="true"]');
+    await expect(field).toBeFocused();
+
+    await page.keyboard.type("журнал");
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            () => document.querySelectorAll('[role="option"]').length,
+          ),
+        { timeout: 10_000 },
+      )
+      .toBeGreaterThan(0);
+    // The active option is named through `aria-activedescendant` while focus
+    // stays in the field: that is what a screen reader reads.
+    expect(await field.getAttribute("aria-activedescendant")).toBeTruthy();
+    await page.keyboard.press("Escape");
+    await expect(palette).not.toBeVisible();
   });
 });

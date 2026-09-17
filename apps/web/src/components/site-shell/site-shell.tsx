@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu as MenuIcon, Search, SquarePen, UserRound } from "lucide-react";
+import { Menu as MenuIcon, SquarePen, UserRound } from "lucide-react";
 import { useState } from "react";
 
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
@@ -11,7 +11,11 @@ import { SessionSignalBoundary } from "@/components/auth/session-signal-boundary
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { IconButton, iconButtonVariants } from "@/components/ui/icon-button";
+import {
+  CommandPaletteProvider,
+  CommandPaletteTrigger,
+} from "@/components/ui/command-palette";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   Menu,
   MenuContent,
@@ -177,158 +181,169 @@ export function SiteShell({
     <SiteShellLocaleProvider locale={locale}>
       <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
       <SiteShellContextRailProvider setModules={setRouteContextModules}>
-        <div
-          data-site-shell="root"
-          className="flex min-h-dvh min-w-0 flex-col bg-surface text-text"
+        {/* One dialog for however many triggers the shell draws. Mounted
+            twice, `⌘K` opened two palettes and a screen reader saw two
+            comboboxes — found by driving it, not by reading it. */}
+        <CommandPaletteProvider
+          locale={locale}
+          actions={paletteActions(navigation)}
         >
-          <a
-            href="#main-content"
-            className="sr-only z-toast rounded-md border border-border bg-surface px-3 py-2 text-body-sm font-medium text-text focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-focus-ring"
+          <div
+            data-site-shell="root"
+            className="flex min-h-dvh min-w-0 flex-col bg-surface text-text"
           >
-            {copy.shell.skipToContent}
-          </a>
-
-          <div className="grid min-w-0 flex-1 lg:grid-cols-shell xl:grid-cols-shell-wide">
-            <header
-              data-site-shell-region="header"
-              className="sticky top-0 z-header flex min-h-14 min-w-0 items-center gap-1 border-b border-border bg-surface px-2 lg:h-dvh lg:flex-col lg:items-stretch lg:gap-0 lg:self-start lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-4"
+            <a
+              href="#main-content"
+              className="sr-only z-toast rounded-md border border-border bg-surface px-3 py-2 text-body-sm font-medium text-text focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-focus-ring"
             >
-              <MobileMenuTrigger
-                navigation={navigation}
-                pathname={pathname}
-                open={mobileMenuOpen}
-                onOpenChange={setMobileMenuOpen}
-                isAuthenticated={isAuthenticated}
-              />
+              {copy.shell.skipToContent}
+            </a>
 
-              <Link
-                data-site-shell-brand="true"
-                href={navigation.publicItems[0]?.href ?? "/"}
-                className="flex min-h-11 min-w-0 shrink-0 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:mb-4 lg:px-2"
+            <div className="grid min-w-0 flex-1 lg:grid-cols-shell xl:grid-cols-shell-wide">
+              <header
+                data-site-shell-region="header"
+                className="sticky top-0 z-header flex min-h-14 min-w-0 items-center gap-1 border-b border-border bg-surface px-2 lg:h-dvh lg:flex-col lg:items-stretch lg:gap-0 lg:self-start lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-4"
               >
-                <OverGardenLogo className="h-7 w-auto shrink-0 lg:h-8" />
-                <span className="sr-only">OverGarden</span>
-              </Link>
-
-              {/* The rail's navigation, at `lg` and above. */}
-              <div className="hidden min-w-0 flex-col gap-4 lg:flex">
-                <SiteShellNavigationList
-                  items={navigation.publicItems}
+                <MobileMenuTrigger
+                  navigation={navigation}
                   pathname={pathname}
-                  ariaLabel={navigation.labels.siteNavigation}
+                  open={mobileMenuOpen}
+                  onOpenChange={setMobileMenuOpen}
+                  isAuthenticated={isAuthenticated}
                 />
-                {navigation.personalItems.length > 0 ? (
-                  <SiteShellNavigationList
-                    items={navigation.personalItems}
-                    pathname={pathname}
-                    ariaLabel={navigation.labels.personalSection}
-                  />
-                ) : null}
-              </div>
 
-              {/* The primary action is in the rail above `lg` and in the tab
+                <Link
+                  data-site-shell-brand="true"
+                  href={navigation.publicItems[0]?.href ?? "/"}
+                  className="flex min-h-11 min-w-0 shrink-0 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:mb-4 lg:px-2"
+                >
+                  <OverGardenLogo className="h-7 w-auto shrink-0 lg:h-8" />
+                  <span className="sr-only">OverGarden</span>
+                </Link>
+
+                {/* The rail's navigation, at `lg` and above. The palette sits
+                  above it: search is a way into everything, and the two plain
+                  links below it are the way in without JavaScript
+                  (ADR-0031 D7). */}
+                <div className="hidden min-w-0 flex-col gap-4 lg:flex">
+                  <CommandPaletteTrigger label={copy.palette.open} />
+                  <SiteShellNavigationList
+                    items={navigation.publicItems}
+                    pathname={pathname}
+                    ariaLabel={navigation.labels.siteNavigation}
+                  />
+                  {navigation.personalItems.length > 0 ? (
+                    <SiteShellNavigationList
+                      items={navigation.personalItems}
+                      pathname={pathname}
+                      ariaLabel={navigation.labels.personalSection}
+                    />
+                  ) : null}
+                </div>
+
+                {/* The primary action is in the rail above `lg` and in the tab
                   bar below it: one control visible to a reader at any width,
                   and never the two the header and the rail used to draw at
                   once (DESIGN.md §4.4, ADR-0031 D4). */}
-              <div className="mt-4 hidden w-full lg:block">
-                <PrimaryAction item={navigation.primaryAction} />
-              </div>
+                <div className="mt-4 hidden w-full lg:block">
+                  <PrimaryAction item={navigation.primaryAction} />
+                </div>
 
-              <div className="ml-auto flex shrink-0 items-center lg:hidden">
-                <Link
-                  href={navigation.searchHref}
-                  aria-label={navigation.labels.search}
-                  className={iconButtonVariants({
-                    variant: "ghost",
-                    size: "lg",
-                  })}
+                <div
+                  data-site-shell-mobile-search="true"
+                  className="ml-auto flex shrink-0 items-center lg:hidden"
                 >
-                  <Search aria-hidden="true" />
-                </Link>
-              </div>
+                  <CommandPaletteTrigger
+                    presentation="icon"
+                    label={copy.palette.open}
+                  />
+                </div>
 
-              <div className="mt-auto hidden w-full flex-col gap-2 pt-4 lg:flex">
-                <Separator />
-                <AccountRegion
-                  locale={locale}
-                  navigation={navigation}
-                  isAuthenticated={isAuthenticated}
-                  hasOperatorAccess={hasOperatorAccess}
-                />
-              </div>
-            </header>
+                <div className="mt-auto hidden w-full flex-col gap-2 pt-4 lg:flex">
+                  <Separator />
+                  <AccountRegion
+                    locale={locale}
+                    navigation={navigation}
+                    isAuthenticated={isAuthenticated}
+                    hasOperatorAccess={hasOperatorAccess}
+                  />
+                </div>
+              </header>
 
-            {/* The column clears the tab bar, not just the content inside it:
+              {/* The column clears the tab bar, not just the content inside it:
                 the footer is the last thing on a short page, and padding the
                 content alone left it underneath the bar. */}
-            <div
-              data-site-shell-column="true"
-              className="site-shell-content-safe-bottom flex min-w-0 flex-col"
-            >
               <div
-                id="main-content"
-                data-interface-locale-fragment-safe="true"
-                data-site-shell-region="content"
-                tabIndex={-1}
-                className="mx-auto w-full max-w-content min-w-0 flex-1 outline-none"
+                data-site-shell-column="true"
+                className="site-shell-content-safe-bottom flex min-w-0 flex-col"
               >
-                {children}
+                <div
+                  id="main-content"
+                  data-interface-locale-fragment-safe="true"
+                  data-site-shell-region="content"
+                  tabIndex={-1}
+                  className="mx-auto w-full max-w-content min-w-0 flex-1 outline-none"
+                >
+                  {children}
+                </div>
+
+                <SiteShellFooter
+                  locale={locale}
+                  market={market}
+                  pathname={pathname}
+                  links={navigation.footerLinks}
+                  navigationLabel={navigation.labels.footerNavigation}
+                  tagline={copy.shell.footerTagline}
+                  sourcesTitle={copy.shell.sourcesTitle}
+                  sourcesDescription={copy.shell.sourcesDescription}
+                />
               </div>
 
-              <SiteShellFooter
-                locale={locale}
-                market={market}
-                pathname={pathname}
-                links={navigation.footerLinks}
-                navigationLabel={navigation.labels.footerNavigation}
-                tagline={copy.shell.footerTagline}
-                sourcesTitle={copy.shell.sourcesTitle}
-                sourcesDescription={copy.shell.sourcesDescription}
-              />
+              <aside
+                data-site-shell-region="context"
+                aria-label={navigation.labels.contextRail}
+                className="sticky top-0 hidden h-dvh self-start overflow-y-auto border-l border-border px-5 py-6 xl:block"
+              >
+                {routeContextModules ? (
+                  <SiteShellContextRailModules modules={routeContextModules} />
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-overline text-text-muted uppercase">
+                      {navigation.labels.contextTitle}
+                    </p>
+                    <h2 className="text-h4 text-text-heading">
+                      {context.title}
+                    </h2>
+                    <p className="text-body-sm text-text-secondary">
+                      {context.description}
+                    </p>
+                    <div className="flex flex-col gap-2 pt-1">
+                      <Link
+                        href={context.primaryHref}
+                        className={buttonVariants({
+                          variant: "secondary",
+                          size: "sm",
+                          className: "justify-start",
+                        })}
+                      >
+                        {context.primaryLabel}
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </aside>
             </div>
 
-            <aside
-              data-site-shell-region="context"
-              aria-label={navigation.labels.contextRail}
-              className="sticky top-0 hidden h-dvh self-start overflow-y-auto border-l border-border px-5 py-6 xl:block"
-            >
-              {routeContextModules ? (
-                <SiteShellContextRailModules modules={routeContextModules} />
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <p className="text-overline text-text-muted uppercase">
-                    {navigation.labels.contextTitle}
-                  </p>
-                  <h2 className="text-h4 text-text-heading">{context.title}</h2>
-                  <p className="text-body-sm text-text-secondary">
-                    {context.description}
-                  </p>
-                  <div className="flex flex-col gap-2 pt-1">
-                    <Link
-                      href={context.primaryHref}
-                      className={buttonVariants({
-                        variant: "secondary",
-                        size: "sm",
-                        className: "justify-start",
-                      })}
-                    >
-                      {context.primaryLabel}
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </aside>
+            {isSiteShellComposerRoute(pathname) ? null : (
+              <SiteShellMobileNavigation
+                items={navigation.mobileItems}
+                pathname={pathname}
+                ariaLabel={navigation.labels.mobileNavigation}
+                primaryActionKey={navigation.primaryAction.key}
+              />
+            )}
           </div>
-
-          {isSiteShellComposerRoute(pathname) ? null : (
-            <SiteShellMobileNavigation
-              items={navigation.mobileItems}
-              pathname={pathname}
-              ariaLabel={navigation.labels.mobileNavigation}
-              primaryActionKey={navigation.primaryAction.key}
-            />
-          )}
-        </div>
+        </CommandPaletteProvider>
       </SiteShellContextRailProvider>
     </SiteShellLocaleProvider>
   );
@@ -342,6 +357,26 @@ export function SiteShell({
       <SignOutProvider locale={locale}>{shell}</SignOutProvider>
     </OwnerScopeProvider>
   );
+}
+
+/**
+ * The palette's fifth group: what the rail can do, as commands. It is built
+ * from the same navigation the rail renders, so a group that drifts from the
+ * rail is not a thing that can happen.
+ */
+function paletteActions(navigation: SiteShellNavigation) {
+  return [
+    ...navigation.publicItems,
+    ...navigation.personalItems,
+    navigation.primaryAction,
+  ].map((item) => ({
+    key: "actions" as const,
+    id: `actions:${item.key}`,
+    label: item.label,
+    detail: null,
+    href: item.href,
+    language: null,
+  }));
 }
 
 /**

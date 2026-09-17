@@ -177,19 +177,32 @@ export async function seedOrganismFixture(
 
   // `/eppo/LYPES` must resolve; a database that already links the tomato's
   // EPPO code keeps its row, an empty one gets the code on this species.
-  const existingEppo = await pool.query<{ id: string }>(
-    `select catalog_item_id::text as id from catalog_item_identifiers where scheme = 'eppo' and value = 'LYPES' limit 1`,
+  //
+  // `(scheme, value)` is globally unique and Playwright runs spec *files* in
+  // parallel, so a read-then-insert raced: three specs seed this fixture, two
+  // read "no EPPO row" in the same instant and the second insert failed the
+  // constraint — which aborted `beforeAll` and then failed teardown on an
+  // undefined fixture, so the error a reader saw named neither. One statement
+  // now: whoever wins the insert owns the row, and everyone reads back what is
+  // actually there.
+  const claimed = await pool.query<{ id: string }>(
+    `insert into catalog_item_identifiers (catalog_item_id, scheme, value, assertion_id)
+     values ($1, 'eppo', 'LYPES', $2)
+     on conflict (scheme, value) do nothing
+     returning catalog_item_id::text as id`,
+    [speciesId, assertionId],
   );
-  let eppo: OrganismFixture["eppo"];
-  if (existingEppo.rows[0]) {
-    eppo = { itemId: existingEppo.rows[0].id, seeded: false };
-  } else {
-    await pool.query(
-      `insert into catalog_item_identifiers (catalog_item_id, scheme, value, assertion_id) values ($1, 'eppo', 'LYPES', $2)`,
-      [speciesId, assertionId],
-    );
-    eppo = { itemId: speciesId, seeded: true };
-  }
+  const eppo: OrganismFixture["eppo"] = claimed.rows[0]
+    ? { itemId: claimed.rows[0].id, seeded: true }
+    : {
+        itemId: (
+          await pool.query<{ id: string }>(
+            `select catalog_item_id::text as id from catalog_item_identifiers
+             where scheme = 'eppo' and value = 'LYPES' limit 1`,
+          )
+        ).rows[0]!.id,
+        seeded: false,
+      };
 
   // One public entry each makes the species and the form indexable, so their
   // JSON-LD and sitemap rows exist; the orphan stays without entries. The
