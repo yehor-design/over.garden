@@ -733,8 +733,18 @@ describe("app route cache guardrail", () => {
     const canonicalUkrainianGoneHtml = await canonicalUkrainianGone.text();
     expect(canonicalUkrainianGoneHtml).toContain("Профіль більше недоступний");
     expect(canonicalUkrainianGoneHtml).not.toContain("opaque-root-token");
-    expect(canonicalUkrainianGoneHtml).not.toContain(
+    // Even a tombstone carries the control, in every language: a reader who
+    // lands on a dead address in a language they do not read has to be able to
+    // leave it in one they do. Each option is the prefixed spelling, which is
+    // what tells the proxy the language was chosen.
+    expect(canonicalUkrainianGoneHtml).toContain(
       "data-interface-language-control",
+    );
+    expect(canonicalUkrainianGoneHtml).toContain(
+      'href="/bg/@former_ua_garden?profileAction=reported"',
+    );
+    expect(canonicalUkrainianGoneHtml).toContain(
+      'href="/uk/@former_ua_garden?profileAction=reported"',
     );
     expect(unavailable.status).toBe(404);
     expect(unavailable.headers.get("Content-Language")).toBe("bg");
@@ -948,7 +958,11 @@ describe("app route cache guardrail", () => {
 
     expect(publicResponse.status).toBe(200);
     expect(publicResponse.headers.get("Content-Language")).toBe("bg");
-    expect(setCookie).toContain(`${INTERFACE_MARKET_COOKIE_NAME}=bulgaria`);
+    // The language is the reader's choice and is written down. The market is
+    // where they are, and a `/bg` address says nothing about that: with no
+    // country signal this request stays in the fallback market, which now
+    // offers Bulgarian anyway.
+    expect(setCookie).toContain(`${INTERFACE_MARKET_COOKIE_NAME}=ukraine`);
     expect(setCookie).toContain(`${INTERFACE_LOCALE_COOKIE_NAME}=bg`);
     expect(setCookie).toMatch(/HttpOnly/i);
     expect(setCookie).toMatch(/SameSite=lax/i);
@@ -976,7 +990,10 @@ describe("app route cache guardrail", () => {
       cookie: interfaceCookies("bulgaria", "bg"),
       "x-vercel-ip-country": "UA",
     });
-    expect(uaGardenResponse.headers.get("Content-Language")).toBe("uk");
+    // Crossing into Ukraine moves the market, and the market moves nothing
+    // else: a reader who chose Bulgarian keeps reading Bulgarian, in the
+    // workspace as on every public page.
+    expect(uaGardenResponse.headers.get("Content-Language")).toBe("bg");
     expect(uaGardenResponse.headers.get("set-cookie")).toContain(
       `${INTERFACE_MARKET_COOKIE_NAME}=ukraine`,
     );
@@ -1120,7 +1137,10 @@ describe("app route cache guardrail", () => {
       expect(response.headers.get("Location")).toBeNull();
     }
     expect(persistedRussian.headers.get("Content-Language")).toBe("ru");
-    expect(persistedUkrainian.headers.get("Content-Language")).toBe("bg");
+    // A reader in Bulgaria who chose Ukrainian keeps Ukrainian. The market
+    // used to overrule them here, which is the whole complaint this change
+    // answers.
+    expect(persistedUkrainian.headers.get("Content-Language")).toBe("uk");
     expect(invalidPreference.headers.get("Content-Language")).toBe("uk");
     expect(persistedBulgaria.headers.get("Content-Language")).toBe("ru");
   });
@@ -1146,17 +1166,62 @@ describe("app route cache guardrail", () => {
       { cookie: interfaceCookies("bulgaria", "bg") },
     );
 
-    for (const [name, response, language] of [
-      ["privacy", privacyResponse, "bg"],
-      ["blog", blogResponse, "ru"],
-      ["journal", ugcResponse, "bg"],
-      ["objects", catalogResponse, "ru"],
-      ["topic", topicResponse, "bg"],
+    for (const [name, response, language, rendered] of [
+      ["privacy", privacyResponse, "bg", "/bg/privacy"],
+      ["blog", blogResponse, "ru", "/ru/blog/field-note"],
+      ["journal", ugcResponse, "bg", "/bg/@yehor/field-note"],
+      ["objects", catalogResponse, "ru", "/ru/objects"],
+      ["topic", topicResponse, "bg", "/bg/topics/care-checks"],
     ] as const) {
       expect(response.status, name).toBe(200);
       expect(response.headers.get("Location"), name).toBeNull();
       expect(response.headers.get("Content-Language"), name).toBe(language);
+      // The address the reader asked for is the address they keep; which
+      // locale subtree renders it is the proxy's business. Before this, the
+      // language was a header on a Ukrainian document.
+      expect(
+        response.headers.get("x-middleware-rewrite"),
+        name,
+      ).toContain(rendered);
     }
+  });
+
+  it("renders an unprefixed address in the reader's language and leaves everything else alone", async () => {
+    const ukrainianReader = await responseFor("/journals", {
+      cookie: interfaceCookies("ukraine", "uk"),
+    });
+    const crawler = await responseFor("/journals");
+    const bulgarianReader = await responseFor("/journals", {
+      cookie: interfaceCookies("bulgaria", "bg"),
+    });
+    const workspace = await responseFor("/garden", {
+      cookie: interfaceCookies("bulgaria", "bg"),
+    });
+    const permalink = await responseFor("/support", {
+      cookie: interfaceCookies("bulgaria", "bg"),
+    });
+    const alreadyPrefixed = await responseFor("/bg/journals", {
+      cookie: interfaceCookies("bulgaria", "bg"),
+    });
+
+    // The default locale's pages are the unprefixed tree itself, so a reader
+    // in it — and a crawler, which carries no preference — is not rewritten.
+    expect(ukrainianReader.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(crawler.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(crawler.headers.get("Content-Language")).toBe("uk");
+
+    expect(bulgarianReader.headers.get("x-middleware-rewrite")).toContain(
+      "/bg/journals",
+    );
+    expect(bulgarianReader.status).toBe(200);
+
+    // Nothing without a prefixed twin is rewritten: the workspace reads the
+    // same preference at request time, and a page that exists only unprefixed
+    // would 404 in a subtree that does not hold it.
+    expect(workspace.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(workspace.headers.get("Content-Language")).toBe("bg");
+    expect(permalink.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(alreadyPrefixed.headers.get("x-middleware-rewrite")).toBeNull();
   });
 
   it("canonicalizes a supported but non-canonical cookie value", async () => {

@@ -8,16 +8,24 @@ import {
 } from "./interface-market";
 
 describe("interface market contract", () => {
-  it("treats explicit Bulgarian and Russian routes as Bulgaria-market intent", () => {
+  it("never reads a market out of a locale prefix", () => {
+    // Each market carries all three languages now, so a prefix says which
+    // language a reader chose and nothing about where they are. Reading a
+    // market out of it moved a reader in Ukraine into the Bulgarian market for
+    // choosing Russian, and took the language control away from a reader in
+    // Bulgaria for choosing Ukrainian.
     expect(
       resolveInterfaceMarket({ routeLocale: "bg", countryCode: "UA" }),
-    ).toEqual({ market: "bulgaria", source: "route" });
+    ).toEqual({ market: "ukraine", source: "country" });
     expect(
       resolveInterfaceMarket({ routeLocale: "ru", countryCode: "UA" }),
-    ).toEqual({ market: "bulgaria", source: "route" });
+    ).toEqual({ market: "ukraine", source: "country" });
     expect(
       resolveInterfaceMarket({ routeLocale: "uk", countryCode: "BG" }),
-    ).toEqual({ market: "ukraine", source: "route" });
+    ).toEqual({ market: "bulgaria", source: "country" });
+    expect(
+      resolveInterfaceMarket({ routeLocale: "uk", persistedMarket: "bulgaria" }),
+    ).toEqual({ market: "bulgaria", source: "persisted" });
   });
 
   it("lets supported country win on unprefixed routes", () => {
@@ -56,10 +64,10 @@ describe("interface market contract", () => {
     ).toEqual({ market: "ukraine", source: "fallback" });
   });
 
-  it("owns deterministic per-market locale allowlists and defaults", () => {
-    expect(getAllowedInterfaceLocales("ukraine")).toEqual(["uk"]);
+  it("offers every language in every market and differs only in the default", () => {
+    expect(getAllowedInterfaceLocales("ukraine")).toEqual(["uk", "bg", "ru"]);
+    expect(getAllowedInterfaceLocales("bulgaria")).toEqual(["uk", "bg", "ru"]);
     expect(getDefaultInterfaceLocale("ukraine")).toBe("uk");
-    expect(getAllowedInterfaceLocales("bulgaria")).toEqual(["bg", "ru"]);
     expect(getDefaultInterfaceLocale("bulgaria")).toBe("bg");
   });
 

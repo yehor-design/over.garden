@@ -124,9 +124,10 @@ export function SiteShell({
   }
 
   if (languageControlPlacement !== "site-shell") {
-    const showUtility =
-      languageControlPlacement === "utility" &&
-      (isAuthenticated || market === "bulgaria");
+    // The utility region carries the control on the routes that have no shell.
+    // The market no longer gates it: every market has three languages to
+    // choose between.
+    const showUtility = languageControlPlacement === "utility";
     const excludedShell = (
       <SiteShellLocaleProvider locale={locale}>
         <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
@@ -277,15 +278,16 @@ export function SiteShell({
                 </Link>
 
                 <div className="site-shell-header-actions ml-auto flex items-center">
-                  {market === "bulgaria" ? (
-                    <div className="rounded-md bg-background text-foreground">
-                      <InterfaceLanguageControl
-                        locale={locale}
-                        market={market}
-                        pathname={pathname}
-                      />
-                    </div>
-                  ) : null}
+                  {/* Every reader, every market. It was drawn for Bulgaria
+                      alone, so a reader in Ukraine had no way to change the
+                      interface language at all. */}
+                  <div className="rounded-md bg-background text-foreground">
+                    <InterfaceLanguageControl
+                      locale={locale}
+                      market={market}
+                      pathname={pathname}
+                    />
+                  </div>
                   <span className="hidden sm:inline-flex">
                     <Tooltip>
                       <TooltipTrigger

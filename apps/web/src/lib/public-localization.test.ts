@@ -41,10 +41,8 @@ describe("public localization paths", () => {
     expect(Object.values(buildLanguageAlternates("/"))).not.toContain("/uk");
   });
 
-  it("keeps the public switcher allowlist market-bounded", () => {
-    expect(getLanguageSwitcherLocales("uk")).toEqual(["uk"]);
-    expect(getLanguageSwitcherLocales("bg")).toEqual(["bg", "ru"]);
-    expect(getLanguageSwitcherLocales("ru")).toEqual(["bg", "ru"]);
+  it("offers every language to every reader", () => {
+    expect(getLanguageSwitcherLocales()).toEqual(["uk", "bg", "ru"]);
   });
 });
 
@@ -105,19 +103,23 @@ describe("hreflang reciprocity", () => {
     expect(alternates.uk).toBe("/journals");
   });
 
-  it("never lets the switcher list stand in for an hreflang set", () => {
-    // `getLanguageSwitcherLocales` answers "what may this reader switch to",
-    // which is market-scoped and excludes their own market's other language.
-    // Used as an hreflang set it produced a cluster that omitted the canonical
-    // URL itself — /bg/communities declared bg and ru and not uk.
-    const switcherForBulgarian = getLanguageSwitcherLocales("bg");
+  it("never lets a narrowed language list stand in for an hreflang set", () => {
+    // An hreflang cluster is built from the addresses a page has, never from
+    // what some reader may switch to. Narrowing the set produced a cluster
+    // that omitted the canonical URL itself — /bg/communities once declared bg
+    // and ru and not uk. The switcher now happens to list all three, which is
+    // exactly why this must be asserted against a narrowed list rather than
+    // against the switcher: the day the two diverge again, this still fails.
+    const narrowed = ["bg", "ru"] as const;
 
-    expect(switcherForBulgarian).not.toContain("uk");
-    expect([...PUBLIC_LOCALES]).toContain("uk");
     expect(
-      Object.keys(
-        buildLanguageAlternates("/communities", switcherForBulgarian),
-      ),
+      Object.keys(buildLanguageAlternates("/communities", narrowed)),
     ).not.toContain("uk");
+    expect(
+      Object.keys(buildLanguageAlternates("/communities")),
+    ).toEqual([...PUBLIC_LOCALES, "x-default"]);
+    expect(buildLanguageAlternates("/communities")["x-default"]).toBe(
+      "/communities",
+    );
   });
 });

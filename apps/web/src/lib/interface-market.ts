@@ -1,7 +1,6 @@
 import {
-  BULGARIA_PUBLIC_LOCALES,
   DEFAULT_PUBLIC_LOCALE,
-  UKRAINE_PUBLIC_LOCALES,
+  INTERFACE_LOCALE_CHOICES,
   type PublicLocale,
 } from "./public-localization";
 
@@ -21,12 +20,14 @@ export const INTERFACE_MARKET_CONFIG: Record<
     defaultLocale: PublicLocale;
   }
 > = {
+  // Both markets offer all three languages; what differs is the one a reader
+  // who has chosen nothing starts in.
   ukraine: {
-    allowedLocales: UKRAINE_PUBLIC_LOCALES,
+    allowedLocales: INTERFACE_LOCALE_CHOICES,
     defaultLocale: DEFAULT_PUBLIC_LOCALE,
   },
   bulgaria: {
-    allowedLocales: BULGARIA_PUBLIC_LOCALES,
+    allowedLocales: INTERFACE_LOCALE_CHOICES,
     defaultLocale: "bg",
   },
 };
@@ -74,14 +75,13 @@ export function resolveInterfaceMarket(input: {
   countryCode?: string | null;
   persistedMarket?: MarketCandidate;
 }): ResolvedInterfaceMarket {
-  const routeLocale = input.routeLocale?.trim().toLowerCase();
-  if (routeLocale === "bg" || routeLocale === "ru") {
-    return { market: "bulgaria", source: "route" };
-  }
-  if (routeLocale === "uk") {
-    return { market: "ukraine", source: "route" };
-  }
-
+  // The locale prefix no longer names a market. It used to: `/bg` and `/ru`
+  // meant Bulgaria and `/uk` meant Ukraine, which was true only while each
+  // market had its own languages. Now every market offers all three, so a
+  // reader in Ukraine reading in Russian would have been moved to the
+  // Bulgarian market by the prefix alone, and a reader in Bulgaria who chose
+  // Ukrainian would have lost the language control that got them there. Where
+  // the reader is, and what they were told last time, decide it.
   const countryCode = normalizeInterfaceCountryCode(input.countryCode);
   if (countryCode === "UA") {
     return { market: "ukraine", source: "country" };
@@ -108,6 +108,23 @@ export function getDefaultInterfaceLocale(
   market: InterfaceMarket,
 ): PublicLocale {
   return INTERFACE_MARKET_CONFIG[market].defaultLocale;
+}
+
+/**
+ * The market a language is the default of.
+ *
+ * For a document with no reader — a prerendered locale shell, the last-resort
+ * error page — this is the only honest market to claim. Every other caller has
+ * a request and should resolve the reader's own market from it.
+ */
+export function marketWithDefaultInterfaceLocale(
+  locale: PublicLocale,
+): InterfaceMarket {
+  return (
+    INTERFACE_MARKETS.find(
+      (market) => INTERFACE_MARKET_CONFIG[market].defaultLocale === locale,
+    ) ?? DEFAULT_INTERFACE_MARKET
+  );
 }
 
 export function isInterfaceLocaleAllowed(

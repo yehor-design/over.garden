@@ -69,7 +69,10 @@ describe("production site shell", () => {
     expect(html).not.toContain(">Моє<");
     expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);
     expect(html).not.toContain("data-sign-out-control");
-    expect(html).not.toContain("data-interface-language-control");
+    // The language control is here in every market now, Ukraine included: it
+    // was drawn for Bulgaria alone, so a reader in Ukraine could not change
+    // the interface language from anywhere in the product.
+    expect(html.match(/data-interface-language-control=/g)).toHaveLength(1);
   });
 
   it("draws the brand lockup in the prerendered header and keeps its accessible name", async () => {

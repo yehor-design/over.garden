@@ -36,11 +36,29 @@ describe("global error market boundary", () => {
     ).toEqual({ market: "bulgaria", locale: "bg" });
   });
 
-  it("ignores malformed or market-incompatible metadata hints", () => {
+  it("reads any market's language out of a hint and ignores a malformed one", () => {
+    // Every market offers every language, so these two are ordinary readers:
+    // one in Bulgaria reading Ukrainian, one in Ukraine reading Russian. The
+    // error document has to speak to them in the language they were reading.
+    expect(
+      resolveGlobalErrorInterfaceContext({
+        pathname: "/garden",
+        htmlLang: "en",
+        metadataHint: "bulgaria:uk",
+      }),
+    ).toEqual({ market: "bulgaria", locale: "uk" });
+    expect(
+      resolveGlobalErrorInterfaceContext({
+        pathname: "/garden",
+        htmlLang: "en",
+        metadataHint: "ukraine:ru",
+      }),
+    ).toEqual({ market: "ukraine", locale: "ru" });
+
     for (const metadataHint of [
-      "bulgaria:uk",
-      "ukraine:ru",
       "bulgaria:bg:extra",
+      "bulgaria:de",
+      "moldova:bg",
       "private-user-state",
     ]) {
       expect(
