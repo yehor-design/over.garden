@@ -288,7 +288,16 @@ test.describe("before the bundle runs", () => {
     const page = await context.newPage();
 
     try {
-      for (const screen of ["/auth/sign-in", "/auth/sign-up", "/auth/help"]) {
+      for (const screen of [
+        "/auth/sign-in",
+        "/auth/sign-up",
+        "/auth/help",
+        // The screen a reader reaches from an email, often on a phone and a
+        // network that has just made them wait. It called Better Auth from the
+        // browser until `OVE-455`, so it did nothing at all until its bundle
+        // had run.
+        "/auth/reset-password?token=proof-token",
+      ]) {
         const response = await page.goto(screen, { waitUntil: "load" });
         expect(response?.status(), screen).toBe(200);
         const forms = await page.evaluate(() =>
