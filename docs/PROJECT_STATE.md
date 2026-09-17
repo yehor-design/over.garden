@@ -97,11 +97,17 @@ for the boundary that identifies a control, on every input on the site. And the
 focus ring was `#a1a1a1` at **2.32:1**, which failed the same rule everywhere.
 All three are fixed and all three are now measured by a gate.
 
-The page families (`OVE-443`–`OVE-459`) are still in Backlog. Two gaps the
-foundation declares rather than hides: no illustration is published yet, so
-every empty state renders without one (`src/lib/illustrations.ts` records the
-three steps to add one), and gate 8's command-palette flow is blocked on
-`OVE-445`, which builds the palette.
+The page families (`OVE-443`–`OVE-459`) are still in Backlog. The empty states
+have their pictures: six 3D objects from `thiings.co` in
+`apps/web/public/illustrations/`, resolved through one manifest module
+(`src/lib/illustrations.ts`), on the owner's position of 2026-09-17 — the free
+tier, and no attribution anywhere, including the footer. `DESIGN.md` §2.9 now
+records that instead of the visible credit it used to require, and says why the
+files ship with the code rather than through the media pipeline, which exists
+for a gardener's photographs. No page renders `EmptyState` yet, so they reach a
+reader as the page families land. One gap the foundation declares rather than
+hides: gate 8's command-palette flow is blocked on `OVE-445`, which builds the
+palette.
 
 **Decided, 2026-09-16, not yet built.** The editorial pipeline — a machine that
 reads the websites the owner chose and drafts news and blog articles for him to
