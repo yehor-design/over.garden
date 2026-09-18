@@ -254,7 +254,60 @@ no longer has; the sign-up half is on the shared helper now and the column is a
 spawned task. And the shell's context rail read "Далі / Далі" on any route with
 no destination of its own, which nothing but a screenshot could have told us.
 
-The remaining page families (`OVE-447`–`OVE-459`) are still in Backlog.
+**The first screen a stranger sees is rebuilt** (`OVE-447`, 2026-09-17). `/`
+and `/feed` are one column of `EntryCard`s at 704 px — object and kind above,
+title, date, excerpt, a full-bleed 4:3 photograph, the byline, and an
+engagement slot beneath — with the six designed states under them. `EntryCard`
+is the system component three later tasks consume (`OVE-448`, `OVE-450`,
+`OVE-454`), and its props are its contract: every string arrives localized, the
+`id` is required because the `<article>` owes a reader an accessible name on
+the server, and the cover's box is reserved with or without a photograph.
+
+Four things the screens gave up. **The row of zeros is gone**: the feed offered
+five "verified topics" of which three counted zero, and a filter that can only
+return nothing is a dead end with a number beside it. A topic is offered when a
+gardener has written on it, and the crawlable path to one is the context rail's
+plain anchors. **The filter row stopped being links.** A chip's job is to say
+whether it is on, `aria-pressed` does that, and `aria-pressed` on a link is an
+ARIA error — so the chips are submit buttons in a `<form method="get">`, which
+also means the press works before hydration and the filter lands in the URL.
+**Signed-out `/feed` shows the real feed** behind one `Callout`, where it used
+to show a single bordered card on a page whose whole purpose is a list.
+**A one-page feed gets the sentence and no navigation**, because two disabled
+edges with a status line between them is three controls saying the same nothing.
+
+Two defects only a rendered page could show. The **consent banner sat on top of
+the mobile tab bar** — the banner is `z-toast`, the bar is `z-rail`, and both
+were anchored to the bottom of the viewport, so the product's one primary action
+was underneath a cookie notice on every phone. And a **no-JavaScript like on an
+entry answered 500**: `proxy.ts` rewrites `/@handle/slug` into the `[locale]`
+tree for `GET` and `HEAD` only, so a progressive form's `POST` was matched by
+`[locale]/[profileHandle]` — the wrong route — and Next resolves such a form's
+action out of the matched route's own manifest. With the client bundle running
+it worked, because the `Next-Action` header resolves the id globally. That is
+exactly the shape of defect ADR-0024 D3 exists to prevent, and every test that
+pressed the button in a hydrated browser passed. `POST` is rewritten now, and
+`tests/public-hydration.spec.ts` posts the form over HTTP with no browser at
+all and asserts the like count moved.
+
+Two stale checks turned up with it. `a[href*="/journal/"]` had matched nothing
+since `OVE-436` moved an entry's address under its author, so the hydration
+spec's two liveliest tests had been skipping themselves and reporting a pass;
+they read a card's own `data-entry-card` now. And an unscoped
+`button[aria-pressed]` would have found a filter chip instead of the like
+control the moment this task shipped one.
+
+**The §9 LCP budget is not reachable, and it is not the pages** (`OVE-461`).
+Measured through the Lighthouse CLI, three runs, median: `/` is **4.28 s** with
+**CLS 0**, of which 2.90 s is render delay while the cover photograph has
+finished loading at 1.38 s. `origin/main` measured 4.06 s. `root-document.tsx`
+wraps the whole body in one `Suspense` because the shell awaits the session, so
+every public page's content arrives inside `<div hidden>` and is revealed by
+React's `$RC` script — LCP lands at TTI, and it is the same boundary that makes
+a scripts-off reader see nothing. The owner's call on 2026-09-17: record the
+measurement in each page-family PR and keep shipping; `OVE-461` owns the fix.
+
+The remaining page families (`OVE-448`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

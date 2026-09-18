@@ -129,20 +129,18 @@ test.describe("public pages hydrate below the shell", () => {
   });
 
   test("a public control acts on a hard load", async ({ page }) => {
-    await page.goto("/journals", { waitUntil: "load" });
-    const entry = page.locator('a[href*="/journal/"]').first();
-
-    // The subject here is the control, not the seed data. A database with no
-    // published entry has no control to press, and failing for that would make
-    // this step report a fixture problem as a hydration regression.
-    if ((await entry.count()) === 0) {
+    const entryHref = await firstPublicEntryHref(page);
+    if (!entryHref) {
       test.skip(true, "no published journal entry on this database");
       return;
     }
 
-    await entry.click();
+    await page.goto(entryHref, { waitUntil: "load" });
 
-    const like = page.locator("button[aria-pressed]").first();
+    // Scoped to the engagement panel. Since `OVE-447` a filter chip is also a
+    // `button[aria-pressed]` — that is what makes a chip's state audible — so
+    // an unscoped locator would press a filter and report it as a like.
+    const like = page.locator("#comments button[aria-pressed]").first();
     await like.waitFor({ state: "visible", timeout: 10_000 });
 
     // Whatever hydration does, the control must reach the server: since OVE-377
@@ -159,7 +157,88 @@ test.describe("public pages hydrate below the shell", () => {
 
     expect(response.status()).toBeLessThan(400);
   });
+
+  test("the like endpoint answers with no client bundle at all", async ({
+    request,
+    baseURL,
+  }) => {
+    // The stronger question, and the one `OVE-447` asks: not "does it work
+    // after hydration" but "does it work when there is no hydration".
+    //
+    // It is asked over HTTP rather than in a scripts-disabled browser on
+    // purpose. With scripts off these pages render no *visible* text — the
+    // shell arrives through the document's Suspense boundary and only the
+    // streaming runtime resolves it — so a scripts-off browser cannot see the
+    // control, and a click-based proof would fail for a reason that is not the
+    // endpoint. The endpoint is still there, and this sends it exactly what a
+    // browser's own form submission would: the action reference, the action
+    // key, and the target in `formData`.
+    const home = await request.get(new URL("/", baseURL!).toString());
+    expect(home.status()).toBe(200);
+    const entryHref = firstEntryCardHref(await home.text());
+    if (!entryHref) {
+      test.skip(true, "no published journal entry on this database");
+      return;
+    }
+    const entryUrl = new URL(entryHref, baseURL!).toString();
+
+    const document = await request.get(entryUrl);
+    expect(document.status()).toBe(200);
+    const form = readLikeForm(await document.text());
+    expect(
+      form,
+      "the entry page rendered no like form with a real endpoint",
+    ).not.toBeNull();
+
+    // React writes `action="javascript:throw …"` for a form whose action is a
+    // client closure and replaces it on hydration, so an empty `action` — post
+    // to this URL — is itself part of the proof (ADR-0024 D3).
+    expect(form!.action).toBe("");
+    expect(form!.fields.targetKind).toBe("journal_entry");
+
+    // The body is assembled by hand rather than through Playwright's
+    // `multipart` helper, which drops a field whose value is the empty
+    // string — and `$ACTION_REF_1` is exactly that. Without it Next finds no
+    // action id at all and answers "Failed to find Server Action", which reads
+    // as the defect this test exists to catch rather than as a harness
+    // artefact.
+    const body = encodeMultipart(form!.fields);
+    const response = await request.post(entryUrl, {
+      headers: {
+        origin: new URL(baseURL!).origin,
+        "content-type": `multipart/form-data; boundary=${body.boundary}`,
+      },
+      data: body.buffer,
+    });
+    expect(
+      response.status(),
+      await response.text().catch(() => ""),
+    ).toBeLessThan(400);
+
+    // And the like was actually recorded: the count the next render carries is
+    // one higher. A 200 from a Server Action endpoint that changed nothing
+    // would pass the assertion above and fail the product.
+    const after = readLikeForm(await (await request.get(entryUrl)).text());
+    expect(after?.activeLikeCount).toBe(form!.activeLikeCount + 1);
+  });
 });
+
+/**
+ * The first published entry's own address, read off the home feed.
+ *
+ * `a[href*="/journal/"]` used to stand here, and it had silently matched
+ * nothing since `OVE-436` moved an entry's address under its author
+ * (`/@handle/slug`, migration 0073) — so the two tests below it skipped
+ * themselves and reported a pass. A card's own `data-entry-card` is the
+ * durable handle.
+ */
+async function firstPublicEntryHref(page: Page): Promise<string | null> {
+  await page.goto("/", { waitUntil: "load" });
+  await page.waitForTimeout(1_500);
+  const title = page.locator("[data-entry-card] h2 a").first();
+  if ((await title.count()) === 0) return null;
+  return title.getAttribute("href");
+}
 
 test.describe("choosing a language is a choice, not a hover", () => {
   test("hovering an option requests nothing, clicking it switches and sticks", async ({
@@ -206,3 +285,87 @@ test.describe("choosing a language is a choice, not a hover", () => {
       .toBe("ru");
   });
 });
+
+/**
+ * The like form as the browser sees it: its `action`, every hidden field, and
+ * the count the render carried.
+ *
+ * Parsed out of the served HTML rather than read through the DOM, because the
+ * point of the check above is that nothing on the client has run.
+ */
+function readLikeForm(document: string): {
+  action: string;
+  fields: Record<string, string>;
+  activeLikeCount: number;
+} | null {
+  const marker = document.indexOf('name="targetKind" value="journal_entry"');
+  if (marker < 0) return null;
+  const start = document.lastIndexOf("<form", marker);
+  const end = document.indexOf("</form>", marker);
+  if (start < 0 || end < 0) return null;
+  const fragment = document.slice(start, end);
+
+  const action = /<form[^>]*\saction="([^"]*)"/u.exec(fragment)?.[1] ?? null;
+  if (action === null) return null;
+
+  const fields: Record<string, string> = {};
+  for (const match of fragment.matchAll(
+    /<input[^>]*type="hidden"[^>]*name="([^"]+)"(?:[^>]*value="([^"]*)")?[^>]*\/>/gu,
+  )) {
+    fields[decodeEntities(match[1]!)] = decodeEntities(match[2] ?? "");
+  }
+
+  const state = fields["$ACTION_1:1"];
+  const activeLikeCount = state
+    ? (JSON.parse(state) as Array<{ activeLikeCount?: number }>)[0]
+        ?.activeLikeCount
+    : undefined;
+
+  return {
+    action,
+    fields,
+    activeLikeCount: typeof activeLikeCount === "number" ? activeLikeCount : -1,
+  };
+}
+
+function decodeEntities(value: string) {
+  return value
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&amp;", "&");
+}
+
+/**
+ * The first entry card's own link, read out of the home feed's served HTML.
+ *
+ * Over HTTP rather than through the DOM, for the same reason the check above
+ * is: the subject is what a reader gets before anything on the client runs.
+ */
+function firstEntryCardHref(document: string): string | null {
+  const match =
+    /id="entry-card-[^"]*-title"[^>]*>\s*<a[^>]*\shref="([^"]+)"/u.exec(
+      document,
+    );
+  return match ? decodeEntities(match[1]!) : null;
+}
+
+/**
+ * One `multipart/form-data` body, byte for byte as a browser would send it.
+ *
+ * Field order is preserved, and a field whose value is the empty string is
+ * still a field — `$ACTION_REF_1` is one, and it is the field that tells Next
+ * there is an action to decode at all.
+ */
+function encodeMultipart(fields: Record<string, string>) {
+  const boundary = `----OverGardenProof${Date.now().toString(36)}`;
+  const parts: string[] = [];
+  for (const [name, value] of Object.entries(fields)) {
+    parts.push(
+      `--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="${name}"\r\n\r\n` +
+        `${value}\r\n`,
+    );
+  }
+  parts.push(`--${boundary}--\r\n`);
+  return { boundary, buffer: Buffer.from(parts.join(""), "utf8") };
+}

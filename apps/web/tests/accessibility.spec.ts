@@ -98,6 +98,25 @@ async function scan(page: Page, url: string, label: string) {
   expect(violations, `${label}: ${JSON.stringify(violations)}`).toEqual([]);
 }
 
+/** The two widths every redesigned screen is signed off at (ADR-0031 D9). */
+const PHONE = { width: 375, height: 812 } as const;
+const DESKTOP = { width: 1_440, height: 900 } as const;
+
+/**
+ * The same scan at 375 px and 1440 px.
+ *
+ * A screen can be clean at one width and wrong at the other: below `lg` the
+ * shell swaps its rail for a top bar and a tab bar, and above `xl` it adds a
+ * context rail — three different documents from one route. Scanning one of
+ * them proves one of them.
+ */
+async function scanBothWidths(page: Page, url: string, label: string) {
+  await page.setViewportSize(PHONE);
+  await scan(page, url, `${label} at 375 px`);
+  await page.setViewportSize(DESKTOP);
+  await scan(page, url, `${label} at 1440 px`);
+}
+
 async function selectLocale(context: BrowserContext, baseURL: string) {
   await context.addCookies([
     { name: INTERFACE_LOCALE_COOKIE, value: "uk", url: baseURL },
@@ -207,7 +226,13 @@ test.describe("gate 7 — axe on the key screens", () => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
 
-    await scan(page, "/", "home");
+    // `OVE-447` redesigned these two, and its criteria are stated at 375 px
+    // and 1440 px, so both are scanned. Nothing is published on a fresh gate
+    // database, which means this pass is also the proof that the *designed
+    // empty states* are clean — the populated ones are scanned below, after a
+    // gardener has published.
+    await scanBothWidths(page, "/", "home, signed out");
+    await scanBothWidths(page, "/feed", "the followed feed, signed out");
     await scan(page, "/journals", "the journals directory");
     await scan(page, "/objects", "the catalogue front door");
     await scan(page, `/species/${fixture.speciesSlug}`, "an organism card");
@@ -252,6 +277,12 @@ test.describe("gate 7 — axe on the key screens", () => {
 
     await scan(page, `/@${handle}`, "a public profile");
     await scan(page, `/@${handle}/${entry}`, "a public entry");
+
+    // With one entry published, the home feed and the followed feed are now
+    // lists of real cards rather than empty states — a different document, and
+    // the one a reader actually gets.
+    await scanBothWidths(page, "/", "home with cards, signed in");
+    await scanBothWidths(page, "/feed", "the followed feed, signed in");
   });
 
   test("a deliberate violation is seen, so a clean run means something", async ({

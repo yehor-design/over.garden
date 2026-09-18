@@ -141,6 +141,13 @@
   --grid-template-columns-shell-wide: var(--container-rail) minmax(0, 1fr)
     var(--container-context);
 
+  /* photography — DESIGN.md §2.10. The three ratios a photograph is served
+     at, as tokens, so `aspect-cover` and `aspect-card` are utilities rather
+     than the arbitrary `aspect-[4/3]` the gate rejects. 1:1 is Tailwind's own
+     `aspect-square`. */
+  --aspect-cover: 16 / 9;
+  --aspect-card: 4 / 3;
+
   /* layering — DESIGN.md §2.11. Tailwind's z-index namespace is
      `--z-index-*`; the product name stays `--z-*`. */
   --z-index-base: var(--z-base);
@@ -552,14 +559,22 @@
   }
 }
 
+/* The consent banner floats over the page rather than in it — `position:
+   fixed`, so it cannot shift the column and contributes nothing to CLS
+   (DESIGN.md §9). What it *could* do, and did until `OVE-447`, is sit on top
+   of the mobile tab bar: the banner is `z-toast` and the bar is `z-rail`, and
+   both were anchored to the bottom of the viewport, so the product's one
+   primary action was underneath a cookie notice on every phone. Below `lg` it
+   now clears the bar by the same 5rem the content column reserves; at `lg` and
+   above there is no bar, and it sits 20px off the edge. */
 .analytics-consent-banner {
-  bottom: 12px;
-  max-height: calc(100dvh - 24px);
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 7rem);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-@media (width >= 40rem) {
+@media (width >= 64rem) {
   .analytics-consent-banner {
     bottom: 20px;
     max-height: calc(100dvh - 40px);

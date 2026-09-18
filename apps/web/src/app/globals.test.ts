@@ -419,6 +419,29 @@ describe("global responsive floor", () => {
     expect(globals).toContain(".site-shell-safe-bottom");
   });
 
+  it("owns the three photographic ratios as tokens", () => {
+    // DESIGN.md §2.10. They are tokens because `aspect-[4/3]` is exactly the
+    // arbitrary value gate 2 rejects, and because a ratio that is written in
+    // two components is a ratio that will disagree with itself.
+    expect(globals).toContain("--aspect-cover: 16 / 9;");
+    expect(globals).toContain("--aspect-card: 4 / 3;");
+  });
+
+  it("keeps the consent banner clear of the mobile tab bar", () => {
+    // `OVE-447` criterion 7. The banner is `position: fixed`, so it shifts
+    // nothing; the failure it actually had was covering the tab bar, which
+    // carries the product's one primary action on a phone. Below `lg` it
+    // clears the bar by the same 5rem the content column reserves, and the
+    // 40rem breakpoint that used to drop the offset was wrong — the bar is
+    // `lg:hidden` and exists at every width beneath it.
+    const banner = globals.slice(globals.indexOf(".analytics-consent-banner"));
+    expect(banner).toContain(
+      "bottom: calc(5rem + env(safe-area-inset-bottom));",
+    );
+    expect(banner).toMatch(/@media \(width >= 64rem\)/u);
+    expect(banner).not.toContain("bottom: 12px;");
+  });
+
   it("still collapses every duration for a reader who asked for less motion", () => {
     expect(globals).toContain("@media (prefers-reduced-motion: reduce)");
     expect(globals).toContain("animation-duration: 0.01ms !important;");

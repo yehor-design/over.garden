@@ -56,7 +56,17 @@ vi.mock("@/components/site-shell/site-shell", () => ({
     </div>
   ),
 }));
-vi.mock("@/app/google-analytics", () => ({ GoogleAnalytics: () => null }));
+vi.mock("@/app/google-analytics", () => ({
+  // The consent banner is this component's only visible output. Standing in
+  // for it with a marker is what lets the placement be asserted without
+  // pulling `next/script` and a client store into a server render.
+  GoogleAnalytics: () => (
+    <div
+      data-analytics-consent-banner="true"
+      className="analytics-consent-banner"
+    />
+  ),
+}));
 vi.mock("@/app/meta-marketing", () => ({
   MetaMarketingAttribution: () => null,
 }));
@@ -103,6 +113,37 @@ describe("root document", () => {
     expect(html).toContain('data-owner="private-user-id"');
     expect(html).toContain('data-communities="true"');
     expect(mocks.getRequestInterfaceLocalization).not.toHaveBeenCalled();
+  });
+
+  it("puts the consent banner beside the shell, never inside the content column", async () => {
+    mocks.getSiteShellSessionState.mockResolvedValue({
+      isAuthenticated: false,
+      ownerUserId: null,
+      hasOperatorAccess: false,
+    });
+    mocks.hasReadyCommunityNavigation.mockResolvedValue(false);
+
+    const html = renderToStaticMarkup(
+      await RootDocumentShell({
+        localization: { locale: "uk", market: "ukraine" },
+        children: <main>OverGarden</main>,
+      }),
+    );
+
+    // `OVE-447` criterion 7. The banner is a sibling of the shell and
+    // `position: fixed` (its geometry is asserted in `globals.test.ts`), so it
+    // is out of flow and contributes nothing to CLS — the page's largest shift
+    // risk turns out not to be a shift risk at all. What it *was* doing wrong
+    // is covered by the offset that now clears the mobile tab bar.
+    const shellAt = html.indexOf('data-testid="site-shell"');
+    const bannerAt = html.indexOf('data-analytics-consent-banner="true"');
+    expect(shellAt).toBeGreaterThan(-1);
+    expect(bannerAt).toBeGreaterThan(shellAt);
+    expect(html).toContain("analytics-consent-banner");
+    // The shell's element closes before the banner opens, so the banner is
+    // not nested in the content column — where a block element would push the
+    // first card down the moment consent resolved.
+    expect(html.slice(shellAt, bannerAt)).toContain("</div>");
   });
 
   it("resolves the interface locale at request time for unprefixed routes and hides the owner attribute from guests", async () => {
