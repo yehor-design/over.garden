@@ -148,8 +148,17 @@ test.describe("public pages hydrate below the shell", () => {
     // Scoped to the engagement panel. Since `OVE-447` a filter chip is also a
     // `button[aria-pressed]` — that is what makes a chip's state audible — so
     // an unscoped locator would press a filter and report it as a like.
-    const like = page.locator("#comments button[aria-pressed]").first();
-    await like.waitFor({ state: "visible", timeout: 10_000 });
+    //
+    // The panel arrives with the streamed shell, not with `load`, so the wait
+    // is the 20 s every other proof of streamed content in this suite uses.
+    // At 10 s this was the shortest budget in the repository and it lost a
+    // full CI run on 2026-09-18 — while `journal-entry.spec.ts` asserted the
+    // same control on the same commit and passed, which is what says the wait
+    // was short rather than the control missing.
+    const panel = page.locator("#comments");
+    await panel.waitFor({ state: "visible", timeout: 20_000 });
+    const like = panel.locator("button[aria-pressed]").first();
+    await like.waitFor({ state: "visible", timeout: 20_000 });
 
     // Whatever hydration does, the control must reach the server: since OVE-377
     // it is a Server Action form with a real endpoint, so a browser that never

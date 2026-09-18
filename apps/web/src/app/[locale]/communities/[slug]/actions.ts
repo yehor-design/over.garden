@@ -27,7 +27,24 @@ import { publicCommunityPath } from "@/lib/garden/public-paths";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
-export async function setCommunityMembershipAction(formData: FormData) {
+/**
+ * Every action here is shaped `(previousState, formData)` — the shape
+ * `useActionState` calls — so `OwnerScopedProgressiveForm` can hand React the
+ * reference itself (`OVE-454`, ADR-0024 D3).
+ *
+ * The adapter form wrapped the action in a client closure, and React answers a
+ * closure with `action="javascript:throw new Error('React form unexpectedly
+ * submitted.')"` — a placeholder it replaces on hydration and never before. So
+ * join, leave, contribute, report and block did nothing at all until the
+ * bundle had run, on a page whose entire point is that a reader can act on it.
+ * Nothing about what the actions *do* changes here; only how a browser reaches
+ * them.
+ */
+
+export async function setCommunityMembershipAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -50,7 +67,10 @@ export async function setCommunityMembershipAction(formData: FormData) {
   finish(formData, slug, status, "community-membership");
 }
 
-export async function contributeJournalToCommunityAction(formData: FormData) {
+export async function contributeJournalToCommunityAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -74,7 +94,10 @@ export async function contributeJournalToCommunityAction(formData: FormData) {
   finish(formData, slug, status, "community-contribute");
 }
 
-export async function reportCommunityContributionAction(formData: FormData) {
+export async function reportCommunityContributionAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -100,6 +123,7 @@ export async function reportCommunityContributionAction(formData: FormData) {
 }
 
 export async function blockCommunityContributionAuthorAction(
+  _previousState: unknown,
   formData: FormData,
 ) {
   const admission = await resolveMutationScope({

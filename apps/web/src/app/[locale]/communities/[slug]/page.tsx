@@ -15,11 +15,15 @@ import {
   isPublicLocale,
   type PublicLocale,
 } from "@/lib/public-localization";
+import {
+  EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST,
+  normalizePublicCommunityViewRequest,
+} from "@/lib/public-community-view";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   buildPublicCommunityDiscoverySource,
   getPublicCommunityPage,
-  type CommunityObjectKind,
+  listPublicCommunities,
   type PublicCommunityPageModel,
 } from "@/server/community-repository";
 import {
@@ -30,7 +34,10 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
-import { readPublicCommunityPage } from "@/server/public-cache";
+import {
+  readPublicCommunityDirectory,
+  readPublicCommunityPage,
+} from "@/server/public-cache";
 
 interface CommunityDetailRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -78,9 +85,9 @@ export async function generateMetadata({
         safeSlug,
         localeParam,
         null,
-        "",
+        EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST.query,
         undefined,
-        null,
+        EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST.cursor,
       );
       if (!community) throw new Error("Public community unavailable.");
       return buildPublicCommunityDiscoverySource(localeParam, community);
@@ -103,17 +110,23 @@ export default async function CommunityDetailRoute({
   if (!slug) return notFound();
   const viewerScope = await currentViewerScope();
 
-  const query = firstValue(queryParams.q).slice(0, 100);
-  const kind = normalizeKind(firstValue(queryParams.kind));
-  const cursor = firstValue(queryParams.cursor).slice(0, 512) || null;
-  const community = await loadCommunityPage(
-    slug,
-    localeParam,
-    viewerScope,
-    query,
-    kind,
-    cursor,
-  );
+  const request = normalizePublicCommunityViewRequest(queryParams);
+  const [community, directory] = await Promise.all([
+    loadCommunityPage(
+      slug,
+      localeParam,
+      viewerScope,
+      request.query,
+      request.kind === "all" ? "all" : request.kind,
+      request.cursor,
+    ),
+    // The rail's "other communities" (Digg's Discover panel). It is the same
+    // cached directory read `/communities` makes, so a reader who came from
+    // the list pays nothing for it.
+    viewerScope
+      ? listPublicCommunities(viewerScope)
+      : readPublicCommunityDirectory(),
+  ]);
   if (!community) return notFound();
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
     buildPublicCommunityDiscoverySource(localeParam, community),
@@ -130,9 +143,8 @@ export default async function CommunityDetailRoute({
       locale={localeParam}
       community={community}
       viewer={viewerScope ? "member" : "guest"}
-      query={query}
-      kind={kind}
-      cursor={cursor ?? ""}
+      request={request}
+      otherCommunities={directory}
       actionStatus={firstValue(queryParams.communityAction) || null}
       state="ready"
       resumeAction={normalizeAuthIntentResumeAction(queryParams.authIntent)}
@@ -181,10 +193,6 @@ function buildCommunitySurface(
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
-}
-
-function normalizeKind(value: string): CommunityObjectKind {
-  return value === "plant" || value === "animal" ? value : "all";
 }
 
 function normalizeCommunitySlug(value: string) {

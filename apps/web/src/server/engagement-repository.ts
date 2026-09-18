@@ -1638,6 +1638,19 @@ export function buildPublicCommunityContributionCommentTargetQuery(
       "community_contributions.id as contributionId",
       "community_contributions.discussion_state as discussionState",
       "communities.slug as communitySlug",
+      // What the discussion page shows above the thread (`OVE-454`): which
+      // entry is being discussed, by whom and when. Columns only — every
+      // predicate below is unchanged, so what this query *admits* is exactly
+      // what it admitted before.
+      "communities.content_key as communityContentKey",
+      "journal_entries.title as entryTitle",
+      "journal_entries.public_slug as entryPublicSlug",
+      "journal_entries.entry_date as entryDate",
+      "plant_objects.display_name as objectDisplayName",
+      "plant_objects.object_kind as objectKind",
+      "user_public_profiles.handle as authorHandle",
+      "user_public_profiles.display_name as authorDisplayName",
+      "user_handle_registry.normalized_handle as addressHandle",
     ])
     .where(
       "community_contributions.id",

@@ -753,6 +753,35 @@ the guides, the answers, the market landings, and the legal and support pages
   their addresses; the set is enumerated in
   `src/app/google-analytics.test.tsx` so a move fails there first.
 
+### 5.10 A count of zero is not a fact
+
+Every surface that counts something owes its reader the same discipline, and
+the community card is where the product failed it most plainly: the one
+community on the site rendered `0 Записи · 0 Живі об'єкти · 0 Учасники` as its
+entire footer, spending the most valuable row on the card to say that nothing
+was happening.
+
+- **Omit the nought, and say what the thing is instead.** A count of zero is
+  the absence of a fact, not a fact; `communityFacts` returns what a community
+  *has*, and a community with nothing yet gets one badge that is true of it.
+  The same rule governs a profile's counts and a listing's facets.
+- **"Nothing yet" and "nothing matched" are different screens** (§5.4). The
+  first is one `empty-first-run` with one action — not a filter bar over
+  nothing, a heading with a nought beside it and an empty picker stacked on
+  each other. The second is the filters the reader set and a way to clear them,
+  with no illustration.
+- **An empty state must not become an indexable thin page** (ADR-0022 D4). An
+  empty listing is one of the three places `noindex` is allowed, and a redesign
+  that makes emptiness look better must not make it look indexable.
+- **A rule a reader is asked to follow is on the page.** The community's rules
+  of participation lived in a section marked `xl:hidden`, so above `xl` — where
+  the context rail took them — the community's own page carried no rules at
+  all, and the widest reader was the one told least. A rail is a *second* home
+  for something, never its only one.
+- **Membership is not a roster.** A community shows the people writing in it,
+  which they published by publishing; who merely joined is theirs, and the
+  product has no disclosure covering a list of them.
+
 ---
 
 ## 6. Language and locale

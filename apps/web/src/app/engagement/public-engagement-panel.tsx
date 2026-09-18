@@ -247,7 +247,7 @@ export function PublicEngagementPanel({
       )}
 
       {threads.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body-sm text-text-muted">
           {copy.engagement.noComments}
         </p>
       ) : (
@@ -259,22 +259,32 @@ export function PublicEngagementPanel({
             );
             const isResumedReply =
               resumeAction === "comment" && resumeControl === replyControl;
+            // One box per thread, and every Reply in the thread leads to it.
+            // That is the flatten (`OVE-454`, criterion 3): a reply to a reply
+            // joins the same thread at the same level rather than opening a
+            // third, and no reader is offered a depth the server refuses.
+            const replyFieldId = isResumedReply
+              ? buildAuthIntentAnchor("comment", replyControl)
+              : `engagement-${replyControl}`;
 
             return (
               <li
                 key={root.key}
                 className="grid gap-3 rounded-lg border border-border p-3"
               >
-                <CommentHeader comment={root} locale={locale} />
-                <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-                  {root.body}
-                </p>
-                <CommentActions
+                <Comment
                   comment={root}
-                  isAuthenticated={isAuthenticated}
                   locale={locale}
+                  isAuthenticated={isAuthenticated}
                   target={target}
                   returnTo={returnTo}
+                  replyFieldId={
+                    isActiveComment(root) && isAuthenticated
+                      ? replyFieldId
+                      : null
+                  }
+                  replyLabel={copy.engagement.reply}
+                  permalinkLabel={copy.engagement.commentPermalink}
                   resumeAction={resumeAction}
                   resumeControl={resumeControl}
                 />
@@ -282,17 +292,20 @@ export function PublicEngagementPanel({
                 {replies.length > 0 ? (
                   <ol className="grid gap-3 border-l border-border pl-4">
                     {replies.map((reply) => (
-                      <li key={reply.key} className="grid gap-2">
-                        <CommentHeader comment={reply} locale={locale} />
-                        <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-                          {reply.body}
-                        </p>
-                        <CommentActions
+                      <li key={reply.key}>
+                        <Comment
                           comment={reply}
-                          isAuthenticated={isAuthenticated}
                           locale={locale}
+                          isAuthenticated={isAuthenticated}
                           target={target}
                           returnTo={returnTo}
+                          replyFieldId={
+                            isActiveComment(root) && isAuthenticated
+                              ? replyFieldId
+                              : null
+                          }
+                          replyLabel={copy.engagement.reply}
+                          permalinkLabel={copy.engagement.commentPermalink}
                           resumeAction={resumeAction}
                           resumeControl={resumeControl}
                         />
@@ -309,11 +322,7 @@ export function PublicEngagementPanel({
                     clientMutationId={randomUUID()}
                     compact
                     controlRef={replyControl}
-                    fieldId={
-                      isResumedReply
-                        ? buildAuthIntentAnchor("comment", replyControl)
-                        : undefined
-                    }
+                    fieldId={replyFieldId}
                     autoFocus={isResumedReply}
                     labels={{
                       field: copy.engagement.reply,
@@ -359,16 +368,88 @@ export function PublicEngagementPanel({
   );
 }
 
-function CommentHeader({
+/**
+ * One comment: who wrote it, when, what it says, and a link to itself.
+ *
+ * The anchor is the "individually addressable" half of `OVE-454` criterion 3 —
+ * a reader can send somebody a link to the comment rather than to the page it
+ * is somewhere on — and `scroll-mt` keeps the target clear of the sticky
+ * header when they follow one.
+ */
+function Comment({
   comment,
   locale,
+  isAuthenticated,
+  target,
+  returnTo,
+  replyFieldId,
+  replyLabel,
+  permalinkLabel,
+  resumeAction,
+  resumeControl,
 }: {
   comment: PublicEngagementComment;
   locale: InterfaceLocale;
+  isAuthenticated: boolean;
+  target: EngagementCommentTarget;
+  returnTo: string;
+  /** The thread's one reply box, or null when there is nothing to reply into. */
+  replyFieldId: string | null;
+  replyLabel: string;
+  permalinkLabel: string;
+  resumeAction: AuthIntentAction | null;
+  resumeControl: string | null;
+}) {
+  const anchor = commentAnchorId(
+    createAuthIntentControlRef("reply", comment.replyToken),
+  );
+  return (
+    <article id={anchor} className="grid scroll-mt-20 gap-2">
+      <CommentHeader comment={comment} locale={locale} anchor={anchor} />
+      <p className="text-body-sm whitespace-pre-wrap text-text">
+        {comment.body}
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        {replyFieldId && isActiveComment(comment) ? (
+          <a
+            href={`#${replyFieldId}`}
+            className="text-link hover:text-link-hover rounded-sm text-caption underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
+            {replyLabel}
+          </a>
+        ) : null}
+        <a
+          href={`#${anchor}`}
+          className="rounded-sm text-caption text-text-muted underline underline-offset-4 outline-none hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+        >
+          {permalinkLabel}
+        </a>
+        <CommentActions
+          comment={comment}
+          isAuthenticated={isAuthenticated}
+          locale={locale}
+          target={target}
+          returnTo={returnTo}
+          resumeAction={resumeAction}
+          resumeControl={resumeControl}
+        />
+      </div>
+    </article>
+  );
+}
+
+function CommentHeader({
+  comment,
+  locale,
+  anchor,
+}: {
+  comment: PublicEngagementComment;
+  locale: InterfaceLocale;
+  anchor: string;
 }) {
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-      <p className="text-sm font-medium text-foreground">
+      <p className="text-body-sm font-medium text-text-heading">
         {comment.authorHandle ? (
           <Link href={publicProfileBasePath(comment.authorHandle)}>
             {comment.authorLabel}
@@ -377,7 +458,11 @@ function CommentHeader({
           comment.authorLabel
         )}
       </p>
-      <time className="text-xs text-muted-foreground">
+      <time
+        dateTime={isoDate(comment.createdAt)}
+        data-comment-anchor={anchor}
+        className="text-caption text-text-muted"
+      >
         {formatDate(comment.createdAt, locale)}
       </time>
     </div>
@@ -548,19 +633,73 @@ function engagementAuthIntentTarget(
   return { kind: "collection", ref: target.ref };
 }
 
-function buildCommentThreads(comments: PublicEngagementComment[]) {
-  const roots = comments.filter((comment) => !comment.parentReplyToken);
+/**
+ * A thread is two levels deep, and nothing is lost getting there (`OVE-454`).
+ *
+ * The previous shape filed a reply under `parentReplyToken` and then only ever
+ * read the map at a **root's** token, so a comment whose parent was itself a
+ * reply was silently absent from the page — present in the database, counted,
+ * and invisible. Today the server cannot store one (`addEngagementComment`
+ * admits a reply only under a root, and `EngagementCommentForm` below posts a
+ * root's token whichever comment the reader pressed Reply on), but a renderer
+ * that drops a row it does not recognise is a defect waiting for the first
+ * shape it has not met.
+ *
+ * So: a comment whose parent is not among the loaded comments is a root, and a
+ * comment whose parent is a reply joins that reply's own root. Depth is capped
+ * at two by construction rather than by hoping the input is well formed.
+ */
+export function buildCommentThreads(comments: PublicEngagementComment[]) {
+  const byToken = new Map(
+    comments.map((comment) => [comment.replyToken, comment]),
+  );
+
+  /** The root this comment belongs under, following at most a few parents. */
+  const rootTokenOf = (comment: PublicEngagementComment) => {
+    let current = comment;
+    for (let hop = 0; hop < 8; hop += 1) {
+      const parentToken = current.parentReplyToken;
+      if (!parentToken) return current.replyToken;
+      const parent = byToken.get(parentToken);
+      // The parent is not on this page: this comment opens a thread of its own
+      // rather than vanishing.
+      if (!parent || parent.replyToken === current.replyToken) {
+        return current.replyToken;
+      }
+      current = parent;
+    }
+    return current.replyToken;
+  };
+
+  const roots = comments.filter(
+    (comment) => rootTokenOf(comment) === comment.replyToken,
+  );
   const repliesByRoot = new Map<string, PublicEngagementComment[]>();
   for (const comment of comments) {
-    if (!comment.parentReplyToken) continue;
-    const replies = repliesByRoot.get(comment.parentReplyToken) ?? [];
+    const rootToken = rootTokenOf(comment);
+    if (rootToken === comment.replyToken) continue;
+    const replies = repliesByRoot.get(rootToken) ?? [];
     replies.push(comment);
-    repliesByRoot.set(comment.parentReplyToken, replies);
+    repliesByRoot.set(rootToken, replies);
   }
   return roots.map((root) => ({
     root,
     replies: repliesByRoot.get(root.replyToken) ?? [],
   }));
+}
+
+/**
+ * Every comment is a place a reader can link to (`OVE-454`, criterion 3) —
+ * and the address is the comment's **opaque** control ref, never its id.
+ *
+ * A comment id is a capability here: `createAuthIntentControlRef` exists so a
+ * guest's sign-in round trip can name a control without the page ever printing
+ * the row it refers to, and `public-engagement-panel.test.tsx` asserts a
+ * guest's rendered thread contains no raw token. An anchor built from the id
+ * would have undone that quietly, in an `href` nobody would look at twice.
+ */
+export function commentAnchorId(controlRef: string) {
+  return `comment-${controlRef}`;
 }
 
 function isActiveComment(comment: PublicEngagementComment) {
@@ -572,6 +711,11 @@ function appendCommentCursor(returnTo: string, cursor: string) {
   url.searchParams.set("cursor", cursor);
   url.hash = "comments";
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function isoDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
 function formatDate(value: Date | string, locale: InterfaceLocale) {

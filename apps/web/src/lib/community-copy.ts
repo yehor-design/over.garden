@@ -55,6 +55,24 @@ export interface CommunityCopy {
   error: string;
   retry: string;
   actionMessages: Record<string, string>;
+  /** `OVE-454`. The community family's own words; see `public-community.tsx`. */
+  breadcrumbHome: string;
+  filtersLabel: string;
+  clearFilters: string;
+  firstRunTitle: string;
+  firstRunDescription: string;
+  firstRunAction: string;
+  noResultsTitle: string;
+  contributors: string;
+  contributorsDescription: string;
+  contributorEntries: (count: number) => string;
+  discoverCommunities: string;
+  newCommunity: string;
+  discussionTitle: string;
+  discussionEntry: string;
+  discussionBack: string;
+  replyingTo: string;
+  commentPermalink: string;
 }
 
 const COPY: Record<PublicLocale, CommunityCopy> = {
@@ -143,6 +161,26 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
       blocked: "Автор заблокований; його записи більше не відображаються.",
       unavailable: "Дію не виконано. Оновіть сторінку й спробуйте ще раз.",
     },
+    breadcrumbHome: "Спільноти",
+    filtersLabel: "Фільтри",
+    clearFilters: "Скинути фільтри",
+    firstRunTitle: "Тут ще нічого не опубліковано",
+    firstRunDescription:
+      "Спільнота відкрита. Перший запис задасть тон усім наступним.",
+    firstRunAction: "Написати перший запис",
+    noResultsTitle: "За цими умовами записів не знайдено",
+    contributors: "Хто пише тут",
+    contributorsDescription:
+      "Садівники, чиї публічні записи вже є в цій спільноті.",
+    contributorEntries: (count: number) =>
+      `${count} ${count % 10 === 1 && count % 100 !== 11 ? "запис" : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? "записи" : "записів"}`,
+    discoverCommunities: "Інші спільноти",
+    newCommunity: "Нова спільнота",
+    discussionTitle: "Обговорення запису",
+    discussionEntry: "Запис, який обговорюють",
+    discussionBack: "До спільноти",
+    replyingTo: "У відповідь",
+    commentPermalink: "Посилання на коментар",
   },
   bg: {
     navigation: "Общности",
@@ -227,6 +265,26 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
       blocked: "Авторът е блокиран и записите му вече не се показват.",
       unavailable: "Действието не бе изпълнено. Обновете и опитайте отново.",
     },
+    breadcrumbHome: "Общности",
+    filtersLabel: "Филтри",
+    clearFilters: "Изчистване на филтрите",
+    firstRunTitle: "Тук още няма публикувано нищо",
+    firstRunDescription:
+      "Общността е отворена. Първият запис задава тона на следващите.",
+    firstRunAction: "Напишете първия запис",
+    noResultsTitle: "При тези условия не са намерени записи",
+    contributors: "Кой пише тук",
+    contributorsDescription:
+      "Градинари, чиито публични записи вече са в тази общност.",
+    contributorEntries: (count: number) =>
+      `${count} ${count === 1 ? "запис" : "записа"}`,
+    discoverCommunities: "Други общности",
+    newCommunity: "Нова общност",
+    discussionTitle: "Обсъждане на записа",
+    discussionEntry: "Записът, който се обсъжда",
+    discussionBack: "Към общността",
+    replyingTo: "В отговор на",
+    commentPermalink: "Връзка към коментара",
   },
   ru: {
     navigation: "Сообщества",
@@ -312,6 +370,26 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
       unavailable:
         "Действие не выполнено. Обновите страницу и попробуйте снова.",
     },
+    breadcrumbHome: "Сообщества",
+    filtersLabel: "Фильтры",
+    clearFilters: "Сбросить фильтры",
+    firstRunTitle: "Здесь ещё ничего не опубликовано",
+    firstRunDescription:
+      "Сообщество открыто. Первая запись задаст тон всем следующим.",
+    firstRunAction: "Написать первую запись",
+    noResultsTitle: "По этим условиям записей не найдено",
+    contributors: "Кто пишет здесь",
+    contributorsDescription:
+      "Садоводы, чьи публичные записи уже есть в этом сообществе.",
+    contributorEntries: (count: number) =>
+      `${count} ${count % 10 === 1 && count % 100 !== 11 ? "запись" : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? "записи" : "записей"}`,
+    discoverCommunities: "Другие сообщества",
+    newCommunity: "Новое сообщество",
+    discussionTitle: "Обсуждение записи",
+    discussionEntry: "Запись, которую обсуждают",
+    discussionBack: "К сообществу",
+    replyingTo: "В ответ",
+    commentPermalink: "Ссылка на комментарий",
   },
 };
 

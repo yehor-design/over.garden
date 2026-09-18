@@ -13,6 +13,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
   notFound: mocks.notFound,
+  // `FilterBar` navigates through the router once hydrated; on the server it
+  // renders a plain `GET` form, so a stub is all a rendering proof needs.
+  useRouter: () => ({ push: vi.fn() }),
 }));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
@@ -52,7 +55,9 @@ const directoryCommunity = {
 const communityPage = {
   ...directoryCommunity,
   rules: [],
+  contributors: [],
   contributions: { items: [], nextCursor: null },
+  search: { mode: "browse", degradedReason: null, shortQuery: false },
   viewer: {
     membershipState: null,
     isModerator: false,
@@ -127,7 +132,7 @@ describe("community public routes", () => {
     expect(detailMeta.alternates).toBeUndefined();
 
     mocks.getPublicCommunityPage.mockResolvedValueOnce({
-      ...directoryCommunity,
+      ...communityPage,
       navigationReady: false,
       contributions: {
         items: [
@@ -151,6 +156,43 @@ describe("community public routes", () => {
       robots: { index: true, follow: true },
       alternates: { canonical: "https://over.garden/bg/communities/observation-and-care" },
     });
+  });
+
+  it("gives an empty community the first-run state, and keeps it out of the index", async () => {
+    const { default: Detail, generateMetadata: detailMetadata } = await import(
+      "@/app/[locale]/communities/[slug]/page"
+    );
+    mocks.getPublicCommunityPage.mockResolvedValue({
+      ...communityPage,
+      activeMemberCount: 0,
+      activeContributionCount: 0,
+      activeObjectCount: 0,
+    });
+
+    const html = renderToStaticMarkup(
+      await Detail({
+        params: Promise.resolve({
+          locale: "uk",
+          slug: "observation-and-care",
+        }),
+      }),
+    );
+
+    // `OVE-454` criteria 1, 2 and 6 in one place: one state rather than a
+    // stack of empty sections, no count of zero anywhere on it, and an empty
+    // listing is still one of the three places `noindex` is allowed
+    // (ADR-0022 D4) — an empty state must not become an indexable thin page.
+    expect(html).toContain('data-public-community-screen="empty-first-run"');
+    expect(html).toContain('data-community-facts="none"');
+    expect(html).not.toMatch(/>0</u);
+    expect(
+      await detailMetadata({
+        params: Promise.resolve({
+          locale: "uk",
+          slug: "observation-and-care",
+        }),
+      }),
+    ).toMatchObject({ robots: { index: false, follow: false } });
   });
 
   /**

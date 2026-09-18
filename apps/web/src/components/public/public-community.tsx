@@ -1,12 +1,4 @@
-import Link from "next/link";
-import {
-  CalendarDays,
-  MessageCircle,
-  PawPrint,
-  Search,
-  Sprout,
-  UsersRound,
-} from "lucide-react";
+import { MessageCircle, PawPrint, Search, Sprout, UsersRound } from "lucide-react";
 
 import {
   blockCommunityContributionAuthorAction,
@@ -16,13 +8,32 @@ import {
 } from "@/app/[locale]/communities/[slug]/actions";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import {
-  SubjectAwareHtmlImage,
-  SubjectAwareMediaImage,
-} from "@/components/media/subject-aware-media-image";
-import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
-import { buttonVariants } from "@/components/ui/button";
+  SiteShellContextRailModules,
+  SiteShellContextRailRegistration,
+  type SiteShellContextRailModule,
+} from "@/components/site-shell/site-shell-context-rail";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EntryCard } from "@/components/ui/entry-card";
+import { Field } from "@/components/ui/field";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { HiddenField } from "@/components/ui/hidden-field";
+import NextLink from "next/link";
+
+import { Link } from "@/components/ui/link";
+import { ListRow } from "@/components/ui/list-row";
+import { MediaFigure } from "@/components/ui/media-figure";
+import { PageHeader } from "@/components/ui/page-header";
+import { SearchInput } from "@/components/ui/search-input";
+import { Section } from "@/components/ui/section";
+import { Select } from "@/components/ui/select";
 import {
   buildAuthIntentAnchor,
   type AuthIntentAction,
@@ -30,23 +41,63 @@ import {
 import {
   getCommunityContentCopy,
   getCommunityCopy,
+  type CommunityCopy,
 } from "@/lib/community-copy";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
-import { cn } from "@/lib/utils";
-import type {
-  PublicCommunityDirectoryItem,
-  PublicCommunityPageModel,
-} from "@/server/community-repository";
-import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { resolveIllustration } from "@/lib/illustrations";
 import {
   publicCommunityDiscussionPath,
   publicCommunityPath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
-import { HiddenField } from "@/components/ui/hidden-field";
-import { Field } from "@/components/ui/field";
-import { SearchInput } from "@/components/ui/search-input";
-import { Select } from "@/components/ui/select";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { publicMediaAltText } from "@/lib/public-media-alt";
+import {
+  buildCommunityRemovalHref,
+  buildPublicCommunityHref,
+  communityBasePath,
+  communityFacts,
+  isFirstRunCommunity,
+  PUBLIC_COMMUNITY_OBJECT_KINDS,
+  type PublicCommunityViewRequest,
+} from "@/lib/public-community-view";
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import type {
+  PublicCommunityContribution,
+  PublicCommunityContributor,
+  PublicCommunityDirectoryItem,
+  PublicCommunityPageModel,
+} from "@/server/community-repository";
+
+/**
+ * The community family (`OVE-454`): a list, a community, and the shape a
+ * discussion hangs in.
+ *
+ * Three decisions here are the task, and each replaces something that was on
+ * the screen before:
+ *
+ * - **A count of zero is not shown.** The one community on the site rendered
+ *   `0 Записи · 0 Живі об'єкти · 0 Учасники` as its entire card footer, which
+ *   told a visitor only that nothing was happening. `communityFacts` returns
+ *   what a community *has*; when it has nothing, the card says what it is —
+ *   its topic and that it is open — because a community with no photographs is
+ *   type and structure, not filler (ADR-0031 D3).
+ * - **An empty community is one state, not a stack of empty sections.** No
+ *   filter bar over nothing, no "Записи · 0" heading, no contribution picker
+ *   with an empty select: one `empty-first-run` with one action, and the rules
+ *   a first contributor is agreeing to.
+ * - **The rules are on the page.** They used to be `xl:hidden` — so above
+ *   `xl`, where the rail took them, the community page itself carried no rules
+ *   at all. They are a `Section` at every width now, and the rail carries the
+ *   thing a rail is for: other communities (Digg's "Discover Communities").
+ *
+ * And the one that does not show: every form here is an
+ * `OwnerScopedProgressiveForm`, so join, leave, contribute, report and block
+ * decide on a real endpoint before the bundle runs (ADR-0024 D3). Whether a
+ * reader may actually post is decided on the server at the moment of the
+ * mutation — a control that looks available to somebody who will be refused is
+ * correct, and hiding it would be the client-side pre-check ADR-0022 forbids.
+ */
 
 export type PublicCommunityState = "ready" | "loading" | "error";
 
@@ -68,7 +119,7 @@ export function PublicCommunityDirectory({
     <main
       lang={locale}
       data-public-community-directory={state}
-      className="mx-auto flex w-full max-w-5xl flex-col px-4 py-5 sm:px-6"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       {serializedJsonLd ? (
         <script
@@ -76,84 +127,34 @@ export function PublicCommunityDirectory({
           dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
-      <header className="grid gap-2 border-b border-border pb-4">
-        <h1 className="text-3xl font-semibold text-foreground">
-          {copy.directoryTitle}
-        </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {copy.directoryDescription}
-        </p>
-      </header>
+
+      <PageHeader
+        title={copy.directoryTitle}
+        description={copy.directoryDescription}
+      />
 
       {state === "loading" ? (
-        <p className="py-10 text-sm text-muted-foreground">{copy.loading}</p>
+        <p className="py-10 text-body-sm text-text-muted">{copy.loading}</p>
       ) : state === "error" ? (
-        <p className="py-10 text-sm text-muted-foreground" role="alert">
+        <p className="py-10 text-body-sm text-text-muted" role="alert">
           {copy.error}
         </p>
       ) : communities.length === 0 ? (
-        <p className="py-10 text-sm text-muted-foreground">
-          {copy.directoryEmpty}
-        </p>
+        <EmptyState
+          illustration={resolveIllustration("empty-community")}
+          title={copy.directoryEmpty}
+          description={copy.directoryDescription}
+        />
       ) : (
-        <ul className="grid gap-3 py-4 sm:grid-cols-2">
-          {communities.map((community) => (
-            <li key={community.id}>
-              <Link
-                href={localizedPath(
-                  locale,
-                  publicCommunityPath(community.slug),
-                )}
-                className="grid min-h-48 content-between gap-6 rounded-md border border-border p-4 transition-colors hover:border-primary/45 hover:bg-muted/30"
-              >
-                <span
-                  className={cn(
-                    "grid gap-4",
-                    community.coverUrl && "sm:flex sm:items-start",
-                  )}
-                >
-                  <span className="grid min-w-0 gap-2 sm:flex-1">
-                    <span className="text-xs font-semibold text-primary uppercase">
-                      {copy.eyebrow}
-                    </span>
-                    <span className="text-xl leading-7 font-semibold break-words text-foreground">
-                      {
-                        getCommunityContentCopy(locale, community.contentKey)
-                          .name
-                      }
-                    </span>
-                    <span className="text-sm leading-6 text-muted-foreground">
-                      {
-                        getCommunityContentCopy(locale, community.contentKey)
-                          .description
-                      }
-                    </span>
-                  </span>
-                  {community.coverUrl ? (
-                    <span className="relative aspect-4/3 overflow-hidden rounded-md bg-muted sm:w-32 sm:shrink-0">
-                      <CommunityMedia
-                        src={community.coverUrl}
-                        sizes="128px"
-                        focalX={community.coverFocalX}
-                        focalY={community.coverFocalY}
-                        intrinsicWidth={community.coverIntrinsicWidth}
-                        intrinsicHeight={community.coverIntrinsicHeight}
-                      />
-                    </span>
-                  ) : null}
-                </span>
-                <span className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground tabular-nums">
-                  <span>
-                    {community.activeContributionCount} {copy.journals}
-                  </span>
-                  <span>
-                    {community.activeObjectCount} {copy.objects}
-                  </span>
-                  <span>
-                    {community.activeMemberCount} {copy.members}
-                  </span>
-                </span>
-              </Link>
+        <ul className="grid gap-4 sm:grid-cols-2">
+          {communities.map((community, index) => (
+            <li key={community.id} className="min-w-0">
+              <CommunityCard
+                locale={locale}
+                copy={copy}
+                community={community}
+                priority={index < 2}
+              />
             </li>
           ))}
         </ul>
@@ -162,13 +163,150 @@ export function PublicCommunityDirectory({
   );
 }
 
+/**
+ * One community, shown by what it has.
+ *
+ * The photograph is the only coloured thing on it (ADR-0031 D3) and its box is
+ * reserved whether or not one exists, so a late image shifts nothing. Beneath
+ * the description come the community's facts — and only the facts: a zero is
+ * absent, and a community with none of them gets the one badge that is true of
+ * it instead.
+ */
+function CommunityCard({
+  locale,
+  copy,
+  community,
+  priority,
+}: {
+  locale: PublicLocale;
+  copy: CommunityCopy;
+  community: PublicCommunityDirectoryItem;
+  priority: boolean;
+}) {
+  const content = getCommunityContentCopy(locale, community.contentKey);
+  const facts = communityFacts(community, copy);
+  const titleId = `community-${community.id}-title`;
+
+  return (
+    <Card
+      as="article"
+      interactive
+      aria-labelledby={titleId}
+      data-public-community-card={community.slug}
+      className="grid h-full content-start gap-3 overflow-hidden p-4"
+    >
+      {community.coverUrl ? (
+        <MediaFigure
+          aspect="card"
+          className="-mx-4 -mt-4"
+          src={community.coverUrl}
+          srcSet={
+            buildPublicMediaSourceSet({
+              publicUrl: community.coverUrl,
+              intrinsicWidth: community.coverIntrinsicWidth,
+              intrinsicHeight: community.coverIntrinsicHeight,
+            }).srcSet
+          }
+          sizes="(max-width: 639px) 100vw, 344px"
+          alt={content.name}
+          focalX={community.coverFocalX}
+          focalY={community.coverFocalY}
+          intrinsicWidth={community.coverIntrinsicWidth}
+          intrinsicHeight={community.coverIntrinsicHeight}
+          priority={priority}
+        />
+      ) : null}
+      <p className="text-overline text-text-muted uppercase">{copy.eyebrow}</p>
+      <h2 id={titleId} className="text-h3 break-words text-text-heading">
+        <Link
+          href={localizedPath(locale, publicCommunityPath(community.slug))}
+          variant="quiet"
+          className="before:absolute before:inset-0"
+        >
+          {content.name}
+        </Link>
+      </h2>
+      <p className="line-clamp-3 text-body-sm text-text-muted">
+        {content.description}
+      </p>
+      <CommunityFacts
+        community={community}
+        copy={copy}
+        facts={facts}
+        className="mt-1"
+      />
+    </Card>
+  );
+}
+
+/**
+ * What this community has — and when it has nothing yet, what it is.
+ *
+ * A row of noughts is the defect this component exists to prevent, so the
+ * empty case is a deliberate branch rather than an empty list: a badge saying
+ * the community is new and open, which is the one true statement available.
+ */
+function CommunityFacts({
+  community,
+  copy,
+  facts,
+  className,
+}: {
+  community: Pick<
+    PublicCommunityDirectoryItem,
+    "lifecycleState" | "participationState"
+  >;
+  copy: CommunityCopy;
+  facts: ReturnType<typeof communityFacts>;
+  className?: string;
+}) {
+  const stateBadge =
+    community.lifecycleState === "archived"
+      ? { tone: "neutral" as const, label: copy.archived }
+      : community.participationState === "closed"
+        ? { tone: "warning" as const, label: copy.participationClosed }
+        : null;
+
+  if (facts.length === 0) {
+    return (
+      <p
+        data-community-facts="none"
+        className={["flex flex-wrap gap-2", className]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <Badge tone={stateBadge ? stateBadge.tone : "action"}>
+          {stateBadge ? stateBadge.label : copy.newCommunity}
+        </Badge>
+      </p>
+    );
+  }
+
+  return (
+    <dl
+      data-community-facts={facts.length}
+      className={["flex flex-wrap gap-x-4 gap-y-1", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {facts.map((fact) => (
+        <div key={fact.key} className="flex items-baseline gap-1.5">
+          <dt className="text-caption text-text-muted">{fact.label}</dt>
+          <dd className="text-body-sm font-medium text-text tabular-nums">
+            {fact.value}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function PublicCommunityView({
   locale,
   community,
   viewer,
-  query = "",
-  kind = "all",
-  cursor = "",
+  request,
+  otherCommunities = [],
   actionStatus,
   state = "ready",
   resumeAction = null,
@@ -178,9 +316,9 @@ export function PublicCommunityView({
   locale: PublicLocale;
   community: PublicCommunityPageModel;
   viewer: "guest" | "member";
-  query?: string;
-  kind?: "all" | "plant" | "animal";
-  cursor?: string;
+  request: PublicCommunityViewRequest;
+  /** The rest of the directory, for the rail (Digg's "Discover Communities"). */
+  otherCommunities?: readonly PublicCommunityDirectoryItem[];
   actionStatus?: string | null;
   state?: PublicCommunityState;
   resumeAction?: AuthIntentAction | null;
@@ -189,15 +327,8 @@ export function PublicCommunityView({
 }) {
   const copy = getCommunityCopy(locale);
   const contentCopy = getCommunityContentCopy(locale, community.contentKey);
-  const communityPath = localizedPath(
-    locale,
-    publicCommunityPath(community.slug),
-  );
-  const communityReturnPath = communityViewPath(communityPath, {
-    query,
-    kind,
-    cursor,
-  });
+  const canonicalPath = communityBasePath(locale, community.slug);
+  const returnPath = buildPublicCommunityHref(locale, community.slug, request);
   const knowledgePath = localizedPath(
     locale,
     publicTopicPath(community.topicSlug),
@@ -209,30 +340,29 @@ export function PublicCommunityView({
     shortQuery: false,
   };
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
-  const contextModules = [
-    {
-      key: "community-rules",
-      title: copy.rules,
-      items: community.rules.map((rule) => ({
-        href: `${communityReturnPath}#rule-${rule.id}`,
-        label: copy.ruleLabels[rule.key] ?? rule.key,
-      })),
-      emptyLabel: copy.rulesDescription,
-    },
-    {
-      key: "community-knowledge",
-      title: copy.relatedKnowledge,
-      items: [{ href: knowledgePath, label: copy.openKnowledge }],
-      emptyLabel: copy.openKnowledge,
-    },
-  ];
+  const firstRun = state === "ready" && isFirstRunCommunity(community, request);
+  const facts = communityFacts(community, copy);
+  const contextModules = buildCommunityContextModules(
+    locale,
+    copy,
+    community,
+    otherCommunities,
+    knowledgePath,
+  );
+  const canContribute =
+    state === "ready" &&
+    viewer === "member" &&
+    community.viewer.membershipState === "active" &&
+    community.lifecycleState === "active" &&
+    community.participationState === "open";
 
   return (
     <main
       lang={locale}
       data-public-community={community.slug}
       data-public-community-state={state}
-      className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
+      data-public-community-screen={firstRun ? "empty-first-run" : state}
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       {serializedJsonLd ? (
         <script
@@ -243,236 +373,474 @@ export function PublicCommunityView({
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
       <SiteShellContextRailRegistration modules={contextModules} />
 
-      <header className="grid gap-4 border-b border-border pb-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <p className="text-xs font-semibold text-primary uppercase">
-            {copy.eyebrow}
-          </p>
-          {state === "ready" ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <CommunityMembershipAction
-                locale={locale}
-                community={community}
-                viewer={viewer}
-                communityPath={communityReturnPath}
-                resumeAction={resumeAction}
-                resumeControl={resumeControl}
-              />
-            </div>
-          ) : null}
-        </div>
-        <div
-          className={cn(
-            "grid gap-4",
-            community.coverUrl && "sm:flex sm:items-start",
-          )}
-        >
-          <div className="grid max-w-2xl min-w-0 gap-2 sm:flex-1">
-            <h1 className="text-3xl leading-9 font-semibold break-words text-foreground">
-              {contentCopy.name}
-            </h1>
-            <p className="text-sm leading-6 text-muted-foreground">
-              {contentCopy.description}
-            </p>
-          </div>
-          {community.coverUrl ? (
-            <div className="relative aspect-4/3 overflow-hidden rounded-md bg-muted sm:w-56 sm:shrink-0">
-              <CommunityMedia
-                src={community.coverUrl}
-                priority
-                sizes="(max-width: 640px) 100vw, 224px"
-                focalX={community.coverFocalX}
-                focalY={community.coverFocalY}
-                intrinsicWidth={community.coverIntrinsicWidth}
-                intrinsicHeight={community.coverIntrinsicHeight}
-              />
-            </div>
-          ) : null}
-        </div>
-
-        {actionMessage ? (
-          <p
-            className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
-            role="status"
-          >
-            {actionMessage}
-          </p>
-        ) : null}
-        {community.lifecycleState === "archived" ? (
-          <p className="text-sm text-muted-foreground">{copy.archived}</p>
-        ) : community.participationState === "closed" ? (
-          <p className="text-sm text-muted-foreground">
-            {copy.participationClosed}
-          </p>
-        ) : null}
-
-        <dl className="grid grid-cols-3 divide-x divide-border border-y border-border py-3">
-          <CommunityStat
-            label={copy.journals}
-            value={community.activeContributionCount}
+      <PageHeader
+        breadcrumb={
+          <CommunityBreadcrumb
+            locale={locale}
+            copy={copy}
+            current={contentCopy.name}
           />
-          <CommunityStat
-            label={copy.objects}
-            value={community.activeObjectCount}
-          />
-          <CommunityStat
-            label={copy.members}
-            value={community.activeMemberCount}
-          />
-        </dl>
-      </header>
+        }
+        eyebrow={copy.eyebrow}
+        title={contentCopy.name}
+        description={contentCopy.description}
+        actions={
+          state === "ready" ? (
+            <CommunityMembershipAction
+              locale={locale}
+              community={community}
+              viewer={viewer}
+              communityPath={returnPath}
+              resumeAction={resumeAction}
+              resumeControl={resumeControl}
+            />
+          ) : null
+        }
+      />
 
-      {state === "ready" &&
-      viewer === "member" &&
-      community.viewer.membershipState === "active" &&
-      community.lifecycleState === "active" &&
-      community.participationState === "open" ? (
-        <CommunityContributionForm locale={locale} community={community} />
+      {community.coverUrl ? (
+        <MediaFigure
+          src={community.coverUrl}
+          srcSet={
+            buildPublicMediaSourceSet({
+              publicUrl: community.coverUrl,
+              intrinsicWidth: community.coverIntrinsicWidth,
+              intrinsicHeight: community.coverIntrinsicHeight,
+            }).srcSet
+          }
+          sizes="(max-width: 767px) 100vw, 704px"
+          alt={contentCopy.name}
+          focalX={community.coverFocalX}
+          focalY={community.coverFocalY}
+          intrinsicWidth={community.coverIntrinsicWidth}
+          intrinsicHeight={community.coverIntrinsicHeight}
+          priority
+        />
       ) : null}
 
-      <form
-        method="get"
-        action={communityPath}
-        aria-label={copy.searchLabel}
-        className="grid gap-3 border-b border-border py-4 sm:flex sm:items-end"
-      >
-        <Field
-          label={copy.searchLabel}
-          id="community-search"
-          className="min-w-0 sm:flex-1"
-        >
-          <SearchInput
-            name="q"
-            defaultValue={query}
-            maxLength={100}
-            placeholder={copy.searchPlaceholder}
-          />
-        </Field>
-        <Field label={copy.kindLabel} className="sm:w-48 sm:shrink-0">
-          <Select name="kind" defaultValue={kind === "all" ? "" : kind}>
-            <option value="">{copy.allKinds}</option>
-            {Object.entries(copy.kindLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <button type="submit" className={buttonVariants()}>
-          <Search aria-hidden="true" />
-          {copy.search}
-        </button>
-      </form>
+      <CommunityFacts community={community} copy={copy} facts={facts} />
 
-      {searchState.shortQuery ? (
-        <p className="py-3 text-sm text-muted-foreground" role="status">
-          {copy.shortSearch}
-        </p>
-      ) : searchState.degradedReason ? (
-        <p
-          className="my-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
-          role="status"
-        >
-          {copy.degradedSearch}
-        </p>
+      {actionMessage ? (
+        <Callout tone="info" role="status">
+          {actionMessage}
+        </Callout>
+      ) : null}
+      {community.lifecycleState === "archived" ? (
+        <Callout tone="info">{copy.archived}</Callout>
+      ) : community.participationState === "closed" ? (
+        <Callout tone="warning">{copy.participationClosed}</Callout>
       ) : null}
 
-      <section aria-labelledby="community-journals" className="grid">
-        <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border py-3">
-          <h2 id="community-journals" className="text-lg font-semibold">
-            {copy.journals}
-          </h2>
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {community.activeContributionCount}
-          </span>
-        </div>
-        {state === "loading" ? (
-          <p className="py-10 text-sm text-muted-foreground">{copy.loading}</p>
-        ) : state === "error" ? (
-          <p className="py-10 text-sm text-muted-foreground" role="alert">
-            {copy.error}
-          </p>
-        ) : community.contributions.items.length === 0 ? (
-          <div className="grid justify-items-start gap-3 py-10">
-            <p className="text-sm text-muted-foreground">
-              {query || kind !== "all" ? copy.noResults : copy.noContributions}
-            </p>
-            {query || kind !== "all" ? (
-              <Link
-                href={communityPath}
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
+      {firstRun ? (
+        <>
+          <EmptyState
+            illustration={resolveIllustration("empty-community")}
+            title={copy.firstRunTitle}
+            description={copy.firstRunDescription}
+            action={
+              <NextLink
+                // `/garden` has no locale-prefixed twin — the prefixed tree is
+                // a subset of the unprefixed one, and `/bg/garden` is a `404`
+                // the proxy decides before rendering. A gardener's own
+                // workspace is one address.
+                href={
+                  canContribute
+                    ? "#community-contribute"
+                    : "/garden#first-entry-composer"
+                }
+                className={buttonVariants()}
               >
-                {copy.resetFilters}
-              </Link>
-            ) : null}
-          </div>
-        ) : (
-          <ul>
-            {community.contributions.items.map((item) => (
-              <CommunityContributionRow
-                key={item.id}
-                locale={locale}
-                item={item}
-                viewer={viewer}
-                community={community}
-                communityPath={communityReturnPath}
-                resumeAction={resumeAction}
-                resumeControl={resumeControl}
-              />
-            ))}
-          </ul>
-        )}
-        {state === "ready" && community.contributions.nextCursor ? (
-          <Link
-            href={`${communityPath}?${communityQuery({
-              query,
-              kind,
-              cursor: community.contributions.nextCursor,
-            })}`}
-            className={cn(
-              buttonVariants({ variant: "secondary" }),
-              "my-4 w-fit",
-            )}
-          >
-            {copy.showMore}
-          </Link>
-        ) : null}
-      </section>
+                {copy.firstRunAction}
+              </NextLink>
+            }
+          />
+          {/* The action, where the action's anchor points. A member who can
+              write is offered the picker itself rather than an anchor to a
+              section that is not on the page. */}
+          {canContribute ? (
+            <CommunityContributionForm locale={locale} community={community} />
+          ) : null}
+        </>
+      ) : (
+        <>
+          {canContribute ? (
+            <CommunityContributionForm locale={locale} community={community} />
+          ) : null}
 
-      <section
-        className="grid gap-3 border-t border-border py-5 xl:hidden"
-        aria-labelledby="community-rules"
+          <CommunityFilters
+            locale={locale}
+            copy={copy}
+            slug={community.slug}
+            request={request}
+            canonicalPath={canonicalPath}
+          />
+
+          {searchState.shortQuery ? (
+            <p className="text-body-sm text-text-muted" role="status">
+              {copy.shortSearch}
+            </p>
+          ) : searchState.degradedReason ? (
+            <Callout tone="warning" role="status">
+              {copy.degradedSearch}
+            </Callout>
+          ) : null}
+
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-3">
+            <h2 className="text-h2 text-text-heading">{copy.journals}</h2>
+            {/* Always in the document, so a filter change announces the new
+                number into this node rather than arriving with a fresh one
+                that announces nothing. */}
+            <p
+              data-community-result-count="true"
+              aria-live="polite"
+              className="text-body-sm text-text-muted tabular-nums"
+            >
+              {state === "ready" ? community.contributions.items.length : ""}
+            </p>
+          </div>
+
+          {state === "loading" ? (
+            <p className="py-10 text-body-sm text-text-muted">{copy.loading}</p>
+          ) : state === "error" ? (
+            <p className="py-10 text-body-sm text-text-muted" role="alert">
+              {copy.error}
+            </p>
+          ) : community.contributions.items.length === 0 ? (
+            <EmptyState
+              variant="no-results"
+              title={copy.noResultsTitle}
+              filters={
+                <CommunityFilterChips
+                  locale={locale}
+                  copy={copy}
+                  slug={community.slug}
+                  request={request}
+                />
+              }
+              action={
+                <NextLink
+                  href={canonicalPath}
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  {copy.clearFilters}
+                </NextLink>
+              }
+            />
+          ) : (
+            <ul className="grid gap-4">
+              {community.contributions.items.map((item, index) => (
+                <li key={item.id} className="min-w-0">
+                  <CommunityContributionCard
+                    locale={locale}
+                    copy={copy}
+                    item={item}
+                    viewer={viewer}
+                    community={community}
+                    communityPath={returnPath}
+                    resumeAction={resumeAction}
+                    resumeControl={resumeControl}
+                    priority={index === 0}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {state === "ready" && community.contributions.nextCursor ? (
+            <NextLink
+              href={buildPublicCommunityHref(locale, community.slug, {
+                ...request,
+                cursor: community.contributions.nextCursor,
+              })}
+              className={buttonVariants({
+                variant: "secondary",
+                className: "w-fit",
+              })}
+            >
+              {copy.showMore}
+            </NextLink>
+          ) : null}
+
+          {community.contributors.length > 0 ? (
+            <Section
+              id="community-contributors"
+              title={copy.contributors}
+              description={copy.contributorsDescription}
+            >
+              <ul className="flex flex-wrap gap-x-5 gap-y-3">
+                {community.contributors.map((contributor) => (
+                  <li key={contributor.handle}>
+                    <CommunityContributor
+                      contributor={contributor}
+                      copy={copy}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          ) : null}
+        </>
+      )}
+
+      {/* The rules are the page's, at every width. They were `xl:hidden`
+          before, so a reader above `xl` met a community whose own page never
+          said what it expected of them (`OVE-454`, criterion 5). */}
+      <Section
+        id="community-rules"
+        title={copy.rules}
+        description={copy.rulesDescription}
       >
-        <h2 id="community-rules" className="text-lg font-semibold">
-          {copy.rules}
-        </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
-          {copy.rulesDescription}
-        </p>
         <ol className="grid gap-2">
           {community.rules.map((rule) => (
             <li
               id={`rule-${rule.id}`}
               key={rule.id}
-              className="flex gap-3 text-sm leading-6"
+              className="flex scroll-mt-20 gap-3 text-body-sm text-text"
             >
-              <span className="font-semibold tabular-nums">{rule.order}.</span>
+              <span className="font-medium text-text-muted tabular-nums">
+                {rule.order}.
+              </span>
               <span>{copy.ruleLabels[rule.key] ?? rule.key}</span>
             </li>
           ))}
         </ol>
-        <Link
+        <NextLink
           href={knowledgePath}
           className={buttonVariants({
             variant: "secondary",
-            size: "sm",
             className: "w-fit",
           })}
         >
           {copy.openKnowledge}
-        </Link>
-      </section>
+        </NextLink>
+      </Section>
+
+      {/* The owner's way into moderation from the community itself. One link,
+          not a second surface: `/account/communities` is `OVE-456`'s. */}
+      {state === "ready" && community.viewer.isModerator ? (
+        <Callout tone="info">
+          {/* Unprefixed for the same reason: `/account/**` is signed-in and
+              has no `[locale]` twin. */}
+          <Link href="/account/communities">{copy.moderatorQueue}</Link>
+        </Callout>
+      ) : null}
+
+      <div className="border-t border-border pt-6 xl:hidden">
+        <SiteShellContextRailModules modules={contextModules} />
+      </div>
     </main>
+  );
+}
+
+function CommunityBreadcrumb({
+  locale,
+  copy,
+  current,
+}: {
+  locale: PublicLocale;
+  copy: CommunityCopy;
+  current: string;
+}) {
+  return (
+    <nav aria-label={copy.breadcrumbHome}>
+      <ol className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
+        <li>
+          <Link href={localizedPath(locale, "/communities")}>
+            {copy.breadcrumbHome}
+          </Link>
+        </li>
+        <li aria-hidden="true">·</li>
+        <li aria-current="page" className="min-w-0 truncate">
+          {current}
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
+/**
+ * The same bar `/journals`, `/catalog` and `/knowledge` use (DESIGN.md §5.1):
+ * one parameter per facet, apply on change after hydration, a real `GET`
+ * submit before it, and chips above the results.
+ */
+function CommunityFilters({
+  locale,
+  copy,
+  slug,
+  request,
+  canonicalPath,
+}: {
+  locale: PublicLocale;
+  copy: CommunityCopy;
+  slug: string;
+  request: PublicCommunityViewRequest;
+  canonicalPath: string;
+}) {
+  return (
+    <FilterBar
+      action={canonicalPath}
+      search={
+        <div className="flex items-end gap-2">
+          <Field
+            label={copy.searchLabel}
+            id="community-search"
+            className="min-w-0 flex-1"
+          >
+            <SearchInput
+              name="q"
+              defaultValue={request.query}
+              maxLength={100}
+              placeholder={copy.searchPlaceholder}
+            />
+          </Field>
+          <Button type="submit" className="shrink-0">
+            <Search aria-hidden="true" />
+            {copy.search}
+          </Button>
+        </div>
+      }
+      facets={[
+        {
+          key: "kind",
+          label: copy.kindLabel,
+          value: request.kind === "all" ? [] : [request.kind],
+          anyLabel: copy.allKinds,
+          options: PUBLIC_COMMUNITY_OBJECT_KINDS.map((kind) => ({
+            value: kind,
+            label: copy.kindLabels[kind],
+          })),
+        },
+      ]}
+      chips={buildCommunityChips(locale, copy, slug, request)}
+      clearAllHref={canonicalPath}
+      labels={{
+        filters: copy.filtersLabel,
+        openFilters: copy.filtersLabel,
+        sheetDescription: copy.rulesDescription,
+        apply: copy.search,
+        clear: copy.clearFilters,
+        clearAll: copy.clearFilters,
+        activeFilters: copy.filtersLabel,
+        sort: copy.kindLabel,
+      }}
+    />
+  );
+}
+
+function CommunityFilterChips({
+  locale,
+  copy,
+  slug,
+  request,
+}: {
+  locale: PublicLocale;
+  copy: CommunityCopy;
+  slug: string;
+  request: PublicCommunityViewRequest;
+}) {
+  const chips = buildCommunityChips(locale, copy, slug, request);
+  if (chips.length === 0) return null;
+  return (
+    <>
+      {chips.map((chip) => (
+        <Chip key={chip.key} label={chip.label} />
+      ))}
+    </>
+  );
+}
+
+function buildCommunityChips(
+  locale: PublicLocale,
+  copy: CommunityCopy,
+  slug: string,
+  request: PublicCommunityViewRequest,
+) {
+  const chips: {
+    key: string;
+    label: string;
+    removeHref: string;
+    removeLabel: string;
+  }[] = [];
+  if (request.query) {
+    chips.push({
+      key: `q:${request.query}`,
+      label: request.query,
+      removeHref: buildCommunityRemovalHref(locale, slug, request, "q"),
+      removeLabel: `${copy.clearFilters}: ${request.query}`,
+    });
+  }
+  if (request.kind !== "all") {
+    chips.push({
+      key: `kind:${request.kind}`,
+      label: copy.kindLabels[request.kind],
+      removeHref: buildCommunityRemovalHref(locale, slug, request, "kind"),
+      removeLabel: `${copy.clearFilters}: ${copy.kindLabels[request.kind]}`,
+    });
+  }
+  return chips;
+}
+
+function buildCommunityContextModules(
+  locale: PublicLocale,
+  copy: CommunityCopy,
+  community: PublicCommunityPageModel,
+  otherCommunities: readonly PublicCommunityDirectoryItem[],
+  knowledgePath: string,
+): SiteShellContextRailModule[] {
+  const others = otherCommunities
+    .filter((item) => item.slug !== community.slug)
+    .slice(0, 6)
+    .map((item) => ({
+      href: localizedPath(locale, publicCommunityPath(item.slug)),
+      label: getCommunityContentCopy(locale, item.contentKey).name,
+    }));
+
+  return [
+    {
+      key: "community-knowledge",
+      title: copy.relatedKnowledge,
+      items: [{ href: knowledgePath, label: copy.openKnowledge }],
+      emptyLabel: copy.openKnowledge,
+    },
+    // Digg's "Discover Communities" panel — and only when there are some. A
+    // module headed "other communities" whose one entry is a link back to the
+    // list is a heading that promises something the rail does not have.
+    ...(others.length > 0
+      ? [
+          {
+            key: "community-discover",
+            title: copy.discoverCommunities,
+            items: others,
+            emptyLabel: copy.directoryEmpty,
+          },
+        ]
+      : []),
+  ];
+}
+
+function CommunityContributor({
+  contributor,
+  copy,
+}: {
+  contributor: PublicCommunityContributor;
+  copy: CommunityCopy;
+}) {
+  return (
+    <Link
+      href={contributor.href}
+      variant="quiet"
+      className="flex items-center gap-2"
+    >
+      <Avatar src={contributor.avatarUrl} name={contributor.label} size="sm" />
+      <span className="grid min-w-0">
+        <span className="truncate text-body-sm text-text">
+          {contributor.label}
+        </span>
+        <span className="text-caption text-text-muted tabular-nums">
+          {copy.contributorEntries(contributor.entryCount)}
+        </span>
+      </span>
+    </Link>
   );
 }
 
@@ -495,9 +863,7 @@ function CommunityMembershipAction({
   const control = "community-membership";
   const active = community.viewer.membershipState === "active";
   if (community.lifecycleState !== "active" && !active) return null;
-  if (community.participationState === "closed" && !active) {
-    return null;
-  }
+  if (community.participationState === "closed" && !active) return null;
 
   if (viewer === "guest") {
     return (
@@ -513,12 +879,11 @@ function CommunityMembershipAction({
   }
 
   if (community.viewer.membershipState === "banned") {
-    return (
-      <p className="max-w-xs text-sm text-muted-foreground">{copy.banned}</p>
-    );
+    return <p className="max-w-xs text-body-sm text-text-muted">{copy.banned}</p>;
   }
+
   return (
-    <OwnerScopedActionForm action={setCommunityMembershipAction}>
+    <OwnerScopedProgressiveForm action={setCommunityMembershipAction}>
       <CommunityActionFields locale={locale} slug={community.slug} />
       <HiddenField name="membershipState" value={active ? "left" : "active"} />
       <button
@@ -536,7 +901,7 @@ function CommunityMembershipAction({
         <UsersRound aria-hidden="true" />
         {active ? copy.leave : copy.follow}
       </button>
-    </OwnerScopedActionForm>
+    </OwnerScopedProgressiveForm>
   );
 }
 
@@ -549,20 +914,13 @@ function CommunityContributionForm({
 }) {
   const copy = getCommunityCopy(locale);
   return (
-    <section
-      className="grid gap-3 border-b border-border py-4"
-      aria-labelledby="community-contribute"
+    <Section
+      id="community-contribute"
+      title={copy.contributeTitle}
+      description={copy.contributeDescription}
     >
-      <div className="grid gap-1">
-        <h2 id="community-contribute" className="text-base font-semibold">
-          {copy.contributeTitle}
-        </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
-          {copy.contributeDescription}
-        </p>
-      </div>
       {community.viewer.eligibleJournals.length > 0 ? (
-        <OwnerScopedActionForm
+        <OwnerScopedProgressiveForm
           action={contributeJournalToCommunityAction}
           className="grid gap-3 sm:flex sm:items-end"
         >
@@ -580,101 +938,110 @@ function CommunityContributionForm({
               ))}
             </Select>
           </Field>
-          <button className={buttonVariants()}>{copy.contribute}</button>
-        </OwnerScopedActionForm>
+          <Button type="submit">{copy.contribute}</Button>
+        </OwnerScopedProgressiveForm>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {copy.noEligibleJournals}
           </p>
-          <Link
+          <NextLink
             href="/garden#first-entry-composer"
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.createJournal}
-          </Link>
+          </NextLink>
         </div>
       )}
-    </section>
+    </Section>
   );
 }
 
-function CommunityContributionRow({
+/**
+ * One contribution, as `EntryCard` (`OVE-447`).
+ *
+ * The community's own controls — read, discuss, report, block — arrive through
+ * the card's `engagement` slot, which is exactly what that slot is for: the
+ * page resolves what a viewer may be offered and hands the rendered controls
+ * down, so the card never reads a viewer's state itself.
+ */
+function CommunityContributionCard({
   locale,
+  copy,
   item,
   viewer,
   community,
   communityPath,
   resumeAction,
   resumeControl,
+  priority,
 }: {
   locale: PublicLocale;
-  item: PublicCommunityPageModel["contributions"]["items"][number];
+  copy: CommunityCopy;
+  item: PublicCommunityContribution;
   viewer: "guest" | "member";
   community: PublicCommunityPageModel;
   communityPath: string;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
+  priority: boolean;
 }) {
-  const copy = getCommunityCopy(locale);
-  const KindIcon =
-    item.object.kind === "plant"
-      ? Sprout
-      : item.object.kind === "animal"
-        ? PawPrint
-        : PawPrint;
+  const KindIcon = item.object.kind === "plant" ? Sprout : PawPrint;
 
   return (
-    <li className="grid gap-4 border-b border-border py-5 sm:flex">
-      <article className="grid min-w-0 gap-3 sm:flex-1">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <Link
-            href={item.object.href}
-            className="inline-flex items-center gap-1.5 font-medium text-foreground hover:text-primary"
-          >
-            <KindIcon className="size-4" aria-hidden="true" />
-            {item.object.displayName}
-          </Link>
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="size-4" aria-hidden="true" />
-            {formatCommunityDate(item.entryDate, locale)}
-          </span>
-          {item.author ? (
-            <Link href={item.author.href} className="hover:text-foreground">
-              {item.author.label}
-            </Link>
-          ) : null}
-        </div>
-        <div className="grid gap-2">
-          <h3 className="text-xl leading-7 font-semibold">
-            <Link href={item.href} className="hover:text-primary">
-              {item.title}
-            </Link>
-          </h3>
-          <p className="line-clamp-4 text-sm leading-6 text-muted-foreground">
-            {item.excerpt}
-          </p>
-        </div>
+    <EntryCard
+      id={item.id}
+      href={item.href}
+      title={item.title}
+      headingLevel={3}
+      dateTime={isoDay(item.entryDate)}
+      dateLabel={formatCommunityDate(item.entryDate, locale)}
+      excerpt={item.excerpt}
+      subject={{
+        label: item.object.displayName,
+        href: item.object.href,
+        kindLabel: copy.kindLabels[item.object.kind] ?? copy.objects,
+        icon: <KindIcon className="size-6" aria-hidden="true" />,
+      }}
+      author={
+        item.author
+          ? { displayName: item.author.label, href: item.author.href }
+          : null
+      }
+      cover={
+        item.coverUrl
+          ? {
+              src: item.coverUrl,
+              srcSet: buildPublicMediaSourceSet({
+                publicUrl: item.coverUrl,
+                intrinsicWidth: item.coverIntrinsicWidth,
+                intrinsicHeight: item.coverIntrinsicHeight,
+              }).srcSet,
+              alt: publicMediaAltText({}, item.title),
+              focalX: item.coverFocalX,
+              focalY: item.coverFocalY,
+              intrinsicWidth: item.coverIntrinsicWidth,
+              intrinsicHeight: item.coverIntrinsicHeight,
+              sizes: "(max-width: 767px) 100vw, 704px",
+            }
+          : null
+      }
+      priority={priority}
+      engagement={
         <div className="relative flex flex-wrap items-center gap-2">
-          <Link
-            href={item.href}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            {copy.readJournal}
-          </Link>
           {item.discussionState === "open" ? (
-            <Link
+            <NextLink
               href={localizedPath(
                 locale,
                 publicCommunityDiscussionPath(community.slug, item.id),
               )}
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
             >
               <MessageCircle aria-hidden="true" />
               {copy.comments}
-            </Link>
+            </NextLink>
           ) : (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-caption text-text-muted">
               {copy.discussionClosed}
             </span>
           )}
@@ -688,24 +1055,8 @@ function CommunityContributionRow({
             resumeControl={resumeControl}
           />
         </div>
-      </article>
-      {item.coverUrl ? (
-        <Link
-          href={item.href}
-          aria-label={`${copy.readJournal}: ${item.title}`}
-          className="relative order-first aspect-4/3 overflow-hidden rounded-md bg-muted sm:order-none sm:w-48 sm:shrink-0"
-        >
-          <CommunityMedia
-            src={item.coverUrl}
-            sizes="(max-width: 640px) 100vw, 192px"
-            focalX={item.coverFocalX}
-            focalY={item.coverFocalY}
-            intrinsicWidth={item.coverIntrinsicWidth}
-            intrinsicHeight={item.coverIntrinsicHeight}
-          />
-        </Link>
-      ) : null}
-    </li>
+      }
+    />
   );
 }
 
@@ -719,7 +1070,7 @@ function CommunitySafetyActions({
   resumeControl,
 }: {
   locale: PublicLocale;
-  item: PublicCommunityPageModel["contributions"]["items"][number];
+  item: PublicCommunityContribution;
   viewer: "guest" | "member";
   community: PublicCommunityPageModel;
   communityPath: string;
@@ -760,7 +1111,7 @@ function CommunitySafetyActions({
   return (
     <>
       {item.viewerReportState ? (
-        <span className="text-xs text-muted-foreground">
+        <span className="text-caption text-text-muted">
           {copy.reportPending}
         </span>
       ) : (
@@ -776,16 +1127,17 @@ function CommunitySafetyActions({
           <summary
             data-auth-intent-control="report"
             data-auth-intent-control-ref={reportControl}
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "cursor-pointer list-none",
-            )}
+            className={buttonVariants({
+              variant: "ghost",
+              size: "sm",
+              className: "cursor-pointer list-none",
+            })}
           >
             {copy.report}
           </summary>
-          <OwnerScopedActionForm
+          <OwnerScopedProgressiveForm
             action={reportCommunityContributionAction}
-            className="absolute left-0 z-popover mt-1 grid w-72 gap-3 rounded-md border border-border bg-popover p-3 shadow-md"
+            className="absolute left-0 z-popover mt-1 grid w-72 gap-3 rounded-md border border-border bg-surface-raised p-3 shadow-popover"
           >
             <CommunityActionFields locale={locale} slug={community.slug} />
             <HiddenField name="contributionId" value={item.id} />
@@ -798,13 +1150,15 @@ function CommunitySafetyActions({
                 ))}
               </Select>
             </Field>
-            <button className={buttonVariants({ size: "sm" })}>
+            <Button type="submit" size="sm">
               {copy.sendReport}
-            </button>
-          </OwnerScopedActionForm>
+            </Button>
+          </OwnerScopedProgressiveForm>
         </details>
       )}
-      <OwnerScopedActionForm action={blockCommunityContributionAuthorAction}>
+      <OwnerScopedProgressiveForm
+        action={blockCommunityContributionAuthorAction}
+      >
         <CommunityActionFields locale={locale} slug={community.slug} />
         <HiddenField name="contributionId" value={item.id} />
         <button
@@ -819,8 +1173,102 @@ function CommunitySafetyActions({
         >
           {copy.block}
         </button>
-      </OwnerScopedActionForm>
+      </OwnerScopedProgressiveForm>
     </>
+  );
+}
+
+/**
+ * The discussion page's own shape (`OVE-454`, criterion 3).
+ *
+ * The thread itself is `PublicEngagementPanel`, which the page passes in: this
+ * component is what a reader arriving from a search result needs around it —
+ * where they are, which entry is being discussed, and the way back. The entry
+ * is a `ListRow` rather than a second card, because the page is about the
+ * conversation and the entry is its subject line.
+ */
+export function PublicCommunityDiscussion({
+  locale,
+  communitySlug,
+  communityName,
+  entry,
+  children,
+}: {
+  locale: PublicLocale;
+  communitySlug: string;
+  communityName: string;
+  entry: {
+    title: string;
+    href: string;
+    authorLabel: string | null;
+    authorHref: string | null;
+    dateTime: string | undefined;
+    dateLabel: string;
+    objectLabel: string;
+  } | null;
+  children: React.ReactNode;
+}) {
+  const copy = getCommunityCopy(locale);
+  const communityPath = communityBasePath(locale, communitySlug);
+
+  return (
+    <main
+      lang={locale}
+      data-public-community-discussion={communitySlug}
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
+    >
+      <PageHeader
+        breadcrumb={
+          <nav aria-label={copy.breadcrumbHome}>
+            <ol className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
+              <li>
+                <Link href={localizedPath(locale, "/communities")}>
+                  {copy.breadcrumbHome}
+                </Link>
+              </li>
+              <li aria-hidden="true">·</li>
+              <li>
+                <Link href={communityPath}>{communityName}</Link>
+              </li>
+              <li aria-hidden="true">·</li>
+              <li aria-current="page" className="min-w-0 truncate">
+                {copy.discussionTitle}
+              </li>
+            </ol>
+          </nav>
+        }
+        title={copy.discussionTitle}
+        description={entry?.title}
+        actions={
+          <NextLink
+            href={communityPath}
+            className={buttonVariants({ variant: "secondary" })}
+          >
+            {copy.discussionBack}
+          </NextLink>
+        }
+      />
+
+      {entry ? (
+        <Section id="discussion-entry" title={copy.discussionEntry}>
+          <ul>
+            <ListRow
+              title={entry.title}
+              href={entry.href}
+              description={entry.objectLabel}
+              meta={
+                <>
+                  {entry.authorLabel ? `${entry.authorLabel} · ` : null}
+                  <time dateTime={entry.dateTime}>{entry.dateLabel}</time>
+                </>
+              }
+            />
+          </ul>
+        </Section>
+      ) : null}
+
+      {children}
+    </main>
   );
 }
 
@@ -839,107 +1287,15 @@ function CommunityActionFields({
   );
 }
 
-function CommunityStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="grid justify-items-center gap-0.5 px-2">
-      <dd className="text-lg font-semibold tabular-nums">{value}</dd>
-      <dt className="text-center text-xs text-muted-foreground">{label}</dt>
-    </div>
-  );
-}
-
 function formatCommunityDate(value: Date | string, locale: PublicLocale) {
   const date = value instanceof Date ? value : new Date(value);
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date);
 }
 
-function communityQuery(input: {
-  query: string;
-  kind: string;
-  cursor: string;
-}) {
-  const params = new URLSearchParams();
-  if (input.query) params.set("q", input.query);
-  if (input.kind !== "all") params.set("kind", input.kind);
-  params.set("cursor", input.cursor);
-  return params.toString();
-}
-
-function communityViewPath(
-  path: string,
-  input: {
-    query: string;
-    kind: string;
-    cursor: string;
-  },
-) {
-  const params = new URLSearchParams();
-  if (input.query) params.set("q", input.query);
-  if (input.kind !== "all") params.set("kind", input.kind);
-  if (input.cursor) params.set("cursor", input.cursor);
-  return params.size > 0 ? `${path}?${params.toString()}` : path;
-}
-
-function CommunityMedia({
-  src,
-  sizes,
-  priority = false,
-  focalX = null,
-  focalY = null,
-  intrinsicWidth = null,
-  intrinsicHeight = null,
-}: {
-  src: string;
-  sizes: string;
-  priority?: boolean;
-  focalX?: number | null;
-  focalY?: number | null;
-  intrinsicWidth?: number | null;
-  intrinsicHeight?: number | null;
-}) {
-  if (isLoopbackMediaUrl(src)) {
-    return (
-      <SubjectAwareHtmlImage
-        src={src}
-        alt=""
-        presentationMode="cover"
-        focalX={focalX}
-        focalY={focalY}
-        intrinsicWidth={intrinsicWidth}
-        intrinsicHeight={intrinsicHeight}
-        className="absolute inset-0 h-full w-full"
-        loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : undefined}
-        decoding="async"
-      />
-    );
-  }
-
-  return (
-    <SubjectAwareMediaImage
-      src={src}
-      alt=""
-      fill
-      priority={priority}
-      sizes={sizes}
-      presentationMode="cover"
-      focalX={focalX}
-      focalY={focalY}
-      intrinsicWidth={intrinsicWidth}
-      intrinsicHeight={intrinsicHeight}
-    />
-  );
-}
-
-function isLoopbackMediaUrl(value: string) {
-  try {
-    const hostname = new URL(value).hostname;
-    return (
-      hostname === "localhost" ||
-      hostname === "127.0.0.1" ||
-      hostname === "[::1]"
-    );
-  } catch {
-    return false;
-  }
+/** `YYYY-MM-DD` for `<time datetime>`: a day, not an instant. */
+function isoDay(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toISOString().slice(0, 10);
 }

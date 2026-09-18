@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 
+import { waitForHydration } from "./helpers/hydration";
+
 /**
  * The journals directory stopped being a form (`OVE-448`).
  *
@@ -91,6 +93,10 @@ async function openDirectory(page: Page, query = "") {
   await expect(page.locator('[data-site-shell-region="header"]')).toBeVisible();
   await expect(page.locator(visibleBar)).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(visibleBar)).toHaveCount(1);
+  // Apply-on-change is a hydrated behaviour: before React adopts the form the
+  // selects are real and inert, and a `selectOption` that lands early changes
+  // nothing and navigates nowhere.
+  await waitForHydration(page.locator(visibleBar));
 }
 
 test.describe("the journals directory applies its filters on change", () => {

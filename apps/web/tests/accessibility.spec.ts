@@ -146,21 +146,39 @@ async function tabTo(
  * a colour that is not transparent. All three, because any one of them alone
  * can be true while nothing is drawn.
  */
-async function expectVisibleFocusRing(
-  locator: ReturnType<Page["locator"]>,
+function expectVisibleFocusRing(
+  ring: { width: string; style: string; color: string },
   what: string,
 ) {
-  const ring = await locator.evaluate((node) => {
+  expect(ring.width, `${what}: outline-width`).not.toBe("0px");
+  expect(ring.style, `${what}: outline-style`).not.toBe("none");
+  expect(ring.color, `${what}: outline-color`).not.toBe("rgba(0, 0, 0, 0)");
+}
+
+/**
+ * Who has focus, and what ring they draw — read in **one** evaluation.
+ *
+ * The walk used to count `:focus-visible` with one locator and then evaluate
+ * against it with another, and a locator resolves afresh every time. Between
+ * the two calls the page can move focus, or hydration can replace the node,
+ * and the second call then waits for a `:focus-visible` that no longer exists
+ * until the test times out — which is how this failed once in a full gate run
+ * while passing alone. One `page.evaluate` on `document.activeElement` cannot
+ * race itself.
+ */
+async function focusedRing(page: Page) {
+  return page.evaluate(() => {
+    const node = document.activeElement;
+    if (!(node instanceof HTMLElement) || node === document.body) return null;
+    if (!node.matches(":focus-visible")) return null;
     const style = getComputedStyle(node);
     return {
+      name: `${node.tagName.toLowerCase()}:${node.getAttribute("data-slot") ?? (node.textContent || "").trim().slice(0, 16)}`,
       width: style.outlineWidth,
       style: style.outlineStyle,
       color: style.outlineColor,
     };
   });
-  expect(ring.width, `${what}: outline-width`).not.toBe("0px");
-  expect(ring.style, `${what}: outline-style`).not.toBe("none");
-  expect(ring.color, `${what}: outline-color`).not.toBe("rgba(0, 0, 0, 0)");
 }
 
 /**
@@ -376,7 +394,15 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     // `outline-style: var(--tw-outline-style)`, so a control carrying both
     // reported `2px` and a set colour while drawing nothing. Thirty-seven
     // places carried both.
-    await expectVisibleFocusRing(submit, "the submit control");
+    const submitRing = await submit.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return {
+        width: style.outlineWidth,
+        style: style.outlineStyle,
+        color: style.outlineColor,
+      };
+    });
+    expectVisibleFocusRing(submitRing, "the submit control");
     await page.keyboard.press("Enter");
     await expect(password).toBeVisible();
   });
@@ -499,14 +525,10 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     const walked: string[] = [];
     for (let step = 0; step < 24; step += 1) {
       await page.keyboard.press("Tab");
-      const active = page.locator(":focus-visible");
-      if ((await active.count()) === 0) continue;
-      const name = await active.evaluate(
-        (node) =>
-          `${node.tagName.toLowerCase()}:${node.getAttribute("data-slot") ?? (node.textContent || "").trim().slice(0, 16)}`,
-      );
-      walked.push(name);
-      await expectVisibleFocusRing(active, name);
+      const focused = await focusedRing(page);
+      if (!focused) continue;
+      walked.push(focused.name);
+      expectVisibleFocusRing(focused, focused.name);
     }
     // The walk has to have found something, or the assertions above are
     // vacuous — and it has to have found more than one *kind* of control,

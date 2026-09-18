@@ -247,7 +247,12 @@ export const INTERFACE_ROUTE_POLICIES = [
     id: "public-community-detail",
     mode: "localized-link",
     prefixes: ["/communities/"],
-    safeQueryKeys: ["kind", "communityAction", "authIntent"],
+    // `q` joined the list in `OVE-454`: the community's search is a facet like
+    // any other, and a reader who switched language from a searched view
+    // landed on the unfiltered community. `cursor` deliberately does not — a
+    // paging position is opaque, and the first page of the same view is the
+    // right place to arrive.
+    safeQueryKeys: ["q", "kind", "communityAction", "authIntent"],
     preserveClientFragment: true,
   },
   {

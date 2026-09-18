@@ -185,6 +185,8 @@ export interface PublicCommunityDirectoryItem {
 export interface PublicCommunityPageModel extends PublicCommunityDirectoryItem {
   rules: { id: string; key: string; order: number }[];
   contributions: PublicCommunityContributionPage;
+  /** The people writing here, most entries first (`OVE-454`). */
+  contributors: PublicCommunityContributor[];
   search: {
     mode: "browse" | "hybrid" | "bounded_fallback";
     degradedReason: PublicCommunitySearchReason | null;
@@ -374,8 +376,15 @@ export async function getPublicCommunityPage(
           }
         : null;
 
-  const [rules, stats, readiness, contributionRows, membership, moderator] =
-    await Promise.all([
+  const [
+    rules,
+    stats,
+    readiness,
+    contributionRows,
+    contributorRows,
+    membership,
+    moderator,
+  ] = await Promise.all([
       buildCommunityRulesQuery(executor, community.id).execute(),
       buildCommunityStatsQuery(
         executor,
@@ -393,6 +402,11 @@ export async function getPublicCommunityPage(
             limit: pageSize + 1,
             cursor,
           }).execute(),
+      buildCommunityContributorsQuery(
+        executor,
+        community.id,
+        viewerScope,
+      ).execute(),
       viewerScope
         ? buildCommunityMembershipStateQuery(
             executor,
@@ -458,6 +472,19 @@ export async function getPublicCommunityPage(
       key: rule.ruleKey,
       order: rule.sortOrder,
     })),
+    contributors: contributorRows.flatMap((row) => {
+      const handle = normalizeProjectedHandle(row.handle);
+      if (!handle) return [];
+      return [
+        {
+          handle,
+          label: row.displayName?.trim() || `@${handle}`,
+          href: publicProfilePath(locale, handle),
+          avatarUrl: row.avatarUrl?.trim() || null,
+          entryCount: Number(row.entryCount ?? 0),
+        },
+      ];
+    }),
     contributions: serializePublicCommunityContributionPage(
       contributionRows as PublicCommunityContributionRow[],
       locale,
@@ -1285,6 +1312,125 @@ export function buildCommunityStatsQuery(
       )`.as("activeObjectCount"),
     ])
     .where("community_memberships.community_id", "=", normalizedCommunityId);
+}
+
+/**
+ * Who writes here (`OVE-454`).
+ *
+ * Circle, Whop and Digg all show a community by the people writing in it, and
+ * this is that panel — not a roster. The distinction is more than a design
+ * one: **membership is a fact this product has never published**, and a page
+ * listing everyone who pressed Join would publish it, with no disclosure in
+ * `lib/privacy/disclosures.ts` covering the act. A contributor published their
+ * own participation by publishing an entry into the community, and their
+ * handle is already on every one of those entries.
+ *
+ * So the predicates here are deliberately the contribution list's, to the
+ * letter: the same handle-registry and profile joins, the same
+ * `membership_state != 'banned'`, the same launch-surface and entry
+ * predicates, and the same viewer block. A contributor this query shows is a
+ * contributor whose entries the reader can already see.
+ */
+export interface PublicCommunityContributor {
+  handle: string;
+  label: string;
+  href: string;
+  avatarUrl: string | null;
+  entryCount: number;
+}
+
+export const PUBLIC_COMMUNITY_CONTRIBUTOR_LIMIT = 12;
+
+export function buildCommunityContributorsQuery(
+  executor: QueryExecutor,
+  communityId: string,
+  viewerScope: RequestScope | null = null,
+  limit: number = PUBLIC_COMMUNITY_CONTRIBUTOR_LIMIT,
+) {
+  const normalizedCommunityId = normalizeUuid(communityId, "Community");
+  return executor
+    .selectFrom("community_contributions")
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.id",
+      "community_contributions.journal_entry_id",
+    )
+    .innerJoin("community_memberships", (join) =>
+      join
+        .onRef(
+          "community_memberships.community_id",
+          "=",
+          "community_contributions.community_id",
+        )
+        .onRef(
+          "community_memberships.user_id",
+          "=",
+          "community_contributions.contributor_user_id",
+        ),
+    )
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .innerJoin("user_public_profiles", (join) =>
+      join
+        .onRef(
+          "user_public_profiles.user_id",
+          "=",
+          "user_handle_registry.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "user_handle_registry.normalized_handle",
+        )
+        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+        .on("user_public_profiles.removed_at", "is", null),
+    )
+    .select([
+      "user_public_profiles.handle as handle",
+      "user_public_profiles.display_name as displayName",
+      "user_public_profiles.avatar_url as avatarUrl",
+      sql<number>`count(distinct community_contributions.id)`.as("entryCount"),
+    ])
+    .where("community_contributions.community_id", "=", normalizedCommunityId)
+    .where("community_contributions.contribution_state", "=", "active")
+    .whereRef(
+      "community_contributions.contributor_user_id",
+      "=",
+      "journal_entries.owner_user_id",
+    )
+    .where("community_memberships.membership_state", "!=", "banned")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
+    .$if(Boolean(viewerScope), (qb) =>
+      qb.where(
+        noCommunityBlockPredicate(
+          viewerScope!.userId,
+          "journal_entries.owner_user_id",
+        ),
+      ),
+    )
+    .groupBy([
+      "user_public_profiles.handle",
+      "user_public_profiles.display_name",
+      "user_public_profiles.avatar_url",
+    ])
+    // Most entries first, then the handle, so the panel is stable between
+    // requests rather than reordering on a tie.
+    .orderBy(sql`count(distinct community_contributions.id)`, "desc")
+    .orderBy("user_public_profiles.handle", "asc")
+    .limit(Math.min(Math.max(1, limit), 48));
 }
 
 export function communityIsNavigationReady(
