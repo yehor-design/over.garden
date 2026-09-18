@@ -91,28 +91,25 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     );
     expect(html).toContain("Публічний вид");
     expect(html).toContain("Записати цей вид");
-    expect(html).toContain('href="/objects?identity=species"');
+    // The catalogue has one door since `OVE-451`, and the card links to it.
+    expect(html).toContain('href="/catalog"');
     expect(html).not.toContain("списку бажань");
-    // D9 section order: facts, experience, relations, names and sources, attribution.
-    const markers = [
-      'data-organism-section="facts"',
-      'data-organism-section="experience"',
-      'data-organism-section="relations"',
-      'data-organism-section="names-and-sources"',
-      'data-organism-section="attribution"',
-    ];
-    const positions = Object.fromEntries(
-      markers.map((marker) => [marker, html.indexOf(marker)]),
-    );
-    expect(positions).toEqual(
-      Object.fromEntries(markers.map((marker) => [marker, expect.any(Number)])),
-    );
-    const order = markers.map((marker) => positions[marker]!);
-    expect(
-      order.every((index) => index >= 0),
-      JSON.stringify(positions),
-    ).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order);
+
+    // ADR-0026 D9's section order, read out of the document rather than
+    // eyeballed. It looks like a styling choice and is not: the fact-only
+    // first paragraph is what makes this page usable as an answer, and
+    // reordering it silently undoes an earlier slice's work.
+    const order = [
+      ...html.matchAll(/data-organism-section="([a-z-]+)"/gu),
+    ].map((match) => match[1]);
+    expect(order).toEqual([
+      "facts",
+      "experience",
+      "relations",
+      "presence",
+      "names-and-sources",
+      "attribution",
+    ]);
     expect(html).toContain(
       "Solanum lycopersicum — вид. У каталозі 1 форма цього виду. Публічні журнали ведуть 2 садівники у 1 області.",
     );
@@ -120,11 +117,33 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(html).toContain('href="/species/solanum-lycopersicum/de-barao"');
     expect(html).toContain("Tuta absoluta");
     expect(html).toContain("основний живитель");
-    expect(html).toMatch(
+    // ADR-0026 D9 wrote this section as "collapsed". It is a real section
+    // now (`OVE-452` criterion 6): a collapsed section is invisible to a
+    // crawler even though it is in the DOM, and everything in it — the
+    // identifiers `sameAs` is built from, the source behind each fact, the
+    // licence attribution — is a fact that matters for indexing.
+    expect(html).not.toMatch(
       /<details[^>]*data-organism-section="names-and-sources"/u,
     );
-    expect(html).not.toMatch(/<details[^>]*open/u);
+    expect(html).toMatch(
+      /<section[^>]*data-organism-section="names-and-sources"/u,
+    );
     expect(html).toContain("Джерела розходяться щодо прийнятої назви:");
+
+    // The identifiers, visible and linking out, in the monospace the design
+    // system reserves for a string a reader copies. `sameAs` is unchanged.
+    expect(html).toContain('data-organism-identifiers="true"');
+    expect(html).toContain('data-organism-identifier="eppo"');
+    expect(html).toMatch(
+      /class="[^"]*font-mono[^"]*"[^>]*(?:rel|target|href)[^>]*>LYPES|href="https:\/\/gd\.eppo\.int\/taxon\/LYPES"/u,
+    );
+    expect(html).toContain('href="https://gd.eppo.int/taxon/LYPES"');
+
+    // A name is written in a language and the markup says which (WCAG 3.1.2);
+    // a fact or an identifier is not a name and carries no `lang` — claiming
+    // one would be the same error in the other direction.
+    expect(html).toMatch(/<span lang="la"[^>]*>Solanum lycopersicum L\./u);
+    expect(html).not.toMatch(/<span lang="[a-z]{2}"[^>]*>LYPES/u);
     expect(html).toMatch(/"@type":\s*"Taxon"/u);
     expect(html).toContain(`/id/${ITEM_ID}`);
     expect(html).toContain("https://gd.eppo.int/taxon/LYPES");

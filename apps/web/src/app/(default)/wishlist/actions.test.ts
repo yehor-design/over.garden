@@ -85,7 +85,7 @@ describe("wishlist actions", () => {
     formData.set("locale", "uk");
     formData.set("returnTo", "/variety/pomidor-cheri-0000000101");
 
-    await addCatalogPublicSlugToWishlistAction(formData);
+    await addCatalogPublicSlugToWishlistAction(undefined, formData);
 
     expect(mocks.addCatalogPublicSlugToWishlist).toHaveBeenCalledWith(
       {
@@ -114,7 +114,7 @@ describe("wishlist actions", () => {
     formData.set("catalogPublicSlug", "pomidor-cheri-0000000101");
     formData.set("returnTo", "/variety/pomidor-cheri-0000000101");
 
-    await addCatalogPublicSlugToWishlistAction(formData);
+    await addCatalogPublicSlugToWishlistAction(undefined, formData);
 
     expect(mocks.addCatalogPublicSlugToWishlist).not.toHaveBeenCalled();
     expect(mocks.redirect).toHaveBeenCalledWith(
@@ -133,7 +133,7 @@ describe("wishlist actions", () => {
     formData.set("catalogPublicSlug", "pomidor-cheri-0000000101");
     formData.set("returnTo", returnTo);
 
-    await addCatalogPublicSlugToWishlistAction(formData);
+    await addCatalogPublicSlugToWishlistAction(undefined, formData);
 
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/garden?wishlist=pomidor-cheri-0000000101&returnTo=%2Fvariety%2Fpomidor-cheri-0000000101&source=wishlist",

@@ -516,7 +516,51 @@ filtering as a real `method="get"` the server honours, the alphabet walked by
 keyboard, and axe clean at 375 px and 1440 px on the door, a filtered listing
 and an empty one.
 
-The remaining page families (`OVE-452`–`OVE-459`) are still in Backlog.
+**The organism card carries its own provenance** (`OVE-452`, 2026-09-18). The
+card holds more than any other page in the product — names in four languages,
+identifiers across five sources, relations, facts with the assertions behind
+them, presence badges for two countries, the attribution EPPO's licence
+requires, the forms beneath a species, and the gardener experience under all
+of it — and it arrived as one long column with no way in. It is the design
+system now: `PageHeader`'s rhythm, `Section` per region, `Badge` for a count
+and a status, `MediaFigure` for a gardener's photograph, and the shell's own
+contents rail above `xl`, where every entry points at a section that is on the
+page and open.
+
+**Two things it fixed rather than restyled.** The identifiers — COL, GBIF,
+WFO, EPPO, Wikidata — were in the JSON-LD's `sameAs` and nowhere a reader
+could see them; they render now in the monospace the design system reserves
+for a string somebody copies, each linking out. And **"Names and sources" is
+not an accordion any more**: ADR-0026 D9 wrote it as *collapsed*, but a
+collapsed section is invisible to a crawler even though it is in the DOM, and
+that section holds the identifiers, the source behind every fact and the
+licence attribution. The ADR is amended in place with the reason. The owner's
+own controls stay behind a disclosure, because those are tools for one person
+rather than facts.
+
+The section order is ADR-0026 D9's, unchanged, and it is **read out of the
+served bytes** in `tests/organism-card.spec.ts` rather than eyeballed — it
+looks like a styling choice and is not: the fact-only first paragraph is what
+makes the page usable as an answer, and reordering it silently undoes an
+earlier slice's work.
+
+`app/catalog-evidence-route.tsx` was the last `OwnerScopedActionForm` in this
+family. Converting it reshaped `addCatalogPublicSlugToWishlistAction` to
+`(previousState, formData)`, which the workspace's own call site shares — so
+that form stopped needing hydration too.
+
+Proven against a production build on the catalogue gate database, wired into
+`pnpm gates:browser` and the CI list: the D9 order out of the bytes; no card
+section rendered as a `<details>`; the identifiers visible, monospaced and
+linking out; a source-only card still `noindex` with no JSON-LD at all; a
+merged card's address still answering 308 to the survivor; and **axe clean at
+375, 1024 and 1440 px on four cards** — one the owner marked indexable, a form
+beneath a species, a source-only node, and one merged away. JSON-LD is
+**byte-identical to `main`** on a real indexable card, 1 658 bytes both sides.
+Lighthouse through the CLI on that card: LCP **0.8–1.1 s**, CLS **0**,
+performance 98–100.
+
+The remaining page families (`OVE-453`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

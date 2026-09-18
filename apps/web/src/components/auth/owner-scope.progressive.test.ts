@@ -20,6 +20,7 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const PROGRESSIVE_SURFACES = [
   "app/(default)/garden/catalog/queue/page.tsx",
   "app/(default)/garden/catalog/sources/page.tsx",
+  "app/catalog-evidence-route.tsx",
   "app/catalog-owner-card-controls.tsx",
   // `OVE-450`: the public profile's follow, unfollow, report and block, and
   // the lineage passport's follow and question. Thirty-three call sites across

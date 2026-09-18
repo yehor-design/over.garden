@@ -1,5 +1,7 @@
 import { ExternalLink } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
+
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { formatOrganismDate } from "@/lib/public-organism-copy";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
@@ -33,23 +35,20 @@ export function PublicVarietySourceCredits({
       className="grid gap-4 border-t border-border pt-6"
     >
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-muted-foreground">
+        <p className="text-overline text-text-muted uppercase">
           {copy.sourceCredits.dataSources}
         </p>
-        <h2
-          id="source-credits-heading"
-          className="text-2xl font-semibold tracking-tight text-foreground"
-        >
+        <h2 id="source-credits-heading" className="text-h2 text-text-heading">
           {copy.sourceCredits.title}
         </h2>
         {lastUpdated ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {copy.organism.sections.lastUpdated}:{" "}
             <time dateTime={toIso(contentUpdatedAt)}>{lastUpdated}</time>
           </p>
         ) : null}
       </div>
-      <ol className="grid gap-3 md:grid-cols-2">
+      <ol className="grid list-none gap-3 md:grid-cols-2">
         {credits.map((credit) => {
           const downloaded = formatOrganismDate(locale, credit.fetchedAt);
           const observed = formatOrganismDate(locale, credit.lastObservedAt);
@@ -63,51 +62,58 @@ export function PublicVarietySourceCredits({
                   href={credit.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 min-w-0 items-center gap-1 rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
                   <span className="truncate">{credit.sourceName}</span>
-                  <ExternalLink className="size-3 shrink-0" />
+                  <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
                 </a>
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-md border border-border px-2 py-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral">
                     {copy.sourceCredits.versionLabel}: {credit.sourceVersion}
-                  </span>
+                  </Badge>
                   {downloaded ? (
-                    <span className="rounded-md border border-border px-2 py-1">
+                    <Badge tone="neutral">
                       {copy.organism.sections.downloadedOn}:{" "}
-                      <time dateTime={toIso(credit.fetchedAt)}>{downloaded}</time>
-                    </span>
+                      <time dateTime={toIso(credit.fetchedAt)}>
+                        {downloaded}
+                      </time>
+                    </Badge>
                   ) : null}
                   {observed ? (
-                    <span className="rounded-md border border-border px-2 py-1">
+                    <Badge tone="neutral">
                       {copy.organism.sections.observedOn}:{" "}
-                      <time dateTime={toIso(credit.lastObservedAt)}>{observed}</time>
-                    </span>
+                      <time dateTime={toIso(credit.lastObservedAt)}>
+                        {observed}
+                      </time>
+                    </Badge>
                   ) : null}
                   {credit.attributionRequired ? (
-                    <span className="rounded-md border border-border px-2 py-1">
+                    // The licence obligation, stated rather than implied:
+                    // where a source requires attribution the page says so
+                    // beside the attribution itself.
+                    <Badge tone="info">
                       {copy.sourceCredits.attributionRequired}
-                    </span>
+                    </Badge>
                   ) : null}
                 </div>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-body-sm text-text-muted">
                   {credit.licenseUrl ? (
                     <a
                       href={credit.licenseUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="font-medium text-foreground underline-offset-4 hover:underline"
+                      className="rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                     >
                       {credit.license}
                     </a>
                   ) : (
-                    <span className="font-medium text-foreground">
+                    <span className="font-medium text-text">
                       {credit.license}
                     </span>
                   )}
                 </p>
                 {credit.attributionText ? (
-                  <p className="text-sm leading-6 text-muted-foreground">
+                  <p className="text-body-sm text-text-muted">
                     {credit.attributionText}
                   </p>
                 ) : null}

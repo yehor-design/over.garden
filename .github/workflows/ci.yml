@@ -247,7 +247,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts
 
   matching:
     name: Python matching tier
