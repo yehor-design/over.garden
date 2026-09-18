@@ -673,6 +673,37 @@ control's accessible name states the action and the count
 ("Like, 12 likes" / "Liked, 13 likes"), and the count lives in an
 `aria-live="polite"` region.
 
+### 5.7 Profiles and tabs
+
+A profile is content, not a dashboard (ADR-0031 D4). `ProfileHeader` is the one
+shape: picture, name, handle, one line of bio, the facts that are not counts,
+the counts, and **one** action — the rest belong in a menu.
+
+- **A count of zero is omitted rather than printed.** A row of zeros tells a
+  visitor only that nothing is happening, and the empty state below already
+  says it in words. A count that is *hidden* — a gardener who does not publish
+  their relationships — is omitted too, and the page says so in a sentence
+  instead of printing a blank.
+- **A tab's selection lives in the URL.** A view a reader cannot share or
+  reload back into is a view that forgot what it was for, so the selected tab
+  is a search parameter and the server decides which panel is open on the
+  first paint. `replace`, not `push`: a tab is a view of one page, and filling
+  the Back button with tab changes makes Back stop meaning "the page I came
+  from".
+- **The press is applied before the address is.** The obvious shape — read the
+  parameter back out of the router and let that be the state — was measured in
+  a browser and is wrong: the parameter is read on the server, so between the
+  press and the answer an arrow key moved focus to a tab that stayed
+  `aria-selected="false"`. The component holds the selection and adopts a
+  `selectedId` that changes underneath it.
+- **Every panel is rendered, whichever tab is open.** `Tabs` hides the others
+  rather than dropping them, so a crawler still reads a gardener's entries
+  whatever `?tab=` says.
+- **A public route carries only the parameters it declares.** The author-scoped
+  rewrite rebuilds the search string from `lib/interface-route-policy.ts`, so a
+  new parameter that is not registered there never reaches the page: the
+  address changes and the view does not.
+
 ---
 
 ## 6. Language and locale

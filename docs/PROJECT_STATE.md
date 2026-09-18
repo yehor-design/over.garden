@@ -413,7 +413,59 @@ Measured on the entry: LCP **4.29 s** against **4.45 s** on `main`, CLS **0**
 both, and the LCP element is the gardener's photograph in both. The budget is
 `OVE-461`'s, as above.
 
-The remaining page families (`OVE-450`–`OVE-459`) are still in Backlog.
+**The profile and the passport are a gardener's body of work** (`OVE-450`,
+2026-09-18). `/{handle}` opens with `ProfileHeader` — picture, name, handle,
+bio, region and languages, the counts, one action — and then three real tabs
+with roving tabindex: objects, entries, about. The objects are `Card`s with a
+`MediaFigure` at the 4:3 card ratio; the entries are the system's `EntryCard`;
+the empty profile is `empty-first-run` for its owner and `empty-no-results` for
+a visitor, which is the distinction `DESIGN.md` §5.4 draws and the old page did
+not. `/{handle}/objects/{slug}` and `/lineage/objects/{id}` are one passport
+rebuilt on the same primitives, with the identity carrying `lang="la"` only
+when it is a binomial, the last breadcrumb carrying `aria-current`, and the
+provenance list saying in a badge that only confirmed edges appear in it.
+
+**There is no communities tab, and the absence is a decision.** The acceptance
+criteria name one. `community_memberships` has no visibility column — a row
+records `active`, `left` or `banned` and nothing about who may see it — so
+publishing that set on a public profile would publish data no gardener ever
+marked publishable, the fact of a ban included. That needs an owner decision,
+not an implementation, so the third tab is `about` and the reason is recorded
+in `src/lib/public-profile-tabs.ts`.
+
+Three defects only a browser found, and two of them were in the obvious
+design. **A tab that changed the address and not the view**: the selection was
+read back out of the router, and that route reads its parameters on the server,
+so an arrow key moved focus to a tab that stayed `aria-selected="false"` for a
+frame or more. The selection is held in the component now and the address is
+written beside it. **A parameter the proxy deleted**: `?tab=` never reached the
+page at all, because the author-scoped rewrite rebuilds the search string from
+the route's own allow-list in `lib/interface-route-policy.ts` — the address
+said `entries` and the profile opened on its objects. And **a canonical that
+redirected**: a gardener's rename moves every object passport's address, but
+`publicProfileChangeTags` named no tag the passport's hour-long cache carries,
+so a renamed gardener's passports went on advertising an address that 308s
+until the cache aged out. The `catalog` family tag closes that; the entry pages
+were already covered.
+
+Proven against a production build on a scratch database, in
+`tests/public-profile.spec.ts`, which went into `pnpm gates:browser` **and**
+the CI list on the day it was written: axe clean at 375 px and 1440 px on five
+surfaces (a full profile, its entries tab, an empty profile, an object passport
+and a lineage passport); the arrow keys moving the tabs with the URL following
+and a reload landing on the same view; a rename answering **308** for the
+passport's old address with the canonical naming the new one, and **410** for
+the retired profile handle with none of the gardener's work in the body; and a
+follow posted as raw multipart with **no client bundle at all**, asserted by
+the row appearing in `profile_follows`. The passport's two converted forms are
+checked the same way — every form on the page either names an endpoint of its
+own or carries the server-action reference that lets it submit unhydrated.
+
+`OwnerScopedActionForm` is gone from both files this task owns, and both
+actions files now take `(_previousState, formData)`, which is the shape
+`useActionState` hands a progressive form.
+
+The remaining page families (`OVE-451`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

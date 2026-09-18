@@ -4,6 +4,7 @@ import {
   type PublicLocale,
 } from "./public-localization";
 import { AUTH_INTENT_ACTIONS } from "./auth/auth-intent-contract";
+import { PUBLIC_PROFILE_TAB_IDS } from "./public-profile-tabs";
 
 export const INTERFACE_LOCALE_PREFERENCE_ENDPOINT = "/api/interface/locale";
 export const INTERFACE_CONTEXT_ENDPOINT = "/api/interface/context";
@@ -254,7 +255,11 @@ export const INTERFACE_ROUTE_POLICIES = [
     id: "public-profile",
     mode: "localized-link",
     prefixes: ["/@", "/%40"],
-    safeQueryKeys: ["profileAction", "authIntent"],
+    // `tab` is the profile's own view, and it is on this list because it has
+    // to be: the author-scoped rewrite rebuilds the search string from the
+    // allow-list, so a parameter that is not declared here never reaches the
+    // page at all — the address changes and the view does not (`OVE-450`).
+    safeQueryKeys: ["profileAction", "authIntent", "tab"],
     preserveClientFragment: true,
   },
   {
@@ -551,6 +556,10 @@ function sanitizeInterfaceRouteQueryValue(
       return AUTH_INTENT_ACTION_SET.has(value) ? value : null;
     case "profileAction":
       return PROFILE_ACTIONS.has(value) ? value : null;
+    case "tab":
+      return (PUBLIC_PROFILE_TAB_IDS as readonly string[]).includes(value)
+        ? value
+        : null;
     case "communityAction":
       return COMMUNITY_ACTIONS.has(value) ? value : null;
     case "engagement":

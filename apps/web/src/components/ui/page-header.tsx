@@ -39,7 +39,12 @@ function PageHeader({
           {eyebrow ? (
             <p className="text-overline text-text-muted uppercase">{eyebrow}</p>
           ) : null}
-          <h1 id={id} className="text-h1 text-text-heading">
+          {/* `break-words`, because a page's title is data: a living object
+              named in one 60-character token must wrap rather than push the
+              page sideways, and the type scale (DESIGN.md §2.6) is fixed — a
+              second, smaller `h1` tier for long titles would be a second
+              scale. */}
+          <h1 id={id} className="text-h1 break-words text-text-heading">
             {title}
           </h1>
           {description ? (

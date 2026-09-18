@@ -27,8 +27,14 @@ vi.mock("@/server/profile-interaction-repository", () => ({
   getProfileViewerState: mocks.getProfileViewerState,
 }));
 
+// The profile's tabs are a client component, and a real `Tabs` renders here.
+// Only the router underneath is stubbed — the URL round-trip is a browser fact
+// and `tests/public-profile.spec.ts` is where it is proven.
 vi.mock("next/navigation", () => ({
   notFound: mocks.notFound,
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => "/uk/@green_thumb",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 vi.mock("@/app/[locale]/[profileHandle]/actions", () => ({
@@ -150,6 +156,27 @@ describe("/{locale}/@:handle public profile route", () => {
     expect(html).not.toMatch(
       /email|provider|account|session-1|ip_address|user_agent|quarantine|derivative|invite|token|pending|precise|latitude|longitude/i,
     );
+  });
+
+  it("opens the tab `?tab=` names, and ignores one that is not a tab", async () => {
+    const { default: LocalizedPublicProfileRoute } = await import("./page");
+    const open = async (tab?: string) =>
+      renderToStaticMarkup(
+        await LocalizedPublicProfileRoute({
+          params: Promise.resolve({
+            locale: "uk",
+            profileHandle: "@green_thumb",
+          }),
+          ...(tab ? { searchParams: Promise.resolve({ tab }) } : {}),
+        }),
+      );
+
+    expect(await open("entries")).toContain('data-profile-tab="entries"');
+    expect(await open("about")).toContain('data-profile-tab="about"');
+    // A stale or hand-edited link lands on the gardener's objects rather than
+    // on an error: a tab is a view, and an unknown view is not a 404.
+    expect(await open("communities")).toContain('data-profile-tab="objects"');
+    expect(await open()).toContain('data-profile-tab="objects"');
   });
 
   it("uses the authenticated relationship state without exposing account data", async () => {

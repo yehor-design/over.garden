@@ -1,25 +1,22 @@
-import Image from "next/image";
-import Link from "next/link";
+// A button-shaped link keeps `next/link` directly: the design system's
+// `Link` carries link typography, and `buttonVariants` would have to fight it.
+import NextLink from "next/link";
 import type { ReactNode } from "react";
-import {
-  BookOpen,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ImageOff,
-  PawPrint,
-  Sprout,
-  UserRound,
-} from "lucide-react";
-
-import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
-import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { BookOpen, ChevronRight, ImageOff, PawPrint, Sprout } from "lucide-react";
 
 import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Link } from "@/components/ui/link";
+import { MediaFigure } from "@/components/ui/media-figure";
+import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatLivingObjectPassportDate,
@@ -31,7 +28,33 @@ import {
   type OwnerLivingObjectPassportPresentation,
   type PublicLivingObjectPassportPresentation,
 } from "@/lib/living-object-passport";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { cn } from "@/lib/utils";
+
+/**
+ * The passport of one living object — the page an object earns by being the
+ * spine of every entry written about it (`OVE-450`).
+ *
+ * It is one component behind two addresses. `/@{handle}/objects/{slug}` is the
+ * readable one and `/lineage/objects/{uuid}` is the one the graph uses
+ * (ADR-0029 D9); the second delegates to the first's route, so what is drawn
+ * here is what both of them draw, for a visitor and for the object's own
+ * caretaker.
+ *
+ * Three things are the same rules the rest of the redesign follows, and they
+ * are why this file has so little styling of its own:
+ *
+ * - **Every photograph is a `MediaFigure`** at the 4:3 card ratio, so the box
+ *   is reserved before the bytes land (DESIGN.md §2.10) and the `srcset` the
+ *   media pipeline built survives (ADR-0022 D2).
+ * - **The identity is a name, and a scientific name is Latin.** `lang="la"`
+ *   goes on a binomial and on nothing else, so a screen reader does not read
+ *   *Solanum lycopersicum* with Ukrainian phonetics — and does not read a
+ *   gardener's Ukrainian variety name with Latin ones either.
+ * - **A chronology is a list of observations, not a feed.** The body of an
+ *   observation is the substance of it, so it is shown in full rather than
+ *   clamped into a card's excerpt; only a long one folds behind a disclosure.
+ */
 
 const TIMELINE_PREVIEW_SIZE = 5;
 
@@ -58,14 +81,6 @@ export function LivingObjectPassportOverview({
 }) {
   const copy = getLivingObjectPassportCopy(locale);
   const domain = getLivingObjectPassportDomain(locale, passport.objectKind);
-  const longestTitleToken = passport.displayName
-    .split(/\s+/u)
-    .reduce(
-      (longest, token) => (token.length > longest.length ? token : longest),
-      "",
-    );
-  const hasLongTitle =
-    passport.displayName.length > 56 || longestTitleToken.length > 18;
 
   return (
     <section
@@ -73,144 +88,118 @@ export function LivingObjectPassportOverview({
       data-living-object-passport="overview"
       data-passport-audience={passport.audience}
       data-object-kind={passport.objectKind}
-      className="grid gap-5"
+      className="grid gap-6"
     >
-      <nav aria-label={passport.passportLabel} className="min-w-0">
-        <ol className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          {passport.breadcrumbs.map((item, index) => (
-            <li
-              key={`${item.label}:${index}`}
-              className="flex min-w-0 items-center gap-1.5"
-            >
-              {index > 0 ? (
-                <ChevronRight
-                  className="size-3.5 shrink-0"
-                  aria-hidden="true"
-                />
-              ) : null}
-              {item.href ? (
-                <Link
-                  href={item.href}
-                  className="max-w-52 truncate hover:text-foreground hover:underline"
-                >
-                  {item.label}
-                </Link>
-              ) : (
-                <span className="max-w-52 truncate text-foreground">
-                  {item.label}
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
-      </nav>
-
-      <header className="grid gap-5 border-b border-border pb-5 md:grid-cols-3 md:items-start">
+      <div className="grid gap-5 md:grid-cols-3 md:items-start">
         <PassportCover passport={passport} noPhotoLabel={copy.noPhoto} />
 
-        <div className="flex min-w-0 flex-col gap-4 md:col-span-2">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+        <div className="grid min-w-0 gap-4 md:col-span-2">
+          <PageHeader
+            className="border-b-0 pb-0"
+            breadcrumb={
+              <PassportBreadcrumbs
+                passport={passport}
+                label={passport.passportLabel}
+              />
+            }
+            eyebrow={`${passport.passportLabel} · ${domain.kindLabel}`}
+            title={passport.displayName}
+            description={
+              <>
+                {passport.identity.label}:{" "}
+                <ScientificName identity={passport.identity} />
+              </>
+            }
+            actions={
+              passport.primaryAction || passport.secondaryActions.length > 0 ? (
+                <>
+                  {passport.primaryAction ? (
+                    <NextLink
+                      href={passport.primaryAction.href}
+                      className={buttonVariants({ size: "sm" })}
+                    >
+                      <BookOpen aria-hidden="true" />
+                      {passport.primaryAction.label}
+                    </NextLink>
+                  ) : null}
+                  {passport.secondaryActions.map((action) => (
+                    <NextLink
+                      key={`${action.href}:${action.label}`}
+                      href={action.href}
+                      className={buttonVariants({
+                        variant: "secondary",
+                        size: "sm",
+                      })}
+                    >
+                      {action.label}
+                    </NextLink>
+                  ))}
+                </>
+              ) : null
+            }
+          />
+
+          {/* A status is a word before it is a colour (DESIGN.md §8). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="neutral">
               <ObjectKindIcon kind={passport.objectKind} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-muted-foreground uppercase">
-                {passport.passportLabel} · {domain.kindLabel}
-              </p>
-              <h1
-                className={cn(
-                  "mt-1 font-semibold break-words text-foreground",
-                  hasLongTitle
-                    ? "text-xl leading-tight sm:text-3xl"
-                    : "text-3xl leading-tight",
-                )}
-              >
-                {passport.displayName}
-              </h1>
-              <p className="mt-1 text-sm break-words text-muted-foreground">
-                {passport.identity.label}: {passport.identity.value}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="rounded-md border border-border px-2 py-1 font-medium text-foreground">
               {passport.status.label}
-            </span>
-            <span className="rounded-md bg-muted px-2 py-1 text-foreground">
-              {passport.identity.state}
-            </span>
+            </Badge>
+            <Badge tone="info">{passport.identity.state}</Badge>
             {passport.status.latestDate ? (
-              <time className="px-1 text-muted-foreground">
+              <span className="text-caption text-text-muted">
                 {copy.latestObservation}:{" "}
-                {formatLivingObjectPassportDate(
-                  passport.status.latestDate,
-                  locale,
-                )}
-              </time>
+                <time
+                  dateTime={dateTimeValue(passport.status.latestDate)}
+                  className="tabular-nums"
+                >
+                  {formatLivingObjectPassportDate(
+                    passport.status.latestDate,
+                    locale,
+                  )}
+                </time>
+              </span>
             ) : null}
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {passport.primaryAction ? (
-              <Link
-                href={passport.primaryAction.href}
-                className={buttonVariants({ size: "sm" })}
-              >
-                <BookOpen aria-hidden="true" />
-                {passport.primaryAction.label}
-              </Link>
-            ) : null}
-            {passport.secondaryActions.map((action) => (
-              <Link
-                key={`${action.href}:${action.label}`}
-                href={action.href}
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
-              >
-                {action.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="flex min-w-0 items-center gap-3 border-t border-border pt-3">
-            <CaretakerAvatar passport={passport} />
+          <div className="flex min-w-0 items-center gap-3 border-t border-border pt-4">
+            <Avatar
+              src={passport.caretaker.avatarUrl}
+              name={passport.caretaker.displayName}
+              size="lg"
+            />
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">{copy.caretaker}</p>
+              <p className="text-caption text-text-muted">{copy.caretaker}</p>
               {passport.caretaker.profilePath ? (
                 <Link
                   href={passport.caretaker.profilePath}
-                  className="block truncate text-sm font-semibold text-foreground hover:text-primary hover:underline"
+                  variant="quiet"
+                  className="block truncate text-body-sm font-semibold text-text-heading"
                 >
                   {passport.caretaker.displayName}
                 </Link>
               ) : (
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-body-sm font-semibold text-text-heading">
                   {passport.caretaker.displayName}
                 </p>
               )}
               {passport.caretaker.mention ? (
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-caption text-text-muted">
                   {passport.caretaker.mention}
                 </p>
               ) : null}
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <dl className="grid border-y border-border sm:grid-cols-2 xl:grid-cols-3">
+      <dl className="grid gap-x-6 gap-y-4 border-y border-border py-4 sm:grid-cols-2 xl:grid-cols-3">
         {passport.facts.map((fact) => (
-          <div
-            key={fact.key}
-            className="min-w-0 border-b border-border px-3 py-3 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 xl:[&:nth-last-child(-n+3)]:border-b-0"
-          >
-            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
-            <dd className="mt-1 text-sm font-medium break-words text-foreground">
+          <div key={fact.key} className="min-w-0">
+            <dt className="text-caption text-text-muted">{fact.label}</dt>
+            <dd className="mt-1 text-body-sm font-medium break-words text-text">
               {fact.href ? (
-                <Link
-                  href={fact.href}
-                  className="hover:text-primary hover:underline"
-                >
+                <Link href={fact.href} variant="quiet">
                   {fact.value}
                 </Link>
               ) : (
@@ -222,38 +211,32 @@ export function LivingObjectPassportOverview({
       </dl>
 
       {passport.gallery.length > 1 ? (
-        <section
-          aria-labelledby="passport-gallery-title"
-          className="grid gap-3"
+        <Section
+          id="passport-gallery"
+          title={copy.mediaGallery}
+          level={2}
+          headingClassName="text-h3"
         >
-          <h2
-            id="passport-gallery-title"
-            className="text-base font-semibold text-foreground"
-          >
-            {copy.mediaGallery}
-          </h2>
-          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <ul className="grid list-none grid-cols-2 gap-3 sm:grid-cols-3">
             {passport.gallery.slice(0, 6).map((media) => (
               <li key={media.publicUrl} className="min-w-0">
-                <SubjectAwareMediaImage
+                <MediaFigure
+                  aspect="card"
+                  className="overflow-hidden rounded-lg border border-border"
                   src={media.publicUrl}
                   srcSet={buildPublicMediaSourceSet(media).srcSet}
                   placeholderDataUri={media.placeholderDataUri ?? null}
                   alt={media.alt}
-                  width={640}
-                  height={480}
                   sizes="(min-width: 1024px) 14rem, 45vw"
-                  presentationMode="contain"
                   focalX={media.focalX}
                   focalY={media.focalY}
                   intrinsicWidth={media.intrinsicWidth}
                   intrinsicHeight={media.intrinsicHeight}
-                  className="aspect-4/3 w-full rounded-md border border-border bg-muted"
                 />
               </li>
             ))}
           </ul>
-        </section>
+        </Section>
       ) : null}
     </section>
   );
@@ -347,6 +330,75 @@ export function buildLivingObjectPassportContextModules(
   ];
 }
 
+function PassportBreadcrumbs({
+  passport,
+  label,
+}: {
+  passport: LivingObjectPassportPresentation;
+  label: string;
+}) {
+  if (passport.breadcrumbs.length === 0) return null;
+  const last = passport.breadcrumbs.length - 1;
+
+  return (
+    <nav aria-label={label} className="min-w-0">
+      <ol className="flex min-w-0 list-none flex-wrap items-center gap-1.5 text-caption text-text-muted">
+        {passport.breadcrumbs.map((item, index) => (
+          <li
+            key={`${item.label}:${index}`}
+            className="flex min-w-0 items-center gap-1.5"
+          >
+            {index > 0 ? (
+              <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
+            ) : null}
+            {item.href ? (
+              <Link
+                href={item.href}
+                variant="muted"
+                className="max-w-52 truncate"
+              >
+                {item.label}
+              </Link>
+            ) : (
+              /* The last crumb is this page. `aria-current` is what says so
+                 to a screen reader; truncation only says it to the eye. */
+              <span
+                className="max-w-52 truncate text-text"
+                {...(index === last ? { "aria-current": "page" as const } : {})}
+              >
+                {item.label}
+              </span>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+/**
+ * The identified name, with `lang="la"` when — and only when — it is one.
+ *
+ * A binomial is Latin whatever the page's language, and a screen reader that
+ * reads it with Ukrainian phonetics reads a different word (WCAG 3.1.2). A
+ * variety name a gardener wrote is *not* Latin, so `catalogKind` decides
+ * rather than the shape of the string.
+ */
+function ScientificName({
+  identity,
+}: {
+  identity: LivingObjectPassportPresentation["identity"];
+}) {
+  if (identity.catalogKind === "species") {
+    return (
+      <span lang="la" className="italic">
+        {identity.value}
+      </span>
+    );
+  }
+  return <span>{identity.value}</span>;
+}
+
 function PassportCover({
   passport,
   noPhotoLabel,
@@ -354,51 +406,32 @@ function PassportCover({
   passport: LivingObjectPassportPresentation;
   noPhotoLabel: string;
 }) {
-  return passport.cover ? (
-    <SubjectAwareMediaImage
+  if (!passport.cover) {
+    return (
+      <div className="flex aspect-card w-full items-center justify-center rounded-lg border border-dashed border-border bg-surface-sunken text-text-muted">
+        <span className="flex flex-col items-center gap-2 text-body-sm">
+          <ImageOff className="size-6" aria-hidden="true" />
+          {noPhotoLabel}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <MediaFigure
+      aspect="card"
+      className="overflow-hidden rounded-lg border border-border"
       src={passport.cover.publicUrl}
       srcSet={buildPublicMediaSourceSet(passport.cover).srcSet}
       placeholderDataUri={passport.cover.placeholderDataUri ?? null}
       alt={passport.cover.alt}
-      width={960}
-      height={720}
       sizes="(min-width: 768px) 20rem, 100vw"
-      loading="eager"
-      presentationMode="cover"
       focalX={passport.cover.focalX}
       focalY={passport.cover.focalY}
       intrinsicWidth={passport.cover.intrinsicWidth}
       intrinsicHeight={passport.cover.intrinsicHeight}
-      className="aspect-4/3 w-full rounded-md border border-border"
+      priority
     />
-  ) : (
-    <div className="flex aspect-4/3 w-full items-center justify-center rounded-md border border-dashed border-border bg-muted/40 text-muted-foreground">
-      <span className="flex flex-col items-center gap-2 text-sm">
-        <ImageOff className="size-6" aria-hidden="true" />
-        {noPhotoLabel}
-      </span>
-    </div>
-  );
-}
-
-function CaretakerAvatar({
-  passport,
-}: {
-  passport: LivingObjectPassportPresentation;
-}) {
-  return passport.caretaker.avatarUrl ? (
-    <Image
-      src={passport.caretaker.avatarUrl}
-      alt=""
-      width={40}
-      height={40}
-      unoptimized
-      className="size-10 rounded-full border border-border object-cover"
-    />
-  ) : (
-    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-      <UserRound className="size-5" aria-hidden="true" />
-    </span>
   );
 }
 
@@ -416,38 +449,33 @@ function PassportTimeline({
   const continuation = passport.timeline.entries.slice(TIMELINE_PREVIEW_SIZE);
 
   return (
-    <section
+    <Section
       id="passport-timeline"
-      className="grid gap-4 border-t border-border pt-5"
+      className="border-t border-border pt-6"
+      level={2}
+      title={
+        passport.audience === "owner"
+          ? copy.ownerChronology
+          : copy.publicChronology
+      }
+      description={formatLivingObjectPassportEntryCount(
+        locale,
+        passport.timeline.totalCount,
+      )}
     >
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase">
-            {copy.chronology}
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-foreground">
-            {passport.audience === "owner"
-              ? copy.ownerChronology
-              : copy.publicChronology}
-          </h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {formatLivingObjectPassportEntryCount(
-            locale,
-            passport.timeline.totalCount,
-          )}
-        </p>
-      </div>
-
       {preview.length === 0 ? (
-        <div className="flex min-h-28 items-center rounded-md border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-          {passport.audience === "owner"
-            ? copy.noOwnerEntries
-            : copy.noPublicEntries}
-        </div>
+        <EmptyState
+          variant={passport.audience === "owner" ? "first-run" : "no-results"}
+          illustration={null}
+          title={
+            passport.audience === "owner"
+              ? copy.noOwnerEntries
+              : copy.noPublicEntries
+          }
+        />
       ) : (
         <>
-          <ol className="grid gap-3">
+          <ol className="grid list-none gap-4">
             {renderTimelineEntries(
               preview,
               locale,
@@ -458,21 +486,20 @@ function PassportTimeline({
             )}
           </ol>
           {continuation.length > 0 ? (
-            <details className="group border-t border-border pt-3">
-              <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-foreground hover:text-primary">
-                <span>
-                  {passport.timeline.hasMore ? copy.showRecent : copy.showAll} ·{" "}
-                  {formatLivingObjectPassportEntryCount(
-                    locale,
-                    passport.timeline.loadedCount,
-                  )}
-                </span>
-                <ChevronDown
-                  className="size-4 transition-transform group-open:rotate-180"
-                  aria-hidden="true"
-                />
+            <details className="group grid gap-4 border-t border-border pt-4">
+              <summary
+                className={cn(
+                  "flex min-h-11 cursor-pointer list-none items-center gap-2",
+                  "text-body-sm font-semibold text-link hover:underline",
+                )}
+              >
+                {passport.timeline.hasMore ? copy.showRecent : copy.showAll} ·{" "}
+                {formatLivingObjectPassportEntryCount(
+                  locale,
+                  passport.timeline.loadedCount,
+                )}
               </summary>
-              <ol className="mt-3 grid gap-3">
+              <ol className="grid list-none gap-4">
                 {renderTimelineEntries(
                   continuation,
                   locale,
@@ -485,7 +512,7 @@ function PassportTimeline({
           ) : null}
         </>
       )}
-    </section>
+    </Section>
   );
 }
 
@@ -501,21 +528,30 @@ function renderTimelineEntries(
     const showYear =
       entry.year &&
       entry.year !== (index === 0 ? precedingYear : entries[index - 1]?.year);
+    // A note this long buries the next observation. Anything shorter is read
+    // in place — folding a three-line note behind a control costs a press and
+    // saves nothing.
     const longBody = entry.body.length > 320;
+    const titleId = `passport-entry-${entry.id}-title`;
 
     return (
       <li key={entry.id} className="grid gap-2">
         {showYear ? (
-          <p className="pt-1 text-xs font-semibold text-muted-foreground">
+          <p className="text-overline text-text-muted tabular-nums">
             {entry.year}
           </p>
         ) : null}
-        <article
+        <Card
+          as="article"
           id={`passport-entry-${entry.id}`}
-          className="grid min-w-0 gap-3 rounded-md border border-border p-3 sm:flex sm:items-start"
+          aria-labelledby={titleId}
+          className="grid min-w-0 gap-3 p-4 sm:flex sm:items-start sm:gap-4"
         >
-          <div className="text-xs text-muted-foreground sm:w-28 sm:shrink-0">
-            <time className="font-medium text-foreground">
+          <div className="text-caption text-text-muted sm:w-28 sm:shrink-0">
+            <time
+              dateTime={dateTimeValue(entry.entryDate)}
+              className="font-medium text-text tabular-nums"
+            >
               {formatLivingObjectPassportDate(entry.entryDate, locale)}
             </time>
             <p className="mt-1">{entry.relationLabel}</p>
@@ -523,38 +559,40 @@ function renderTimelineEntries(
           </div>
 
           <div className="min-w-0 sm:flex-1">
-            <div className="grid gap-3 sm:flex sm:items-start">
+            <div className="grid gap-3 sm:flex sm:items-start sm:gap-4">
               <div className="min-w-0 sm:flex-1">
-                <h3 className="text-base font-semibold break-words text-foreground">
-                  <Link
-                    href={entry.href}
-                    className="hover:text-primary hover:underline"
-                  >
+                <h3
+                  id={titleId}
+                  className="text-h3 break-words text-text-heading"
+                >
+                  <Link href={entry.href} variant="quiet">
                     {entry.title}
                   </Link>
                 </h3>
                 {longBody ? (
                   <details className="group/note mt-2">
-                    <summary className="cursor-pointer list-none text-sm leading-6 text-foreground">
+                    <summary className="min-h-11 cursor-pointer list-none text-body-sm text-text">
                       <span className="line-clamp-3 whitespace-pre-wrap">
                         {entry.body}
                       </span>
-                      <span className="mt-1 inline-block text-xs font-semibold text-primary group-open/note:hidden">
+                      <span className="mt-1 inline-block text-caption font-semibold text-link group-open/note:hidden">
                         {copy.readFullNote}
                       </span>
                     </summary>
-                    <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                    <p className="mt-2 max-w-prose text-body-sm whitespace-pre-wrap text-text">
                       {entry.body}
                     </p>
                   </details>
                 ) : (
-                  <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                  <p className="mt-2 max-w-prose text-body-sm whitespace-pre-wrap text-text">
                     {entry.body}
                   </p>
                 )}
               </div>
               {entry.mediaPublicUrl ? (
-                <SubjectAwareMediaImage
+                <MediaFigure
+                  aspect="card"
+                  className="overflow-hidden rounded-lg border border-border sm:w-32 sm:shrink-0"
                   src={entry.mediaPublicUrl}
                   srcSet={
                     buildPublicMediaSourceSet({
@@ -566,53 +604,45 @@ function renderTimelineEntries(
                   }
                   placeholderDataUri={entry.mediaPlaceholderDataUri ?? null}
                   alt={copy.entryPhotoAlt.replace("{title}", entry.title)}
-                  width={240}
-                  height={180}
                   sizes="(min-width: 640px) 8rem, 100vw"
-                  loading={eagerFirstMedia && index === 0 ? "eager" : "lazy"}
-                  presentationMode="cover"
                   focalX={entry.mediaFocalX}
                   focalY={entry.mediaFocalY}
                   intrinsicWidth={entry.mediaIntrinsicWidth}
                   intrinsicHeight={entry.mediaIntrinsicHeight}
-                  className="aspect-4/3 w-full rounded-md border border-border sm:w-32"
+                  priority={eagerFirstMedia && index === 0}
                 />
               ) : null}
             </div>
 
-            <nav
-              aria-label={`${copy.chronology}: ${entry.title}`}
-              className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-2 text-xs"
-            >
-              {entry.newer ? (
-                <Link
-                  href={entry.newer.href}
-                  className="flex min-w-0 items-center gap-1 text-muted-foreground hover:text-primary"
-                >
-                  <ChevronLeft
-                    className="size-3.5 shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span className="truncate">
-                    {copy.newer}: {entry.newer.title}
-                  </span>
-                </Link>
-              ) : null}
-              {entry.older ? (
-                <Link
-                  href={entry.older.href}
-                  className="flex min-w-0 items-center gap-1 text-muted-foreground hover:text-primary"
-                >
-                  <span className="truncate">
-                    {copy.older}: {entry.older.title}
-                  </span>
-                  <ChevronRight
-                    className="size-3.5 shrink-0"
-                    aria-hidden="true"
-                  />
-                </Link>
-              ) : null}
-            </nav>
+            {entry.newer || entry.older ? (
+              <nav
+                aria-label={`${copy.chronology}: ${entry.title}`}
+                className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-caption"
+              >
+                {entry.newer ? (
+                  <Link
+                    href={entry.newer.href}
+                    variant="muted"
+                    className="inline-flex min-h-11 min-w-0 items-center gap-1"
+                  >
+                    <span className="truncate">
+                      ← {copy.newer}: {entry.newer.title}
+                    </span>
+                  </Link>
+                ) : null}
+                {entry.older ? (
+                  <Link
+                    href={entry.older.href}
+                    variant="muted"
+                    className="inline-flex min-h-11 min-w-0 items-center gap-1"
+                  >
+                    <span className="truncate">
+                      {copy.older}: {entry.older.title} →
+                    </span>
+                  </Link>
+                ) : null}
+              </nav>
+            ) : null}
 
             {renderEntryActions ? (
               <div className="mt-3 border-t border-border pt-3">
@@ -620,7 +650,7 @@ function renderTimelineEntries(
               </div>
             ) : null}
           </div>
-        </article>
+        </Card>
       </li>
     );
   });
@@ -632,7 +662,11 @@ function ObjectKindIcon({
   kind: LivingObjectPassportPresentation["objectKind"];
 }) {
   if (kind === "animal") {
-    return <PawPrint className="size-5" aria-hidden="true" />;
+    return <PawPrint aria-hidden="true" />;
   }
-  return <Sprout className="size-5" aria-hidden="true" />;
+  return <Sprout aria-hidden="true" />;
+}
+
+function dateTimeValue(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : value;
 }

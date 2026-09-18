@@ -53,8 +53,8 @@ describe("localized public profile actions", () => {
       await import("./actions");
     const formData = profileFormData("bg");
 
-    await followProfileAction(formData);
-    await unfollowProfileAction(formData);
+    await followProfileAction(undefined, formData);
+    await unfollowProfileAction(undefined, formData);
 
     const scope = {
       userId: "00000000-0000-4000-8000-000000000001",
@@ -75,7 +75,7 @@ describe("localized public profile actions", () => {
     const formData = profileFormData("ru");
     formData.set("reason", "privacy");
 
-    await reportProfileAction(formData);
+    await reportProfileAction(undefined, formData);
 
     expect(mocks.reportProfile).toHaveBeenCalledWith(
       expect.any(Object),
@@ -91,7 +91,7 @@ describe("localized public profile actions", () => {
     const { blockProfileAction } = await import("./actions");
     const formData = profileFormData("uk");
 
-    await blockProfileAction(formData);
+    await blockProfileAction(undefined, formData);
 
     expect(mocks.blockProfile).toHaveBeenCalledWith(
       expect.any(Object),
@@ -107,7 +107,7 @@ describe("localized public profile actions", () => {
     const { followProfileAction } = await import("./actions");
     const formData = profileFormData("https://attacker.example");
 
-    await followProfileAction(formData);
+    await followProfileAction(undefined, formData);
 
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/@demo_olena?profileAction=unavailable#profile-follow",

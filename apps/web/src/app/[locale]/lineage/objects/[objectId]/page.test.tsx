@@ -276,6 +276,36 @@ describe("/lineage/objects/[objectId]", () => {
     );
   });
 
+  it("builds the provenance list out of the design system, and names its region", async () => {
+    const { default: PublicLineageObjectRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await PublicLineageObjectRoute({
+        params: Promise.resolve({ locale: "uk", objectId }),
+      }),
+    );
+
+    // A `<section>` earns the `region` role only when it is named, and the
+    // rail links straight to this one (DESIGN.md §4.2.1).
+    expect(html).toContain('id="passport-provenance"');
+    expect(html).toMatch(
+      /id="passport-provenance"[^>]*aria-labelledby="passport-provenance-heading"/u,
+    );
+    // Every card is the system's `Card`, every qualifier the system's `Badge`,
+    // and the catalog entry is a link because a badge is never a control.
+    expect(html).toContain('data-slot="card"');
+    expect(html).toContain('data-slot="badge"');
+    expect(html).toContain('data-slot="link"');
+    // An edge's date is machine-readable, not only printed.
+    expect(html).toMatch(/<time dateTime="20\d\d-/u);
+    // Nothing in the passport reaches for the pre-redesign palette any more.
+    // The slice stops at the engagement panel, which is the comment surface
+    // `OVE-453` rebuilds — this task does not get to claim that page family.
+    const passport = html.slice(0, html.indexOf('id="comments"'));
+    expect(passport).not.toContain("text-muted-foreground");
+    expect(passport).not.toContain("bg-muted");
+    expect(passport).not.toContain("text-foreground");
+  });
+
   it("keeps signed-in follow and engagement mutations on their canonical authorization boundaries", async () => {
     mocks.getCurrentSession.mockResolvedValue({
       user: { id: "00000000-0000-4000-8000-000000000001" },

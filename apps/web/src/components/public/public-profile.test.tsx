@@ -7,6 +7,15 @@ vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
   SiteShellContextRailRegistration: () => null,
 }));
 
+// The tabs are a real client component and `Tabs` is rendered for real here —
+// only the router underneath it is stubbed, because a `router.replace` is a
+// browser fact and `tests/public-profile.spec.ts` is where it is proven.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  usePathname: () => "/uk/@demo_olena",
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock("@/app/[locale]/[profileHandle]/actions", () => ({
   followProfileAction: vi.fn(),
   unfollowProfileAction: vi.fn(),
@@ -75,7 +84,7 @@ const PROFILE: PublicProfileEvidencePage = {
 };
 
 describe("PublicProfileView", () => {
-  it("renders object evidence before journals and identity details", async () => {
+  it("is a header, three tabs and the gardener's own work — in that order", async () => {
     const { PublicProfileView } = await import("./public-profile");
     const html = renderToStaticMarkup(
       <PublicProfileView
@@ -86,58 +95,160 @@ describe("PublicProfileView", () => {
     );
 
     expect(html).toContain('data-public-profile="v2"');
+    expect(html).toContain('data-slot="profile-header"');
+    // The name is the page's one `h1`; the handle and the bio sit under it.
     expect(html).toMatch(/<h1[^>]*>Олена · міський сад<\/h1>/);
+    expect(html).toContain("@demo_olena");
     expect(html).toContain(
-      'data-profile-content-order="objects-journals-about"',
+      "Вирощую їстівний балкон і записую чесні результати.",
     );
-    expect(html.indexOf("Живі об’єкти")).toBeLessThan(
-      html.indexOf("Журнал догляду"),
+
+    // Real tabs, in the order the profile reads: objects, entries, about.
+    expect(html).toContain('role="tablist"');
+    const tabLabels = [...html.matchAll(/role="tab"[^>]*>([^<]*)</gu)].map(
+      (match) => match[1],
     );
-    expect(html.indexOf("Журнал догляду")).toBeLessThan(
-      html.indexOf("Про садівника"),
+    expect(tabLabels).toEqual([
+      "Живі об’єкти",
+      "Журнал догляду",
+      "Про садівника",
+    ]);
+
+    // Roving tabindex: exactly one tab is reachable with Tab, and it is the
+    // selected one. The rest are reached with the arrow keys.
+    const tabIndexes = [...html.matchAll(/role="tab"[^>]*tabindex="(-?\d)"/gu)]
+      .map((match) => match[1]);
+    expect(tabIndexes).toEqual(["0", "-1", "-1"]);
+    expect(html).toMatch(/role="tab"[^>]*aria-selected="true"/u);
+
+    // Every panel is in the HTML whichever tab is open, so the entries stay
+    // indexable — the unselected ones are `hidden`, not dropped.
+    expect([...html.matchAll(/role="tabpanel"/gu)]).toHaveLength(3);
+    expect([...html.matchAll(/role="tabpanel"[^>]*hidden=""/gu)]).toHaveLength(
+      2,
     );
+
     expect(html).toContain("Томат Чорний принц");
     expect(html).toContain("Перший урожай після спеки");
-    expect(html).toContain('aria-label="Перший урожай після спеки"');
+    expect(html).toContain('data-slot="entry-card"');
     expect(html).toContain("Показати ще 1");
-    expect(html).toContain('data-auth-intent-control="follow"');
-    expect(html).toContain('data-auth-intent-control="report"');
-    expect(html).toContain('data-auth-intent-control="block"');
-    expect(html).toContain('action="/auth/intent/start"');
-    expect(html).toContain('name="targetKind" value="profile"');
-    expect(html).toContain('name="targetRef" value="demo_olena"');
-    expect(html).not.toContain('name="control"');
-    expect(html).toContain('id="lineage-follow"');
-    expect(html).toContain('id="profile-block"');
     expect(html).toContain("Ukraine");
     expect(html).not.toContain("Kyiv City");
     expect(html).not.toMatch(
       /userId|email|session|quarantine|derivative_key|owner_user_id|precise|latitude|longitude/i,
     );
+
+    // The profile no longer reaches for the pre-redesign palette. This is the
+    // cheapest way to catch a half-migrated surface: those names still resolve
+    // to colours, so a leftover renders fine and looks wrong (DESIGN.md §2.1).
+    expect(html).not.toContain("text-muted-foreground");
+    expect(html).not.toContain("text-foreground");
+    expect(html).not.toContain("bg-muted");
+    expect(html).not.toContain("hover:text-primary");
   });
 
-  it("opens and exposes the exact authenticated action after an auth-intent resume", async () => {
+  it("opens the tab the URL names, and no other", async () => {
     const { PublicProfileView } = await import("./public-profile");
     const html = renderToStaticMarkup(
       <PublicProfileView
         profile={PROFILE}
         locale="uk"
+        viewer={{ kind: "guest" }}
+        activeTab="entries"
+      />,
+    );
+
+    // The server decides the open panel, so a shared `?tab=entries` link
+    // paints the entries without waiting for hydration.
+    expect(html).toContain('data-profile-tab="entries"');
+    const panels = [...html.matchAll(/role="tabpanel"([^>]*)>/gu)].map(
+      (match) => match[1],
+    );
+    expect(panels).toHaveLength(3);
+    expect(panels.filter((panel) => !panel.includes("hidden"))).toHaveLength(1);
+    expect(panels[1]).not.toContain("hidden");
+  });
+
+  it("names the follow control with the state it will produce", async () => {
+    const { PublicProfileView } = await import("./public-profile");
+    const following = renderToStaticMarkup(
+      <PublicProfileView
+        profile={PROFILE}
+        locale="uk"
+        viewer={{ kind: "following" }}
+      />,
+    );
+    const stranger = renderToStaticMarkup(
+      <PublicProfileView
+        profile={PROFILE}
+        locale="uk"
         viewer={{ kind: "not_following" }}
+      />,
+    );
+
+    // DESIGN.md §5.6. "Стежити" alone does not say whose profile, and in a
+    // list of controls a screen reader reads them one after another.
+    expect(stranger).toContain(
+      'aria-label="Стежити, Олена · міський сад"',
+    );
+    expect(following).toContain(
+      'aria-label="Не стежити, Олена · міський сад"',
+    );
+  });
+
+  it("omits a count that is zero and says so when one is hidden", async () => {
+    const { PublicProfileView } = await import("./public-profile");
+    const html = renderToStaticMarkup(
+      <PublicProfileView
+        profile={{
+          ...PROFILE,
+          summary: {
+            ...PROFILE.summary,
+            publicObjectCount: 0,
+            relationships: null,
+          },
+        }}
+        locale="uk"
+        viewer={{ kind: "guest" }}
+      />,
+    );
+
+    // A row of zeros tells a visitor only that nothing is happening; the
+    // empty state below already says it in words.
+    const header = html.slice(
+      html.indexOf('data-slot="profile-header"'),
+      html.indexOf('role="tablist"'),
+    );
+    expect(header).not.toContain("Об’єкти");
+    expect(header).toContain("Записи");
+    expect(header).not.toContain("Стежать");
+    // Hidden is not the same as zero, and the page says which one this is.
+    expect(html).toContain("Лічильники підписок приховані.");
+  });
+
+  it("still exposes the exact authenticated action after an auth-intent resume", async () => {
+    const { PublicProfileView } = await import("./public-profile");
+    const html = renderToStaticMarkup(
+      <PublicProfileView
+        profile={PROFILE}
+        locale="uk"
+        viewer={{ kind: "guest" }}
         resumeAction="report"
       />,
     );
 
-    expect(html).toContain(
-      '<details class="group w-full sm:relative sm:w-auto" id="profile-report" open="">',
-    );
-    expect(html).toContain(
-      'class="absolute inset-x-0 top-11 z-popover grid w-auto gap-3 rounded-md border border-border bg-background p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64"',
-    );
+    expect(html).toContain('id="profile-report"');
+    expect(html).toContain("open=\"\"");
     expect(html).toContain('data-auth-intent-control="report"');
     expect(html).toContain('data-auth-intent-control="block"');
+    expect(html).toContain('action="/auth/intent/start"');
+    expect(html).toContain('name="targetKind" value="profile"');
+    expect(html).toContain('name="targetRef" value="demo_olena"');
+    expect(html).toContain('id="lineage-follow"');
+    expect(html).toContain('id="profile-block"');
   });
 
-  it("renders a useful owner empty state without inventing public evidence", async () => {
+  it("shows the first-run empty state, with its illustration, to the owner", async () => {
     const { PublicProfileView } = await import("./public-profile");
     const html = renderToStaticMarkup(
       <PublicProfileView
@@ -158,8 +269,27 @@ describe("PublicProfileView", () => {
       />,
     );
 
+    expect(html).toContain('data-screen-state="empty-first-run"');
+    expect(html).toContain("/illustrations/empty-garden");
     expect(html).toContain("Додати перший об’єкт");
     expect(html).toContain("Редагувати профіль");
     expect(html).not.toContain('data-auth-intent-control="follow"');
+  });
+
+  it("shows a stranger nothing-yet without an illustration or an invitation", async () => {
+    const { PublicProfileView } = await import("./public-profile");
+    const html = renderToStaticMarkup(
+      <PublicProfileView
+        profile={{ ...PROFILE, objects: [], journals: [] }}
+        locale="uk"
+        viewer={{ kind: "guest" }}
+      />,
+    );
+
+    // A visitor cannot add this gardener's first object, so the state is
+    // "no results", which DESIGN.md §5.4 says carries no picture.
+    expect(html).toContain('data-screen-state="empty-no-results"');
+    expect(html).not.toContain("/illustrations/");
+    expect(html).not.toContain("Додати перший об’єкт");
   });
 });

@@ -76,17 +76,87 @@ describe("living-object passport V2 components", () => {
     expect(JSON.stringify(passport)).not.toContain("Owner action");
   });
 
-  it("uses the compact heading tier for long object names", () => {
+  it("keeps one heading tier and lets a long object name wrap", () => {
     const passport = {
       ...publicPresentation(),
       displayName:
-        "Довга назва експериментального томата для перевірки перенесення рядків",
+        "Довганазваекспериментальноготоматадляперевіркиперенесеннярядків",
     };
     const html = renderToStaticMarkup(
       <LivingObjectPassportOverview passport={passport} locale="uk" />,
     );
 
-    expect(html).toMatch(/<h1 class="[^"]*text-xl[^"]*sm:text-3xl/);
+    // An object's name is data. The old passport answered a long one with a
+    // second, smaller heading tier; the type scale is fixed (DESIGN.md §2.6),
+    // so the answer is that the word wraps — a 62-character token has to break
+    // or it pushes the whole page sideways at 375 px.
+    expect(html).toMatch(/<h1[^>]*class="[^"]*text-h1[^"]*break-words/u);
+    expect(html).not.toMatch(/<h1[^>]*class="[^"]*sm:text-3xl/u);
+  });
+
+  it("marks a scientific name as Latin, and a gardener's variety name not", () => {
+    const species = publicPresentation();
+    const speciesHtml = renderToStaticMarkup(
+      <LivingObjectPassportOverview
+        passport={{
+          ...species,
+          identity: {
+            ...species.identity,
+            catalogKind: "species",
+            value: "Solanum lycopersicum",
+          },
+        }}
+        locale="uk"
+      />,
+    );
+    // The fixture's own identity is a variety a gardener named, which is not
+    // Latin however Latin it looks (WCAG 3.1.2).
+    const varietyHtml = renderToStaticMarkup(
+      <LivingObjectPassportOverview passport={species} locale="uk" />,
+    );
+
+    expect(speciesHtml).toContain('lang="la"');
+    expect(speciesHtml).toContain("Solanum lycopersicum");
+    expect(varietyHtml).not.toContain('lang="la"');
+  });
+
+  it("names the page in its own breadcrumb trail", () => {
+    const html = renderToStaticMarkup(
+      <LivingObjectPassportOverview
+        passport={publicPresentation()}
+        locale="uk"
+      />,
+    );
+
+    // The last crumb is this page, and `aria-current` is the only thing that
+    // says so to a reader who cannot see that it is not a link.
+    expect(html).toContain('aria-current="page"');
+    expect([...html.matchAll(/aria-current="page"/gu)]).toHaveLength(1);
+  });
+
+  it("reserves every photograph's box before the bytes land", () => {
+    const passport = publicPresentation();
+    const html = renderToStaticMarkup(
+      <>
+        <LivingObjectPassportOverview passport={passport} locale="uk" />
+        <PublicLivingObjectPassportTimeline passport={passport} locale="uk" />
+      </>,
+    );
+
+    // DESIGN.md §2.10: the cover and every timeline photograph are the card
+    // ratio from a token, so a late image shifts nothing. Without a
+    // photograph the same box is still drawn.
+    expect(html).toContain('data-slot="media-figure"');
+    expect(html).toContain('data-media-aspect="card"');
+    expect(html).not.toContain("aspect-4/3");
+
+    const empty = renderToStaticMarkup(
+      <LivingObjectPassportOverview
+        passport={{ ...passport, cover: null }}
+        locale="uk"
+      />,
+    );
+    expect(empty).toContain("aspect-card");
   });
 
   it("renders owner entry controls only for loaded owner entries", () => {

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 
 import { PublicProfileView } from "@/components/public/public-profile";
+import { normalizePublicProfileTab } from "@/lib/public-profile-tabs";
 import {
   publicProfileBasePath,
   publicProfilePath,
@@ -162,6 +163,7 @@ export default async function LocalizedPublicProfileRoute({
         locale={localeParam}
         viewer={viewer}
         actionStatus={firstParam(query.profileAction)}
+        activeTab={normalizePublicProfileTab(query.tab)}
         resumeAction={resumeAction}
         resumeControl={normalizeAuthIntentResumeControl(query.authControl)}
       />
