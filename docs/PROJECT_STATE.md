@@ -365,7 +365,55 @@ criterion 9 actually needed. And `tests/journals-directory.spec.ts` went into
 `pnpm gates:browser` **and** the CI list on the day it was written; five older
 specs did not, and `OVE-462` owns them.
 
-The remaining page families (`OVE-449`–`OVE-459`) are still in Backlog.
+**The page the whole product exists to produce is rebuilt** (`OVE-449`,
+2026-09-18). `/{handle}/{slug}` is a reading page: an eyebrow, the entry's
+title as the page's one `h1`, the date and the safe region, a byline with the
+gardener's picture, the cover at the column's full width, and the prose at
+18/29 in a 704 px column — measured at 68 characters at 768 px and at 1440 px,
+which is inside `DESIGN.md` §2.6's 60–75. At 375 px it is the viewport's
+measure and not the design's, and that is stated rather than papered over: 60
+characters at 18 px needs about 590 px of column, and shrinking the type to
+reach the number would take it under the 13 px floor.
+
+`MediaFigure` and `EngagementBar` are defined here and `OVE-450`, `OVE-452`,
+`OVE-453` and `OVE-454` consume them.
+
+**The byte-identical guarantee is now a committed file.** ADR-0028 promises
+that an entry published before Slice 26 renders byte for byte what it rendered
+before, and `journal-document-pre-slice-26.golden.html` is that promise as
+3,088 bytes: the whole pre-Slice-26 surface — paragraph, headings at 2 and 3,
+ordered and unordered lists two levels deep, a quote with an attribution, a
+delimiter, an image, and the marks bold, italic and link — rendered on
+`origin/main` and committed, with the test on the branch asserting it
+reproduces them exactly. It does, at zero bytes' difference. Two facts close
+the gap the golden file leaves: `git diff` on the renderer is empty, and the
+entry page passes it no `className`, so the document's markup has no route by
+which it could change. What could **not** be done is rendering production's own
+stored documents: reading production is denied to the agent in this
+environment, and the whole pre-Slice-26 _surface_ is the subject instead of a
+sample of real rows.
+
+Four things the rendered page showed. The cover was **letterboxed**: a 16:9
+photograph drawn `contain` inside a 4:3 box, with grey bars above and below it
+on every entry that had one. The byline **printed the handle twice** whenever a
+gardener had set no display name. The context rail drew **three headings with
+nothing under them**, and the author's handle overflowed its 300 px. And the
+engagement bar **printed the like count twice** and held two polite live
+regions — the bar's own and the control's — which is one more than a reader
+should hear. The control owns the region now, because its number is the
+optimistic one `useFormStatus` moves on the press; the bar draws one only for
+a surface whose controls have no count.
+
+The like control's accessible name states the action **and** the count now
+("Подобається, 12 вподобань" becoming "Вподобано, 13 вподобань"), which is
+what `DESIGN.md` §5.6 asked for and what a screen-reader user needs _before_
+pressing.
+
+Measured on the entry: LCP **4.29 s** against **4.45 s** on `main`, CLS **0**
+both, and the LCP element is the gardener's photograph in both. The budget is
+`OVE-461`'s, as above.
+
+The remaining page families (`OVE-450`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

@@ -58,6 +58,8 @@ interface PublicSurfaceCopy {
     variety: string;
   };
   engagement: {
+    /** Names the bar the controls sit in, so it is a group and not a row. */
+    barLabel: string;
     like: string;
     /** The button's own label once this reader has liked, not a status sentence. */
     likeActive: string;
@@ -286,6 +288,7 @@ const COPY = {
       variety: "Сорт",
     },
     engagement: {
+      barLabel: "Дії із записом",
       like: "Подобається",
       likeActive: "Вподобано",
       bookmark: "Зберегти",
@@ -530,6 +533,7 @@ const COPY = {
       variety: "Сорт",
     },
     engagement: {
+      barLabel: "Действия със записа",
       like: "Харесвам",
       likeActive: "Харесано",
       bookmark: "Запази",
@@ -775,6 +779,7 @@ const COPY = {
       variety: "Сорт",
     },
     engagement: {
+      barLabel: "Действия с записью",
       like: "Нравится",
       likeActive: "Понравилось",
       bookmark: "Сохранить",

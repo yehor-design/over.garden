@@ -1,27 +1,25 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpenText,
-  CalendarDays,
   MapPin,
   PawPrint,
   Settings,
   Sprout,
-  UserRound,
 } from "lucide-react";
 
-import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
-  SiteShellContextRailModules,
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
 import { JournalDocumentRenderer } from "@/components/garden/journal-document-renderer";
+import { Avatar } from "@/components/ui/avatar";
 import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { MediaFigure } from "@/components/ui/media-figure";
+import { Section } from "@/components/ui/section";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import {
   legacyBodyToJournalDocumentV1,
@@ -38,6 +36,38 @@ import type {
 } from "@/server/journal-repository";
 import type { OwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
 
+/**
+ * The page the whole product exists to produce.
+ *
+ * A 704 px reading column at 18/29, a byline saying who kept this journal and
+ * when, photographs at the column's full width, and the object and the
+ * organism it is about reachable in one press. Most of its readers will arrive
+ * from a search engine, on a phone, and see it once.
+ *
+ * ## Two boundaries this file does not cross
+ *
+ * **The document's HTML is not the page's.** `JournalDocumentRenderer` is
+ * untouched by this redesign and is handed **no `className`**, because ADR-0028
+ * promises that an entry published before Slice 26 renders byte for byte what
+ * it rendered before. The reading column's typography therefore sits on the
+ * ancestor of the renderer, never on the renderer. `journal-document-renderer.test.tsx`
+ * holds the golden file that keeps that true.
+ *
+ * **The engagement controls are not this component's.** They arrive as
+ * `children` from the route, which resolves the viewer's like state beside its
+ * own reads, and each one is a `<form action={serverAction}>` on a real
+ * endpoint (ADR-0024 D3).
+ *
+ * ## Why there is no inline copy of the context rail
+ *
+ * The rail is absent below `xl` and nothing in it is the only route to
+ * anything: the object, the organism, the topics and the author are all linked
+ * from "what this entry is about" in the column, and the author's other
+ * entries are the related strip. The feed keeps an inline copy because its
+ * rail holds destinations the feed does not otherwise offer; this page does
+ * not need one, and rendering it twice would give a reader the same four links
+ * twice on a phone.
+ */
 export function PublicJournalEntryView({
   locale,
   copy,
@@ -56,6 +86,7 @@ export function PublicJournalEntryView({
   const contextModules = buildContextModules(page, copy);
   const location = getSafeLocation(page, copy);
   const mentionedProfiles = page.mentionedProfiles ?? [];
+  const [cover, ...rest] = page.media;
 
   return (
     <main
@@ -66,13 +97,13 @@ export function PublicJournalEntryView({
       lang={page.entry.sourceLanguage}
       data-public-journal-entry="true"
       data-entry-context={page.context.kind}
-      className="mx-auto flex w-full max-w-4xl flex-col px-4 py-4 sm:px-6 sm:py-5"
+      className="flex w-full min-w-0 flex-col gap-8 px-4 py-8 sm:px-6 md:py-12"
     >
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <nav
         aria-label={copy.journal}
-        className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3"
+        className="flex flex-wrap items-center justify-between gap-2"
       >
         <Link
           href={directoryReturnTo}
@@ -92,80 +123,116 @@ export function PublicJournalEntryView({
         ) : null}
       </nav>
 
-      <JournalContextStrip page={page} copy={copy} location={location} />
-
-      <article className="min-w-0">
-        <header className="grid gap-4 border-b border-border py-5 sm:py-6">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">
-              {page.context.kind === "object"
-                ? copy.objectJournal
-                : copy.spaceJournal}
-            </span>
-            <time
-              dateTime={serializeDate(page.entry.entryDate)}
-              className="inline-flex items-center gap-1.5"
-            >
-              <CalendarDays className="size-4" aria-hidden="true" />
+      <article className="grid min-w-0 gap-6">
+        <header className="grid gap-4">
+          <p className="text-overline text-text-muted uppercase">
+            {page.context.kind === "object"
+              ? copy.objectJournal
+              : copy.spaceJournal}
+          </p>
+          {/* The page's one `h1`. A level-1 heading inside the document
+              renders as an `h2` (ADR-0028), so this stays the only one. */}
+          <h1 className="text-display text-balance text-text-heading">
+            {page.entry.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-text-muted">
+            <time dateTime={serializeDate(page.entry.entryDate)}>
               {formatDate(page.entry.entryDate, locale)}
             </time>
             <span className="inline-flex items-center gap-1.5">
-              <MapPin className="size-4" aria-hidden="true" />
+              <MapPin aria-hidden="true" className="size-3.5" />
               {location}
             </span>
           </div>
-
-          <h1 className="max-w-3xl text-3xl leading-tight font-semibold text-foreground sm:text-4xl">
-            {page.entry.title}
-          </h1>
-
           {page.author ? (
             <Link
               href={page.author.profilePath}
-              className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-primary"
+              className="flex w-fit items-center gap-2 text-body-sm text-text-secondary underline-offset-2 hover:text-text-link hover:underline"
             >
-              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-border bg-muted">
-                {page.author.avatarUrl ? (
-                  <Image
-                    src={page.author.avatarUrl}
-                    alt=""
-                    width={32}
-                    height={32}
-                    unoptimized
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <UserRound className="size-4" aria-hidden="true" />
-                )}
-              </span>
+              <Avatar
+                src={page.author.avatarUrl}
+                name={page.author.displayName}
+                size="md"
+              />
               <span>
                 {copy.by} <strong>{page.author.displayName}</strong>
-                <span className="ml-1">{page.author.mention}</span>
+                {/* A gardener who has set no display name is shown by their
+                    handle, and then the mention beside it is the same string
+                    twice. */}
+                {page.author.mention === page.author.displayName ? null : (
+                  <span className="text-text-muted">
+                    {" "}
+                    {page.author.mention}
+                  </span>
+                )}
               </span>
             </Link>
           ) : null}
         </header>
 
-        {page.media.length > 0 ? (
-          <JournalMediaGallery page={page} copy={copy} />
+        {cover ? (
+          <MediaFigure
+            src={buildPublicMediaSourceSet(cover).src}
+            srcSet={buildPublicMediaSourceSet(cover).srcSet}
+            alt={publicMediaAltText(cover, page.entry.title)}
+            caption={cover.caption}
+            placeholderDataUri={cover.placeholderDataUri}
+            focalX={cover.focalX}
+            focalY={cover.focalY}
+            intrinsicWidth={cover.intrinsicWidth}
+            intrinsicHeight={cover.intrinsicHeight}
+            aspect="cover"
+            priority
+            data-journal-cover="true"
+          />
         ) : null}
 
-        <div className="grid gap-5 py-6 text-base leading-8 text-foreground sm:text-lg sm:leading-8">
+        {/* The reading column's typography, on the ancestor of the renderer
+            and never on the renderer itself — see the note at the top. */}
+        <div
+          data-journal-prose="true"
+          className="grid gap-5 text-body-lg text-text"
+        >
           <PublicJournalEntryBody locale={locale} page={page} copy={copy} />
         </div>
 
-        {mentionedProfiles.length > 0 ? (
-          <section
-            aria-labelledby="journal-entry-mentioned-gardeners"
-            data-dynamic-person-mentions="stable-user-id"
-            className="border-t border-border py-4"
+        {rest.length > 0 ? (
+          <Section
+            id="journal-entry-media"
+            title={copy.media}
+            headingClassName="sr-only"
+            data-journal-media-count={page.media.length}
           >
-            <h2
-              id="journal-entry-mentioned-gardeners"
-              className="mb-2 text-xs font-semibold text-muted-foreground uppercase"
-            >
-              {copy.mentionedGardeners}
-            </h2>
+            <ul className="grid min-w-0 gap-4 sm:grid-cols-2">
+              {rest.map((media) => (
+                <li key={media.id} className="min-w-0">
+                  <MediaFigure
+                    src={buildPublicMediaSourceSet(media).src}
+                    srcSet={buildPublicMediaSourceSet(media).srcSet}
+                    alt={publicMediaAltText(media, page.entry.title)}
+                    caption={media.caption}
+                    placeholderDataUri={media.placeholderDataUri}
+                    focalX={media.focalX}
+                    focalY={media.focalY}
+                    intrinsicWidth={media.intrinsicWidth}
+                    intrinsicHeight={media.intrinsicHeight}
+                    aspect="card"
+                    sizes="(max-width: 639px) 100vw, 336px"
+                  />
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+
+        <JournalAboutBlock page={page} copy={copy} location={location} />
+
+        {mentionedProfiles.length > 0 ? (
+          <Section
+            id="journal-entry-mentioned-gardeners"
+            title={copy.mentionedGardeners}
+            data-dynamic-person-mentions="stable-user-id"
+          >
             <ul className="flex flex-wrap gap-2">
               {mentionedProfiles.map((profile) => (
                 <li key={profile.handle}>
@@ -176,94 +243,60 @@ export function PublicJournalEntryView({
                       size: "sm",
                     })}
                   >
-                    <UserRound aria-hidden="true" />
                     <span>{profile.displayName}</span>
-                    <span className="text-muted-foreground">
-                      {profile.mention}
-                    </span>
+                    <span className="text-text-muted">{profile.mention}</span>
                   </Link>
                 </li>
               ))}
             </ul>
-          </section>
-        ) : null}
-
-        {page.topics.length > 0 ? (
-          <section
-            aria-labelledby="journal-entry-topics"
-            className="border-t border-border py-4"
-          >
-            <h2
-              id="journal-entry-topics"
-              className="mb-2 text-xs font-semibold text-muted-foreground uppercase"
-            >
-              {copy.topics}
-            </h2>
-            <ul className="flex flex-wrap gap-2">
-              {page.topics.map((topic) => (
-                <li key={topic.slug}>
-                  <Link
-                    href={topic.publicPath}
-                    className={buttonVariants({
-                      variant: "secondary",
-                      size: "sm",
-                    })}
-                  >
-                    {topic.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
+          </Section>
         ) : null}
       </article>
+
+      {children}
 
       <JournalChronology page={page} copy={copy} locale={locale} />
 
       {page.relatedEntries.length > 0 ? (
-        <section
-          aria-labelledby="related-journal-history"
-          className="grid gap-3 border-t border-border py-5"
-        >
-          <h2
-            id="related-journal-history"
-            className="text-lg font-semibold text-foreground"
-          >
-            {copy.relatedHistory}
-          </h2>
-          <ol className="grid gap-3 sm:grid-cols-2">
+        <Section id="related-journal-history" title={copy.relatedHistory}>
+          <ol className="grid list-none gap-3 sm:grid-cols-2">
             {page.relatedEntries.map((entry) => (
-              <li key={entry.id}>
-                <Link
-                  href={entry.publicPath}
-                  className="grid h-full gap-2 rounded-md border border-border p-3 transition-colors hover:border-primary"
-                >
-                  <time className="text-xs text-muted-foreground">
+              <li key={entry.id} className="min-w-0">
+                <Card as="section" interactive className="h-full p-4">
+                  <time className="text-caption text-text-muted">
                     {formatDate(entry.entryDate, locale)}
                   </time>
-                  <strong className="text-sm text-foreground">
-                    {entry.title}
-                  </strong>
-                  <span className="line-clamp-2 text-sm leading-5 text-muted-foreground">
+                  <h3 className="mt-1 text-h4 text-text-heading">
+                    <Link
+                      href={entry.publicPath}
+                      className="underline-offset-2 hover:text-text-link hover:underline"
+                    >
+                      {entry.title}
+                    </Link>
+                  </h3>
+                  <p className="mt-1 line-clamp-2 text-body-sm text-text-muted">
                     {entry.bodyPreview}
-                  </span>
-                </Link>
+                  </p>
+                </Card>
               </li>
             ))}
           </ol>
-        </section>
+        </Section>
       ) : null}
-
-      {children}
-
-      <aside className="border-t border-border py-5 xl:hidden">
-        <SiteShellContextRailModules modules={contextModules} />
-      </aside>
     </main>
   );
 }
 
-function JournalContextStrip({
+/**
+ * What this entry is about: the object, the organism, the place and the
+ * topics, each a link, each already in the entity graph the SEO work built.
+ *
+ * It replaces the strip that sat above the title. A reader arriving from a
+ * search engine wants the entry first and its context after it, and a
+ * crawler wants both — putting the context above the `h1` pushed the thing
+ * they came for below the fold on a phone.
+ */
+function JournalAboutBlock({
   page,
   copy,
   location,
@@ -272,147 +305,162 @@ function JournalContextStrip({
   copy: PublicJournalEntryCopy;
   location: string;
 }) {
-  if (page.context.kind === "space") {
-    return (
-      <section className="grid gap-3 border-b border-border py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <BookOpenText className="size-5" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">{copy.contextSpace}</p>
-            <h2 className="truncate text-base font-semibold text-foreground">
-              {page.context.space.displayName}
-            </h2>
-            <p className="text-xs text-muted-foreground">{location}</p>
-          </div>
-        </div>
-        {page.context.mentionedObjects.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              {copy.mentionedObjects}
-            </span>
-            {page.context.mentionedObjects.map((mentioned) => (
-              <Link
-                key={mentioned.plantObjectId}
-                href={mentioned.publicPath}
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
-              >
-                <ObjectKindIcon kind={mentioned.objectKind} />
-                {mentioned.displayName}
-              </Link>
-            ))}
-          </div>
-        ) : null}
-      </section>
-    );
-  }
-
-  const object = page.context.object;
-  const identity = object.catalogCanonicalName ?? object.varietyText;
+  const object = page.context.kind === "object" ? page.context.object : null;
+  const organismPath = object ? getJournalEntryCatalogPath(object) : null;
+  const mentioned =
+    page.context.kind === "space" ? page.context.mentionedObjects : [];
 
   return (
-    <section className="flex min-w-0 flex-col gap-3 border-b border-border py-4 sm:flex-row sm:items-center sm:justify-between">
-      <Link
-        href={object.publicPath}
-        className="flex min-w-0 items-center gap-3 hover:text-primary"
-      >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          <ObjectKindIcon kind={object.objectKind} />
-        </span>
-        <span className="min-w-0">
-          <span className="block text-xs text-muted-foreground">
-            {copy.contextObject}
-          </span>
-          <strong className="block truncate text-base text-foreground">
-            {object.displayName}
-          </strong>
-          <span className="block truncate text-xs text-muted-foreground">
-            {identity ?? copy.identityPending} · {location}
-          </span>
-        </span>
-      </Link>
-      <Link
-        href={object.publicPath}
-        className={buttonVariants({ variant: "secondary", size: "sm" })}
-      >
-        {copy.openObject}
-        <ArrowRight aria-hidden="true" />
-      </Link>
-    </section>
+    <Section
+      id="journal-entry-about"
+      title={copy.aboutTitle}
+      className="rounded-lg border border-border p-4"
+    >
+      <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
+        {object ? (
+          <div className="grid min-w-0 gap-1">
+            <dt className="text-caption text-text-muted">
+              {copy.contextObject}
+            </dt>
+            <dd className="min-w-0">
+              <Link
+                href={object.publicPath}
+                className="inline-flex items-center gap-1.5 text-text underline-offset-2 hover:text-text-link hover:underline"
+              >
+                <ObjectKindIcon kind={object.objectKind} />
+                {object.displayName}
+              </Link>
+            </dd>
+          </div>
+        ) : (
+          <div className="grid min-w-0 gap-1">
+            <dt className="text-caption text-text-muted">
+              {copy.contextSpace}
+            </dt>
+            <dd className="min-w-0 text-text">
+              {page.context.space.displayName}
+            </dd>
+          </div>
+        )}
+
+        {object?.catalogCanonicalName ? (
+          <div className="grid min-w-0 gap-1">
+            <dt className="text-caption text-text-muted">{copy.identity}</dt>
+            <dd className="min-w-0">
+              {/* A species' canonical name is Latin and says so; a variety's
+                  or a breed's is a cultivar name in somebody's language and is
+                  left unmarked (DESIGN.md §6). */}
+              <ScientificName
+                name={object.catalogCanonicalName}
+                isSpecies={object.catalogKind === "species"}
+                href={organismPath}
+              />
+            </dd>
+          </div>
+        ) : object ? (
+          <div className="grid min-w-0 gap-1">
+            <dt className="text-caption text-text-muted">{copy.identity}</dt>
+            <dd className="min-w-0 text-text-muted">
+              {object.varietyText ?? copy.identityPending}
+            </dd>
+          </div>
+        ) : null}
+
+        <div className="grid min-w-0 gap-1">
+          <dt className="text-caption text-text-muted">{copy.safeRegion}</dt>
+          <dd className="min-w-0 text-text">{location}</dd>
+        </div>
+
+        {page.topics.length > 0 ? (
+          <div className="grid min-w-0 gap-1">
+            <dt className="text-caption text-text-muted">{copy.topics}</dt>
+            <dd className="min-w-0">
+              <ul className="flex flex-wrap gap-x-3 gap-y-1">
+                {page.topics.map((topic) => (
+                  <li key={topic.slug}>
+                    <Link
+                      href={topic.publicPath}
+                      className="text-text underline-offset-2 hover:text-text-link hover:underline"
+                    >
+                      #{topic.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        ) : null}
+
+        {mentioned.length > 0 ? (
+          <div className="grid min-w-0 gap-1 sm:col-span-2">
+            <dt className="text-caption text-text-muted">
+              {copy.mentionedObjects}
+            </dt>
+            <dd className="min-w-0">
+              <ul className="flex flex-wrap gap-2">
+                {mentioned.map((item) => (
+                  <li key={item.plantObjectId}>
+                    <Link
+                      href={item.publicPath}
+                      className={buttonVariants({
+                        variant: "secondary",
+                        size: "sm",
+                      })}
+                    >
+                      <ObjectKindIcon kind={item.objectKind} />
+                      {item.displayName}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {object ? (
+        <Link
+          href={object.publicPath}
+          className={buttonVariants({
+            variant: "secondary",
+            size: "sm",
+            className: "w-fit",
+          })}
+        >
+          {copy.openObject}
+          <ArrowRight data-icon="inline-end" aria-hidden="true" />
+        </Link>
+      ) : null}
+    </Section>
   );
 }
 
-function JournalMediaGallery({
-  page,
-  copy,
+/** A scientific name, marked as Latin only when it is one. */
+function ScientificName({
+  name,
+  isSpecies,
+  href,
 }: {
-  page: PublicJournalEntryPage;
-  copy: PublicJournalEntryCopy;
+  name: string;
+  isSpecies: boolean;
+  href: string | null;
 }) {
-  return (
-    <section
-      aria-labelledby="journal-entry-media"
-      data-journal-media-count={page.media.length}
-      className="grid gap-2 border-b border-border py-5"
+  const label = (
+    <span
+      {...(isSpecies ? { lang: "la" } : {})}
+      className={isSpecies ? "italic" : undefined}
     >
-      <h2 id="journal-entry-media" className="sr-only">
-        {copy.media}
-      </h2>
-      <figure className="grid min-w-0 grid-cols-1 gap-2">
-        <SubjectAwareMediaImage
-          src={page.media[0]!.publicUrl}
-          srcSet={buildPublicMediaSourceSet(page.media[0]!).srcSet}
-          placeholderDataUri={page.media[0]!.placeholderDataUri}
-          alt={publicMediaAltText(page.media[0]!, page.entry.title)}
-          width={1200}
-          height={900}
-          sizes="(min-width: 1280px) 48rem, 100vw"
-          priority
-          presentationMode="contain"
-          focalX={page.media[0]!.focalX}
-          focalY={page.media[0]!.focalY}
-          intrinsicWidth={page.media[0]!.intrinsicWidth}
-          intrinsicHeight={page.media[0]!.intrinsicHeight}
-          className="aspect-4/3 w-full rounded-md border border-border bg-muted"
-        />
-        {page.media[0]!.caption ? (
-          <figcaption className="text-sm text-muted-foreground">
-            {page.media[0]!.caption}
-          </figcaption>
-        ) : null}
-      </figure>
-      {page.media.length > 1 ? (
-        <ul className="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
-          {page.media.slice(1).map((media) => (
-            <li key={media.id} className="min-w-0">
-              <figure className="grid min-w-0 grid-cols-1 gap-1.5">
-                <SubjectAwareMediaImage
-                  src={media.publicUrl}
-                  srcSet={buildPublicMediaSourceSet(media).srcSet}
-                  placeholderDataUri={media.placeholderDataUri}
-                  alt={publicMediaAltText(media, page.entry.title)}
-                  width={720}
-                  height={540}
-                  sizes="(min-width: 640px) 15rem, 50vw"
-                  presentationMode="contain"
-                  focalX={media.focalX}
-                  focalY={media.focalY}
-                  intrinsicWidth={media.intrinsicWidth}
-                  intrinsicHeight={media.intrinsicHeight}
-                  className="aspect-4/3 w-full rounded-md border border-border bg-muted"
-                />
-                {media.caption ? (
-                  <figcaption className="text-xs text-muted-foreground">
-                    {media.caption}
-                  </figcaption>
-                ) : null}
-              </figure>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </section>
+      {name}
+    </span>
+  );
+  return href ? (
+    <Link
+      href={href}
+      className="text-text underline-offset-2 hover:text-text-link hover:underline"
+    >
+      {label}
+    </Link>
+  ) : (
+    <span className="text-text">{label}</span>
   );
 }
 
@@ -450,23 +498,23 @@ function JournalChronology({
     <nav
       aria-label={copy.contextHistory}
       data-journal-chronology="true"
-      className="grid min-w-0 gap-3 border-t border-border py-5 sm:grid-cols-2"
+      className="grid min-w-0 gap-3 sm:grid-cols-2"
     >
       {adjacent.map((entry) => (
         <Link
           key={`${entry.label}:${entry.id}`}
           href={entry.publicPath}
           className={cn(
-            "flex min-h-20 max-w-full min-w-0 items-center gap-3 rounded-md border border-border p-3 transition-colors hover:border-primary",
+            "flex min-h-20 max-w-full min-w-0 items-center gap-3 rounded-lg border border-border p-4 transition-colors duration-instant ease-out hover:bg-surface-hover",
             entry.align === "end" && "sm:col-start-2 sm:text-right",
           )}
         >
           {entry.align === "start" ? entry.icon : null}
           <span className="min-w-0 flex-1">
-            <span className="block text-xs text-muted-foreground">
+            <span className="block text-caption text-text-muted">
               {entry.label} · {formatDate(entry.entryDate, locale)}
             </span>
-            <strong className="mt-1 block truncate text-sm text-foreground">
+            <strong className="mt-1 block truncate text-body-sm text-text-heading">
               {entry.title}
             </strong>
           </span>
@@ -540,13 +588,22 @@ function buildContextModules(
         {
           href: page.author.profilePath,
           label: page.author.displayName,
-          meta: page.author.mention,
+          // Same string twice reads as noise and overflows a 300 px rail.
+          meta:
+            page.author.mention === page.author.displayName
+              ? undefined
+              : page.author.mention,
         },
       ],
     });
   }
 
-  return modules;
+  // A module with nothing in it is a heading with nothing under it, and the
+  // rail is discardable by design — so an empty one is dropped rather than
+  // drawn. `journal-context` keeps its `emptyLabel`, which is the space's name.
+  return modules.filter(
+    (module) => module.items.length > 0 || module.emptyLabel !== undefined,
+  );
 }
 
 function getSafeLocation(
@@ -650,9 +707,9 @@ function ObjectKindIcon({
   kind: PublicJournalEntryObject["objectKind"];
 }) {
   if (kind === "animal") {
-    return <PawPrint className="size-5" aria-hidden="true" />;
+    return <PawPrint className="size-4" aria-hidden="true" />;
   }
-  return <Sprout className="size-5" aria-hidden="true" />;
+  return <Sprout className="size-4" aria-hidden="true" />;
 }
 
 function splitBody(body: string) {
