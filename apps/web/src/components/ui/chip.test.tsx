@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { Chip, FilterChip } from "./chip";
+import { Chip, FilterChip, ToggleChip } from "./chip";
 
 describe("Chip", () => {
   it("names what the remove control removes, not just 'remove'", async () => {
@@ -60,5 +60,54 @@ describe("FilterChip", () => {
     expect(control).toHaveProperty("disabled", true);
     await userEvent.click(control);
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("ToggleChip", () => {
+  it("states whether the filter is on, on a control where aria-pressed is valid", () => {
+    render(
+      <form action="/" method="get">
+        <ToggleChip name="kind" value="plant" label="Рослини" pressed={false} />
+        <ToggleChip name="kind" value="animal" label="Тварини" pressed />
+      </form>,
+    );
+
+    expect(
+      screen
+        .getByRole("button", { name: /Рослини/u })
+        .getAttribute("aria-pressed"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("button", { name: /Тварини/u })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("submits the form it sits in, so the filter works before hydration", () => {
+    render(
+      <form action="/" method="get">
+        <ToggleChip name="kind" value="plant" label="Рослини" pressed={false} />
+      </form>,
+    );
+
+    // A submit button inside a GET form is the browser's own mechanism: no
+    // click handler, no bundle, and the filter lands in the URL.
+    const chip = screen.getByRole("button", { name: /Рослини/u });
+    expect(chip.getAttribute("type")).toBe("submit");
+  });
+
+  it("turns a filter off by contributing no value at all", () => {
+    // The chip that is already on carries no `name`, so pressing it submits
+    // the form without the parameter — which is how "all" is expressed.
+    render(
+      <form action="/" method="get">
+        <ToggleChip label="Останні" pressed />
+      </form>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Останні" }).getAttribute("name"),
+    ).toBeNull();
   });
 });

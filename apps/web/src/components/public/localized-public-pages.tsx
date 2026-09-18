@@ -47,6 +47,7 @@ import type {
   TrustedPublicFeedTopic,
 } from "@/server/public-feed-repository";
 import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
+import type { WorkspaceFailureDescription } from "@/server/workspace-failure";
 
 export function PublicLocalizedHeader({
   locale,
@@ -79,6 +80,7 @@ export function LocalizedHomePage({
   topics,
   isAuthenticated,
   state,
+  failure = null,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -88,6 +90,7 @@ export function LocalizedHomePage({
   topics: TrustedPublicFeedTopic[];
   isAuthenticated: boolean;
   state: PublicHomeFeedState;
+  failure?: WorkspaceFailureDescription | null;
   jsonLd?: Record<string, unknown> | null;
 }) {
   return (
@@ -101,6 +104,7 @@ export function LocalizedHomePage({
         topics={topics}
         isAuthenticated={isAuthenticated}
         state={state}
+        failure={failure}
       />
     </>
   );

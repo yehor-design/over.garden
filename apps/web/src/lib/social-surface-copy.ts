@@ -12,7 +12,12 @@ export interface SocialSurfaceCopy {
     title: string;
     description: string;
     signIn: string;
+    signedOutPublic: string;
     empty: string;
+    emptyTitle: string;
+    emptyAction: string;
+    paginationLabel: string;
+    firstPage: string;
     all: string;
     people: string;
     objects: string;
@@ -102,8 +107,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       description:
         "Нові публічні записи від людей, об'єктів і тем, за якими ви стежите.",
       signIn: "Увійдіть, щоб відкрити стрічку підписок.",
+      signedOutPublic: "Нижче — публічна стрічка OverGarden.",
       empty:
         "Підпишіться на профіль, живий об'єкт або тему, і нові публічні записи з'являться тут.",
+      emptyTitle: "Стрічка підписок поки порожня",
+      emptyAction: "Знайти журнали",
+      paginationLabel: "Сторінки стрічки підписок",
+      firstPage: "До початку стрічки",
       all: "Усі",
       people: "Люди",
       objects: "Об'єкти",
@@ -203,8 +213,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       description:
         "Нови публични записи от хора, обекти и теми, които следвате.",
       signIn: "Влезте, за да отворите емисията си.",
+      signedOutPublic: "По-долу е публичната емисия на OverGarden.",
       empty:
         "Последвайте профил, жив обект или тема и новите публични записи ще се появят тук.",
+      emptyTitle: "Емисията от следвани е още празна",
+      emptyAction: "Намерете дневници",
+      paginationLabel: "Страници на емисията от следвани",
+      firstPage: "Към началото на емисията",
       all: "Всички",
       people: "Хора",
       objects: "Обекти",
@@ -305,8 +320,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       description:
         "Новые публичные записи людей, объектов и тем, на которые вы подписаны.",
       signIn: "Войдите, чтобы открыть ленту подписок.",
+      signedOutPublic: "Ниже — публичная лента OverGarden.",
       empty:
         "Подпишитесь на профиль, живой объект или тему, и новые публичные записи появятся здесь.",
+      emptyTitle: "Лента подписок пока пуста",
+      emptyAction: "Найти журналы",
+      paginationLabel: "Страницы ленты подписок",
+      firstPage: "К началу ленты",
       all: "Все",
       people: "Люди",
       objects: "Объекты",

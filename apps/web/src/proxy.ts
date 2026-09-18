@@ -468,8 +468,26 @@ function getAuthorScopedRewriteResponse(
             );
 
     // `/@handle` is a canonical address and stays one whatever country the
-    // request came from (ADR-0029 D10). It used to 307 to `/bg/@handle` here.
-    if (request.method !== "GET" && request.method !== "HEAD") return null;
+    // request came from (ADR-0029 D10). It used to 307 to `/bg/@handle` here,
+    // and the method guard that replaced that redirect is why `POST` is
+    // allowed through now rather than dropped.
+    //
+    // A `POST` to an author-scoped address is a Server Action form submission
+    // and nothing else. Refusing to rewrite it left it matched by
+    // `[locale]/[profileHandle]` with the locale set to `@handle` — the wrong
+    // route — and Next resolves a **progressive** form's action out of the
+    // matched route's own manifest, so it answered `Failed to find Server
+    // Action` and 500. With the client bundle running it worked, because the
+    // `Next-Action` header resolves the id globally; that is exactly the shape
+    // of defect ADR-0024 D3 exists to prevent, and it was invisible to every
+    // test that pressed the button in a hydrated browser (`OVE-447`).
+    if (
+      request.method !== "GET" &&
+      request.method !== "HEAD" &&
+      request.method !== "POST"
+    ) {
+      return null;
+    }
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);

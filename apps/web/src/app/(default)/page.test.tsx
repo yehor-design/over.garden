@@ -39,12 +39,12 @@ const feedPage: PublicFeedPage = {
       sourceLanguage: "uk",
       entryDate: "2026-07-10",
       publishedAt: "2026-07-10T12:00:00.000Z",
-      publicPath: "/journal/morning-check",
+      publicPath: "/@demo_olena/morning-check",
       object: {
         id: "object-1",
         displayName: "Томат Черрі",
         kind: "plant",
-        publicPath: "/lineage/objects/object-1",
+        publicPath: "/@demo_olena/objects/tomato",
         safeRegionCode: null,
       },
       author: {
@@ -94,7 +94,7 @@ describe("/", () => {
     ).toBe("uk");
   });
 
-  it("renders the Ukrainian read-first feed as an indexable listing", async () => {
+  it("renders the Ukrainian read-first feed as an indexable listing of cards", async () => {
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "uk" }),
@@ -106,11 +106,15 @@ describe("/", () => {
     });
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
-    expect(metadata.alternates).toMatchObject({ canonical: "https://over.garden/" });
+    expect(metadata.alternates).toMatchObject({
+      canonical: "https://over.garden/",
+    });
     expect(html).toContain('lang="uk"');
     expect(html).toContain(">Стрічка</h1>");
     expect(html).toContain("Ранкове спостереження");
-    expect(html).toContain('href="/journal/morning-check"');
+    expect(html).toContain('href="/@demo_olena/morning-check"');
+    // Criterion 8: the article is named by the entry it holds.
+    expect(html).toContain('aria-labelledby="entry-card-entry-1-title"');
     expect(html).not.toContain("Ведіть живу історію");
     expect(html).not.toContain("Почати перший запис");
     expect(html).not.toContain('aria-label="Language switcher"');
@@ -140,7 +144,11 @@ describe("/", () => {
     );
     expect(html).toContain('lang="bg"');
     expect(html).toContain(">Поток</h1>");
-    expect(html).toContain('href="/bg?kind=animal&amp;topic=winter-care"');
+    // The active filter is in the URL, and it stays there while the other one
+    // changes: it travels as a hidden field in the chip row's GET form.
+    expect(html).toContain('type="hidden" name="topic" value="winter-care"');
+    expect(html).toContain('type="hidden" name="kind" value="animal"');
+    expect(html).toContain('action="/bg"');
     expect(html).not.toContain('href="/bg/feed"');
     expect(html).not.toContain('aria-label="Смяна на езика"');
   });
@@ -161,7 +169,7 @@ describe("/", () => {
     expect(html).toContain('href="/ru/feed"');
   });
 
-  it("renders a recoverable localized feed error instead of an auth wall", async () => {
+  it("settles a failed feed read into a class the page renders", async () => {
     mocks.listPublicFeedPage.mockRejectedValue(
       new Error("database unavailable"),
     );
@@ -173,7 +181,13 @@ describe("/", () => {
       }),
     );
 
+    // ADR-0023: a failure is a value, not an exception the reader inherits.
+    // The class travels as a data attribute and the digest is printed, so the
+    // reader and the log line quote the same string.
+    expect(html).toContain('data-screen-state="error"');
+    expect(html).toMatch(/data-section-failure="[a-z_]+"/u);
     expect(html).toContain("Стрічку не вдалося завантажити");
+    expect(html).toContain("Код звернення:");
     expect(html).toContain('href="/?kind=animal"');
     expect(html).not.toMatch(/href="[^"]*(?:sign.?up|register|join)/i);
   });

@@ -96,4 +96,62 @@ function FilterChip({
   );
 }
 
-export { Chip, FilterChip };
+/**
+ * A chip the reader presses to change what a list shows, when the change is a
+ * navigation rather than a field in a larger form.
+ *
+ * It is a real `<button type="submit">` inside a `<form method="get">`, which
+ * is what makes three things true at once: `aria-pressed` states whether the
+ * filter is on (valid only on a button — a link with `aria-pressed` is an ARIA
+ * error, and that is why the feed's filters stopped being links), the press
+ * works with the bundle absent because a GET form is the browser's own
+ * mechanism, and the resulting filter lands in the URL so the view is linkable
+ * (DESIGN.md §5.1, ADR-0031 D6).
+ *
+ * Pressing the chip that is already on turns it **off**: the caller omits
+ * `name`, the button submits the form without contributing a value, and the
+ * parameter simply is not in the next URL.
+ */
+function ToggleChip({
+  className,
+  label,
+  count,
+  pressed,
+  icon,
+  ...props
+}: Omit<React.ComponentProps<"button">, "type" | "children"> & {
+  label: React.ReactNode;
+  count?: number;
+  pressed: boolean;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <button
+      type="submit"
+      data-slot="toggle-chip"
+      aria-pressed={pressed}
+      className={cn(
+        "relative inline-flex min-h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-body-sm",
+        "transition-colors duration-instant ease-out",
+        // WCAG 2.2 2.5.8: the visual chip is 32 px and the target is 44.
+        "before:absolute before:top-1/2 before:left-0 before:h-11 before:w-full before:-translate-y-1/2",
+        "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+        pressed
+          ? "border-action bg-action-subtle text-action-subtle-text"
+          : "border-border-control text-text hover:bg-surface-hover",
+        className,
+      )}
+      {...props}
+    >
+      {icon}
+      <span>{label}</span>
+      {typeof count === "number" ? (
+        <span className="text-caption text-text-muted tabular-nums">
+          {count}
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+export { Chip, FilterChip, ToggleChip };

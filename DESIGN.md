@@ -343,10 +343,22 @@ Photographs are the product. They keep the rules already in production
 server-side processing and no Vercel image optimizer.
 
 Design rules on top of that: aspect ratios are 16:9 (cover), 4:3 (card), 1:1
-(avatar, thumbnail) and `auto` (in prose). Every image reserves its box with
+(avatar, thumbnail) and `auto` (in prose). The first two are **tokens** —
+`--aspect-cover` and `--aspect-card`, so `aspect-cover` and `aspect-card` are
+utilities; 1:1 is Tailwind's own `aspect-square`, and `aspect-[4/3]` is exactly
+the arbitrary value §10's gate 2 rejects. Every image reserves its box with
 `aspect-ratio` so nothing shifts. Subject-aware cropping uses the existing focal
 point. A photograph never has a coloured overlay; if text must sit on one, it
 sits on a `neutral-950 / 0.55` scrim, measured to clear 4.5:1.
+
+**A card's picture is 4:3 and bleeds to the card's edges**, which is the
+Substack and Digg shape. It has a measured consequence beyond taste: at 375 px
+the full-bleed 4:3 picture is 88,000 px² against the consent banner's 76,000,
+so the _photograph_ is the page's largest contentful paint rather than a cookie
+notice that arrives after hydration. A card whose picture is inset and 16:9 is
+smaller than the banner, and principle 1 stops being true of the page a reader
+actually measures. A **cover** at 16:9 is the entry page's hero, not a card's
+picture.
 
 ### 2.11 Layering
 
@@ -530,6 +542,13 @@ above the results with an "Apply" button. Etsy, Walmart, Tripadvisor and
 Selfridges all do the opposite, and so do we.
 
 - Filters apply **on change**. There is no Apply button on desktop.
+- A chip that changes what a list shows is a `<button type="submit">` inside a
+  `<form method="get">`, never a link. `aria-pressed` is what tells a reader
+  whether a filter is on, it is valid on a button and an **ARIA error on a
+  link**, and a GET form is the browser's own mechanism, so the press works
+  before hydration and the result lands in the URL. The crawlable path to the
+  same view is a plain anchor elsewhere on the page — the feed's is in the
+  context rail.
 - Active filters appear as removable chips above the results, with "Clear all"
   when more than one is set.
 - The result count is always visible and updates with the filters.
@@ -702,8 +721,26 @@ checks, not aspirations.
 **Keyboard**
 
 - Every interactive element reachable and operable by keyboard, in DOM order.
-- Focus visible on everything: 2 px `focus-ring` outline, 2 px offset. Never
-  `outline: none` without an equal replacement.
+- Focus visible on everything: 2 px `focus-ring` outline, 2 px offset, at
+  **full strength**. Never `outline: none` without an equal replacement.
+
+  **How this was broken for the whole product, and what makes it stay fixed.**
+  Tailwind v4 compiles `outline-none` to `--tw-outline-style: none` and every
+  `focus-visible:outline-*` to `outline-style: var(--tw-outline-style)`. A
+  control carrying both — thirty-seven places did, `Button`, `IconButton`,
+  `Input`, `Checkbox`, `Radio`, `Switch`, `Tabs`, `Accordion`, `Dialog`,
+  `Popover`, `Link`, `Chip`, `Pagination`, `ListRow`, `CommandPalette` and
+  `ErrorState` among them — resolved its ring to `outline-style: none` and drew
+  **nothing**, while reporting `outline-width: 2px` and a set colour. The ring
+  was also `focus-ring/50` from shadcn's default, which measures about 2.0:1
+  over white and fails 1.4.11's 3:1 even where it did draw. Nothing caught
+  either: axe does not test focus visibility, and the browser gate asserted
+  `outlineWidth !== "0px"`, which was true throughout. `globals.css` now
+  carries one **unlayered** `*:focus-visible { --tw-outline-style: solid }`,
+  which wins over `@layer utilities` whatever a component writes, and the gate
+  asserts the width, the style and the colour on every control a keyboard walk
+  reaches.
+
 - No keyboard trap. `Esc` closes every overlay. Focus returns to the trigger.
 - Skip link first. Roving tabindex in tab lists, menus and toolbars.
 
@@ -743,6 +780,19 @@ The public pages are the product's distribution. Budgets per public page:
 - LCP ≤ 2.0 s on a simulated slow 4G; CLS ≤ 0.02; INP ≤ 200 ms.
 - No layout shift from an image, a font or a late banner — every box is
   reserved, the consent banner included.
+
+**The LCP figure is not currently reachable, and the reason is not the pages.**
+Measured through the Lighthouse CLI on a production build, three runs, median:
+`/` comes back at **4.28 s** with **CLS 0**, of which 2.90 s is render delay
+while the cover photograph has finished loading at 1.38 s. `origin/main` before
+the redesign measured 4.06 s, so this predates it. The cause is one boundary:
+`app/root-document.tsx` wraps the whole body in a single `Suspense` because the
+shell awaits the session, so every public page's content arrives inside
+`<div hidden>` and is revealed by React's `$RC` script — LCP lands at TTI, and
+a scripts-off reader sees nothing at all. `OVE-461` owns the fix; until it
+lands, a page-family task records its measured LCP and CLS and names this
+paragraph. CLS, INP and the reserved boxes are met and are gated.
+
 - No component ships a client bundle to a public reading page unless it must.
 - The composer is the one heavy surface and it is workspace-only.
 

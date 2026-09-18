@@ -419,6 +419,67 @@ describe("global responsive floor", () => {
     expect(globals).toContain(".site-shell-safe-bottom");
   });
 
+  it("draws the focus ring, at full strength", () => {
+    // WCAG 2.4.7, DESIGN.md §8, and the defect that hid behind two true
+    // statements. Tailwind v4 compiles `outline-none` to
+    // `--tw-outline-style: none` and every `focus-visible:outline-*` to
+    // `outline-style: var(--tw-outline-style)` — so thirty-seven controls
+    // carrying both resolved their ring to `outline-style: none` and drew
+    // nothing, while `outline-width` stayed `2px` and the colour stayed set.
+    // The unlayered rule wins over `@layer utilities` whatever a component
+    // writes.
+    // Both declarations: the variable is what a component's own
+    // `focus-visible:outline-2` resolves through, and the literal is for the
+    // controls whose ring comes from the base layer — `@layer utilities` beats
+    // `@layer base` by layer order, so `.outline-none`'s literal would keep
+    // winning there. The footer's `<summary>` was exactly that case.
+    const ring = globals.slice(globals.indexOf("*:focus-visible {"));
+    expect(ring).toContain("*:focus-visible {");
+    expect(ring).toContain("--tw-outline-style: solid;");
+    expect(ring).toContain("outline-style: solid;");
+    // Unlayered, so it wins over `@layer utilities` whatever a component
+    // writes. Checked on the stylesheet with its comments removed, because
+    // the rule's own comment names `@layer base` and a naive search for the
+    // last `@layer` finds the prose rather than the cascade.
+    const code = globals.replace(/\/\*[\s\S]*?\*\//gu, "");
+    const lastLayer = code.lastIndexOf("@layer");
+    const ruleAt = code.indexOf("*:focus-visible");
+    expect(ruleAt).toBeGreaterThan(lastLayer);
+    // And the braces between them balance, so the rule is not nested in one.
+    const between = code.slice(lastLayer, ruleAt);
+    const opens = (between.match(/\{/gu) ?? []).length;
+    const closes = (between.match(/\}/gu) ?? []).length;
+    expect(closes, "the focus-ring rule is nested inside a @layer").toBe(opens);
+
+    // And the ring is `focus-ring`, not `focus-ring/50`: a 2 px green-600 at
+    // half alpha over white measures about 2.0:1, below 1.4.11's 3:1.
+    expect(globals).toContain("@apply border-border outline-focus-ring;");
+    expect(globals).not.toContain("outline-focus-ring/50");
+  });
+
+  it("owns the three photographic ratios as tokens", () => {
+    // DESIGN.md §2.10. They are tokens because `aspect-[4/3]` is exactly the
+    // arbitrary value gate 2 rejects, and because a ratio that is written in
+    // two components is a ratio that will disagree with itself.
+    expect(globals).toContain("--aspect-cover: 16 / 9;");
+    expect(globals).toContain("--aspect-card: 4 / 3;");
+  });
+
+  it("keeps the consent banner clear of the mobile tab bar", () => {
+    // `OVE-447` criterion 7. The banner is `position: fixed`, so it shifts
+    // nothing; the failure it actually had was covering the tab bar, which
+    // carries the product's one primary action on a phone. Below `lg` it
+    // clears the bar by the same 5rem the content column reserves, and the
+    // 40rem breakpoint that used to drop the offset was wrong — the bar is
+    // `lg:hidden` and exists at every width beneath it.
+    const banner = globals.slice(globals.indexOf(".analytics-consent-banner"));
+    expect(banner).toContain(
+      "bottom: calc(5rem + env(safe-area-inset-bottom));",
+    );
+    expect(banner).toMatch(/@media \(width >= 64rem\)/u);
+    expect(banner).not.toContain("bottom: 12px;");
+  });
+
   it("still collapses every duration for a reader who asked for less motion", () => {
     expect(globals).toContain("@media (prefers-reduced-motion: reduce)");
     expect(globals).toContain("animation-duration: 0.01ms !important;");

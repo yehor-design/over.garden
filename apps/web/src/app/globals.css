@@ -141,6 +141,13 @@
   --grid-template-columns-shell-wide: var(--container-rail) minmax(0, 1fr)
     var(--container-context);
 
+  /* photography — DESIGN.md §2.10. The three ratios a photograph is served
+     at, as tokens, so `aspect-cover` and `aspect-card` are utilities rather
+     than the arbitrary `aspect-[4/3]` the gate rejects. 1:1 is Tailwind's own
+     `aspect-square`. */
+  --aspect-cover: 16 / 9;
+  --aspect-card: 4 / 3;
+
   /* layering — DESIGN.md §2.11. Tailwind's z-index namespace is
      `--z-index-*`; the product name stays `--z-*`. */
   --z-index-base: var(--z-base);
@@ -391,7 +398,11 @@
 
 @layer base {
   * {
-    @apply border-border outline-focus-ring/50;
+    /* The focus ring is `focus-ring` at full strength. It arrived from
+       shadcn's default as `/50`, and a 2 px ring of `green-600` at half alpha
+       over white measures about 2.0:1 — below WCAG 2.2 1.4.11's 3:1 for a
+       boundary that identifies a component, everywhere on the site. */
+    @apply border-border outline-focus-ring;
   }
   body {
     @apply bg-surface text-text;
@@ -552,16 +563,59 @@
   }
 }
 
+/* The consent banner floats over the page rather than in it — `position:
+   fixed`, so it cannot shift the column and contributes nothing to CLS
+   (DESIGN.md §9). What it *could* do, and did until `OVE-447`, is sit on top
+   of the mobile tab bar: the banner is `z-toast` and the bar is `z-rail`, and
+   both were anchored to the bottom of the viewport, so the product's one
+   primary action was underneath a cookie notice on every phone. Below `lg` it
+   now clears the bar by the same 5rem the content column reserves; at `lg` and
+   above there is no bar, and it sits 20px off the edge. */
 .analytics-consent-banner {
-  bottom: 12px;
-  max-height: calc(100dvh - 24px);
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  max-height: calc(100dvh - 7rem);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-@media (width >= 40rem) {
+@media (width >= 64rem) {
   .analytics-consent-banner {
     bottom: 20px;
     max-height: calc(100dvh - 40px);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The focus ring is drawn. DESIGN.md §8, WCAG 2.4.7.
+
+   Tailwind v4 compiles `outline-none` to
+   `--tw-outline-style: none; outline-style: none`, and it compiles every
+   `focus-visible:outline-*` to `outline-style: var(--tw-outline-style)`. So a
+   control that carries **both** — and thirty-seven places in this repository
+   did, `Button`, `IconButton`, `Input`, `Checkbox`, `Radio`, `Switch`, `Tabs`,
+   `Accordion`, `Dialog`, `Popover`, `Link`, `Chip`, `Pagination`, `ListRow`,
+   `CommandPalette` and `ErrorState` among them — resolves its focus ring to
+   `outline-style: none` and draws nothing at all. Measured in Chromium on
+   2026-09-17: `:focus-visible` matched, `outline-width` was `2px`,
+   `outline-color` was set, and `outline-style` was `none`.
+
+   Nothing caught it. axe does not test focus visibility, and gate 8 asserted
+   `outlineWidth !== "0px"`, which was true the whole time. `tests/accessibility.spec.ts`
+   asserts the *style* now, and this rule makes the ring impossible to remove
+   by accident: it is unlayered, so it wins over `@layer utilities` whatever a
+   component writes, and it only touches an element that asked for a ring —
+   `outline-style` on an element carrying `outline-none` alone is a literal
+   declaration and is not resolved through this variable.
+   ═══════════════════════════════════════════════════════════════════════════ */
+*:focus-visible {
+  /* Both, and for two different reasons. The variable is what a component's
+     own `focus-visible:outline-2` resolves through. The literal is for the
+     controls whose ring comes from the base layer above — a `<summary>`, an
+     `<a>` with no focus utility of its own — because `@layer utilities` beats
+     `@layer base` by layer order regardless of specificity, so `.outline-none`
+     would keep winning there. The footer's language control was exactly that
+     case, and the keyboard walk in `tests/accessibility.spec.ts` is what
+     found it after the variable alone had been declared a fix. */
+  --tw-outline-style: solid;
+  outline-style: solid;
 }

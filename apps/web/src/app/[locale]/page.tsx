@@ -26,6 +26,10 @@ import {
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 import {
+  describeWorkspaceFailure,
+  type WorkspaceFailureDescription,
+} from "@/server/workspace-failure";
+import {
   readPublicFeedPage,
   readTrustedPublicFeedTopics,
 } from "@/server/public-cache";
@@ -113,6 +117,13 @@ export async function renderLocalizedHomePage(
       : feed.entries.length === 0
         ? "empty"
         : "ready";
+  // ADR-0023: the failure is a value the page settles, not an exception the
+  // screen inherits. The class travels as `data-section-failure` and the digest
+  // is the one string the reader and the log line share.
+  const failure: WorkspaceFailureDescription | null =
+    feedResult.status === "rejected"
+      ? describeWorkspaceFailure(feedResult.reason)
+      : null;
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
     buildHomeDiscoverySource(
       locale,
@@ -140,6 +151,7 @@ export async function renderLocalizedHomePage(
         sessionResult.value.isAuthenticated
       }
       state={state}
+      failure={failure}
       jsonLd={surface.jsonLd}
     />
   );

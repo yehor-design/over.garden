@@ -1,20 +1,39 @@
-import { ArrowRight, Leaf, UserRound } from "lucide-react";
+import { LogIn, MessageCircle, PawPrint, Sprout } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   MySocialLayout,
   SocialEmptyState,
 } from "@/components/social/my-social-layout";
+import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { ToggleChip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EntryCard } from "@/components/ui/entry-card";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Pagination } from "@/components/ui/pagination";
+import { resolveIllustration } from "@/lib/illustrations";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
+import { publicMediaAltText } from "@/lib/public-media-alt";
 import {
+  contentLanguageAttribute,
   isPublicLocale,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getLocalizedHomeContent } from "@/server/public-localized-content";
+import { readPublicFeedPage } from "@/server/public-cache";
+import {
+  normalizePublicFeedRequest,
+  type PublicFeedEntry,
+  type PublicFeedRequest,
+} from "@/server/public-feed-repository";
 import { scopedToUser } from "@/server/request-scope";
 import {
   listFollowedFeedPage,
@@ -23,12 +42,16 @@ import {
   type FollowedFeedSource,
 } from "@/server/social-return-repository";
 import { evaluateNonDiscoveryRouteIndexability } from "@/server/public-surface-indexing-policy";
-import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 
 interface LocalizedFeedRouteProps {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
+
+const KIND_ICONS: Record<"plant" | "animal", React.ReactNode> = {
+  plant: <Sprout aria-hidden="true" className="size-4" />,
+  animal: <PawPrint aria-hidden="true" className="size-4" />,
+};
 
 export async function generateMetadata({
   params,
@@ -58,20 +81,16 @@ export default async function LocalizedFollowedFeedRoute({
   const userId = session?.user?.id;
 
   if (!userId) {
-    return (
-      <MySocialLayout
-        locale={localeParam}
-        active="feed"
-        title={copy.feed.title}
-        description={copy.feed.description}
-      >
-        <SignInPrompt
-  locale={localeParam}
-  next={localizedPath(localeParam, "/feed")}
-  description={copy.feed.signIn}
-/>
-      </MySocialLayout>
-    );
+    // Awaited here rather than rendered as an element: the public read is a
+    // database round trip, and an async component in a synchronous render tree
+    // suspends. The route is already async, so the whole state is resolved
+    // before it is returned.
+    return renderSignedOutFollowedFeed({
+      locale: localeParam,
+      query,
+      title: copy.feed.title,
+      description: copy.feed.description,
+    });
   }
 
   const source = parseSource(firstParam(query.source));
@@ -102,32 +121,215 @@ export default async function LocalizedFollowedFeedRoute({
       }
     >
       {page.items.length === 0 ? (
-        <SocialEmptyState>{copy.feed.empty}</SocialEmptyState>
+        <EmptyState
+          illustration={resolveIllustration("empty-journal")}
+          title={copy.feed.emptyTitle}
+          description={copy.feed.empty}
+          action={
+            <Link
+              href={localizedPath(localeParam, "/journals")}
+              className={buttonVariants({})}
+            >
+              {copy.feed.emptyAction}
+            </Link>
+          }
+        />
       ) : (
-        <ol className="divide-y divide-border border-y border-border">
+        <ol className="grid list-none gap-4">
           {page.items.map((item, index) => (
-            <FollowedFeedCard
-              key={item.key}
-              item={item}
-              locale={localeParam}
-              eagerMedia={index < 3}
-            />
+            <li key={item.key} className="min-w-0">
+              <FollowedFeedEntryCard
+                item={item}
+                locale={localeParam}
+                priority={index === 0}
+              />
+            </li>
           ))}
         </ol>
       )}
-      {page.nextCursor ? (
-        <Link
-          href={feedHref(localeParam, source, objectKind, page.nextCursor)}
-          className="flex min-h-11 items-center justify-center gap-2 border border-border px-4 text-sm font-medium text-foreground hover:bg-muted"
-        >
-          {copy.feed.more}
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </Link>
+      {page.items.length > 0 &&
+      (page.nextCursor || firstParam(query.cursor)) ? (
+        <Pagination
+          label={copy.feed.paginationLabel}
+          previousLabel={copy.feed.firstPage}
+          previousHref={
+            firstParam(query.cursor)
+              ? feedHref(localeParam, source, objectKind, null)
+              : null
+          }
+          nextLabel={copy.feed.more}
+          nextHref={
+            page.nextCursor
+              ? feedHref(localeParam, source, objectKind, page.nextCursor)
+              : null
+          }
+        />
       ) : null}
     </MySocialLayout>
   );
 }
 
+/**
+ * What a signed-out reader gets at `/feed`.
+ *
+ * The real feed, with one `Callout` above it saying what signing in adds
+ * (DESIGN.md §5.4, the `signed-out` state). It used to be a single bordered
+ * card in the middle of a page whose whole purpose is a list of entries — a
+ * reader who arrived from a shared link saw nothing at all and had no reason
+ * to believe the product had anything in it.
+ *
+ * The public feed is the honest stand-in: a followed feed is a subset of it,
+ * and every entry on it is public by definition (ADR-0022 D4).
+ */
+async function renderSignedOutFollowedFeed({
+  locale,
+  query,
+  title,
+  description,
+}: {
+  locale: PublicLocale;
+  query: Record<string, string | string[] | undefined>;
+  title: string;
+  description: string;
+}) {
+  const copy = getSocialSurfaceCopy(locale);
+  const homeCopy = getLocalizedHomeContent(locale).feed;
+  const request: PublicFeedRequest = normalizePublicFeedRequest({
+    kind: query.kind,
+    topic: query.topic,
+    cursor: query.cursor,
+  });
+  const feed = await readPublicFeedPage(request, locale).catch(() => ({
+    entries: [] as PublicFeedEntry[],
+    nextCursor: null,
+  }));
+
+  return (
+    <MySocialLayout
+      locale={locale}
+      active="feed"
+      title={title}
+      description={description}
+    >
+      <div data-screen-state="signed-out" className="grid gap-4">
+        {/* One way in, and no heading of its own: the page header above
+            already says what this screen is, and a callout that repeats it
+            gives a screen reader the same sentence twice. */}
+        <Callout
+          tone="info"
+          actions={
+            <Link
+              href={buildSignInHref({
+                returnTo: localizedPath(locale, "/feed"),
+              })}
+              className={buttonVariants({ size: "sm" })}
+            >
+              <LogIn aria-hidden="true" />
+              {getTrustSurfaceCopy(locale).authPanel.signIn}
+            </Link>
+          }
+        >
+          <p>
+            {copy.feed.signedOutPublic} {copy.feed.signIn}
+          </p>
+        </Callout>
+
+        {feed.entries.length === 0 ? (
+          <SocialEmptyState>{homeCopy.emptyTitle}</SocialEmptyState>
+        ) : (
+          <ol className="grid list-none gap-4">
+            {feed.entries.map((entry, index) => (
+              <li key={entry.id} className="min-w-0">
+                <PublicFeedEntryCard
+                  entry={entry}
+                  locale={locale}
+                  priority={index === 0}
+                />
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </MySocialLayout>
+  );
+}
+
+function PublicFeedEntryCard({
+  entry,
+  locale,
+  priority,
+}: {
+  entry: PublicFeedEntry;
+  locale: PublicLocale;
+  priority: boolean;
+}) {
+  const copy = getLocalizedHomeContent(locale).feed;
+  const [cover] = entry.media;
+  const sourceSet = cover ? buildPublicMediaSourceSet(cover) : null;
+
+  return (
+    <EntryCard
+      id={entry.id}
+      href={entry.publicPath}
+      title={entry.title}
+      contentLanguage={
+        contentLanguageAttribute(entry.sourceLanguage, locale).lang
+      }
+      subject={{
+        label: entry.object.displayName,
+        href: entry.object.publicPath,
+        kindLabel: copy.kindLabels[entry.object.kind],
+        icon: KIND_ICONS[entry.object.kind],
+      }}
+      dateTime={toIsoDateTime(entry.publishedAt)}
+      dateLabel={formatDate(entry.publishedAt, locale)}
+      excerpt={entry.excerpt}
+      cover={
+        cover && sourceSet
+          ? {
+              src: sourceSet.src,
+              srcSet: sourceSet.srcSet,
+              alt: publicMediaAltText({}, entry.title),
+              placeholderDataUri: cover.placeholderDataUri,
+              focalX: cover.focalX,
+              focalY: cover.focalY,
+              intrinsicWidth: cover.intrinsicWidth,
+              intrinsicHeight: cover.intrinsicHeight,
+            }
+          : null
+      }
+      author={
+        entry.author
+          ? {
+              displayName: entry.author.displayName,
+              href: entry.author.profilePath,
+              avatarUrl: entry.author.avatarUrl,
+            }
+          : null
+      }
+      authorPrefix={copy.publishedBy}
+      engagement={
+        <Link
+          href={`${entry.publicPath}#comments`}
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          <MessageCircle aria-hidden="true" />
+          {copy.discuss}
+        </Link>
+      }
+      priority={priority}
+    />
+  );
+}
+
+/**
+ * The filters, as chips in two GET forms.
+ *
+ * Six full-width controls in two bordered strips became two rows of chips that
+ * say whether they are on. The same shape as the home feed's, and for the same
+ * reason: `aria-pressed` is valid on a button and an ARIA error on a link, and
+ * a GET form is what keeps the press working before hydration (DESIGN.md §5.1).
+ */
 function FeedFilters({
   locale,
   source,
@@ -138,130 +340,136 @@ function FeedFilters({
   objectKind: FollowedFeedObjectKind;
 }) {
   const copy = getSocialSurfaceCopy(locale);
-  const sources: Array<[FollowedFeedSource, string]> = [
-    ["all", copy.feed.all],
+  const action = localizedPath(locale, "/feed");
+  const sources: Array<[Exclude<FollowedFeedSource, "all">, string]> = [
     ["people", copy.feed.people],
     ["objects", copy.feed.objects],
     ["topics", copy.feed.topics],
   ];
-  const kinds: Array<[FollowedFeedObjectKind, string]> = [
-    ["all", copy.feed.everyKind],
+  const kinds: Array<[Exclude<FollowedFeedObjectKind, "all">, string]> = [
     ["plant", copy.feed.plants],
     ["animal", copy.feed.animals],
   ];
 
   return (
-    <>
-      <div
-        className="flex overflow-x-auto border border-border"
-        role="group"
-        aria-label={copy.feed.sourceFiltersLabel}
+    <div
+      role="group"
+      aria-label={copy.feed.sourceFiltersLabel}
+      className="grid w-full gap-3"
+    >
+      <form
+        method="get"
+        action={action}
+        data-followed-feed-source-filters="true"
+        className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
       >
-        {sources.map(([value, label]) => (
-          <Link
-            key={value}
-            href={feedHref(locale, value, objectKind, null)}
-            aria-current={source === value ? "true" : undefined}
-            className={filterClass(source === value)}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
-      <div
-        className="flex overflow-x-auto border border-border"
-        role="group"
-        aria-label={copy.feed.kindFiltersLabel}
+        {objectKind === "all" ? null : (
+          <HiddenField name="kind" value={objectKind} />
+        )}
+        <ToggleChip label={copy.feed.all} pressed={source === "all"} />
+        {sources.map(([value, label]) => {
+          const pressed = source === value;
+          return (
+            <ToggleChip
+              key={value}
+              {...(pressed ? {} : { name: "source", value })}
+              label={label}
+              pressed={pressed}
+            />
+          );
+        })}
+      </form>
+      <form
+        method="get"
+        action={action}
+        data-followed-feed-kind-filters="true"
+        className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
       >
-        {kinds.map(([value, label]) => (
-          <Link
-            key={value}
-            href={feedHref(locale, source, value, null)}
-            aria-current={objectKind === value ? "true" : undefined}
-            className={filterClass(objectKind === value)}
-          >
-            {label}
-          </Link>
-        ))}
-      </div>
-    </>
+        {source === "all" ? null : <HiddenField name="source" value={source} />}
+        <span className="shrink-0 text-overline text-text-muted uppercase">
+          {copy.feed.kindFiltersLabel}
+        </span>
+        <ToggleChip
+          label={copy.feed.everyKind}
+          pressed={objectKind === "all"}
+        />
+        {kinds.map(([value, label]) => {
+          const pressed = objectKind === value;
+          return (
+            <ToggleChip
+              key={value}
+              {...(pressed ? {} : { name: "kind", value })}
+              icon={KIND_ICONS[value]}
+              label={label}
+              pressed={pressed}
+            />
+          );
+        })}
+      </form>
+    </div>
   );
 }
 
-function FollowedFeedCard({
+function FollowedFeedEntryCard({
   item,
   locale,
-  eagerMedia,
+  priority,
 }: {
   item: FollowedFeedItem;
   locale: PublicLocale;
-  eagerMedia: boolean;
+  priority: boolean;
 }) {
   const copy = getSocialSurfaceCopy(locale);
+  const homeCopy = getLocalizedHomeContent(locale).feed;
+  const reason = item.reasons[0];
+
   return (
-    <li>
-      <article className="grid gap-4 py-5 sm:flex sm:items-start">
-        <div className="grid min-w-0 gap-3 sm:flex-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <Link
-              href={item.author.href}
-              className="flex items-center gap-1.5 font-medium text-foreground hover:underline"
-            >
-              <UserRound className="size-4" aria-hidden="true" />
-              {item.author.label}
-            </Link>
-            <time className="text-muted-foreground">
-              {formatDate(item.publishedAt, locale)}
-            </time>
-          </div>
-          <div className="grid gap-1">
-            <Link href={item.href} className="group grid gap-1">
-              <h2 className="text-lg font-semibold text-foreground group-hover:underline">
-                {item.title}
-              </h2>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {item.excerpt}
-              </p>
-            </Link>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Link
-              href={item.object.href}
-              className="flex items-center gap-1 border border-border px-2 py-1 hover:text-foreground"
-            >
-              <Leaf className="size-3.5" aria-hidden="true" />
-              {item.object.displayName}
-              {item.object.varietyText ? ` · ${item.object.varietyText}` : ""}
-            </Link>
-            {item.reasons.map((reason) => (
-              <span key={reason} className="border border-border px-2 py-1">
-                {reason === "people"
-                  ? copy.feed.fromPerson
-                  : reason === "topics"
-                    ? copy.feed.fromTopic
-                    : copy.feed.fromObject}
-              </span>
-            ))}
-          </div>
-        </div>
-        {item.mediaUrl ? (
+    <EntryCard
+      id={item.key}
+      href={item.href}
+      title={item.title}
+      subject={{
+        label: item.object.displayName,
+        href: item.object.href,
+        kindLabel: homeCopy.kindLabels[item.object.kind],
+        icon: KIND_ICONS[item.object.kind],
+        meta: item.object.varietyText ?? undefined,
+      }}
+      dateTime={toIsoDateTime(item.publishedAt)}
+      dateLabel={formatDate(item.publishedAt, locale)}
+      excerpt={item.excerpt}
+      cover={
+        item.mediaUrl
+          ? {
+              src: item.mediaUrl,
+              alt: publicMediaAltText({}, item.title),
+            }
+          : null
+      }
+      author={{ displayName: item.author.label, href: item.author.href }}
+      authorPrefix={homeCopy.publishedBy}
+      engagement={
+        <>
+          {reason ? (
+            <span className="text-caption text-text-muted">
+              {reason === "people"
+                ? copy.feed.fromPerson
+                : reason === "topics"
+                  ? copy.feed.fromTopic
+                  : copy.feed.fromObject}
+            </span>
+          ) : null}
           <Link
-            href={item.href}
-            aria-label={item.title}
-            className="relative aspect-4/3 overflow-hidden bg-muted sm:w-44 sm:shrink-0"
+            href={`${item.href}#comments`}
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            <SubjectAwareMediaImage
-              src={item.mediaUrl}
-              alt=""
-              fill
-              loading={eagerMedia ? "eager" : "lazy"}
-              sizes="(min-width: 640px) 176px, 100vw"
-              presentationMode="cover"
-            />
+            <MessageCircle aria-hidden="true" />
+            {homeCopy.discuss}
           </Link>
-        ) : null}
-      </article>
-    </li>
+        </>
+      }
+      priority={priority}
+    />
   );
 }
 
@@ -277,14 +485,6 @@ function feedHref(
   if (cursor) params.set("cursor", cursor);
   const path = localizedPath(locale, "/feed");
   return params.size ? `${path}?${params}` : path;
-}
-
-function filterClass(active: boolean) {
-  return `min-h-9 shrink-0 border-r border-border px-3 py-2 text-sm last:border-r-0 ${
-    active
-      ? "bg-foreground text-background"
-      : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-  }`;
 }
 
 function parseSource(value: string | undefined): FollowedFeedSource {
@@ -307,4 +507,10 @@ function formatDate(value: Date | string, locale: PublicLocale) {
     month: "short",
     year: "numeric",
   });
+}
+
+function toIsoDateTime(value: Date | string) {
+  return value instanceof Date
+    ? value.toISOString()
+    : new Date(value).toISOString();
 }
