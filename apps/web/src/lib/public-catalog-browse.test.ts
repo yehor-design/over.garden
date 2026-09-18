@@ -1,93 +1,126 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  CATALOG_BROWSE_INITIALS,
+  buildCatalogBrowseRemovalHref,
   buildPublicCatalogBrowseHref,
   catalogBrowseInitial,
   catalogKingdomFromSlug,
   initialOfCatalogName,
   isPublicCatalogBrowsePath,
+  isUnfilteredCatalogBrowseRequest,
+  matchLegacyCatalogBrowsePath,
   normalizePublicCatalogBrowseRequest,
-} from "@/lib/public-catalog-browse";
+} from "./public-catalog-browse";
 
-describe("the catalog's front door", () => {
-  it("knows the eight kingdoms by slug and nothing else", () => {
-    expect(catalogKingdomFromSlug("plantae")).toBe("Plantae");
-    expect(catalogKingdomFromSlug("PLANTAE")).toBe("Plantae");
-    expect(catalogKingdomFromSlug("animalia")).toBe("Animalia");
-    // A typo in an import must not mint a crawlable page.
-    expect(catalogKingdomFromSlug("plants")).toBeNull();
-    expect(catalogKingdomFromSlug("")).toBeNull();
-    expect(catalogKingdomFromSlug(null)).toBeNull();
+describe("the catalogue's one address", () => {
+  it("is /catalog, and the two doors it replaced are recognised", () => {
+    expect(isPublicCatalogBrowsePath("/catalog")).toBe(true);
+    expect(isPublicCatalogBrowsePath("/bg/catalog")).toBe(true);
+    expect(isPublicCatalogBrowsePath("/catalog/")).toBe(true);
+    // An organism's own page is not the listing.
+    expect(isPublicCatalogBrowsePath("/species/solanum-lycopersicum")).toBe(
+      false,
+    );
+
+    expect(matchLegacyCatalogBrowsePath("/objects")).toBe("/objects");
+    expect(matchLegacyCatalogBrowsePath("/ru/species")).toBe("/species");
+    // Only the index moved. Every organism keeps its own address.
+    expect(matchLegacyCatalogBrowsePath("/species/apis-mellifera")).toBeNull();
+    expect(matchLegacyCatalogBrowsePath("/variety/red-cherry")).toBeNull();
   });
 
-  it("accepts the latin initials and the digit bucket", () => {
-    expect(CATALOG_BROWSE_INITIALS).toHaveLength(27);
-    expect(catalogBrowseInitial("S")).toBe("s");
-    expect(catalogBrowseInitial("#")).toBe("#");
-    // A Cyrillic initial cannot occur: a catalog name is a scientific name or
-    // a romanized denomination, and both namespaces are latin.
-    expect(catalogBrowseInitial("б")).toBeNull();
-    expect(catalogBrowseInitial("ss")).toBeNull();
-  });
-
-  it("files every name under an initial", () => {
-    expect(initialOfCatalogName("Solanum lycopersicum")).toBe("s");
-    expect(initialOfCatalogName("apis mellifera")).toBe("a");
-    expect(initialOfCatalogName("3 Ages")).toBe("#");
-    expect(initialOfCatalogName("")).toBe("#");
-  });
-
-  it("folds an initial without a kingdom back to the root", () => {
-    expect(normalizePublicCatalogBrowseRequest({ letter: "s" })).toEqual({
-      kingdom: null,
-      initial: null,
-      page: 1,
-    });
+  it("writes only what is set, so one view has one address", () => {
+    expect(buildPublicCatalogBrowseHref("uk")).toBe("/catalog");
+    expect(buildPublicCatalogBrowseHref("bg")).toBe("/bg/catalog");
+    // Absent means unset: no `kingdom=all`, no `page=1`, no default sort.
     expect(
-      normalizePublicCatalogBrowseRequest({ kingdom: "plantae", letter: "s" }),
-    ).toEqual({ kingdom: "Plantae", initial: "s", page: 1 });
-  });
-
-  it("reads a page number and refuses anything that is not one", () => {
-    const of = (page: string) =>
-      normalizePublicCatalogBrowseRequest({ kingdom: "fungi", page }).page;
-    expect(of("3")).toBe(3);
-    expect(of("0")).toBe(1);
-    expect(of("abc")).toBe(1);
-    expect(of("-2")).toBe(1);
-  });
-
-  it("builds one href per view, with the locale prefix the address law wants", () => {
-    expect(buildPublicCatalogBrowseHref("uk")).toBe("/species");
-    expect(buildPublicCatalogBrowseHref("bg")).toBe("/bg/species");
-    expect(
-      buildPublicCatalogBrowseHref("uk", { kingdom: "Plantae", initial: "s" }),
-    ).toBe("/species?kingdom=plantae&letter=s");
-    expect(
-      buildPublicCatalogBrowseHref("ru", {
-        kingdom: "Fungi",
-        initial: "a",
-        page: 4,
+      buildPublicCatalogBrowseHref("uk", {
+        kingdoms: [],
+        page: 1,
+        sort: "name",
       }),
-    ).toBe("/ru/species?kingdom=fungi&letter=a&page=4");
-    // Page one is the bare view: two addresses for one page is what the
-    // address law exists to prevent.
+    ).toBe("/catalog");
     expect(
-      buildPublicCatalogBrowseHref("uk", { kingdom: "Fungi", page: 1 }),
-    ).toBe("/species?kingdom=fungi");
-    // An initial without a kingdom is not a view, so it is not an href either.
-    expect(buildPublicCatalogBrowseHref("uk", { initial: "s" })).toBe(
-      "/species",
+      buildPublicCatalogBrowseHref("uk", {
+        kingdoms: ["Plantae", "Fungi"],
+        ranks: ["species"],
+        registers: ["ua"],
+        grown: true,
+        initial: "s",
+        query: "solanum",
+        sort: "written",
+        page: 3,
+      }),
+    ).toBe(
+      "/catalog?q=solanum&kingdom=plantae&kingdom=fungi&rank=species&register=ua&grown=1&letter=s&sort=written&page=3",
     );
   });
 
-  it("recognises the browse root and never an organism page", () => {
-    expect(isPublicCatalogBrowsePath("/species")).toBe(true);
-    expect(isPublicCatalogBrowsePath("/bg/species")).toBe(true);
-    expect(isPublicCatalogBrowsePath("/species/")).toBe(true);
-    expect(isPublicCatalogBrowsePath("/species/solanum-lycopersicum")).toBe(
-      false,
+  it("reads a request the way the URL carried it, and refuses the rest", () => {
+    const request = normalizePublicCatalogBrowseRequest({
+      kingdom: ["plantae", "fungi", "narnia"],
+      rank: ["species", "phylum"],
+      register: ["ua", "xx"],
+      grown: "1",
+      letter: "S",
+      q: "  Solanum  ",
+      sort: "written",
+      page: "4",
+    });
+
+    expect(request.kingdoms).toEqual(["Plantae", "Fungi"]);
+    expect(request.ranks).toEqual(["species"]);
+    expect(request.registers).toEqual(["ua"]);
+    expect(request.grown).toBe(true);
+    expect(request.initial).toBe("s");
+    expect(request.query).toBe("Solanum");
+    expect(request.sort).toBe("written");
+    expect(request.page).toBe(4);
+
+    // A kingdom nobody defined would otherwise mint a crawlable page out of a
+    // typo in an import.
+    expect(catalogKingdomFromSlug("narnia")).toBeNull();
+    expect(catalogBrowseInitial("ї")).toBeNull();
+    expect(initialOfCatalogName("4-o'clock flower")).toBe("#");
+  });
+
+  it("falls back rather than failing on a request nobody built", () => {
+    const request = normalizePublicCatalogBrowseRequest({
+      sort: "whatever",
+      page: "0",
+      grown: "yes",
+    });
+    expect(request.sort).toBe("name");
+    expect(request.page).toBe(1);
+    expect(request.grown).toBe(false);
+    expect(isUnfilteredCatalogBrowseRequest(request)).toBe(true);
+  });
+
+  it("knows the unfiltered catalogue, which is the only canonical", () => {
+    expect(
+      isUnfilteredCatalogBrowseRequest(normalizePublicCatalogBrowseRequest()),
+    ).toBe(true);
+    expect(
+      isUnfilteredCatalogBrowseRequest(
+        normalizePublicCatalogBrowseRequest({ letter: "a" }),
+      ),
+    ).toBe(false);
+  });
+
+  it("removes one filter and returns to the first page of what is left", () => {
+    const request = normalizePublicCatalogBrowseRequest({
+      kingdom: ["plantae", "fungi"],
+      grown: "1",
+      page: "5",
+    });
+
+    // Page 5 of a narrower listing is a different set of results, and often
+    // an empty one — so a chip's href is page 1.
+    expect(
+      buildCatalogBrowseRemovalHref("uk", request, "kingdom", "Fungi"),
+    ).toBe("/catalog?kingdom=plantae&grown=1");
+    expect(buildCatalogBrowseRemovalHref("uk", request, "grown")).toBe(
+      "/catalog?kingdom=plantae&kingdom=fungi",
     );
   });
 });

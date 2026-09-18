@@ -1,5 +1,5 @@
 import { PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE } from "@/server/public-journal-directory-query";
-import { PUBLIC_OBJECT_CATALOG_PAGE_SIZE } from "@/server/public-object-catalog-repository";
+import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import { stripLocalePrefix } from "@/lib/public-localization";
 
 /**
@@ -11,28 +11,39 @@ import { stripLocalePrefix } from "@/lib/public-localization";
  */
 const PAGINATED_LISTINGS: Readonly<Record<string, number>> = {
   "/journals": PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
-  "/objects": PUBLIC_OBJECT_CATALOG_PAGE_SIZE,
 };
 
 /**
  * Listings whose filters are views of one address rather than addresses of
  * their own.
  *
- * The catalog's front door is the only one so far (ADR-0029 D13 item 2): a
- * kingdom and an initial narrow `/species`, every one of those views carries
- * `/species` as its canonical (D10), and a letter nobody has filed anything
- * under is an empty listing that must not be indexed. None of that can be said
- * in the page's own `<head>` — the same reason page two cannot, below — so it
- * is said here.
+ * The catalogue is the only one (ADR-0029 D13 item 2): a kingdom, a rank, a
+ * register, a letter and a search all narrow `/catalog`, every one of those
+ * views carries `/catalog` as its canonical (D10), and a filter nobody has
+ * filed anything under is an empty listing that must not be indexed. None of
+ * that can be said in the page's own `<head>` — the same reason page two
+ * cannot, below — so it is said here.
+ *
+ * The list is every facet the catalogue speaks, and it has to stay that way:
+ * a facet missing from it would give one view two indexable addresses.
  *
  * `page` is in this list rather than in `PAGINATED_LISTINGS` on purpose. That
  * table also drives `isListingPageBeyondTheEnd`, which bounds every listing by
  * the *journal entry* count — eleven of them, one page of sixty — and putting
- * `/species` there would 404 a browse page that legitimately has hundreds. The
- * browse route knows its own count and answers that bound itself.
+ * the catalogue there would 404 a browse page that legitimately has hundreds.
+ * The route knows its own count and answers that bound itself.
  */
 const FILTERED_LISTINGS: Readonly<Record<string, readonly string[]>> = {
-  "/species": ["kingdom", "letter", "page"],
+  [CATALOG_BROWSE_PATH]: [
+    "q",
+    "kingdom",
+    "rank",
+    "register",
+    "grown",
+    "letter",
+    "sort",
+    "page",
+  ],
 };
 
 export function paginatedListingPageSize(pathname: string): number | null {

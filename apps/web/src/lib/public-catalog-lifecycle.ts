@@ -1,3 +1,4 @@
+import { CATALOG_BROWSE_PATH } from "./public-catalog-browse";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   renderPublicLifecycleDocument,
@@ -34,7 +35,7 @@ export function renderNotFoundPublicCatalogHtml(
     search: location?.search,
     title: copy.notFound,
     description: copy.notFoundDescription,
-    actionHref: localizedPath(locale, "/objects"),
+    actionHref: localizedPath(locale, CATALOG_BROWSE_PATH),
     actionLabel: copy.browseObjects,
   });
 }

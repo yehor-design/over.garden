@@ -704,6 +704,30 @@ the counts, and **one** action — the rest belong in a menu.
   new parameter that is not registered there never reaches the page: the
   address changes and the view does not.
 
+### 5.8 One listing per thing
+
+A product with two listings over one graph has two of everything: two result
+cards, two facet vocabularies, two canonicals, two indexing decisions — and a
+reader who never learns they are the same thing. The catalogue had exactly
+that, and closing it (`OVE-451`) fixed four rules worth keeping:
+
+- **One address, and the name is the one the product already uses.** The menu
+  says *Каталог*, the schema says `catalog_items`, the owner's tools live at
+  `/garden/catalog`; the public listing is `/catalog`. An address that
+  under-describes what it holds — `/species` listing breeds — is a name a
+  reader has to translate.
+- **A merged entrance is a `308`, never a deletion.** Every address the
+  product has published keeps answering, and it lands on the *view* it meant:
+  `/objects` listed the organisms gardeners here keep, so it lands on that
+  filter of the catalogue rather than on the whole of it (ADR-0029 D8).
+- **A named view is a facet, not a second page.** `?grown=1` is a view of one
+  listing with one canonical. Two pages over one query is how the duplicate
+  started.
+- **The redirect is decided before the 404s.** An address whose directory has
+  gone is exactly the shape the unknown-segment and section-root blocks answer
+  404 for, so a merge that adds its redirect below them turns a published
+  address into a 404 — which is what the first draft of this did.
+
 ---
 
 ## 6. Language and locale

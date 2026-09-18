@@ -1156,7 +1156,7 @@ describe("app route cache guardrail", () => {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
     const catalogResponse = await responseFor(
-      "/objects?kind=plant&token=opaque",
+      "/catalog?kingdom=plantae&token=opaque",
       {
         cookie: interfaceCookies("bulgaria", "ru"),
       },
@@ -1170,7 +1170,7 @@ describe("app route cache guardrail", () => {
       ["privacy", privacyResponse, "bg", "/bg/privacy"],
       ["blog", blogResponse, "ru", "/ru/blog/field-note"],
       ["journal", ugcResponse, "bg", "/bg/@yehor/field-note"],
-      ["objects", catalogResponse, "ru", "/ru/objects"],
+      ["catalog", catalogResponse, "ru", "/ru/catalog"],
       ["topic", topicResponse, "bg", "/bg/topics/care-checks"],
     ] as const) {
       expect(response.status, name).toBe(200);
@@ -1447,7 +1447,7 @@ describe("organism addresses (ADR-0026 D8)", () => {
     expect(missing.headers.get("Content-Language")).toBe("bg");
     const missingHtml = await missing.text();
     expect(missingHtml).toContain(getPublicSurfaceCopy("bg").organism.notFound);
-    expect(missingHtml).toContain('href="/bg/objects"');
+    expect(missingHtml).toContain('href="/bg/catalog"');
 
     const canonical = await responseFor("/species/solanum-lycopersicum", document);
     expect(canonical.status).toBe(200);

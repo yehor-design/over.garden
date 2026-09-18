@@ -1,3 +1,4 @@
+import { CATALOG_BROWSE_PATH } from "./public-catalog-browse";
 import { matchAddressPath } from "@/lib/address/match-address-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -48,7 +49,7 @@ function renderLifecycleDocument(
   location?: PublicLifecycleRequestLocation,
 ) {
   const copy = getLivingObjectPassportCopy(locale);
-  const objectsPath = localizedPath(locale, "/objects");
+  const objectsPath = localizedPath(locale, CATALOG_BROWSE_PATH);
 
   return renderPublicLifecycleDocument({
     locale,

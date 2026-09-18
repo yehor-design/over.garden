@@ -1,6 +1,15 @@
-import Link from "next/link";
 import { ArrowLeft, FileText } from "lucide-react";
 
+import { Link } from "@/components/ui/link";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { PublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
@@ -38,7 +47,7 @@ export function PublicCatalogRegisterHub({
       data-public-catalog-register="true"
       data-register-species={hub.speciesSlug}
       data-register-total={hub.total}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-4 sm:px-6 sm:py-5"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       {serializedJsonLd ? (
         <script
@@ -47,61 +56,57 @@ export function PublicCatalogRegisterHub({
         />
       ) : null}
 
-      <header className="flex flex-col gap-3 border-b border-border pb-5">
-        <Link
-          href={localizedPath(locale, hub.speciesPath)}
-          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
-        >
-          <ArrowLeft className="size-4" />
-          {copy.backToSpecies}
-        </Link>
-        <h1 className="text-3xl leading-tight font-semibold text-foreground sm:text-4xl">
-          {copy.heading(hub.speciesName, hub.total)}
-        </h1>
-        <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-          {hub.registeredUa > 0 ? (
-            <li>{copy.registeredUa(hub.registeredUa)}</li>
-          ) : null}
-          {hub.registeredEu > 0 ? (
-            <li>{copy.registeredEu(hub.registeredEu)}</li>
-          ) : null}
-        </ul>
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {copy.sourceNote}
-        </p>
-      </header>
+      <PageHeader
+        breadcrumb={
+          <Link
+            href={localizedPath(locale, hub.speciesPath)}
+            variant="muted"
+            className="inline-flex w-fit min-h-11 items-center gap-1.5 text-body-sm font-medium"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            {copy.backToSpecies}
+          </Link>
+        }
+        title={copy.heading(hub.speciesName, hub.total)}
+        description={copy.sourceNote}
+      />
 
-      <section className="min-w-0 overflow-x-auto">
-        <table className="w-full min-w-xl border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-border text-left text-xs text-muted-foreground uppercase">
-              <th scope="col" className="py-2 pr-4 font-medium">
-                {copy.columnName}
-              </th>
-              <th scope="col" className="py-2 font-medium">
-                {copy.columnRegister}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {hub.forms.map((form) => (
-              <tr key={form.id} className="border-b border-border/60">
-                <th scope="row" className="py-2 pr-4 text-left font-normal">
-                  <Link
-                    href={localizedPath(locale, form.path)}
-                    className="text-foreground underline-offset-4 hover:underline"
-                  >
-                    {form.name}
-                  </Link>
-                </th>
-                <td className="py-2 text-muted-foreground">
-                  <RegisterCell copy={copy} form={form} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <ul className="flex list-none flex-wrap gap-x-4 gap-y-1 text-body-sm text-text-muted">
+        {hub.registeredUa > 0 ? (
+          <li>{copy.registeredUa(hub.registeredUa)}</li>
+        ) : null}
+        {hub.registeredEu > 0 ? (
+          <li>{copy.registeredEu(hub.registeredEu)}</li>
+        ) : null}
+      </ul>
+
+      {/* A register is data with two axes — a cultivar and where it is
+          registered — so it is a real table, with a caption and a `scope` on
+          every header (DESIGN.md §8). The caption is what a screen reader
+          reads before the cells, so it names the species rather than the
+          column count. */}
+      <Table caption={copy.heading(hub.speciesName, hub.total)} captionHidden>
+        <TableHead>
+          <TableRow>
+            <TableHeader scope="col">{copy.columnName}</TableHeader>
+            <TableHeader scope="col">{copy.columnRegister}</TableHeader>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {hub.forms.map((form) => (
+            <TableRow key={form.id}>
+              <TableHeader scope="row" className="font-normal">
+                <Link href={localizedPath(locale, form.path)} variant="quiet">
+                  {form.name}
+                </Link>
+              </TableHeader>
+              <TableCell className="text-text-muted">
+                <RegisterCell copy={copy} form={form} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </main>
   );
 }

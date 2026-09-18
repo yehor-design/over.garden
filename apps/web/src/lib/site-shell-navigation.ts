@@ -8,6 +8,7 @@ import {
   SIGN_IN_PATH,
   SIGN_UP_PATH,
 } from "./navigation/sign-in-href";
+import { CATALOG_BROWSE_PATH } from "./public-catalog-browse";
 import { localizedPath, stripLocalePrefix } from "./public-localization";
 
 export type SiteShellNavigationKey =
@@ -125,7 +126,17 @@ export function isSiteShellComposerRoute(pathname: string) {
  * ADR-0029 says a redesign never moves a permalink. Merging the *pages* behind
  * them is `OVE-451`.
  */
+/**
+ * Every address the one catalogue entry lights up for (`OVE-451`).
+ *
+ * The menu has one catalogue item and it points at `/catalog`. The rest are
+ * addresses under the same graph — an organism's own page in each of its three
+ * route families, a living object's passport, `/objects` and the index at
+ * `/species` while their 308s are still being followed — and a reader who is
+ * on any of them is in the catalogue, so the item is marked current.
+ */
 const CATALOGUE_MATCH_PATHS = [
+  "/catalog",
   "/objects",
   "/species",
   "/variety",
@@ -154,7 +165,7 @@ export function getSiteShellNavigation(
     item(
       "catalogue",
       copy.navigation.catalogue,
-      localizedPath(locale, "/objects"),
+      localizedPath(locale, CATALOG_BROWSE_PATH),
       "public",
       { match: "prefix", paths: CATALOGUE_MATCH_PATHS },
     ),
@@ -308,7 +319,7 @@ export function getSiteShellNavigation(
       {
         key: "catalogue",
         label: copy.navigation.catalogue,
-        href: localizedPath(locale, "/objects"),
+        href: localizedPath(locale, CATALOG_BROWSE_PATH),
       },
       {
         key: "privacy",
@@ -421,7 +432,7 @@ export function getSiteShellRouteContext(
       ...base,
       key: "journal",
       title: copy.navigation.journals,
-      primaryHref: publicHref("/objects"),
+      primaryHref: publicHref(CATALOG_BROWSE_PATH),
       primaryLabel: copy.navigation.catalogue,
     };
   }
@@ -448,7 +459,7 @@ export function getSiteShellRouteContext(
       ...base,
       key: "profile",
       title: copy.navigation.profile,
-      primaryHref: publicHref("/objects"),
+      primaryHref: publicHref(CATALOG_BROWSE_PATH),
       primaryLabel: copy.navigation.catalogue,
     };
   }

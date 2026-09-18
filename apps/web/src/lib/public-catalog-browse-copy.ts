@@ -1,5 +1,10 @@
 import type { PublicLocale } from "@/lib/public-localization";
-import type { CatalogBrowseKingdom } from "@/lib/public-catalog-browse";
+import type {
+  CatalogBrowseKingdom,
+  CatalogBrowseRank,
+  CatalogBrowseRegister,
+  CatalogBrowseSort,
+} from "@/lib/public-catalog-browse";
 
 export interface PublicCatalogBrowseCopy {
   readonly title: string;
@@ -17,6 +22,43 @@ export interface PublicCatalogBrowseCopy {
   readonly nextPage: string;
   readonly emptyInitial: string;
   readonly kingdom: Readonly<Record<CatalogBrowseKingdom, string>>;
+  /** The one door's own chrome (`OVE-451`). */
+  readonly eyebrow: string;
+  readonly searchLabel: string;
+  readonly searchPlaceholder: string;
+  readonly searchSubmit: string;
+  readonly resultsTitle: string;
+  readonly resultCount: (total: number) => string;
+  readonly filtersLabel: string;
+  readonly filtersWithCount: (count: number) => string;
+  readonly filterSheetDescription: string;
+  readonly applyFilters: string;
+  readonly resetFilters: string;
+  readonly activeFiltersLabel: string;
+  readonly removeFilter: string;
+  readonly sortLabel: string;
+  readonly sorts: Readonly<Record<CatalogBrowseSort, string>>;
+  readonly kingdomFacet: string;
+  readonly anyKingdom: string;
+  readonly rankFacet: string;
+  readonly anyRank: string;
+  readonly rank: Readonly<Record<CatalogBrowseRank, string>>;
+  readonly registerFacet: string;
+  readonly anyRegister: string;
+  readonly register: Readonly<Record<CatalogBrowseRegister, string>>;
+  readonly grownFacet: string;
+  readonly grownAny: string;
+  readonly grownOnly: string;
+  readonly writtenAbout: string;
+  readonly lettersHeading: string;
+  readonly allLetters: string;
+  readonly emptyTitle: string;
+  readonly emptyBody: string;
+  readonly errorTitle: string;
+  readonly errorBody: string;
+  readonly errorReference: string;
+  readonly retry: string;
+  readonly loadingLabel: string;
 }
 
 const UK: PublicCatalogBrowseCopy = {
@@ -36,6 +78,48 @@ const UK: PublicCatalogBrowseCopy = {
   previousPage: "Попередня сторінка",
   nextPage: "Наступна сторінка",
   emptyInitial: "На цю літеру тут поки нічого немає.",
+  eyebrow: "Каталог",
+  searchLabel: "Пошук у каталозі",
+  searchPlaceholder: "Наприклад, Solanum lycopersicum або томат",
+  searchSubmit: "Шукати",
+  resultsTitle: "Організми",
+  resultCount: (total) => `${total.toLocaleString("uk-UA")} організмів`,
+  filtersLabel: "Фільтри каталогу",
+  filtersWithCount: (count) => (count > 0 ? `Фільтри (${count})` : "Фільтри"),
+  filterSheetDescription: "Звузьте каталог і натисніть «Застосувати».",
+  applyFilters: "Застосувати",
+  resetFilters: "Скинути",
+  activeFiltersLabel: "Активні фільтри",
+  removeFilter: "Прибрати фільтр",
+  sortLabel: "Порядок",
+  sorts: { name: "За назвою", written: "Спочатку з записами" },
+  kingdomFacet: "Царство",
+  anyKingdom: "Усі царства",
+  rankFacet: "Ранг",
+  anyRank: "Усі ранги",
+  rank: {
+    species: "Вид",
+    cultivar: "Сорт",
+    subspecies: "Підвид",
+    variety: "Різновид",
+    breed: "Порода",
+  },
+  registerFacet: "Реєстр",
+  anyRegister: "Будь-який",
+  register: { ua: "Реєстр України", eu: "Реєстр ЄС" },
+  grownFacet: "Записи садівників",
+  grownAny: "Усі організми",
+  grownOnly: "Лише ті, про які писали",
+  writtenAbout: "Є записи садівників",
+  lettersHeading: "За літерою",
+  allLetters: "Усі літери",
+  emptyTitle: "За цим запитом у каталозі нічого немає.",
+  emptyBody: "Приберіть частину фільтрів або спробуйте іншу назву.",
+  errorTitle: "Каталог зараз недоступний",
+  errorBody: "Спробуйте оновити сторінку за хвилину.",
+  errorReference: "Код звернення:",
+  retry: "Спробувати ще раз",
+  loadingLabel: "Завантажуємо каталог",
   kingdom: {
     Plantae: "Рослини",
     Animalia: "Тварини",
@@ -65,6 +149,48 @@ const BG: PublicCatalogBrowseCopy = {
   previousPage: "Предишна страница",
   nextPage: "Следваща страница",
   emptyInitial: "За тази буква още няма нищо тук.",
+  eyebrow: "Каталог",
+  searchLabel: "Търсене в каталога",
+  searchPlaceholder: "Например Solanum lycopersicum или домат",
+  searchSubmit: "Търсене",
+  resultsTitle: "Организми",
+  resultCount: (total) => `${total.toLocaleString("bg-BG")} организма`,
+  filtersLabel: "Филтри на каталога",
+  filtersWithCount: (count) => (count > 0 ? `Филтри (${count})` : "Филтри"),
+  filterSheetDescription: "Стеснете каталога и натиснете «Приложи».",
+  applyFilters: "Приложи",
+  resetFilters: "Изчисти",
+  activeFiltersLabel: "Активни филтри",
+  removeFilter: "Премахни филтъра",
+  sortLabel: "Подредба",
+  sorts: { name: "По име", written: "Първо със записи" },
+  kingdomFacet: "Царство",
+  anyKingdom: "Всички царства",
+  rankFacet: "Ранг",
+  anyRank: "Всички рангове",
+  rank: {
+    species: "Вид",
+    cultivar: "Сорт",
+    subspecies: "Подвид",
+    variety: "Разновидност",
+    breed: "Порода",
+  },
+  registerFacet: "Регистър",
+  anyRegister: "Всеки",
+  register: { ua: "Регистър на Украйна", eu: "Регистър на ЕС" },
+  grownFacet: "Записи на градинари",
+  grownAny: "Всички организми",
+  grownOnly: "Само тези със записи",
+  writtenAbout: "Има записи на градинари",
+  lettersHeading: "По буква",
+  allLetters: "Всички букви",
+  emptyTitle: "По това търсене каталогът няма нищо.",
+  emptyBody: "Премахнете част от филтрите или опитайте друго име.",
+  errorTitle: "Каталогът не е достъпен в момента",
+  errorBody: "Опитайте да презаредите страницата след минута.",
+  errorReference: "Код на обръщението:",
+  retry: "Опитайте отново",
+  loadingLabel: "Зареждаме каталога",
   kingdom: {
     Plantae: "Растения",
     Animalia: "Животни",
@@ -94,6 +220,48 @@ const RU: PublicCatalogBrowseCopy = {
   previousPage: "Предыдущая страница",
   nextPage: "Следующая страница",
   emptyInitial: "На эту букву здесь пока ничего нет.",
+  eyebrow: "Каталог",
+  searchLabel: "Поиск по каталогу",
+  searchPlaceholder: "Например Solanum lycopersicum или томат",
+  searchSubmit: "Искать",
+  resultsTitle: "Организмы",
+  resultCount: (total) => `${total.toLocaleString("ru-RU")} организмов`,
+  filtersLabel: "Фильтры каталога",
+  filtersWithCount: (count) => (count > 0 ? `Фильтры (${count})` : "Фильтры"),
+  filterSheetDescription: "Сузьте каталог и нажмите «Применить».",
+  applyFilters: "Применить",
+  resetFilters: "Сбросить",
+  activeFiltersLabel: "Активные фильтры",
+  removeFilter: "Убрать фильтр",
+  sortLabel: "Порядок",
+  sorts: { name: "По названию", written: "Сначала с записями" },
+  kingdomFacet: "Царство",
+  anyKingdom: "Все царства",
+  rankFacet: "Ранг",
+  anyRank: "Все ранги",
+  rank: {
+    species: "Вид",
+    cultivar: "Сорт",
+    subspecies: "Подвид",
+    variety: "Разновидность",
+    breed: "Порода",
+  },
+  registerFacet: "Реестр",
+  anyRegister: "Любой",
+  register: { ua: "Реестр Украины", eu: "Реестр ЕС" },
+  grownFacet: "Записи садоводов",
+  grownAny: "Все организмы",
+  grownOnly: "Только те, о которых писали",
+  writtenAbout: "Есть записи садоводов",
+  lettersHeading: "По букве",
+  allLetters: "Все буквы",
+  emptyTitle: "По этому запросу в каталоге ничего нет.",
+  emptyBody: "Уберите часть фильтров или попробуйте другое название.",
+  errorTitle: "Каталог сейчас недоступен",
+  errorBody: "Попробуйте обновить страницу через минуту.",
+  errorReference: "Код обращения:",
+  retry: "Попробовать ещё раз",
+  loadingLabel: "Загружаем каталог",
   kingdom: {
     Plantae: "Растения",
     Animalia: "Животные",

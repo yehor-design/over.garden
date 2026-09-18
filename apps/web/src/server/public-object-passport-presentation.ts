@@ -1,3 +1,4 @@
+import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   buildLivingObjectTimeline,
@@ -56,7 +57,7 @@ export function buildPublicObjectPassportPresentation(
   );
   const breadcrumbs = [
     {
-      href: localizedPath(locale, "/objects"),
+      href: localizedPath(locale, CATALOG_BROWSE_PATH),
       label: copy.livingObjects,
     },
     page.object.catalogPath
