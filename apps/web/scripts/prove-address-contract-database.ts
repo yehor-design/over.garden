@@ -39,7 +39,7 @@ import {
  */
 const STAND_IN_TABLES = `
   create table catalog_items (public_slug text);
-  create table journal_entries (public_slug text);
+  create table journal_entries (public_slug text, author_entry_number integer);
   create table plant_objects (public_slug text);
   create table journal_topics (slug text not null);
   create table communities (slug text not null);
@@ -96,6 +96,27 @@ const NATIVE_CASES: readonly SlugCase[] = [
   { value: "", expect: "refused", why: "the empty string is not an address" },
 ];
 
+interface NumberCase {
+  readonly value: number;
+  readonly expect: "accepted" | "refused";
+  readonly why: string;
+}
+
+/**
+ * An entry's number (ADR-0029 D9, amendment of 2026-09-18). The column is an
+ * `integer`, so its `CHECK` is a range rather than a pattern, and what has to
+ * be shown is that the range and the route pattern admit the same numbers: a
+ * column that held ten digits would hold entries no address could reach.
+ */
+const ORDINAL_CASES: readonly NumberCase[] = [
+  { value: 1, expect: "accepted", why: "an author's first entry" },
+  { value: 12, expect: "accepted", why: "an ordinary number" },
+  { value: 999_999_999, expect: "accepted", why: "nine digits, the route's own bound" },
+  { value: 0, expect: "refused", why: "the count starts at one" },
+  { value: -1, expect: "refused", why: "a negative is not a place in a count" },
+  { value: 1_000_000_000, expect: "refused", why: "ten digits: the route pattern stops at nine" },
+];
+
 /** The Latin namespaces refuse everything the native ones accept in Cyrillic. */
 const LATIN_ONLY_REFUSALS: readonly SlugCase[] = [
   {
@@ -109,7 +130,7 @@ async function insert(
   pool: Pool,
   table: string,
   column: string,
-  value: string,
+  value: string | number,
 ) {
   await pool.query(`insert into ${table} (${column}) values ($1)`, [value]);
   await pool.query(`delete from ${table} where ${column} = $1`, [value]);
@@ -145,7 +166,63 @@ export async function runAddressContractDatabaseProof() {
     const failures: string[] = [];
     let caseCount = 0;
 
+    // 23514 is check_violation. Anything else is a broken proof, not a refused
+    // row, and must never read as a pass.
+    const observe = (work: Promise<unknown>) =>
+      work
+        .then(() => "accepted" as const)
+        .catch((error: unknown) =>
+          error instanceof Error && "code" in error && error.code === "23514"
+            ? ("refused" as const)
+            : (`error:${(error as { code?: string }).code ?? "unknown"}` as const),
+        );
+
     for (const definition of document.constraints) {
+      if (definition.columnType !== "integer") continue;
+      const namespace = definition.namespaces[0]!;
+      for (const numberCase of ORDINAL_CASES) {
+        caseCount += 1;
+        const observed = await observe(
+          insert(pool, definition.table, definition.column, numberCase.value),
+        );
+        if (observed !== numberCase.expect) {
+          failures.push(
+            `${definition.constraint} ${numberCase.value}: expected ${numberCase.expect}, got ${observed} (${numberCase.why})`,
+          );
+        }
+        // The route matcher reads the number as text, the column holds it as a
+        // number, and the two have to agree about which numbers exist.
+        const guard = isAddressSlug(
+          namespace as Parameters<typeof isAddressSlug>[0],
+          String(numberCase.value),
+        )
+          ? "accepted"
+          : "refused";
+        if (guard !== numberCase.expect) {
+          failures.push(
+            `isAddressSlug(${namespace}, "${numberCase.value}"): expected ${numberCase.expect}, got ${guard}`,
+          );
+        }
+      }
+      // A row that was never an address carries no number at all.
+      caseCount += 1;
+      const withoutNumber = await observe(
+        pool.query(
+          `insert into ${definition.table} (${definition.column}) values (null)`,
+        ),
+      );
+      if (withoutNumber !== "accepted") {
+        failures.push(
+          `${definition.constraint}: expected a null number to be accepted, got ${withoutNumber}`,
+        );
+      }
+      await pool.query(
+        `delete from ${definition.table} where ${definition.column} is null`,
+      );
+    }
+
+    for (const definition of document.constraints) {
+      if (definition.columnType === "integer") continue;
       const namespace = definition.namespaces[0]!;
       const script = document.namespaces.find(
         (entry) => entry.namespace === namespace,
@@ -201,6 +278,8 @@ export async function runAddressContractDatabaseProof() {
     // The length bound is the other half of the CHECK, and the only one that
     // needs a row longer than any title anybody would type.
     for (const definition of document.constraints) {
+      // An `integer` has no length; its upper bound is among the cases above.
+      if (definition.columnType === "integer") continue;
       caseCount += 1;
       const tooLong = "a".repeat(definition.maxCharacters + 1);
       const observed = await insert(
