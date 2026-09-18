@@ -324,7 +324,48 @@ React's `$RC` script — LCP lands at TTI, and it is the same boundary that make
 a scripts-off reader see nothing. The owner's call on 2026-09-17: record the
 measurement in each page-family PR and keep shipping; `OVE-461` owns the fix.
 
-The remaining page families (`OVE-448`–`OVE-459`) are still in Backlog.
+**The journals directory stopped being a form** (`OVE-448`, 2026-09-18). Six
+`<select>`s stacked above the results behind an "Застосувати" button — on a
+phone, six full-width controls and a submit before a reader saw one result —
+became the faceted pattern Etsy, Walmart, Tripadvisor and Selfridges all ship:
+filters apply on change, the active ones sit above the results as removable
+chips, the count is always visible in a polite live region, sort is its own
+right-aligned control, and below `lg` it all collapses into one button opening
+a sheet with Apply and Clear. `FilterBar` is the component; `OVE-451` reuses it
+and the URL vocabulary for the organism catalogue.
+
+**The URL vocabulary is written down and tested** in
+`src/lib/public-listing-filters.ts`: one query parameter per facet, named for
+the facet, repeated for multi-select, plus `sort` and `page`, and absent means
+unset. No packed parameter. The journals directory's own builder is expressed in
+it, and both defaults are dropped rather than written — `page=1` is the listing,
+and the default sort depends on whether there is a query at all, so spelling it
+out would give one view two addresses.
+
+Three things only the browser could show. **A chip built as a plain anchor
+announces nothing**: it replaces the document, and a live region that arrives
+with a fresh document has nothing to announce into. The chips are `Link`s now —
+a real href for the unhydrated case, a client navigation once hydrated — and
+the spec marks the region's node and asserts it survived. **Three facet
+selects at 704 px truncate their own options**: "Усі публічні регіони" and
+"Усі ідентичності" both clipped in a three-column grid, which is the Cyrillic
+budget of `DESIGN.md` §2.6 failing; two columns fixed it, measured. And **a
+streamed response carries several copies of every region** — `/journals` serves
+two filter forms and four `<main>` in its bytes, one of each surviving React's
+`$RC` swap — so a proof must ask how many a reader can _see_, not how many the
+document holds.
+
+Two more silent gates turned up. `pnpm smoke:public-journal-search-budget` had
+been failing at its first statement since migration `0046` dropped
+`journal_entries.public_noindex` on 2026-09-03, and nothing noticed because the
+script is in no CI list. Fixed and measured: p95 **11.2 ms** against a 750 ms
+budget, candidate cap 256 held, and the same proof on `origin/main` reads
+10.8 ms — the search reads are byte-identical to `main`, which is what
+criterion 9 actually needed. And `tests/journals-directory.spec.ts` went into
+`pnpm gates:browser` **and** the CI list on the day it was written; five older
+specs did not, and `OVE-462` owns them.
+
+The remaining page families (`OVE-449`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

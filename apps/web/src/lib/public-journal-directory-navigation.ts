@@ -1,4 +1,5 @@
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import { buildListingHref } from "@/lib/public-listing-filters";
 import {
   normalizePublicJournalDirectoryRequest,
   type PublicJournalDirectoryRequest,
@@ -10,24 +11,34 @@ const ALLOWED_DIRECTORY_PATHS = new Map<string, PublicLocale>([
   ["/ru/journals", "ru"],
 ]);
 
+/**
+ * One address for one view of the directory, in the vocabulary of
+ * `@/lib/public-listing-filters` — one parameter per facet, named for the
+ * facet, and absent when the facet is unset. `OVE-451` builds the organism
+ * catalogue's addresses the same way, which is why the rules live there and
+ * only the facet list lives here.
+ *
+ * The two defaults are dropped rather than written: `page=1` is the listing
+ * itself, and the default sort depends on whether there is a query at all —
+ * a search is ordered by relevance and a browse by recency — so writing it
+ * out would make two spellings of the same view.
+ */
 export function buildPublicJournalDirectoryHref(
   locale: PublicLocale,
   request: PublicJournalDirectoryRequest,
 ) {
-  const params = new URLSearchParams();
-  if (request.query) params.set("q", request.query);
-  if (request.kind !== "all") params.set("kind", request.kind);
-  if (request.catalog) params.set("catalog", request.catalog);
-  if (request.topic) params.set("topic", request.topic);
-  if (request.season !== "all") params.set("season", request.season);
-  if (request.region) params.set("region", request.region);
   const defaultSort = request.query ? "relevance" : "recent";
-  if (request.sort !== defaultSort) params.set("sort", request.sort);
-  if (request.page > 1) params.set("page", String(request.page));
 
-  const path = localizedPath(locale, "/journals");
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
+  return buildListingHref(localizedPath(locale, "/journals"), {
+    q: request.query,
+    kind: request.kind === "all" ? null : request.kind,
+    catalog: request.catalog,
+    topic: request.topic,
+    season: request.season === "all" ? null : request.season,
+    region: request.region,
+    sort: request.sort === defaultSort ? null : request.sort,
+    page: request.page > 1 ? request.page : null,
+  });
 }
 
 export function normalizePublicJournalDirectoryReturnTo(
