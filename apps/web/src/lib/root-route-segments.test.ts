@@ -142,11 +142,10 @@ describe("root route segments", () => {
       "/journals",
       "/communities",
       "/feed",
-      // `/species` is the catalog's front door since OVE-431. It used to be a
-      // section root with no page, and a 404 there is now a 404 on the only
-      // inbound link 114 669 organism pages have.
-      "/species",
-      "/bg/species",
+      // `/species` is a section root with no page again since `OVE-451`
+      // merged the catalogue's doors — but it is not a 404: the proxy answers
+      // it with a 308 to `/catalog`, decided *before* this check, because a
+      // 404 there would be a 404 on an address the product published.
       "/species/solanum",
       "/bg/species/solanum",
       "/api",

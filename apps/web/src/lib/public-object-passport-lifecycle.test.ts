@@ -50,7 +50,7 @@ describe("public object passport HTTP lifecycle", () => {
 
     expect(html).toContain("Паспорт видалено");
     expect(html).toContain('name="robots" content="noindex, nofollow"');
-    expect(html).toContain('href="/objects"');
+    expect(html).toContain('href="/catalog"');
     expect(html).not.toMatch(
       /objectId|owner|email|location|region|coordinates|journal body|media/i,
     );

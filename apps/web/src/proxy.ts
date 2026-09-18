@@ -32,6 +32,10 @@ import {
   publicCatalogRegisterHubPath,
   type CatalogSpeciesHubSegment,
 } from "@/lib/catalog/addresses";
+import {
+  CATALOG_BROWSE_PATH,
+  matchLegacyCatalogBrowsePath,
+} from "@/lib/public-catalog-browse";
 import { renderNotFoundPublicCatalogHtml } from "@/lib/public-catalog-lifecycle";
 import { isRetiredControlPlanePath } from "@/lib/retired-control-plane-routes";
 import {
@@ -638,6 +642,37 @@ export async function proxy(request: NextRequest) {
   if (canonicalHostResponse) return canonicalHostResponse;
   const localization = resolveRequestLocalization(request);
   const { locale } = localization;
+
+  // The catalogue's two old doors (`OVE-451`). `/objects` listed the living
+  // objects gardeners keep and `/species` listed the organisms behind them;
+  // there is one listing now and both addresses answer 308 to the view they
+  // meant — `/objects` to the catalogue narrowed to what gardeners here have
+  // written about, which is what it showed (ADR-0029 D8: an address a product
+  // has published never stops answering).
+  //
+  // **Before the two not-found blocks below.** `/objects` has no directory in
+  // `src/app` any more and `/species` has no index of its own, so both are now
+  // exactly the shapes those blocks 404 — the redirect has to be decided
+  // first or a published address answers 404 instead of moving.
+  const legacyCatalogDoor = matchLegacyCatalogBrowsePath(
+    request.nextUrl.pathname,
+  );
+  if (legacyCatalogDoor) {
+    const url = request.nextUrl.clone();
+    // The prefix travels with the reader: `/bg/species` lands on `/bg/catalog`
+    // and not on the Ukrainian one. An old bookmark should not change the
+    // language the page is written in.
+    const prefix = stripLocalePrefix(request.nextUrl.pathname).locale;
+    url.pathname = prefix
+      ? `/${prefix}${CATALOG_BROWSE_PATH}`
+      : CATALOG_BROWSE_PATH;
+    url.search = legacyCatalogDoor === "/objects" ? "?grown=1" : "";
+    return withAppRouteContract(
+      NextResponse.redirect(url, { status: 308 }),
+      request,
+      localization,
+    );
+  }
 
   // A first segment no route can serve must not reach `[locale]`: under Cache
   // Components the page would stream a 200 shell before `notFound()` runs.

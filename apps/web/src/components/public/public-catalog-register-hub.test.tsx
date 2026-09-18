@@ -99,4 +99,27 @@ describe("a species' register hub", () => {
     // silently truncated.
     expect(registerNumber("SOMETHING-ELSE")).toBe("SOMETHING-ELSE");
   });
+
+  it("is a real table, named and scoped, not a grid of divs", () => {
+    const html = renderToStaticMarkup(
+      <PublicCatalogRegisterHub
+        locale="uk"
+        copy={getPublicCatalogRegisterCopy("uk")}
+        hub={HUB}
+      />,
+    );
+
+    // DESIGN.md §8: a caption and a `scope` on every header are what let a
+    // screen reader read a cell as "row three, реєстр, 09040016" rather than
+    // as a number with no subject. The caption may be hidden, never absent.
+    expect(html).toContain("<caption");
+    expect(html).toContain('class="sr-only"');
+    expect(html).toContain('scope="col"');
+    expect(html).toContain('scope="row"');
+    expect(html).toContain('data-slot="table"');
+
+    // And nothing here reaches for the pre-redesign palette any more.
+    expect(html).not.toContain("text-muted-foreground");
+    expect(html).not.toContain("text-foreground");
+  });
 });

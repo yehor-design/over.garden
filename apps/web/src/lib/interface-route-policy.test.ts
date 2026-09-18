@@ -71,7 +71,7 @@ describe("which addresses render in the reader's language", () => {
       "/",
       "/journals",
       "/feed",
-      "/objects",
+      "/catalog",
       "/knowledge",
       "/communities",
       "/communities/tomato-growers",
@@ -337,14 +337,14 @@ describe("interface route policy", () => {
     expect(
       buildLocalizedInterfaceTarget({
         locale: "ru",
-        pathname: "/objects",
+        pathname: "/catalog",
         search: new URLSearchParams({
-          kind: "plant",
-          identity: "species",
+          kingdom: "plantae",
+          rank: "species",
           invite: "private-token",
         }),
       }),
-    ).toBe("/ru/objects?kind=plant&identity=species");
+    ).toBe("/ru/catalog?kingdom=plantae&rank=species");
     expect(
       sanitizeInterfaceRouteSearch(
         "/notifications",
@@ -370,8 +370,8 @@ describe("interface route policy", () => {
     ).toBe("");
     expect(
       sanitizeInterfaceRouteSearch(
-        "/objects",
-        "?kind=private-kind&identity=private-id&page=01&q=private-note",
+        "/catalog",
+        "?kingdom=private-kingdom&rank=private-rank&page=01",
       ),
     ).toBe("");
     expect(

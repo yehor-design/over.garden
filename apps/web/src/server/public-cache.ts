@@ -3,10 +3,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { PUBLIC_CACHE_TAGS, publicCacheTag } from "@/lib/public-cache-tags";
-import type {
-  CatalogBrowseInitial,
-  CatalogBrowseKingdom,
-} from "@/lib/public-catalog-browse";
+import type { PublicCatalogBrowseRequest } from "@/lib/public-catalog-browse";
 import type { PublicLocale } from "@/lib/public-localization";
 import {
   getPublicCommunityPage,
@@ -130,10 +127,17 @@ export async function readCatalogBrowseKingdoms() {
   return listCatalogBrowseKingdoms();
 }
 
+/**
+ * One page of the catalogue, under whatever the reader asked for.
+ *
+ * The whole request is the cache key, which is what a merged listing needs:
+ * the root, a kingdom, a letter, a register and a search are all this read,
+ * and each view caches on its own. `days`, because the catalogue changes when
+ * an import runs and not when a gardener refreshes.
+ */
 export async function readCatalogBrowsePage(
-  kingdom: CatalogBrowseKingdom,
-  initial: CatalogBrowseInitial | null,
-  page: number,
+  request: PublicCatalogBrowseRequest,
+  locale: PublicLocale,
 ) {
   "use cache";
   cacheLife("days");
@@ -141,17 +145,20 @@ export async function readCatalogBrowsePage(
   const { listCatalogBrowsePage } = await import(
     "@/server/public-catalog-browse-repository"
   );
-  return listCatalogBrowsePage({ kingdom, initial, page });
+  return listCatalogBrowsePage(request, locale);
 }
 
-export async function readCatalogBrowseFirstHandOrganisms() {
+/** The counts beside every facet option, for the same request. */
+export async function readCatalogBrowseFacets(
+  request: PublicCatalogBrowseRequest,
+) {
   "use cache";
-  cacheLife("hours");
+  cacheLife("days");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const { listCatalogBrowseFirstHandOrganisms } = await import(
+  const { countCatalogBrowseFacets } = await import(
     "@/server/public-catalog-browse-repository"
   );
-  return listCatalogBrowseFirstHandOrganisms();
+  return countCatalogBrowseFacets(request);
 }
 
 export async function readPublicFeedPage(

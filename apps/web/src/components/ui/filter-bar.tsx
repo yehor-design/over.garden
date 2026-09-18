@@ -64,6 +64,15 @@ export interface FilterBarOption {
   label: string;
   /** How many results this option would leave. Omitted when unknown. */
   count?: number;
+  /**
+   * That number in the reader's own language — `65 832`, not `65832`.
+   *
+   * The bar formats nothing (DESIGN.md §4.2.5): a component that formatted a
+   * number would need the reader's locale, and then every consumer would have
+   * to agree about where that comes from. It matters at catalogue scale, where
+   * a six-figure count with no grouping is unreadable.
+   */
+  countLabel?: string;
 }
 
 export interface FilterBarFacet {
@@ -346,6 +355,7 @@ function FacetControl({
               value={option.value}
               label={option.label}
               count={option.count}
+              countLabel={option.countLabel}
               defaultChecked={facet.value.includes(option.value)}
               onChange={onChange}
             />
@@ -367,8 +377,8 @@ function FacetControl({
         <option value="">{facet.anyLabel ?? facet.label}</option>
         {facet.options.map((option) => (
           <option key={option.value} value={option.value}>
-            {typeof option.count === "number"
-              ? `${option.label} (${option.count})`
+            {option.countLabel ?? typeof option.count === "number"
+              ? `${option.label} (${option.countLabel ?? option.count})`
               : option.label}
           </option>
         ))}

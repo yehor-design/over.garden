@@ -4,6 +4,14 @@ import {
   type PublicLocale,
 } from "./public-localization";
 import { AUTH_INTENT_ACTIONS } from "./auth/auth-intent-contract";
+import {
+  CATALOG_BROWSE_INITIALS,
+  CATALOG_BROWSE_KINGDOMS,
+  CATALOG_BROWSE_PATH,
+  CATALOG_BROWSE_RANKS,
+  CATALOG_BROWSE_REGISTERS,
+  CATALOG_BROWSE_SORTS,
+} from "./public-catalog-browse";
 import { PUBLIC_PROFILE_TAB_IDS } from "./public-profile-tabs";
 
 export const INTERFACE_LOCALE_PREFERENCE_ENDPOINT = "/api/interface/locale";
@@ -73,14 +81,6 @@ const PUBLIC_SEMANTIC_SLUG =
 const PUBLIC_PROFILE_HANDLE = /^[a-z0-9][a-z0-9_]{2,29}$/;
 const AUTH_INTENT_ACTION_SET = new Set<string>(AUTH_INTENT_ACTIONS);
 const PUBLIC_OBJECT_KINDS = new Set(["all", "plant", "animal"]);
-const PUBLIC_OBJECT_IDENTITIES = new Set([
-  "all",
-  "plant_variety",
-  "species",
-  "breed",
-  "unknown",
-  "unavailable",
-]);
 const PUBLIC_BOOKMARK_KINDS = new Set([
   "all",
   "journal_entry",
@@ -103,6 +103,13 @@ const PUBLIC_JOURNAL_SEASONS = new Set([
   "autumn",
 ]);
 const PUBLIC_JOURNAL_SORTS = new Set(["relevance", "recent", "oldest"]);
+const PUBLIC_CATALOG_SORTS = new Set<string>(CATALOG_BROWSE_SORTS);
+const PUBLIC_CATALOG_KINGDOMS = new Set<string>(
+  CATALOG_BROWSE_KINGDOMS.map((kingdom) => kingdom.toLowerCase()),
+);
+const PUBLIC_CATALOG_RANKS = new Set<string>(CATALOG_BROWSE_RANKS);
+const PUBLIC_CATALOG_REGISTERS = new Set<string>(CATALOG_BROWSE_REGISTERS);
+const PUBLIC_CATALOG_INITIALS = new Set<string>(CATALOG_BROWSE_INITIALS);
 const PUBLIC_KNOWLEDGE_TYPES = new Set(["all", "guide", "answer", "topic"]);
 const PROFILE_ACTIONS = new Set([
   "followed",
@@ -175,10 +182,23 @@ export const INTERFACE_ROUTE_POLICIES = [
     preserveClientFragment: true,
   },
   {
-    id: "public-object-directory",
+    // The catalogue's one door (`OVE-451`). It replaced `/objects` and the
+    // index at `/species`, both of which now 308 here — and a parameter that
+    // is not on this list never reaches the page, so every facet the listing
+    // speaks is declared here or it is silently dropped.
+    id: "public-catalog-directory",
     mode: "localized-link",
-    exactPaths: ["/objects"],
-    safeQueryKeys: ["kind", "identity", "page"],
+    exactPaths: ["/catalog"],
+    safeQueryKeys: [
+      "q",
+      "kingdom",
+      "rank",
+      "register",
+      "grown",
+      "letter",
+      "sort",
+      "page",
+    ],
     preserveClientFragment: true,
   },
   {
@@ -270,7 +290,7 @@ export const INTERFACE_ROUTE_POLICIES = [
     id: "public-catalog",
     mode: "localized-link",
     prefixes: ["/species", "/variety/", "/breed/", "/sources/eppo"],
-    safeQueryKeys: ["kingdom", "letter", "page", "authIntent", "engagement"],
+    safeQueryKeys: ["letter", "page", "authIntent", "engagement"],
     preserveClientFragment: true,
   },
 ] as const satisfies readonly InterfaceRoutePolicy[];
@@ -537,14 +557,41 @@ function sanitizeInterfaceRouteQueryValue(
             : PUBLIC_OBJECT_KINDS;
       return allowedKinds.has(value) ? value : null;
     }
-    case "identity":
-      return PUBLIC_OBJECT_IDENTITIES.has(value) ? value : null;
     case "source":
       return PUBLIC_FEED_SOURCES.has(value) ? value : null;
     case "season":
       return PUBLIC_JOURNAL_SEASONS.has(value) ? value : null;
-    case "sort":
-      return PUBLIC_JOURNAL_SORTS.has(value) ? value : null;
+    case "sort": {
+      // A listing's orders are its own. The catalogue sorts by name or by
+      // what has been written about; the journals directory does not.
+      const sorts = normalizeBasePath(pathname).startsWith(
+        CATALOG_BROWSE_PATH,
+      )
+        ? PUBLIC_CATALOG_SORTS
+        : PUBLIC_JOURNAL_SORTS;
+      return sorts.has(value) ? value : null;
+    }
+    case "kingdom":
+      return PUBLIC_CATALOG_KINGDOMS.has(value.toLowerCase())
+        ? value.toLowerCase()
+        : null;
+    case "rank":
+      return PUBLIC_CATALOG_RANKS.has(value) ? value : null;
+    case "register":
+      return PUBLIC_CATALOG_REGISTERS.has(value) ? value : null;
+    case "grown":
+      return value === "1" ? value : null;
+    case "letter":
+      return PUBLIC_CATALOG_INITIALS.has(value.toLowerCase())
+        ? value.toLowerCase()
+        : null;
+    case "q": {
+      // The catalogue's own search. A query is a reader's words, so it is
+      // bounded and stripped of the shapes `UNSAFE_QUERY_VALUE` already
+      // refuses rather than matched against a closed list.
+      const trimmed = value.trim();
+      return trimmed.length > 0 && trimmed.length <= 120 ? trimmed : null;
+    }
     case "type":
       return PUBLIC_KNOWLEDGE_TYPES.has(value) ? value : null;
     case "page": {

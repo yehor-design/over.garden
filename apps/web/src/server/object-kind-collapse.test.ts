@@ -64,16 +64,19 @@ describe("OVE-211 object-kind collapse contracts", () => {
   });
 
   it("exposes only all|plant|animal on public kind filters", () => {
-    expect(
-      sanitizeInterfaceRouteSearch("/objects", "kind=plant&identity=breed"),
-    ).toBe("?kind=plant&identity=breed");
-    expect(
-      sanitizeInterfaceRouteSearch("/objects", "kind=animal"),
-    ).toBe("?kind=animal");
+    // `/objects` was the second catalogue door and 308s to `/catalog` since
+    // `OVE-451`; `kind` is still the object-kind vocabulary everywhere it is
+    // a filter, and the collapse rule is about the vocabulary, not the door.
+    expect(sanitizeInterfaceRouteSearch("/journals", "kind=plant")).toBe(
+      "?kind=plant",
+    );
+    expect(sanitizeInterfaceRouteSearch("/knowledge", "kind=animal")).toBe(
+      "?kind=animal",
+    );
     expect(
       sanitizeInterfaceRouteSearch("/journals", `kind=${LEGACY_KIND}`),
     ).toBe("");
-    expect(sanitizeInterfaceRouteSearch("/objects", "kind=fungi")).toBe("");
+    expect(sanitizeInterfaceRouteSearch("/journals", "kind=fungi")).toBe("");
     expect(normalizePublicObjectKindFilter(LEGACY_KIND)).toBe("animal");
   });
 

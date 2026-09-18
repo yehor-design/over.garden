@@ -19,7 +19,7 @@ describe("site shell navigation contract", () => {
       })),
     ).toEqual([
       { key: "feed", label: "Стрічка", href: "/" },
-      { key: "catalogue", label: "Каталог", href: "/objects" },
+      { key: "catalogue", label: "Каталог", href: "/catalog" },
       { key: "journals", label: "Журнали", href: "/journals" },
       { key: "knowledge", label: "Знання", href: "/knowledge" },
     ]);
@@ -30,20 +30,25 @@ describe("site shell navigation contract", () => {
     );
   });
 
-  it("gives the catalogue one entrance for the five addresses it answers on", () => {
+  it("gives the catalogue one entrance for every address it answers on", () => {
     // `/objects`, `/species`, `/variety`, `/breed` and `/col` are five
     // spellings of one graph, and the rail named it a sixth way. ADR-0031 D8
-    // merges the entrance; ADR-0029 keeps every address.
+    // merges the entrance; ADR-0029 keeps every address. The entrance is
+    // `/catalog` since `OVE-451`, and the old index addresses 308 to it —
+    // but the item still lights up on them, because a reader following one of
+    // those redirects is in the catalogue.
     const navigation = getSiteShellNavigation("uk", false);
     const catalogue = navigation.publicItems.filter((item) =>
-      ["/objects", "/species", "/variety", "/breed", "/col"].some((path) =>
-        isSiteShellItemActive(path, item),
+      ["/catalog", "/objects", "/species", "/variety", "/breed", "/col"].some(
+        (path) => isSiteShellItemActive(path, item),
       ),
     );
 
     expect(catalogue).toHaveLength(1);
     expect(catalogue[0]?.key).toBe("catalogue");
     for (const path of [
+      "/catalog",
+      "/catalog?kingdom=fungi",
       "/objects",
       "/objects/moss",
       "/species",
@@ -136,7 +141,7 @@ describe("site shell navigation contract", () => {
         ({ key, href }) => [key, href] as const,
       ),
     ).toEqual([
-      ["catalogue", "/bg/objects"],
+      ["catalogue", "/bg/catalog"],
       ["privacy", "/bg/privacy"],
       ["support", "/bg/support"],
       ["first-publication-disclosure", "/bg/first-publication-disclosure"],
@@ -189,7 +194,7 @@ describe("site shell navigation contract", () => {
 
     expect(navigation.publicItems.map((item) => item.href)).toEqual([
       "/bg",
-      "/bg/objects",
+      "/bg/catalog",
       "/bg/journals",
       "/bg/knowledge",
     ]);

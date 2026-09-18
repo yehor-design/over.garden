@@ -73,17 +73,14 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "candidate",
     "src/app/[locale]/markets/[market]/page.tsx",
   ),
+  // One catalogue, one consumer (`OVE-451`). There were two — `/objects` and
+  // `/species` — describing one graph to the indexing rule twice, which is
+  // how one of them could be judged full while the other was judged empty.
   inventory(
     "localized_catalog_browse",
     "catalog_browse",
     "candidate",
-    "src/app/[locale]/objects/page.tsx",
-  ),
-  inventory(
-    "localized_species_browse",
-    "catalog_browse",
-    "candidate",
-    "src/app/[locale]/species/page.tsx",
+    "src/app/[locale]/catalog/page.tsx",
   ),
   inventory(
     "localized_species_register_hub",

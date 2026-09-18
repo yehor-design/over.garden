@@ -11,8 +11,11 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
     expect(paginatedListingPageSize("/journals")).toBe(8);
     expect(paginatedListingPageSize("/bg/journals")).toBe(8);
     expect(paginatedListingPageSize("/ru/journals/")).toBe(8);
-    expect(paginatedListingPageSize("/objects")).toBe(6);
-    expect(paginatedListingPageSize("/bg/objects")).toBe(6);
+    // `/objects` was the second catalogue door and now 308s to the one
+    // (`OVE-451`); the catalogue bounds its own pages, because it knows its
+    // own count and the journal-entry bound would 404 page two of 1 694.
+    expect(paginatedListingPageSize("/objects")).toBeNull();
+    expect(paginatedListingPageSize("/catalog")).toBeNull();
   });
 
   it("says nothing about a page that is not a listing", () => {
@@ -49,7 +52,7 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
     expect(paginatedListingRobotsTag("/journals", page("2"))).toBe(
       "noindex, follow",
     );
-    expect(paginatedListingRobotsTag("/bg/objects", page("7"))).toBe(
+    expect(paginatedListingRobotsTag("/bg/catalog", page("7"))).toBe(
       "noindex, follow",
     );
     expect(paginatedListingRobotsTag("/journals", page())).toBeNull();
@@ -60,24 +63,28 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
   });
 });
 
-describe("a filtered view of the catalog's front door (OVE-431)", () => {
-  // A kingdom and an initial narrow one listing; every one of those views
-  // carries `/species` as its canonical, and a letter nobody has filed
-  // anything under is an empty listing. `follow` keeps every organism it lists
-  // reachable.
-  it("is noindex, follow whichever filter it carries", () => {
+describe("a filtered view of the catalogue's one door (OVE-451)", () => {
+  // Every facet narrows one listing; every one of those views carries
+  // `/catalog` as its canonical, and a filter nobody has filed anything under
+  // is an empty listing. `follow` keeps every organism it lists reachable.
+  it("is noindex, follow whichever facet it carries", () => {
     for (const search of [
       "kingdom=plantae",
       "kingdom=plantae&letter=s",
       "kingdom=plantae&letter=s&page=4",
+      "rank=cultivar",
+      "register=ua",
+      "grown=1",
+      "q=solanum",
+      "sort=written",
       "page=2",
     ]) {
       expect(
-        paginatedListingRobotsTag("/species", new URLSearchParams(search)),
+        paginatedListingRobotsTag("/catalog", new URLSearchParams(search)),
         search,
       ).toBe("noindex, follow");
     }
-    for (const path of ["/bg/species", "/ru/species"]) {
+    for (const path of ["/bg/catalog", "/ru/catalog"]) {
       expect(
         paginatedListingRobotsTag(path, new URLSearchParams("kingdom=fungi")),
         path,
@@ -85,10 +92,10 @@ describe("a filtered view of the catalog's front door (OVE-431)", () => {
     }
   });
 
-  it("leaves the front door itself alone", () => {
-    expect(paginatedListingRobotsTag("/species", new URLSearchParams())).toBeNull();
+  it("leaves the one door itself alone", () => {
+    expect(paginatedListingRobotsTag("/catalog", new URLSearchParams())).toBeNull();
     expect(
-      paginatedListingRobotsTag("/species", new URLSearchParams("kingdom=")),
+      paginatedListingRobotsTag("/catalog", new URLSearchParams("kingdom=")),
     ).toBeNull();
     // An organism page is not a view of the listing.
     expect(

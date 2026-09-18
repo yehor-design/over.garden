@@ -465,7 +465,58 @@ own or carries the server-action reference that lets it submit unhydrated.
 actions files now take `(_previousState, formData)`, which is the shape
 `useActionState` hands a progressive form.
 
-The remaining page families (`OVE-451`–`OVE-459`) are still in Backlog.
+**One catalogue, four doors closed** (`OVE-451`, 2026-09-18). The catalogue
+had five entrances and the menu named it a sixth way: `/objects` listed the
+living objects gardeners keep, `/species` listed the 114 669 organisms behind
+them, `/variety`, `/breed` and `/col` were addresses of individual organisms,
+and a reader could arrive at any of them without learning they were one graph.
+The menu item said *Каталог* and landed on a page titled *Живі об'єкти* with a
+card on it offering the catalogue again.
+
+There is one listing now, at **`/catalog`** — the word the menu, the schema
+(`catalog_items`) and the owner's own tools (`/garden/catalog`) already used.
+One result card: the accepted name with `lang="la"` when the rank makes it a
+binomial, the vernacular in the reader's language, the rank, the market
+registers, and whether a gardener here has written about it. One set of facets
+on `FilterBar` in the `OVE-448` vocabulary — kingdom, rank, register, written —
+plus a search and the alphabet index, which stays a list of real links because
+it is the crawl path into every organism page. Sixty rows per page, as a list:
+sixty bordered boxes for sixty one-line names is a page to scroll past rather
+than scan.
+
+**Nothing stopped answering.** `/species` and `/objects` are `308`s to the view
+they meant — `/objects` to `?grown=1`, which is what it showed — and the prefix
+travels, so `/bg/species` lands on `/bg/catalog` and not on the Ukrainian one
+(ADR-0029 D8). Every organism's own address is untouched in all three route
+families. The two discovery consumers that described one graph to the indexing
+rule twice became one.
+
+**The trap this hid.** The redirect has to be decided *before* the proxy's
+unknown-segment and section-root blocks: `/objects` has no directory in
+`src/app` any more and `/species` has no index of its own, so both are exactly
+the shapes those blocks answer 404 for. The first draft put the redirect below
+them and turned two published addresses into 404s. `DESIGN.md` §5.8 records
+that with the rest of the one-listing rule.
+
+Measured on a gate database holding the real Catalogue of Life release —
+119 415 rows, 95 867 of them addressable. The browse read's own latency, on
+ten random facet combinations no server had answered before: **p95 23 ms**,
+median 16 ms. Migration `0075` is why: the merged listing orders by name with
+no kingdom predicate, which `0072`'s `(kingdom, initial, name)` index cannot
+serve, so the unfiltered root — the address every reader lands on — was a
+sequential scan of 95 867 rows plus a sort. The typeahead is untouched and
+still inside its budget: server p95 **27.5 ms** against 100 ms, 716 B gzip
+against 1 KiB.
+
+Proven in `tests/catalog.spec.ts`, wired into `pnpm gates:browser` **and** the
+CI list on the day it was written: every old entrance answering and landing on
+the right view, every organism address unredirected, every filtered view
+naming `/catalog` as its canonical and carrying `noindex, follow`, the form
+filtering as a real `method="get"` the server honours, the alphabet walked by
+keyboard, and axe clean at 375 px and 1440 px on the door, a filtered listing
+and an empty one.
+
+The remaining page families (`OVE-452`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

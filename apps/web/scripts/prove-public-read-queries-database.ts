@@ -37,6 +37,18 @@ import { loadVersionedApplicationSql } from "./application-sql";
 
 /** Ids and slugs nothing in a fresh bootstrap matches. */
 const ABSENT_UUID = "11111111-1111-4111-8111-111111111111";
+
+/** The catalogue's own unfiltered request, spread for the narrower views. */
+const CATALOG_PROOF_REQUEST = {
+  kingdoms: [],
+  ranks: [],
+  registers: [],
+  grown: false,
+  initial: null,
+  query: "",
+  sort: "name",
+  page: 1,
+} as const;
 const ABSENT_SLUG = "no-such-address";
 const ABSENT_HANDLE = "nobody_at_all";
 
@@ -172,10 +184,18 @@ async function readCases(): Promise<ReadCase[]> {
       run: (db) => catalogBrowse.listCatalogBrowseKingdoms(db),
     },
     {
-      name: "catalog browse page",
+      // The unfiltered catalogue: the one view every reader lands on, and the
+      // one whose latency the merged door has to answer for (`OVE-451`).
+      name: "catalog browse page, unfiltered",
+      run: (db) =>
+        catalogBrowse.listCatalogBrowsePage(CATALOG_PROOF_REQUEST, "uk", db),
+    },
+    {
+      name: "catalog browse page, kingdom and letter",
       run: (db) =>
         catalogBrowse.listCatalogBrowsePage(
-          { kingdom: "Plantae", initial: "s", page: 1 },
+          { ...CATALOG_PROOF_REQUEST, kingdoms: ["Plantae"], initial: "s" },
+          "uk",
           db,
         ),
     },
@@ -185,21 +205,29 @@ async function readCases(): Promise<ReadCase[]> {
       name: "catalog browse page, digit bucket",
       run: (db) =>
         catalogBrowse.listCatalogBrowsePage(
-          { kingdom: "Plantae", initial: "#", page: 1 },
+          { ...CATALOG_PROOF_REQUEST, kingdoms: ["Plantae"], initial: "#" },
+          "uk",
           db,
         ),
     },
     {
-      name: "catalog browse page, no initial",
+      name: "catalog browse page, search",
       run: (db) =>
         catalogBrowse.listCatalogBrowsePage(
-          { kingdom: "Fungi", initial: null, page: 1 },
+          { ...CATALOG_PROOF_REQUEST, query: "solanum" },
+          "uk",
           db,
         ),
+    },
+    {
+      name: "catalog browse facet counts",
+      run: (db) =>
+        catalogBrowse.countCatalogBrowseFacets(CATALOG_PROOF_REQUEST, db),
     },
     {
       name: "catalog browse first-hand organisms",
-      run: (db) => catalogBrowse.listCatalogBrowseFirstHandOrganisms(4, db),
+      run: (db) =>
+        catalogBrowse.listCatalogBrowseFirstHandOrganisms("uk", 4, db),
     },
     {
       name: "object passport root",

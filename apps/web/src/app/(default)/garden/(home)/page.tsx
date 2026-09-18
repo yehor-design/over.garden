@@ -1,3 +1,4 @@
+import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -383,7 +384,7 @@ function GuestGardenEntry({
               {copy.publicJournals}
             </Link>
             <Link
-              href={localizedPath(locale, "/objects")}
+              href={localizedPath(locale, CATALOG_BROWSE_PATH)}
               className={buttonVariants({
                 variant: "secondary",
                 className: "justify-start",

@@ -59,11 +59,14 @@ function FilterChip({
   className,
   label,
   count,
+  countLabel,
   disabled,
   ...props
 }: Omit<React.ComponentProps<"input">, "type" | "size"> & {
   label: React.ReactNode;
   count?: number;
+  /** The number in the reader's language; the chip formats nothing. */
+  countLabel?: string;
 }) {
   return (
     <label
@@ -87,9 +90,9 @@ function FilterChip({
         {...props}
       />
       <span>{label}</span>
-      {typeof count === "number" ? (
+      {countLabel ?? typeof count === "number" ? (
         <span className="text-caption text-text-muted tabular-nums">
-          {count}
+          {countLabel ?? count}
         </span>
       ) : null}
     </label>
