@@ -1,3 +1,4 @@
+import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 
 /**
@@ -88,7 +89,9 @@ export const PRE_SLICE_26_DOCUMENT: JournalDocumentV1 = {
         { text: "Довідник, " },
         {
           text: "сторінка 42",
-          marks: [{ type: "link", href: "/guides/start-a-living-plant-record" }],
+          marks: [
+            { type: "link", href: "/guides/start-a-living-plant-record" },
+          ],
         },
       ],
     },
@@ -100,7 +103,11 @@ export const PRE_SLICE_26_DOCUMENT: JournalDocumentV1 = {
         { text: "Порівняв з " },
         {
           text: "минулим записом",
-          marks: [{ type: "link", href: "/@olena/polyv" }],
+          // Built rather than spelled: `check-address-literals.ts` refuses a
+          // `/@…` written by hand, and the bytes are identical either way.
+          marks: [
+            { type: "link", href: publicJournalEntryPath("olena", "polyv") },
+          ],
         },
         { text: " і з " },
         {
