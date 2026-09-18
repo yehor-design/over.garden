@@ -222,8 +222,17 @@ test.describe("the catalogue's one door", () => {
     );
     expect(filtered.status()).toBe(200);
     const filteredHtml = await filtered.text();
-    // What came back is the filtered set, not the whole catalogue.
-    expect(filteredHtml.toLowerCase()).toContain("amanita");
+    // What came back is the narrower set. Asserted as a count rather than as
+    // a word: `amanita` appears in the search field whatever the listing
+    // holds, so matching on it would pass for the wrong reason on a database
+    // that has no Amanita in it.
+    const unfilteredRows = [
+      ...html.matchAll(/data-slot="list-row"/gu),
+    ].length;
+    const filteredRows = [
+      ...filteredHtml.matchAll(/data-slot="list-row"/gu),
+    ].length;
+    expect(filteredRows).toBeLessThan(unfilteredRows);
     // The chosen option comes back selected, so a reader without the bundle
     // sees the state they asked for rather than a reset form.
     expect(filteredHtml).toMatch(
@@ -246,13 +255,19 @@ test.describe("the catalogue's one door", () => {
 
     // The streamed shell leaves the skeleton's copy in the document too; the
     // reveal hides it, so the assertions run against what a reader can see.
-    const letters = page
-      .locator('nav[aria-label="За літерою"]')
-      .last()
-      .locator("a");
+    const index = page.locator('nav[aria-label="За літерою"]').last();
+    const letters = index.locator("a");
     await expect(letters.first()).toBeVisible();
-    const count = await letters.count();
-    expect(count, "the alphabet index rendered no links").toBeGreaterThan(5);
+
+    // The whole alphabet is always rendered — 26 letters, the digit bucket
+    // and "all letters" — because an index that appears and disappears with
+    // the data is an index a reader cannot learn. A letter nothing is filed
+    // under is a disabled span rather than a link to an empty page, so how
+    // many are *links* depends on what the database holds; what must not
+    // depend on that is the shape.
+    await expect(index.locator("li")).toHaveCount(28);
+    const linkCount = await letters.count();
+    expect(linkCount, "no letter is reachable at all").toBeGreaterThan(1);
 
     // Every one is a real anchor with a real href — this is the crawl path —
     // and focus moves through them by Tab without a roving tabindex to learn.
