@@ -57,8 +57,8 @@ export function EppoArchiveExplorer({
       ) : null}
 
       <header className="border-b border-border pb-5">
-        <h1 className="text-3xl font-semibold text-foreground">{copy.title}</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+        <h1 className="text-h1 break-words text-text-heading">{copy.title}</h1>
+        <p className="mt-2 max-w-3xl text-body-sm text-text-muted">
           {copy.intro}
         </p>
       </header>
@@ -70,10 +70,10 @@ export function EppoArchiveExplorer({
         aria-live="polite"
         aria-atomic="true"
       >
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-h3 text-text-heading">
           {copy.resultsTitle}
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-body-sm text-text-muted">
           {formatResultsCount(copy.resultsCount, page.records.length)}
         </p>
         {state === "degraded" ? (
@@ -86,7 +86,7 @@ export function EppoArchiveExplorer({
           />
         ) : null}
         {state === "empty" ? (
-          <p className="mt-3 text-sm text-muted-foreground">{copy.empty}</p>
+          <p className="mt-3 text-body-sm text-text-muted">{copy.empty}</p>
         ) : null}
         {state === "ready" ? (
           <ol className="mt-4 grid gap-3">
@@ -157,8 +157,8 @@ export function EppoArchiveDetail({
       >
         {copy.browseArchive}
       </Link>
-      <p className="text-sm text-muted-foreground">{copy.detailTitle}</p>
-      <h1 className="mt-1 text-3xl font-semibold text-foreground">
+      <p className="text-body-sm text-text-muted">{copy.detailTitle}</p>
+      <h1 className="mt-1 text-h1 break-words text-text-heading">
         {record.displayName}
       </h1>
       {canonicalCard ? (
@@ -190,11 +190,11 @@ export function EppoArchiveNotFound({ locale }: { locale: PublicLocale }) {
       data-eppo-archive-state="not_found"
       className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-5 py-16 sm:px-8"
     >
-      <p className="text-sm font-medium text-muted-foreground">{copy.title}</p>
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
+      <p className="text-sm font-medium text-text-muted">{copy.title}</p>
+      <h1 className="text-h1 break-words text-text-heading">
         {copy.notFound}
       </h1>
-      <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+      <p className="max-w-2xl text-body-sm text-text-muted">
         {copy.intro}
       </p>
       <div className="flex flex-wrap gap-3">
@@ -280,28 +280,28 @@ function ExplorerCard({
   const heading = detail ? (
     record.displayName
   ) : (
-    <Link href={record.href} className="hover:text-primary">
+    <Link href={record.href} className="hover:underline">
       {record.displayName}
     </Link>
   );
   return (
-    <article className="mt-4 rounded-lg border border-border bg-background p-4">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+    <article className="mt-4 rounded-lg border border-border bg-surface p-4">
+      <div className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
         <span className="rounded-md border border-border px-2 py-1">
           {copy.badges[record.evidenceState]}
         </span>
         <span>{copy.kinds[record.objectKind]}</span>
         <code>{record.eppoCode}</code>
       </div>
-      <h2 className="mt-3 text-xl font-semibold text-foreground">{heading}</h2>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+      <h2 className="mt-3 text-h2 text-text-heading">{heading}</h2>
+      <p className="mt-2 text-body-sm text-text-muted">
         {copy.evidenceDescription[record.evidenceState]}
       </p>
-      <dl className="mt-3 grid gap-1 text-sm text-muted-foreground">
+      <dl className="mt-3 grid gap-1 text-body-sm text-text-muted">
         {record.scientificName &&
         record.scientificName !== record.displayName ? (
           <div>
-            <dt className="inline font-medium text-foreground">
+            <dt className="inline font-medium text-text">
               {copy.scientificName}:
             </dt>
             <dd className="inline">{record.scientificName}</dd>
@@ -309,7 +309,7 @@ function ExplorerCard({
         ) : null}
         {record.taxonomicRank ? (
           <div>
-            <dt className="inline font-medium text-foreground">
+            <dt className="inline font-medium text-text">
               {copy.taxonomicRank}:
             </dt>
             <dd className="inline">{record.taxonomicRank}</dd>
@@ -317,7 +317,7 @@ function ExplorerCard({
         ) : null}
         {record.parentDisplayName ? (
           <div>
-            <dt className="inline font-medium text-foreground">
+            <dt className="inline font-medium text-text">
               {copy.parentTaxon}:
             </dt>
             <dd className="inline">{record.parentDisplayName}</dd>
@@ -325,14 +325,14 @@ function ExplorerCard({
         ) : null}
       </dl>
       {record.aliases.length > 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">{copy.aliases}: </span>
+        <p className="mt-3 text-body-sm text-text-muted">
+          <span className="font-medium text-text">{copy.aliases}: </span>
           {record.aliases.join(", ")}
         </p>
       ) : null}
       <time
         dateTime={record.observedAt}
-        className="mt-3 block text-xs text-muted-foreground"
+        className="mt-3 block text-caption text-text-muted"
       >
         {copy.observed}:{" "}
         {new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(
@@ -352,9 +352,9 @@ function SourceCredit({
   source: PublicEppoSourceRecord["source"];
 }) {
   return (
-    <dl className="mt-4 grid gap-1 border-t border-border pt-3 text-sm text-muted-foreground">
+    <dl className="mt-4 grid gap-1 border-t border-border pt-3 text-body-sm text-text-muted">
       <div>
-        <dt className="inline font-medium text-foreground">
+        <dt className="inline font-medium text-text">
           {copy.sourceCredit}:{" "}
         </dt>
         <dd className="inline">
@@ -369,7 +369,7 @@ function SourceCredit({
         </dd>
       </div>
       <div>
-        <dt className="inline font-medium text-foreground">
+        <dt className="inline font-medium text-text">
           {copy.sourceLicense}:{" "}
         </dt>
         <dd className="inline">
@@ -389,7 +389,7 @@ function SourceCredit({
       </div>
       {source.attribution ? (
         <div>
-          <dt className="inline font-medium text-foreground">
+          <dt className="inline font-medium text-text">
             {copy.sourceAttribution}:{" "}
           </dt>
           <dd className="inline">{source.attribution}</dd>
@@ -409,7 +409,7 @@ function ExplorerMessage({
   retryLabel: string;
 }) {
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+    <div className="mt-3 flex flex-wrap items-center gap-3 text-body-sm text-text-muted">
       <p>{text}</p>
       <Link
         href={retryHref}

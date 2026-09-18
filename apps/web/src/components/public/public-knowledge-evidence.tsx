@@ -47,13 +47,13 @@ export function PublicKnowledgeEvidenceList({
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="grid gap-1">
-          <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+          <p className="flex items-center gap-2 text-overline text-text-muted uppercase">
             <BookOpenText className="size-4" aria-hidden="true" />
             {copy.journalEvidenceLabel}
           </p>
           <h2
             id="public-knowledge-evidence-heading"
-            className="text-xl font-semibold text-foreground"
+            className="text-h2 text-text-heading"
           >
             {formatPublicKnowledgeEvidenceCount(
               evidence.totalCount,
@@ -76,7 +76,7 @@ export function PublicKnowledgeEvidenceList({
       {state === "loading" ? (
         <div
           aria-busy="true"
-          className="flex min-h-28 items-center gap-3 border-y border-border py-5 text-sm text-muted-foreground"
+          className="flex min-h-28 items-center gap-3 border-y border-border py-5 text-body-sm text-text-muted"
         >
           <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
           {copy.loadingLabel}
@@ -85,11 +85,11 @@ export function PublicKnowledgeEvidenceList({
 
       {state === "error" ? (
         <div className="grid gap-3 border-y border-border py-5">
-          <p className="flex items-center gap-2 font-semibold text-foreground">
+          <p className="flex items-center gap-2 font-semibold text-text">
             <CircleAlert className="size-5" aria-hidden="true" />
             {copy.errorTitle}
           </p>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-prose text-body-sm text-text-muted">
             {copy.errorBody}
           </p>
           <Link
@@ -107,10 +107,10 @@ export function PublicKnowledgeEvidenceList({
 
       {state === "empty" ? (
         <div className="grid gap-2 border-y border-border py-5">
-          <p className="font-semibold text-foreground">
+          <p className="font-semibold text-text">
             {copy.emptyEvidenceTitle}
           </p>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-prose text-body-sm text-text-muted">
             {copy.emptyEvidenceBody}
           </p>
         </div>
@@ -125,7 +125,7 @@ export function PublicKnowledgeEvidenceList({
             >
               <EvidenceMedia item={item} eager={index === 0} />
               <div className="grid min-w-0 content-start gap-3 sm:col-span-3">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-text-muted">
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarDays className="size-3.5" aria-hidden="true" />
                     <time dateTime={toIsoDate(item.card.entryDate)}>
@@ -134,7 +134,7 @@ export function PublicKnowledgeEvidenceList({
                   </span>
                   <Link
                     href={item.card.object.publicPath}
-                    className="font-medium text-foreground hover:text-primary hover:underline"
+                    className="font-medium text-text hover:underline"
                   >
                     {item.card.object.displayName}
                   </Link>
@@ -151,25 +151,25 @@ export function PublicKnowledgeEvidenceList({
                 >
                   <Link
                     href={item.card.publicPath}
-                    className="text-lg leading-6 font-semibold text-foreground hover:text-primary"
+                    className="text-h3 text-text-heading hover:underline"
                   >
                     {item.card.title}
                   </Link>
-                  <p className="line-clamp-3 text-sm leading-6 text-muted-foreground">
+                  <p className="line-clamp-3 text-body-sm text-text-muted">
                     {item.card.excerpt}
                   </p>
                 </div>
 
                 {item.matches.length > 0 ? (
                   <div className="grid gap-1.5 border-l-2 border-primary/40 pl-3 text-xs">
-                    <p className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <p className="flex items-center gap-1.5 font-semibold text-text">
                       <ScanSearch className="size-3.5" aria-hidden="true" />
                       {copy.whyMatched}
                     </p>
                     {item.matches.map((match) => (
                       <p
                         key={`${match.kind}:${match.slug}`}
-                        className="text-muted-foreground"
+                        className="text-text-muted"
                       >
                         {match.kind === "topic"
                           ? copy.matchedByTopic
@@ -177,7 +177,7 @@ export function PublicKnowledgeEvidenceList({
                         {": "}
                         <Link
                           href={match.publicPath}
-                          className="font-medium text-foreground hover:text-primary hover:underline"
+                          className="font-medium text-text hover:underline"
                         >
                           {match.label}
                         </Link>
@@ -189,14 +189,14 @@ export function PublicKnowledgeEvidenceList({
                 <div className="flex flex-wrap gap-3 border-t border-border pt-3 text-sm font-medium">
                   <Link
                     href={item.card.publicPath}
-                    className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-link hover:underline"
                   >
                     {copy.readEntry}
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
                   <Link
                     href={item.card.object.publicPath}
-                    className="inline-flex items-center gap-1.5 text-foreground hover:text-primary hover:underline"
+                    className="inline-flex min-h-11 items-center gap-1.5 text-text hover:underline"
                   >
                     <Link2 className="size-4" aria-hidden="true" />
                     {copy.viewObject}
@@ -221,7 +221,7 @@ function EvidenceMedia({
   const media = item.card.media[0];
 
   return (
-    <div className="relative aspect-4/3 w-full overflow-hidden rounded-md border border-border bg-muted sm:aspect-square">
+    <div className="relative aspect-4/3 w-full overflow-hidden rounded-lg border border-border bg-surface-sunken sm:aspect-square">
       {media ? (
         <SubjectAwareMediaImage
           src={media.publicUrl}
@@ -237,7 +237,7 @@ function EvidenceMedia({
           unoptimized
         />
       ) : (
-        <div className="flex h-full items-center justify-center p-3 text-center text-xs text-muted-foreground">
+        <div className="flex h-full items-center justify-center p-3 text-center text-caption text-text-muted">
           {item.card.object.identityLabel ?? item.card.object.displayName}
         </div>
       )}

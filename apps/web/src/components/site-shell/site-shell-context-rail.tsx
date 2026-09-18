@@ -71,7 +71,7 @@ export function SiteShellContextRailModules({
     <div className="flex flex-col gap-6" data-site-shell-context="route-owned">
       {modules.map((module) => (
         <section key={module.key} className="flex flex-col gap-2.5">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase">
+          <h2 className="text-overline text-text-muted uppercase">
             {module.title}
           </h2>
           {module.items.length > 0 ? (
@@ -80,11 +80,11 @@ export function SiteShellContextRailModules({
                 <li key={`${module.key}:${item.href}:${item.label}`}>
                   <Link
                     href={item.href}
-                    className="flex min-h-10 items-center justify-between gap-3 border-b border-border py-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
+                    className="flex min-h-11 items-center justify-between gap-3 rounded-sm border-b border-border py-2 text-body-sm font-medium text-text outline-none transition-colors duration-instant ease-out hover:text-link focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
                   >
                     <span className="min-w-0 break-words">{item.label}</span>
                     {item.meta ? (
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      <span className="shrink-0 text-caption text-text-muted tabular-nums">
                         {item.meta}
                       </span>
                     ) : null}
@@ -93,7 +93,7 @@ export function SiteShellContextRailModules({
               ))}
             </ul>
           ) : (
-            <p className="text-sm leading-5 text-muted-foreground">
+            <p className="text-body-sm text-text-muted">
               {module.emptyLabel}
             </p>
           )}

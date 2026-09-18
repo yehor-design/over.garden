@@ -1,15 +1,21 @@
-import Image from "next/image";
-import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
-  CheckCircle2,
-  HelpCircle,
   Globe2,
   Sprout,
 } from "lucide-react";
 
+import NextLink from "next/link";
+
 import { buttonVariants } from "@/components/ui/button";
+import { Link } from "@/components/ui/link";
+import { ListRow } from "@/components/ui/list-row";
+import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
+import {
+  articleSectionId,
+  PublicArticle,
+} from "@/components/public/public-article";
 import {
   PublicHomeFeed,
   type PublicHomeFeedState,
@@ -18,11 +24,6 @@ import {
   PublicKnowledgeEvidenceList,
   type PublicKnowledgeEvidenceState,
 } from "@/components/public/public-knowledge-evidence";
-import {
-  SiteShellContextRailModules,
-  SiteShellContextRailRegistration,
-  type SiteShellContextRailModule,
-} from "@/components/site-shell/site-shell-context-rail";
 import {
   getPublicKnowledgeCopy,
   type PublicKnowledgeCopy,
@@ -64,7 +65,8 @@ export function PublicLocalizedHeader({
     <div className="flex flex-wrap items-center justify-between gap-3">
       <Link
         href={localizedPath(locale, backHref)}
-        className="self-start rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+        variant="quiet"
+        className="inline-flex min-h-11 w-fit items-center rounded-lg border border-border px-3 text-body-sm"
       >
         {backLabel}
       </Link>
@@ -114,7 +116,6 @@ export function LocalizedBlogIndexPage({
   locale,
   content,
   posts,
-  availableLocales,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -126,72 +127,55 @@ export function LocalizedBlogIndexPage({
   return (
     <main
       lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
+      data-public-blog-index="true"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       <PublicSurfaceJsonLd value={jsonLd} />
-      <header className="flex flex-col gap-5 border-b border-border pb-8">
-        <PublicLocalizedHeader
-          locale={locale}
-          basePath="/blog"
-          availableLocales={availableLocales}
-        />
-        <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <BookOpen className="size-4" />
+      <PageHeader
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
+            <BookOpen className="size-4" aria-hidden="true" />
             {content.eyebrow}
-          </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {content.heading}
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            {content.intro}
-          </p>
-        </div>
-      </header>
+          </span>
+        }
+        title={content.heading}
+        description={content.intro}
+      />
 
-      <section className="grid gap-4">
+      {/* One hub shape: a list of things is a list, and a row carries the
+          date it was published beside the sentence it is about
+          (DESIGN.md §4.1). */}
+      <ul className="grid list-none">
         {posts.map((post) => (
-          <article
+          <ListRow
             key={post.slug}
-            className="grid gap-4 rounded-lg border border-border p-4"
-          >
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-muted-foreground">
+            href={localizedPath(locale, post.path)}
+            title={post.title}
+            description={post.excerpt}
+            meta={
+              <time dateTime={new Date(post.publishedDate).toISOString()}>
                 {formatDate(post.publishedDate, locale)}
-              </p>
-              <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                {post.title}
-              </h2>
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                {post.excerpt}
-              </p>
-            </div>
-            <Link
-              href={localizedPath(locale, post.path)}
-              className={buttonVariants({
-                variant: "secondary",
-                className: "self-start",
-              })}
-            >
-              {content.readNoteCta}
-              <ArrowRight className="size-4" />
-            </Link>
-          </article>
+              </time>
+            }
+          />
         ))}
-      </section>
+      </ul>
 
-      <section className="grid gap-3 border-t border-border pt-6">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {content.startTitle}
-        </h2>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {content.startBody}
-        </p>
-        <Link href="/garden" className={buttonVariants({ className: "w-fit" })}>
-          <Sprout className="size-4" />
+      <Section
+        id="blog-start"
+        className="border-t border-border pt-6"
+        level={2}
+        title={content.startTitle}
+        description={content.startBody}
+      >
+        <NextLink
+          href="/garden"
+          className={buttonVariants({ className: "w-fit" })}
+        >
+          <Sprout aria-hidden="true" />
           {content.workspaceCta}
-        </Link>
-      </section>
+        </NextLink>
+      </Section>
     </main>
   );
 }
@@ -200,7 +184,6 @@ export function LocalizedBlogPostPage({
   locale,
   post,
   chrome,
-  availableLocales,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -210,45 +193,22 @@ export function LocalizedBlogPostPage({
   jsonLd?: Record<string, unknown> | null;
 }) {
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
+    <PublicArticle
+      locale={locale}
+      dataset={{ "data-public-blog-post": "true" }}
+      backHref={localizedPath(locale, "/blog")}
+      backLabel={chrome.fieldNotesBack}
+      eyebrow={formatDate(post.publishedDate, locale)}
+      title={post.title}
+      description={post.description}
+      contentsLabel={chrome.relatedPathsTitle}
+      sections={post.sections.map((section, index) => ({
+        id: articleSectionId("blog", section.heading, index),
+        heading: section.heading,
+        body: section.body,
+      }))}
+      jsonLd={jsonLd}
     >
-      <PublicSurfaceJsonLd value={jsonLd} />
-      <header className="flex flex-col gap-5 border-b border-border pb-8">
-        <PublicLocalizedHeader
-          locale={locale}
-          basePath={post.path}
-          availableLocales={availableLocales}
-          backHref="/blog"
-          backLabel={chrome.fieldNotesBack}
-        />
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            {formatDate(post.publishedDate, locale)}
-          </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {post.title}
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            {post.description}
-          </p>
-        </div>
-      </header>
-
-      <article className="grid gap-7">
-        {post.sections.map((section) => (
-          <section key={section.heading} className="grid gap-2">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-              {section.heading}
-            </h2>
-            <p className="max-w-3xl text-sm leading-6 text-foreground">
-              {section.body}
-            </p>
-          </section>
-        ))}
-      </article>
-
       <RelatedLinks
         locale={locale}
         title={chrome.relatedPathsTitle}
@@ -256,7 +216,7 @@ export function LocalizedBlogPostPage({
         showWorkspaceCta={true}
         workspaceCta={chrome.privateRecordCta}
       />
-    </main>
+    </PublicArticle>
   );
 }
 
@@ -264,7 +224,6 @@ export function LocalizedGuidePage({
   locale,
   guide,
   chrome,
-  availableLocales,
   knowledgeCopy = getPublicKnowledgeCopy(locale),
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
@@ -279,100 +238,48 @@ export function LocalizedGuidePage({
   evidenceState?: PublicKnowledgeEvidenceState;
   jsonLd?: Record<string, unknown> | null;
 }) {
-  const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
-
   return (
-    <main
-      lang={locale}
-      data-trust-state="editorial"
-      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
+    <PublicArticle
+      locale={locale}
+      dataset={{ "data-trust-state": "editorial" }}
+      backHref={localizedPath(locale, "/knowledge")}
+      backLabel={knowledgeCopy.backToKnowledge}
+      eyebrow={`${knowledgeCopy.editorialLabel} · ${chrome.guideEyebrow}`}
+      title={guide.title}
+      description={guide.description}
+      meta={[
+        { label: knowledgeCopy.bylineLabel, value: guide.editorial.author },
+        { label: knowledgeCopy.sourceLabel, value: guide.editorial.source },
+        {
+          label: knowledgeCopy.updatedLabel,
+          value: formatDate(guide.editorial.updatedDate, locale),
+        },
+      ]}
+      cover={
+        guide.media
+          ? { src: guide.media.publicUrl, alt: guide.media.alt }
+          : null
+      }
+      outcome={guide.outcome}
+      contentsLabel={chrome.guideEyebrow}
+      // A guide's steps are its sections, numbered: the rail lists them, a
+      // reader can share one, and a screen reader hears "heading two" rather
+      // than "list item" for something that is the body of the page.
+      sections={guide.steps.map((step, index) => ({
+        id: articleSectionId("guide", step.title, index),
+        heading: step.title,
+        body: step.body,
+        ordinal: index + 1,
+      }))}
+      jsonLd={jsonLd}
     >
-      <PublicSurfaceJsonLd value={jsonLd} />
-      <SiteShellContextRailRegistration modules={contextModules} />
-      <header className="flex flex-col gap-5 border-b border-border pb-8">
-        <PublicLocalizedHeader
-          locale={locale}
-          basePath={knowledgeDetailPath(guide.path)}
-          availableLocales={availableLocales}
-          backHref={knowledgeDetailPath("/knowledge")}
-          backLabel={knowledgeCopy.backToKnowledge}
-        />
-        <div className="flex flex-col gap-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase">
-            {knowledgeCopy.editorialLabel} · {chrome.guideEyebrow}
-          </p>
-          <h1 className="max-w-3xl text-3xl font-semibold text-foreground">
-            {guide.title}
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            {guide.description}
-          </p>
-        </div>
-        <dl className="grid gap-x-6 gap-y-2 border-y border-border py-3 text-xs text-muted-foreground sm:grid-cols-3">
-          <EditorialMeta
-            label={knowledgeCopy.bylineLabel}
-            value={guide.editorial.author}
-          />
-          <EditorialMeta
-            label={knowledgeCopy.sourceLabel}
-            value={guide.editorial.source}
-          />
-          <EditorialMeta
-            label={knowledgeCopy.updatedLabel}
-            value={formatDate(guide.editorial.updatedDate, locale)}
-          />
-        </dl>
-        {guide.media ? (
-          <figure className="relative aspect-video w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted">
-            <Image
-              src={guide.media.publicUrl}
-              alt={guide.media.alt}
-              fill
-              sizes="(max-width: 768px) 100vw, 768px"
-              className="object-cover"
-              priority
-              loading="eager"
-              unoptimized
-            />
-          </figure>
-        ) : null}
-        <div className="flex max-w-3xl items-start gap-3 border-l-2 border-primary pl-4 text-sm leading-6 text-foreground">
-          <CheckCircle2 className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          <p>{guide.outcome}</p>
-        </div>
-      </header>
-
-      <ol className="grid border-x border-b border-border">
-        {guide.steps.map((step, index) => (
-          <li
-            key={step.title}
-            className="flex flex-col gap-3 border-t border-border p-4 sm:flex-row"
-          >
-            <span className="flex size-8 items-center justify-center rounded-md border border-border text-sm font-semibold">
-              {index + 1}
-            </span>
-            <div className="grid min-w-0 gap-2">
-              <h2 className="text-xl font-semibold text-foreground">
-                {step.title}
-              </h2>
-              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                {step.body}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
-
       <PublicKnowledgeEvidenceList
         locale={locale}
         copy={knowledgeCopy}
         evidence={evidence}
         state={evidenceState}
       />
-      <div className="border-t border-border pt-6 xl:hidden">
-        <SiteShellContextRailModules modules={contextModules} />
-      </div>
-    </main>
+    </PublicArticle>
   );
 }
 
@@ -380,7 +287,6 @@ export function LocalizedAnswerPage({
   locale,
   page,
   chrome,
-  availableLocales,
   knowledgeCopy = getPublicKnowledgeCopy(locale),
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
@@ -395,108 +301,70 @@ export function LocalizedAnswerPage({
   evidenceState?: PublicKnowledgeEvidenceState;
   jsonLd?: Record<string, unknown> | null;
 }) {
-  const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
-
   return (
-    <main
-      lang={locale}
-      data-trust-state="editorial"
-      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
+    <PublicArticle
+      locale={locale}
+      dataset={{ "data-trust-state": "editorial" }}
+      backHref={localizedPath(locale, "/knowledge")}
+      backLabel={knowledgeCopy.backToKnowledge}
+      eyebrow={`${knowledgeCopy.editorialLabel} · ${chrome.answerEyebrow}`}
+      title={page.question}
+      description={page.description}
+      meta={[
+        { label: knowledgeCopy.bylineLabel, value: page.editorial.author },
+        { label: knowledgeCopy.sourceLabel, value: page.editorial.source },
+        {
+          label: knowledgeCopy.updatedLabel,
+          value: formatDate(page.editorial.updatedDate, locale),
+        },
+      ]}
+      contentsLabel={chrome.faqTitle}
+      // The concise answer first, because that is what the page is for, then
+      // the proof behind it, then the questions it raises. Three real
+      // headings rather than three bordered boxes.
+      sections={[
+        {
+          id: "answer-concise",
+          heading: chrome.conciseAnswerTitle,
+          body: page.conciseAnswer,
+        },
+        {
+          id: "answer-proof",
+          heading: chrome.proofDetailsTitle,
+          body: (
+            <ul className="grid list-disc gap-2 pl-5">
+              {page.proofDetails.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          ),
+        },
+        {
+          id: "answer-faq",
+          heading: chrome.faqTitle,
+          body: (
+            <dl className="grid gap-4">
+              {page.faqs.map((faq) => (
+                <div key={faq.question} className="grid gap-1">
+                  <dt className="text-h3 text-text-heading">{faq.question}</dt>
+                  <dd className="text-body-sm text-text-secondary">
+                    {faq.answer}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ),
+        },
+      ]}
+      jsonLd={jsonLd}
     >
-      <SiteShellContextRailRegistration modules={contextModules} />
-      <PublicSurfaceJsonLd value={jsonLd} />
-      <header className="flex flex-col gap-5 border-b border-border pb-8">
-        <PublicLocalizedHeader
-          locale={locale}
-          basePath={knowledgeDetailPath(page.path)}
-          availableLocales={availableLocales}
-          backHref={knowledgeDetailPath("/knowledge")}
-          backLabel={knowledgeCopy.backToKnowledge}
-        />
-        <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
-            <HelpCircle className="size-4" aria-hidden="true" />
-            {knowledgeCopy.editorialLabel} · {chrome.answerEyebrow}
-          </p>
-          <h1 className="max-w-3xl text-3xl font-semibold text-foreground">
-            {page.question}
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            {page.description}
-          </p>
-        </div>
-        <dl className="grid gap-x-6 gap-y-2 border-y border-border py-3 text-xs text-muted-foreground sm:grid-cols-3">
-          <EditorialMeta
-            label={knowledgeCopy.bylineLabel}
-            value={page.editorial.author}
-          />
-          <EditorialMeta
-            label={knowledgeCopy.sourceLabel}
-            value={page.editorial.source}
-          />
-          <EditorialMeta
-            label={knowledgeCopy.updatedLabel}
-            value={formatDate(page.editorial.updatedDate, locale)}
-          />
-        </dl>
-      </header>
-
-      <section className="grid gap-3 border-y border-border py-5">
-        <h2 className="text-xl font-semibold text-foreground">
-          {chrome.conciseAnswerTitle}
-        </h2>
-        <p className="max-w-3xl text-base leading-7 text-foreground">
-          {page.conciseAnswer}
-        </p>
-      </section>
-
-      <section className="grid gap-3">
-        <h2 className="text-2xl font-semibold text-foreground">
-          {chrome.proofDetailsTitle}
-        </h2>
-        <ul className="grid border-x border-b border-border">
-          {page.proofDetails.map((detail) => (
-            <li
-              key={detail}
-              className="border-t border-border p-4 text-sm leading-6 text-muted-foreground"
-            >
-              {detail}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="grid gap-4 border-t border-border pt-6">
-        <h2 className="text-2xl font-semibold text-foreground">
-          {chrome.faqTitle}
-        </h2>
-        <div className="grid border-x border-b border-border">
-          {page.faqs.map((faq) => (
-            <article
-              key={faq.question}
-              className="grid gap-2 border-t border-border p-4"
-            >
-              <h3 className="text-base font-semibold text-foreground">
-                {faq.question}
-              </h3>
-              <p className="text-sm leading-6 text-muted-foreground">
-                {faq.answer}
-              </p>
-            </article>
-          ))}
-        </div>
-      </section>
-
       <PublicKnowledgeEvidenceList
         locale={locale}
         copy={knowledgeCopy}
         evidence={evidence}
         state={evidenceState}
       />
-      <div className="border-t border-border pt-6 xl:hidden">
-        <SiteShellContextRailModules modules={contextModules} />
-      </div>
-    </main>
+    </PublicArticle>
   );
 }
 
@@ -515,14 +383,6 @@ function PublicSurfaceJsonLd({
   );
 }
 
-function EditorialMeta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-1">
-      <dt>{label}</dt>
-      <dd className="font-medium text-foreground">{value}</dd>
-    </div>
-  );
-}
 
 function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
   return {
@@ -533,50 +393,12 @@ function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
   };
 }
 
-function knowledgeDetailPath(path: string) {
-  return path;
-}
 
-function knowledgeDetailContextModules(
-  copy: PublicKnowledgeCopy,
-  evidence: PublicKnowledgeEvidence,
-): SiteShellContextRailModule[] {
-  const objects = new Map(
-    evidence.items.map((item) => [
-      item.card.object.publicPath,
-      item.card.object,
-    ]),
-  );
-
-  return [
-    {
-      key: "knowledge-detail-journals",
-      title: copy.journalEvidenceLabel,
-      items: evidence.items.map((item) => ({
-        href: item.card.publicPath,
-        label: item.card.title,
-        meta: item.card.object.displayName,
-      })),
-      emptyLabel: copy.emptyEvidenceTitle,
-    },
-    {
-      key: "knowledge-detail-objects",
-      title: copy.kindLabel,
-      items: [...objects.values()].map((object) => ({
-        href: object.publicPath,
-        label: object.displayName,
-        meta: object.identityLabel ?? undefined,
-      })),
-      emptyLabel: copy.emptyEvidenceTitle,
-    },
-  ];
-}
 
 export function LocalizedMarketLandingPage({
   locale,
   landing,
   chrome,
-  availableLocales,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -586,75 +408,56 @@ export function LocalizedMarketLandingPage({
   jsonLd?: Record<string, unknown> | null;
 }) {
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
+    <PublicArticle
+      locale={locale}
+      dataset={{ "data-public-market-landing": "true" }}
+      eyebrow={
+        <span className="inline-flex items-center gap-2">
+          <Globe2 className="size-4" aria-hidden="true" />
+          {chrome.marketEyebrow}
+        </span>
+      }
+      title={landing.title}
+      description={landing.description}
+      contentsLabel={chrome.relatedPathsTitle}
+      sections={[
+        {
+          id: "market-audience",
+          heading: chrome.marketAudienceTitle,
+          body: landing.localAudience,
+        },
+        {
+          id: "market-promise",
+          heading: chrome.marketPromiseTitle,
+          body: landing.promise,
+        },
+        {
+          id: "market-proof",
+          heading: chrome.marketProofTitle,
+          body: (
+            <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
+              {landing.proofPlan.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ),
+        },
+      ]}
+      jsonLd={jsonLd}
     >
-      <PublicSurfaceJsonLd value={jsonLd} />
-      <header className="flex flex-col gap-5 border-b border-border pb-8">
-        <PublicLocalizedHeader
-          locale={locale}
-          basePath={landing.path}
-          availableLocales={availableLocales}
-        />
-        <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Globe2 className="size-4" />
-            {chrome.marketEyebrow}
-          </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {landing.title}
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            {landing.description}
-          </p>
-        </div>
-        <Link href="/garden" className={buttonVariants({ className: "w-fit" })}>
-          <Sprout className="size-4" />
-          {chrome.privateRecordCta}
-        </Link>
-      </header>
-
-      <section className="grid gap-3">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          {chrome.marketAudienceTitle}
-        </h2>
-        <p className="max-w-3xl text-sm leading-6 text-foreground">
-          {landing.localAudience}
-        </p>
-      </section>
-
-      <section className="grid gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {chrome.marketPromiseTitle}
-        </h2>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {landing.promise}
-        </p>
-      </section>
-
-      <section className="grid gap-3">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-          {chrome.marketProofTitle}
-        </h2>
-        <ul className="grid gap-3">
-          {landing.proofPlan.map((item) => (
-            <li
-              key={item}
-              className="rounded-lg border border-border p-4 text-sm leading-6 text-muted-foreground"
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      </section>
-
+      <NextLink
+        href="/garden"
+        className={buttonVariants({ className: "w-fit" })}
+      >
+        <Sprout aria-hidden="true" />
+        {chrome.privateRecordCta}
+      </NextLink>
       <RelatedLinks
         locale={locale}
         title={chrome.relatedPathsTitle}
         links={landing.relatedLinks}
       />
-    </main>
+    </PublicArticle>
   );
 }
 
@@ -672,18 +475,24 @@ function RelatedLinks({
   workspaceCta?: string;
 }) {
   return (
-    <section className="grid gap-4 border-t border-border pt-6">
-      <h2 className="text-xl font-semibold tracking-tight text-foreground">
-        {title}
-      </h2>
+    <Section
+      id="related-paths"
+      className="border-t border-border pt-6"
+      level={2}
+      title={title}
+      headingClassName="text-h3"
+    >
       <LinkGrid locale={locale} links={links} />
       {showWorkspaceCta && workspaceCta ? (
-        <Link href="/garden" className={buttonVariants({ className: "w-fit" })}>
-          <Sprout className="size-4" />
+        <NextLink
+          href="/garden"
+          className={buttonVariants({ className: "w-fit" })}
+        >
+          <Sprout aria-hidden="true" />
           {workspaceCta}
-        </Link>
+        </NextLink>
       ) : null}
-    </section>
+    </Section>
   );
 }
 
@@ -695,27 +504,27 @@ function LinkGrid({
   links: PublicContentLink[];
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <ul className="grid list-none gap-3 sm:grid-cols-2">
       {links.map((link) => (
-        <Link
-          key={link.href}
-          href={localizePublicHref(locale, link.href)}
-          className="grid gap-2 rounded-lg border border-border p-4 text-sm transition-colors hover:bg-muted"
-        >
-          <span className="flex items-center gap-2 font-medium text-foreground">
-            {link.href === "/garden" ? (
-              <Sprout className="size-4" />
-            ) : (
-              <ArrowRight className="size-4" />
-            )}
-            {link.label}
-          </span>
-          <span className="leading-6 text-muted-foreground">
-            {link.description}
-          </span>
-        </Link>
+        <li key={link.href} className="min-w-0">
+          <Link
+            href={localizePublicHref(locale, link.href)}
+            variant="quiet"
+            className="grid h-full gap-2 rounded-lg border border-border p-4 text-body-sm transition-colors duration-instant ease-out hover:bg-surface-hover hover:no-underline"
+          >
+            <span className="flex items-center gap-2 font-medium text-text">
+              {link.href === "/garden" ? (
+                <Sprout className="size-4" aria-hidden="true" />
+              ) : (
+                <ArrowRight className="size-4" aria-hidden="true" />
+              )}
+              {link.label}
+            </span>
+            <span className="text-text-muted">{link.description}</span>
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 

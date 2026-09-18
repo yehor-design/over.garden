@@ -107,7 +107,14 @@ test.describe("the journals directory applies its filters on change", () => {
     // each one is waited for before the next — which is also how a reader
     // uses it.
     const facet = async (key: string, value: string) => {
-      const control = page.locator(`[data-filter-bar-facet="${key}"]`);
+      // Scoped to the bar a reader can see. The streamed shell leaves the
+      // loading skeleton's copy of the form in the document until the reveal,
+      // so a document-wide locator matches two selects and fails in strict
+      // mode — intermittently, because whether it has revealed yet depends on
+      // how busy the server is. Observed on 2026-09-18 in a full gate run.
+      const control = page
+        .locator(visibleBar)
+        .locator(`[data-filter-bar-facet="${key}"]`);
       await control.focus();
       await expect(control).toBeFocused();
       await control.selectOption(value);
@@ -118,7 +125,9 @@ test.describe("the journals directory applies its filters on change", () => {
 
     await facet("kind", "plant");
     await facet("season", "summer");
-    const sort = page.locator('[data-filter-bar-sort="true"]');
+    const sort = page
+      .locator(visibleBar)
+      .locator('[data-filter-bar-sort="true"]');
     await sort.focus();
     await sort.selectOption("oldest");
     await page.waitForURL((url) => url.searchParams.get("sort") === "oldest", {

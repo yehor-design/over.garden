@@ -79,7 +79,7 @@ export function InterfaceLanguageControl({
       data-interface-market={market}
       aria-label={copy.languageControlLabel}
       className={cn(
-        "relative min-w-0 text-foreground",
+        "relative min-w-0 text-text",
         compact && "text-right",
       )}
     >
@@ -87,7 +87,7 @@ export function InterfaceLanguageControl({
         <summary
           aria-label={copy.languageControlTrigger}
           data-interface-language-trigger="true"
-          className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-8 sm:py-1"
+          className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-body-sm font-medium outline-none hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:min-h-8 sm:py-1"
         >
           <Languages className="size-4" aria-hidden="true" />
           <span className={compact ? "" : "sr-only"}>
@@ -202,7 +202,7 @@ function LocalePreferenceOption({
 
 function optionClassName(selected: boolean) {
   return cn(
-    "flex min-h-11 items-center rounded-sm px-3 py-2 text-left text-sm hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-8 sm:py-1",
+    "flex min-h-11 items-center rounded-sm px-3 py-2 text-left text-body-sm outline-none hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring sm:min-h-8 sm:py-1",
     selected && "font-semibold",
   );
 }

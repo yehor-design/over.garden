@@ -560,7 +560,57 @@ beneath a species, a source-only node, and one merged away. JSON-LD is
 Lighthouse through the CLI on that card: LCP **0.8–1.1 s**, CLS **0**,
 performance 98–100.
 
-The remaining page families (`OVE-453`–`OVE-459`) are still in Backlog.
+**Everything the product publishes has one shape** (`OVE-453`, 2026-09-18).
+The blog, the guides, the answers, the market landings, the knowledge hub, the
+topics, the EPPO source archive and the legal and support pages had a shape
+each — three type scales and three header rhythms between the three article
+kinds alone. There are two shapes now: `PublicArticle`, which is `OVE-449`'s
+reading column reused rather than re-derived, and one hub built from
+`PageHeader`, `FilterBar` and `ListRow`.
+
+**The legal pages became readable without a word changing.** Headings that are
+real headings with real ids, a contents list that is the rail above `xl` and a
+list at the foot below it, and the reading measure instead of a wall. That
+distinction is the whole of criterion 5 and it is a real one: the typography is
+a design decision and the wording of a disclosure is a legal one, which is why
+`src/lib/privacy/disclosures.test.ts` is in the task's table.
+
+**The nine instrumented paths are a contract now.** GA4 and GTM are wired on
+`/`, `/blog`, `/privacy`, `/support`, `/first-publication-disclosure` and the
+`/answers/`, `/blog/`, `/guides/` and `/markets/` prefixes, and nowhere else —
+so a redesign that moved one would take a month of missing data to notice.
+`src/app/google-analytics.test.tsx` enumerates the set in both directions: each
+path is measured, in every locale, and the families this slice touched —
+`/catalog`, `/species/…`, `/@handle` — are not and did not become so.
+`tests/editorial-surfaces.spec.ts` loads every one of them and confirms it
+still answers.
+
+Two things the browser found. The article's section body was wrapped in a
+`<div>`, which left the reading column with **no paragraph in it at all** — and
+a measure is read from a paragraph, so the check that would have caught a
+broken column could not run. And three of these pages stream, so the first
+bytes of a request are the skeleton: a proof that asked for them proved the
+skeleton. Both are fixed, and the second is now the rule the spec states.
+
+Along the way the shell's own context rail, the not-found page and the language
+control came onto the token palette — all three appear on every page in this
+family, so leaving them would have made "one shape" untrue at the edges.
+
+Proven in `tests/editorial-surfaces.spec.ts`, into `pnpm gates:browser` and the
+CI list: every instrumented path answering in every locale it has; one article
+shape across a blog post and the two legal pages, with the measure asserted at
+**320, 768 and 1440 px** (704 px, 18/29 at each); one hub shape across the blog
+index and knowledge; the EPPO archive keeping its attribution and its
+observation date; and **axe clean at 375 px and 1440 px on seven pages**, one
+of each shape.
+
+A flake worth recording: `tests/journals-directory.spec.ts` located its facets
+document-wide, and the streamed shell leaves the loading skeleton's copy of the
+form in the DOM until the reveal — so a full gate run, where the server is
+busier, failed in strict mode on two matching selects. It is scoped to the
+visible bar now.
+
+The remaining page families (`OVE-454`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module
