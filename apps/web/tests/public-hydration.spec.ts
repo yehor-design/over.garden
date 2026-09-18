@@ -108,7 +108,7 @@ test.describe("public pages hydrate below the shell", () => {
 
   // The organism card (ADR-0026 D9) is a species page with one public entry,
   // seeded here because a fresh database holds no organism.
-  test("a species card hydrates its main region and ships its panel closed", async ({
+  test("a species card hydrates its main region and hides no fact", async ({
     page,
   }) => {
     const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
@@ -119,9 +119,17 @@ test.describe("public pages hydrate below the shell", () => {
       await expect(page.locator("[data-organism-fact]")).toContainText(
         "Solanum lycopersicum",
       );
+      // "Names and sources" shipped closed until `OVE-452`. It is a real
+      // section now: a collapsed section is invisible to a crawler even
+      // though it is in the DOM, and that one holds the identifiers `sameAs`
+      // is built from and the source behind every fact. ADR-0026 D9 is
+      // amended in place with the reason.
       await expect(
         page.locator('details[data-organism-section="names-and-sources"]'),
-      ).toHaveJSProperty("open", false);
+      ).toHaveCount(0);
+      await expect(
+        page.locator('section[data-organism-section="names-and-sources"]'),
+      ).toBeVisible();
     } finally {
       if (fixture) await cleanupOrganismFixture(pool, fixture);
       await pool.end();
