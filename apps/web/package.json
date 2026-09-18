@@ -141,7 +141,7 @@
     "owner:seed-browser-fixture": "tsx scripts/seed-browser-owner-fixture.ts",
     "screen-states:render": "tsx scripts/render-screen-states.tsx",
     "gates": "pnpm lint && pnpm check:design-tokens && pnpm check:component-tests && vitest run src/app/globals.test.ts scripts/check-design-gates.test.ts && pnpm gates:browser",
-    "gates:browser": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts",
+    "gates:browser": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts",
     "interface:locale:probe": "tsx scripts/probe-interface-locale-production.ts"
   },
   "dependencies": {

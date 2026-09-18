@@ -46,7 +46,25 @@ async function passportPath(rootPlantObjectId: string): Promise<string> {
     : publicLineageObjectPath(rootPlantObjectId);
 }
 
-export async function followLineageNodeAction(formData: FormData) {
+/**
+ * Every action here takes `(_previousState, formData)`.
+ *
+ * That is the shape `useActionState` calls an action with, and
+ * `OwnerScopedProgressiveForm` hands React the reference unwrapped so the form
+ * gets a **real endpoint** before the bundle runs (ADR-0024 D3). The other
+ * shape, `(formData)`, has to be adapted inside a client closure, and React
+ * answers a closure with
+ * `action="javascript:throw new Error('React form unexpectedly submitted.')"` —
+ * a placeholder it replaces on hydration and never before. That exact defect
+ * shipped once and made every owner decision answer 500.
+ *
+ * `_previousState` is unused on purpose: these actions redirect, so there is
+ * no state to thread.
+ */
+export async function followLineageNodeAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const edgeId = String(formData.get("edgeId") ?? "");
   const targetPlantObjectId = String(formData.get("targetPlantObjectId") ?? "");
   const rootPlantObjectId = String(formData.get("rootPlantObjectId") ?? "");
@@ -73,7 +91,10 @@ export async function followLineageNodeAction(formData: FormData) {
   await revalidateLineageInteractionPaths(rootPlantObjectId);
 }
 
-export async function askLineageQuestionAction(formData: FormData) {
+export async function askLineageQuestionAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });

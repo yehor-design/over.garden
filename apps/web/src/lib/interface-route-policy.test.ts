@@ -407,6 +407,28 @@ describe("interface route policy", () => {
     ).toBe("");
   });
 
+  it("carries a profile's open tab, and only a tab that exists", () => {
+    // The author-scoped rewrite rebuilds the search string from this list, so
+    // an undeclared parameter never reaches the page: the address said
+    // `?tab=entries` and the profile opened on its objects (`OVE-450`).
+    expect(
+      sanitizeInterfaceRouteSearch("/@olena", "?tab=entries"),
+    ).toBe("?tab=entries");
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?tab=about")).toBe(
+      "?tab=about",
+    );
+    // A tab nobody built is dropped rather than reflected back into the page.
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?tab=communities")).toBe(
+      "",
+    );
+    expect(
+      sanitizeInterfaceRouteSearch(
+        "/@olena",
+        "?tab=entries&profileAction=followed&token=secret",
+      ),
+    ).toBe("?tab=entries&profileAction=followed");
+  });
+
   it("rewrites a sanitized journal-directory return path to the target locale", () => {
     expect(
       buildLocalizedInterfaceTarget({

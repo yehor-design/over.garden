@@ -23,7 +23,25 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export async function followProfileAction(formData: FormData) {
+/**
+ * Every action here takes `(_previousState, formData)`.
+ *
+ * That is the shape `useActionState` calls an action with, and
+ * `OwnerScopedProgressiveForm` hands React the reference unwrapped so the form
+ * gets a **real endpoint** before the bundle runs (ADR-0024 D3). The other
+ * shape, `(formData)`, has to be adapted inside a client closure, and React
+ * answers a closure with
+ * `action="javascript:throw new Error('React form unexpectedly submitted.')"` —
+ * a placeholder it replaces on hydration and never before. That exact defect
+ * shipped once and made every owner decision answer 500.
+ *
+ * `_previousState` is unused on purpose: these actions redirect, so there is
+ * no state to thread.
+ */
+export async function followProfileAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -38,7 +56,10 @@ export async function followProfileAction(formData: FormData) {
   finishProfileAction(formData, handle, result, "profile-follow");
 }
 
-export async function unfollowProfileAction(formData: FormData) {
+export async function unfollowProfileAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -53,7 +74,10 @@ export async function unfollowProfileAction(formData: FormData) {
   finishProfileAction(formData, handle, result, "profile-follow");
 }
 
-export async function reportProfileAction(formData: FormData) {
+export async function reportProfileAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -68,7 +92,10 @@ export async function reportProfileAction(formData: FormData) {
   finishProfileAction(formData, handle, result, "profile-report");
 }
 
-export async function blockProfileAction(formData: FormData) {
+export async function blockProfileAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });

@@ -6,6 +6,7 @@ import { Pool } from "pg";
 import {
   OWNER_BROWSER_FIXTURE,
   OWNER_BROWSER_FIXTURE_ENV,
+  signInOwnerFixture,
 } from "./helpers/owner-fixture";
 
 /**
@@ -473,20 +474,7 @@ async function cleanupStaleRuns(pool: Pool) {
 }
 
 async function signInAsOwner(context: BrowserContext, baseURL: string) {
-  const signIn = await context.request.post(
-    `${baseURL}/api/auth/sign-in/email`,
-    {
-      headers: { origin: baseURL },
-      data: {
-        email: OWNER_BROWSER_FIXTURE.email,
-        password: OWNER_BROWSER_FIXTURE.password,
-      },
-    },
-  );
-  expect(
-    signIn.ok(),
-    "Run `pnpm owner:seed-browser-fixture` before this spec.",
-  ).toBe(true);
+  await signInOwnerFixture({ request: context.request, baseURL });
 }
 
 async function selectLocale(

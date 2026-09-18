@@ -56,6 +56,11 @@ describe("public cache tags", () => {
         "profile:new_handle",
         "profile:old_handle",
         PUBLIC_CACHE_TAGS.profiles,
+        // An object passport's address and canonical carry its caretaker's
+        // handle, and it caches for hours under `catalog`. Without this tag a
+        // renamed gardener's passports advertised a canonical that 308s until
+        // the cache aged out (`OVE-450`).
+        PUBLIC_CACHE_TAGS.catalog,
       ]),
     );
   });

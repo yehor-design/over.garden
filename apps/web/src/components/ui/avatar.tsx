@@ -29,7 +29,11 @@ function Avatar({
   size?: keyof typeof sizes;
   label?: string;
 }) {
-  const initial = [...name.trim()][0]?.toLocaleUpperCase() ?? "?";
+  // A gardener who has set no display name is shown as their mention, and
+  // `@` is not an initial — it is the same character for every one of them.
+  // The first letter of the name is what a reader recognises.
+  const initial =
+    [...name.trim().replace(/^@+/u, "")][0]?.toLocaleUpperCase() ?? "?";
   return (
     <span
       data-slot="avatar"

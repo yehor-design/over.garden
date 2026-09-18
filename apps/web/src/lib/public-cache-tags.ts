@@ -56,7 +56,18 @@ export function publicEntryChangeTags(input: {
   ]);
 }
 
-/** The tags a profile change touches: its page(s) and the listings naming it. */
+/**
+ * The tags a profile change touches: its page(s) and the listings naming it.
+ *
+ * **`catalog` is in this list because an address carries a handle.** Since
+ * migration `0073` an object passport lives at `/@{handle}/objects/{slug}` and
+ * an entry at `/@{handle}/{slug}`, so a gardener's rename changes the address
+ * and the canonical of every object they keep. `readPublicObjectPassportPage`
+ * caches for hours under `catalog`, and without this a renamed gardener's
+ * passports went on advertising a canonical that 308s — a duplicate signal a
+ * crawler discards — until the cache aged out (`OVE-450`). The entry pages
+ * were already covered: they tag `journals` and their author's handle.
+ */
 export function publicProfileChangeTags(input: {
   ownerUserId: string;
   handle?: string | null;
@@ -71,6 +82,7 @@ export function publicProfileChangeTags(input: {
     PUBLIC_CACHE_TAGS.profiles,
     PUBLIC_CACHE_TAGS.feed,
     PUBLIC_CACHE_TAGS.journals,
+    PUBLIC_CACHE_TAGS.catalog,
     PUBLIC_CACHE_TAGS.communities,
     PUBLIC_CACHE_TAGS.sitemap,
   ]);

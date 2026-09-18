@@ -1,19 +1,24 @@
 import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { BellPlus, GitBranch } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import {
   LivingObjectPassportContextRail,
   LivingObjectPassportOverview,
   PublicLivingObjectPassportTimeline,
 } from "@/components/living-object-passport/living-object-passport";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Link as TextLink } from "@/components/ui/link";
+import { Section } from "@/components/ui/section";
 import {
   buildAuthIntentAnchor,
   normalizeAuthIntentResumeAction,
@@ -53,6 +58,7 @@ import {
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { cn } from "@/lib/utils";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import { scopedToUser } from "@/server/request-scope";
 import { askLineageQuestionAction, followLineageNodeAction } from "./actions";
@@ -176,7 +182,7 @@ export default async function PublicLineageObjectRoute({
   return (
     <main
       lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
+      className="mx-auto grid w-full max-w-5xl gap-7 px-4 py-6 sm:px-6 sm:py-8"
     >
       {serializedJsonLd ? (
         <script
@@ -194,27 +200,39 @@ export default async function PublicLineageObjectRoute({
         locale={locale}
       />
 
-      <section
+      <Section
         id="passport-provenance"
-        className="grid gap-4 border-t border-border pt-5"
-      >
-        <div className="flex flex-col gap-1">
-          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <GitBranch className="size-4" />
-            {getPublicSurfaceCopy(locale).passport.confirmedProvenance}
-          </p>
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+        className="border-t border-border pt-6"
+        level={2}
+        title={
+          <span className="inline-flex items-center gap-2">
+            <GitBranch className="size-5" aria-hidden="true" />
             {getPublicSurfaceCopy(locale).passport.publicLineage}
-          </h2>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            {getPublicSurfaceCopy(locale).passport.publicLineageDescription}
-          </p>
-        </div>
-
+          </span>
+        }
+        description={
+          getPublicSurfaceCopy(locale).passport.publicLineageDescription
+        }
+        /* Only confirmed edges are ever listed here, and the reader is told
+           so rather than left to infer it from an absence (ADR-0026: the
+           ladder never blocks, and an unconfirmed claim is not provenance). */
+        actions={
+          <Badge tone="success">
+            {getPublicSurfaceCopy(locale).passport.confirmedProvenance}
+          </Badge>
+        }
+      >
         {edges.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            {getPublicSurfaceCopy(locale).passport.noConfirmedPublicLineage}
-          </p>
+          /* Nothing is filtered out here — this object simply has no
+             confirmed provenance, so there is no picture to show and nothing
+             to clear (DESIGN.md §5.4). */
+          <EmptyState
+            variant="no-results"
+            illustration={null}
+            title={
+              getPublicSurfaceCopy(locale).passport.noConfirmedPublicLineage
+            }
+          />
         ) : (
           <ol className="grid gap-4">
             {edges.map((edge) => {
@@ -254,7 +272,7 @@ export default async function PublicLineageObjectRoute({
             })}
           </ol>
         )}
-      </section>
+      </Section>
 
       <PublicEngagementPanel
         isAuthenticated={Boolean(userId)}
@@ -355,22 +373,29 @@ function PublicLineageEdgeCard({
   const copy = getPublicSurfaceCopy(locale);
 
   return (
-    <li className="grid gap-4 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-base font-semibold text-foreground">
-          {source.displayName} → {subject.displayName}
+    <li className="min-w-0">
+      <Card as="article" className="grid gap-4 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+        <h3 className="text-h3 break-words text-text-heading">
+          {source.displayName}{" "}
+          <span aria-hidden="true">→</span>
+          <span className="sr-only">{copy.passport.grownObject}:</span>{" "}
+          {subject.displayName}
         </h3>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          <span className="rounded-md border border-border px-2 py-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone="neutral">
             {copy.passport.depth} {edge.depth}
-          </span>
-          <time className="rounded-md border border-border px-2 py-1">
+          </Badge>
+          <time
+            dateTime={edgeDateTime(edge.createdAt)}
+            className="text-caption text-text-muted tabular-nums"
+          >
             {formatDate(edge.createdAt, locale)}
           </time>
         </div>
       </div>
 
-      <dl className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
+      <dl className="grid gap-4 md:grid-cols-2">
         <PublicLineageNodeDescription
           label={copy.passport.source}
           node={source}
@@ -397,6 +422,7 @@ function PublicLineageEdgeCard({
           locale={locale}
         />
       ) : null}
+      </Card>
     </li>
   );
 }
@@ -438,27 +464,29 @@ function LineageInteractionPanel({
       data-auth-intent-resumed={isResumedFollow ? "follow" : undefined}
       className="grid gap-3 border-t border-border pt-3"
     >
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-foreground">
+      <div className="grid gap-1">
+        <p className="text-body-sm font-medium text-text">
           {copy.passport.lineageUpdatesFrom} {target.displayName}
         </p>
-        <p className="text-xs leading-5 text-muted-foreground">
+        <p className="text-caption text-text-muted">
           {copy.passport.lineageQuestionSafety}
         </p>
       </div>
 
       {status === "lineage-question-rate-limited" ||
       status === "interaction-unavailable" ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          {status === "lineage-question-rate-limited"
-            ? copy.passport.lineageQuestionRateLimited
-            : copy.passport.interactionUnavailable}
-        </p>
+        <Callout tone="warning" live="polite">
+          <p>
+            {status === "lineage-question-rate-limited"
+              ? copy.passport.lineageQuestionRateLimited
+              : copy.passport.interactionUnavailable}
+          </p>
+        </Callout>
       ) : null}
 
       {canInteract ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <OwnerScopedActionForm action={followLineageNodeAction}>
+          <OwnerScopedProgressiveForm action={followLineageNodeAction}>
             <HiddenField name="edgeId" value={edge.id} />
             <HiddenField
               name="targetPlantObjectId"
@@ -485,9 +513,9 @@ function LineageInteractionPanel({
             >
               {copy.passport.followUpdates}
             </button>
-          </OwnerScopedActionForm>
+          </OwnerScopedProgressiveForm>
 
-          <OwnerScopedActionForm
+          <OwnerScopedProgressiveForm
             action={askLineageQuestionAction}
             className="grid gap-2"
           >
@@ -518,7 +546,7 @@ function LineageInteractionPanel({
             >
               {copy.passport.sendQuestion}
             </button>
-          </OwnerScopedActionForm>
+          </OwnerScopedProgressiveForm>
         </div>
       ) : isAuthenticated ? (
         <p
@@ -531,7 +559,7 @@ function LineageInteractionPanel({
           tabIndex={-1}
           data-auth-intent-control="follow"
           data-auth-intent-control-ref={followControl}
-          className="text-sm text-muted-foreground"
+          className="text-body-sm text-text-muted"
         >
           {copy.passport.followRequiresWriteAccess}
         </p>
@@ -561,9 +589,11 @@ function PublicLineageNodeDescription({
   locale: InterfaceLocale;
 }) {
   return (
-    <div className="grid gap-1">
-      <dt className="text-xs uppercase">{label}</dt>
-      <dd className="font-medium text-foreground">{node.displayName}</dd>
+    <div className="grid min-w-0 gap-1">
+      <dt className="text-overline text-text-muted uppercase">{label}</dt>
+      <dd className="text-body-sm font-medium break-words text-text">
+        {node.displayName}
+      </dd>
       <dd>
         <PublicLineageNodeMeta node={node} compact locale={locale} />
       </dd>
@@ -590,27 +620,31 @@ function PublicLineageNodeMeta({
 
   return (
     <div
-      className={`flex flex-wrap gap-2 text-xs text-muted-foreground ${
-        compact ? "" : "mt-1"
-      }`}
+      className={cn(
+        "flex flex-wrap items-center gap-2",
+        compact ? "" : "mt-1",
+      )}
     >
       {meta.map((item) => (
-        <span key={item} className="rounded-md border border-border px-2 py-1">
+        <Badge key={item} tone="neutral">
           {item}
-        </span>
+        </Badge>
       ))}
       {node.catalogPublicSlug && node.catalogKind ? (
-        <Link
+        /* The catalog entry is a link, not a badge: a reader can open the
+           organism this object was identified as, and DESIGN.md §5.2 says a
+           badge is never a control. */
+        <TextLink
           href={publicCatalogEvidencePath({
             catalogKind: node.catalogKind,
             publicSlug: node.catalogPublicSlug,
             speciesSlug: node.catalogSpeciesSlug,
           })}
-          className="rounded-md border border-border px-2 py-1 font-medium text-primary underline-offset-4 hover:underline"
+          className="inline-flex min-h-6 items-center text-caption font-medium"
         >
           {node.catalogCanonicalName ??
             getPublicSurfaceCopy(locale).passport.publicCatalog}
-        </Link>
+        </TextLink>
       ) : null}
     </div>
   );
@@ -635,6 +669,10 @@ function buildPublicLineageNodeMap(
   const nodes = lineagePage?.nodes ?? [rootNode];
 
   return new Map(nodes.map((node) => [node.plantObjectId, node]));
+}
+
+function edgeDateTime(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : String(value);
 }
 
 function formatDate(value: Date | string, locale: InterfaceLocale) {

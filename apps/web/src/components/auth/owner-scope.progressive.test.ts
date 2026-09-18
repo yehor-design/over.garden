@@ -21,12 +21,20 @@ const PROGRESSIVE_SURFACES = [
   "app/(default)/garden/catalog/queue/page.tsx",
   "app/(default)/garden/catalog/sources/page.tsx",
   "app/catalog-owner-card-controls.tsx",
+  // `OVE-450`: the public profile's follow, unfollow, report and block, and
+  // the lineage passport's follow and question. Thirty-three call sites across
+  // seventeen files still used the closure form when Slice 28 began; these are
+  // the first six converted, and each page-family task carries its own share.
+  "components/public/public-profile.tsx",
+  "app/[locale]/lineage/objects/[objectId]/page.tsx",
 ] as const;
 
 const PROGRESSIVE_ACTIONS = [
   "app/(default)/garden/catalog/queue/actions.ts",
   "app/(default)/garden/catalog/sources/actions.ts",
   "app/catalog-owner-card-actions.ts",
+  "app/[locale]/[profileHandle]/actions.ts",
+  "app/[locale]/lineage/objects/[objectId]/actions.ts",
 ] as const;
 
 describe("owner forms that decide before hydration", () => {

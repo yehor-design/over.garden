@@ -78,7 +78,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     formData.set("targetPlantObjectId", "00000000-0000-4000-8000-000000000102");
     formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
 
-    await followLineageNodeAction(formData);
+    await followLineageNodeAction(undefined, formData);
 
     expect(mocks.resolveMutationScope).toHaveBeenCalledOnce();
     expect(mocks.followLineageNode).toHaveBeenCalledWith(
@@ -108,7 +108,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     formData.set("clientMutationId", "lineage-question-1");
     formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
 
-    await askLineageQuestionAction(formData);
+    await askLineageQuestionAction(undefined, formData);
 
     expect(mocks.askLineageQuestion).toHaveBeenCalledWith(
       {
@@ -141,7 +141,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     formData.set("clientMutationId", "lineage-question-1");
     formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
 
-    await expect(askLineageQuestionAction(formData)).rejects.toThrow(
+    await expect(askLineageQuestionAction(undefined, formData)).rejects.toThrow(
       "NEXT_REDIRECT:/@yehor/objects/%D1%82%D0%BE%D0%BC%D0%B0%D1%82?engagement=lineage-question-rate-limited#passport-provenance",
     );
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
@@ -158,7 +158,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     formData.set("targetPlantObjectId", "00000000-0000-4000-8000-000000000102");
     formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
 
-    await expect(followLineageNodeAction(formData)).rejects.toThrow(
+    await expect(followLineageNodeAction(undefined, formData)).rejects.toThrow(
       "NEXT_REDIRECT:/auth/intent?intent=opaque-follow-intent",
     );
 
@@ -187,7 +187,7 @@ describe("/lineage/objects/[objectId] actions", () => {
     formData.set("targetPlantObjectId", "00000000-0000-4000-8000-000000000102");
     formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
 
-    await expect(followLineageNodeAction(formData)).rejects.toBe(failure);
+    await expect(followLineageNodeAction(undefined, formData)).rejects.toBe(failure);
 
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();

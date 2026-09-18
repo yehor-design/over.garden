@@ -11,6 +11,13 @@ describe("Avatar", () => {
     expect(container.querySelectorAll("img")).toHaveLength(0);
   });
 
+  it("reads past the mention sign, which every gardener shares", () => {
+    // A gardener who has set no display name is shown as their mention, so
+    // the fallback would otherwise be `@` on every such profile.
+    const { container } = render(<Avatar name="@olena_garden" />);
+    expect(container.textContent).toBe("O");
+  });
+
   it("keeps the picture decorative, because the name is beside it", () => {
     const { container } = render(
       <Avatar name="Олена" src="https://media.over.garden/a.webp" />,

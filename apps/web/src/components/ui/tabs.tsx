@@ -27,18 +27,32 @@ function Tabs({
   label,
   tabs,
   defaultTabId,
+  selectedId: controlledId,
+  onSelect,
   ...props
-}: Omit<React.ComponentProps<"div">, "children"> & {
+}: Omit<React.ComponentProps<"div">, "children" | "onSelect"> & {
   /** Names the tab list. A `tablist` with no name says only "tab list". */
   label: string;
   tabs: readonly TabModel[];
   defaultTabId?: string;
+  /**
+   * Controlled selection. A screen whose selected tab belongs in the URL
+   * passes this and `onSelect` — because a tab that a reader cannot share or
+   * reload back into is a tab that forgot what it was for.
+   */
+  selectedId?: string;
+  onSelect?: (id: string) => void;
 }) {
   const scope = useId();
   const enabled = tabs.filter((tab) => !tab.disabled);
-  const [selectedId, setSelectedId] = useState(
+  const [uncontrolledId, setUncontrolledId] = useState(
     defaultTabId ?? enabled[0]?.id ?? tabs[0]?.id ?? "",
   );
+  const selectedId = controlledId ?? uncontrolledId;
+  const setSelectedId = (id: string) => {
+    if (controlledId === undefined) setUncontrolledId(id);
+    onSelect?.(id);
+  };
   const refs = useRef(new Map<string, HTMLButtonElement | null>());
 
   const move = (delta: number) => {

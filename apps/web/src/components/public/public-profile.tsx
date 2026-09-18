@@ -1,10 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   BookOpen,
-  CalendarDays,
   Flag,
-  ImageOff,
   MapPin,
   MoreHorizontal,
   PawPrint,
@@ -17,18 +14,32 @@ import {
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
-import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { PublicProfileTabs } from "@/components/public/public-profile-tabs";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
 import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EntryCard } from "@/components/ui/entry-card";
+import { Link as TextLink } from "@/components/ui/link";
+import { MediaFigure } from "@/components/ui/media-figure";
+import { ProfileHeader } from "@/components/ui/profile-header";
+import { Section } from "@/components/ui/section";
+import type { TabModel } from "@/components/ui/tabs";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { AuthIntentAction } from "@/lib/auth/auth-intent-contract";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { publicProfilePath } from "@/lib/garden/public-paths";
+import { resolveIllustration } from "@/lib/illustrations";
+import {
+  publicProfileTabHref,
+  type PublicProfileTabId,
+} from "@/lib/public-profile-tabs";
 import { localizedPath } from "@/lib/public-localization";
 import {
   getPublicProfileCopy,
@@ -65,6 +76,7 @@ export function PublicProfileView({
   actionStatus,
   preview = false,
   headingLevel = "h1",
+  activeTab = "objects",
   resumeAction = null,
   resumeControl = null,
 }: {
@@ -75,6 +87,8 @@ export function PublicProfileView({
   /** The owner's editor preview shows the owner-facing empty states. */
   preview?: boolean;
   headingLevel?: "h1" | "h2" | "h3";
+  /** From `?tab=`, already normalized. The server decides what is open. */
+  activeTab?: PublicProfileTabId;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
 }) {
@@ -87,171 +101,295 @@ export function PublicProfileView({
   const regionLabel = publicProfileRegionLabel(profile.coarseRegionCode);
   const actionMessage = profileActionMessage(actionStatus, locale);
   const ownerEmptyState = viewer.kind === "owner" || preview;
-  const ProfileHeading = headingLevel;
+  // Heading levels never skip (DESIGN.md §8). On the profile's own page the
+  // gardener's name is the `h1` and a tab panel's section is an `h2`; inside
+  // the owner's preview the whole thing is already nested, so both drop a
+  // level rather than the section outranking the name it belongs to.
+  const sectionLevel = headingLevel === "h1" ? 2 : 3;
+  const cardHeadingLevel = 3;
+
+  const tabs: TabModel[] = [
+    {
+      id: "objects",
+      label: copy.objectsTitle,
+      content: (
+        <Section
+          id="profile-objects"
+          title={copy.objectsTitle}
+          description={copy.objectsDescription}
+          level={sectionLevel}
+          // The tab above already says the word, so the heading is the
+          // region's name for a screen reader and nothing to the eye.
+          headingClassName="sr-only"
+        >
+          {visibleObjects.length > 0 ? (
+            <>
+              <ul className="grid list-none gap-4 sm:grid-cols-2">
+                {visibleObjects.map((object, index) => (
+                  <li key={object.objectId} className="min-w-0">
+                    <ProfileObjectCard
+                      object={object}
+                      locale={locale}
+                      headingLevel={cardHeadingLevel}
+                      priority={index === 0 && headingLevel === "h1"}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {moreObjects.length > 0 ? (
+                <details className="grid gap-3">
+                  <summary
+                    className={cn(
+                      "w-fit min-h-11 cursor-pointer list-none content-center",
+                      "text-body-sm font-semibold text-link hover:underline",
+                    )}
+                  >
+                    {copy.showMore(moreObjects.length, profile.hasMoreObjects)}
+                  </summary>
+                  <ul className="grid list-none gap-4 sm:grid-cols-2">
+                    {moreObjects.map((object) => (
+                      <li key={object.objectId} className="min-w-0">
+                        <ProfileObjectCard
+                          object={object}
+                          locale={locale}
+                          headingLevel={cardHeadingLevel}
+                          priority={false}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </>
+          ) : (
+            <EmptyState
+              illustration={
+                ownerEmptyState ? resolveIllustration("empty-garden") : null
+              }
+              variant={ownerEmptyState ? "first-run" : "no-results"}
+              title={ownerEmptyState ? copy.noOwnerObjects : copy.noObjects}
+              action={
+                ownerEmptyState ? (
+                  <Link
+                    href={localizedPath(locale, "/garden")}
+                    className={buttonVariants({})}
+                  >
+                    <Sprout aria-hidden="true" />
+                    {copy.addFirstObject}
+                  </Link>
+                ) : null
+              }
+            />
+          )}
+        </Section>
+      ),
+    },
+    {
+      id: "entries",
+      label: copy.journalsTitle,
+      content: (
+        <Section
+          id="profile-journals"
+          title={copy.journalsTitle}
+          description={copy.journalsDescription}
+          level={sectionLevel}
+          headingClassName="sr-only"
+        >
+          {visibleJournals.length > 0 ? (
+            <>
+              <ul className="grid list-none gap-4">
+                {visibleJournals.map((journal, index) => (
+                  <li key={journal.entryId} className="min-w-0">
+                    <ProfileJournalCard
+                      journal={journal}
+                      locale={locale}
+                      headingLevel={cardHeadingLevel}
+                      priority={index === 0 && headingLevel === "h1"}
+                    />
+                  </li>
+                ))}
+              </ul>
+              {moreJournals.length > 0 ? (
+                <details className="grid gap-3">
+                  <summary
+                    className={cn(
+                      "w-fit min-h-11 cursor-pointer list-none content-center",
+                      "text-body-sm font-semibold text-link hover:underline",
+                    )}
+                  >
+                    {copy.showMore(
+                      moreJournals.length,
+                      profile.hasMoreJournals,
+                    )}
+                  </summary>
+                  <ul className="grid list-none gap-4">
+                    {moreJournals.map((journal) => (
+                      <li key={journal.entryId} className="min-w-0">
+                        <ProfileJournalCard
+                          journal={journal}
+                          locale={locale}
+                          headingLevel={cardHeadingLevel}
+                          priority={false}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </>
+          ) : (
+            <EmptyState
+              illustration={
+                ownerEmptyState ? resolveIllustration("empty-journal") : null
+              }
+              variant={ownerEmptyState ? "first-run" : "no-results"}
+              title={ownerEmptyState ? copy.noOwnerJournals : copy.noJournals}
+            />
+          )}
+        </Section>
+      ),
+    },
+    {
+      id: "about",
+      label: copy.aboutTitle,
+      content: (
+        <Section
+          id="profile-about"
+          title={copy.aboutTitle}
+          level={sectionLevel}
+          headingClassName="sr-only"
+        >
+          <p className="max-w-prose text-body-sm break-words whitespace-pre-wrap text-text">
+            {profile.bio ?? copy.aboutEmpty}
+          </p>
+          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {regionLabel ? (
+              <AboutFact label={copy.region}>{regionLabel}</AboutFact>
+            ) : null}
+            {profile.languages.length > 0 ? (
+              <AboutFact label={copy.languages}>
+                {profile.languages
+                  .map(
+                    (language) =>
+                      PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language],
+                  )
+                  .join(" · ")}
+              </AboutFact>
+            ) : null}
+            {profile.summary.confirmedLineageEdgeCount > 0 ? (
+              <AboutFact label={copy.lineage}>
+                {profile.summary.confirmedLineageEdgeCount}
+              </AboutFact>
+            ) : null}
+          </dl>
+          {profile.summary.relationships === null ? (
+            <p className="text-body-sm text-text-muted">
+              {copy.relationshipsHidden}
+            </p>
+          ) : null}
+        </Section>
+      ),
+    },
+  ];
 
   return (
     <article
       data-public-profile="v2"
-      data-profile-content-order="objects-journals-about"
-      className="grid gap-8"
+      data-profile-tab={activeTab}
+      className="grid gap-6"
     >
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
       <SiteShellContextRailRegistration
         modules={buildPublicProfileContextModules(profile, locale)}
       />
 
-      <header className="grid gap-5 border-b border-border pb-6">
-        <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-start">
-          <ProfileAvatar profile={profile} />
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-xs font-semibold text-muted-foreground uppercase">
-                  {copy.profileLabel}
-                </p>
-              </div>
-              <ProfileHeading className="mt-1 text-2xl leading-tight font-semibold break-words text-foreground sm:text-3xl">
-                {profile.displayName}
-              </ProfileHeading>
-              <p className="mt-1 text-sm font-medium break-words text-muted-foreground">
-                {profile.mention}
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-              {regionLabel ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="size-4" aria-hidden="true" />
-                  {regionLabel}
-                </span>
-              ) : null}
-              {profile.languages.length > 0 ? (
-                <span>
-                  {profile.languages
-                    .map(
-                      (language) =>
-                        PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language],
-                    )
-                    .join(" · ")}
-                </span>
-              ) : null}
-            </div>
-
-            <ProfileActions
-              profile={profile}
-              locale={locale}
-              viewer={viewer}
-              returnTo={basePath}
-              resumeAction={resumeAction}
-            />
-          </div>
-        </div>
-
-        {actionMessage ? (
-          <p
-            className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
-            role="status"
-          >
-            {actionMessage}
-          </p>
-        ) : null}
-
-        <ProfileStats profile={profile} locale={locale} />
-      </header>
-
-      <section id="profile-objects" className="grid gap-4">
-        <SectionHeading
-          title={copy.objectsTitle}
-          description={copy.objectsDescription}
-        />
-        {visibleObjects.length > 0 ? (
+      <ProfileHeader
+        eyebrow={copy.profileLabel}
+        avatarUrl={profile.avatarUrl}
+        displayName={profile.displayName}
+        handle={profile.mention}
+        bio={profile.bio}
+        headingLevel={headingLevel}
+        meta={
           <>
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {visibleObjects.map((object) => (
-                <li key={object.objectId}>
-                  <ProfileObjectCard object={object} locale={locale} />
-                </li>
-              ))}
-            </ul>
-            {moreObjects.length > 0 ? (
-              <details className="group grid gap-3">
-                <summary className="w-fit cursor-pointer list-none text-sm font-semibold text-primary hover:underline">
-                  {copy.showMore(moreObjects.length, profile.hasMoreObjects)}
-                </summary>
-                <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {moreObjects.map((object) => (
-                    <li key={object.objectId}>
-                      <ProfileObjectCard object={object} locale={locale} />
-                    </li>
-                  ))}
-                </ul>
-              </details>
+            {regionLabel ? (
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin className="size-4" aria-hidden="true" />
+                {regionLabel}
+              </span>
+            ) : null}
+            {profile.languages.length > 0 ? (
+              <span>
+                {profile.languages
+                  .map(
+                    (language) =>
+                      PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language],
+                  )
+                  .join(" · ")}
+              </span>
             ) : null}
           </>
-        ) : (
-          <ProfileEmptyState
-            message={ownerEmptyState ? copy.noOwnerObjects : copy.noObjects}
-            ownerAction={ownerEmptyState ? copy.addFirstObject : null}
+        }
+        counts={[
+          {
+            label: copy.publicObjects,
+            value: profile.summary.publicObjectCount,
+          },
+          {
+            label: copy.publicEntries,
+            value: profile.summary.publicEntryCount,
+          },
+          {
+            label: copy.followers,
+            value: profile.summary.relationships?.followers ?? null,
+          },
+          {
+            label: copy.following,
+            value: profile.summary.relationships?.following ?? null,
+          },
+        ]}
+        action={
+          <ProfileActions
+            profile={profile}
+            locale={locale}
+            viewer={viewer}
+            returnTo={basePath}
+            resumeAction={resumeAction}
           />
-        )}
-      </section>
+        }
+      />
 
-      <section
-        id="profile-journals"
-        className="grid gap-4 border-t border-border pt-7"
-      >
-        <SectionHeading
-          title={copy.journalsTitle}
-          description={copy.journalsDescription}
-        />
-        {visibleJournals.length > 0 ? (
-          <>
-            <ol className="divide-y divide-border border-y border-border">
-              {visibleJournals.map((journal) => (
-                <li key={journal.entryId}>
-                  <ProfileJournalRow journal={journal} locale={locale} />
-                </li>
-              ))}
-            </ol>
-            {moreJournals.length > 0 ? (
-              <details className="group grid gap-3">
-                <summary className="w-fit cursor-pointer list-none text-sm font-semibold text-primary hover:underline">
-                  {copy.showMore(moreJournals.length, profile.hasMoreJournals)}
-                </summary>
-                <ol className="mt-3 divide-y divide-border border-y border-border">
-                  {moreJournals.map((journal) => (
-                    <li key={journal.entryId}>
-                      <ProfileJournalRow journal={journal} locale={locale} />
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            ) : null}
-          </>
-        ) : (
-          <ProfileEmptyState
-            message={ownerEmptyState ? copy.noOwnerJournals : copy.noJournals}
-          />
-        )}
-      </section>
+      {actionMessage ? (
+        <Callout tone="info" live="polite">
+          <p>{actionMessage}</p>
+        </Callout>
+      ) : null}
 
-      <section
-        id="profile-about"
-        className="grid gap-3 border-t border-border pt-7"
-      >
-        <h2 className="text-xl font-semibold text-foreground">
-          {copy.aboutTitle}
-        </h2>
-        <p className="max-w-2xl text-sm leading-6 break-words whitespace-pre-wrap text-foreground">
-          {profile.bio ?? copy.aboutEmpty}
-        </p>
-        {profile.summary.relationships === null ? (
-          <p className="text-sm text-muted-foreground">
-            {copy.relationshipsHidden}
-          </p>
-        ) : null}
-      </section>
+      {/* Real `Tabs` with roving tabindex, and the open one is in the URL:
+          the server decides which panel is shown from `?tab=`, so a shared
+          link opens where its sender was. Every panel is in the HTML however
+          the tab stands, which is what keeps the entries indexable. */}
+      <PublicProfileTabs
+        label={copy.profileLabel}
+        tabs={tabs}
+        selectedId={activeTab}
+      />
     </article>
+  );
+}
+
+function AboutFact({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-caption text-text-muted">{label}</dt>
+      <dd className="text-body-sm break-words text-text">{children}</dd>
+    </div>
   );
 }
 
@@ -262,76 +400,6 @@ function publicProfileRegionLabel(code: string | null) {
   }
 
   return label.split(" - ")[0] ?? null;
-}
-
-function ProfileAvatar({ profile }: { profile: PublicProfileEvidencePage }) {
-  if (profile.avatarUrl) {
-    return (
-      <Image
-        src={profile.avatarUrl}
-        alt={profile.avatarAlt}
-        width={112}
-        height={112}
-        sizes="112px"
-        unoptimized
-        priority
-        className="size-24 shrink-0 rounded-full border border-border bg-muted object-cover sm:size-28"
-      />
-    );
-  }
-
-  return (
-    <div
-      className="flex size-24 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-2xl font-semibold text-muted-foreground sm:size-28"
-      aria-label={profile.avatarAlt}
-    >
-      {initials(profile.displayName, profile.handle)}
-    </div>
-  );
-}
-
-function ProfileStats({
-  profile,
-  locale,
-}: {
-  profile: PublicProfileEvidencePage;
-  locale: InterfaceLocale;
-}) {
-  const copy = getPublicProfileCopy(locale);
-  const stats = [
-    { label: copy.publicObjects, value: profile.summary.publicObjectCount },
-    { label: copy.publicEntries, value: profile.summary.publicEntryCount },
-    ...(profile.summary.relationships
-      ? [
-          {
-            label: copy.followers,
-            value: profile.summary.relationships.followers,
-          },
-          {
-            label: copy.following,
-            value: profile.summary.relationships.following,
-          },
-        ]
-      : []),
-  ];
-
-  return (
-    <dl className="grid grid-cols-2 border-y border-border sm:grid-cols-4">
-      {stats.map((stat) => (
-        <div
-          key={stat.label}
-          className="min-w-0 border-b border-border px-3 py-3 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
-        >
-          <dt className="truncate text-xs text-muted-foreground">
-            {stat.label}
-          </dt>
-          <dd className="mt-1 text-xl font-semibold text-foreground tabular-nums">
-            {stat.value}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
 }
 
 function ProfileActions({
@@ -383,7 +451,7 @@ function ProfileActions({
           id="lineage-follow"
         />
       ) : viewer.kind === "following" ? (
-        <OwnerScopedActionForm
+        <OwnerScopedProgressiveForm
           action={unfollowProfileAction}
           id="lineage-follow"
         >
@@ -391,24 +459,31 @@ function ProfileActions({
           <button
             type="submit"
             data-auth-intent-control="follow"
+            /* DESIGN.md §5.6: the name is the state this will produce, so a
+               reader knows what the control does before they press it. */
+            aria-label={`${copy.unfollow}, ${profile.displayName}`}
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <UserMinus aria-hidden="true" />
             {copy.unfollow}
           </button>
-        </OwnerScopedActionForm>
+        </OwnerScopedProgressiveForm>
       ) : (
-        <OwnerScopedActionForm action={followProfileAction} id="lineage-follow">
+        <OwnerScopedProgressiveForm
+          action={followProfileAction}
+          id="lineage-follow"
+        >
           {hiddenFields}
           <button
             type="submit"
             data-auth-intent-control="follow"
+            aria-label={`${copy.follow}, ${profile.displayName}`}
             className={buttonVariants({ size: "sm" })}
           >
             <UserPlus aria-hidden="true" />
             {copy.follow}
           </button>
-        </OwnerScopedActionForm>
+        </OwnerScopedProgressiveForm>
       )}
 
       <details
@@ -428,7 +503,7 @@ function ProfileActions({
         >
           <MoreHorizontal aria-hidden="true" />
         </summary>
-        <div className="absolute inset-x-0 top-11 z-popover grid w-auto gap-3 rounded-md border border-border bg-background p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64">
+        <div className="absolute inset-x-0 top-11 z-popover grid w-auto gap-3 rounded-lg border border-border bg-surface-raised p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64">
           {viewer.kind === "guest" ? (
             <>
               <AuthIntentTrigger
@@ -450,14 +525,14 @@ function ProfileActions({
                 icon={<ShieldBan aria-hidden="true" />}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start text-destructive"
+                className="w-full justify-start text-text-danger"
                 formClassName="w-full"
                 id="profile-block"
               />
             </>
           ) : (
             <>
-              <OwnerScopedActionForm
+              <OwnerScopedProgressiveForm
                 action={reportProfileAction}
                 className="grid gap-2"
               >
@@ -485,8 +560,8 @@ function ProfileActions({
                   <Flag aria-hidden="true" />
                   {copy.reportSubmit}
                 </button>
-              </OwnerScopedActionForm>
-              <OwnerScopedActionForm
+              </OwnerScopedProgressiveForm>
+              <OwnerScopedProgressiveForm
                 action={blockProfileAction}
                 id="profile-block"
               >
@@ -497,13 +572,13 @@ function ProfileActions({
                   className={buttonVariants({
                     variant: "ghost",
                     size: "sm",
-                    className: "w-full justify-start text-destructive",
+                    className: "w-full justify-start text-text-danger",
                   })}
                 >
                   <ShieldBan aria-hidden="true" />
                   {copy.block}
                 </button>
-              </OwnerScopedActionForm>
+              </OwnerScopedProgressiveForm>
             </>
           )}
         </div>
@@ -512,29 +587,29 @@ function ProfileActions({
   );
 }
 
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="grid gap-1">
-      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-      <p className="text-sm leading-6 text-muted-foreground">{description}</p>
-    </div>
-  );
-}
-
+/**
+ * One living object in the gardener's grid.
+ *
+ * It is a `Card`, not an `EntryCard`: an object is not an authored post, it is
+ * the thing the posts are about, and it carries a name, what it was identified
+ * as, how many entries exist and when the last one landed. The picture sits in
+ * a `MediaFigure` at the 4:3 card ratio, so the box is reserved whether or not
+ * a cover exists (DESIGN.md §2.10).
+ */
 function ProfileObjectCard({
   object,
   locale,
+  headingLevel,
+  priority,
 }: {
   object: PublicProfileObjectEvidence;
   locale: InterfaceLocale;
+  headingLevel: 2 | 3;
+  priority: boolean;
 }) {
   const copy = getPublicProfileCopy(locale);
+  const Heading = headingLevel === 2 ? "h2" : "h3";
+  const titleId = `profile-object-${object.objectId}-title`;
   const identityState = {
     confirmed: copy.identityConfirmed,
     provisional: copy.identityProvisional,
@@ -542,12 +617,17 @@ function ProfileObjectCard({
   }[object.identityState];
 
   return (
-    <Link
-      href={object.publicPath}
-      className="group grid h-full overflow-hidden rounded-md border border-border bg-background transition-colors hover:border-primary/60"
+    <Card
+      as="article"
+      interactive
+      data-profile-object={object.objectId}
+      aria-labelledby={titleId}
+      className="grid h-full content-start gap-3 overflow-hidden p-4"
     >
       {object.coverImageUrl ? (
-        <SubjectAwareMediaImage
+        <MediaFigure
+          aspect="card"
+          className="-mx-4 -mt-4"
           src={object.coverImageUrl}
           srcSet={
             buildPublicMediaSourceSet({
@@ -559,143 +639,115 @@ function ProfileObjectCard({
           }
           placeholderDataUri={object.coverPlaceholderDataUri}
           alt={object.coverImageAlt}
-          width={640}
-          height={480}
           sizes="(min-width: 640px) 20rem, 100vw"
-          presentationMode="cover"
           focalX={object.coverFocalX}
           focalY={object.coverFocalY}
           intrinsicWidth={object.coverIntrinsicWidth}
           intrinsicHeight={object.coverIntrinsicHeight}
-          className="aspect-4/3 w-full border-b border-border bg-muted"
+          priority={priority}
         />
       ) : (
-        <span className="flex aspect-4/3 w-full items-center justify-center border-b border-border bg-muted text-muted-foreground">
-          <ImageOff className="size-7" aria-hidden="true" />
-        </span>
+        <div
+          aria-hidden="true"
+          className="-mx-4 -mt-4 flex aspect-card items-center justify-center bg-surface-sunken text-text-disabled"
+        >
+          <ObjectKindIcon kind={object.objectKind} />
+        </div>
       )}
-      <span className="grid gap-2 p-3">
-        <span className="flex min-w-0 items-start gap-2">
-          <span className="mt-0.5 text-primary">
-            <ObjectKindIcon kind={object.objectKind} />
-          </span>
-          <span className="min-w-0">
-            <span className="block font-semibold break-words text-foreground group-hover:text-primary">
-              {object.displayName}
-            </span>
-            <span className="mt-0.5 block text-xs break-words text-muted-foreground">
-              {object.identityLabel ?? identityState}
-            </span>
-          </span>
-        </span>
-        <span className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span>{copy.entryCount(object.publicEntryCount)}</span>
-          <time dateTime={dateTimeValue(object.latestEntryDate)}>
-            {formatDate(object.latestEntryDate, locale)}
-          </time>
-        </span>
-      </span>
-    </Link>
+
+      <div className="grid min-w-0 gap-1">
+        <Heading id={titleId} className="text-h3 break-words text-text-heading">
+          <TextLink
+            href={object.publicPath}
+            variant="quiet"
+            className="text-text-heading"
+          >
+            {object.displayName}
+          </TextLink>
+        </Heading>
+        <p className="text-caption break-words text-text-muted">
+          {object.identityLabel ?? identityState}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
+        <span>{copy.entryCount(object.publicEntryCount)}</span>
+        <time
+          dateTime={dateTimeValue(object.latestEntryDate)}
+          className="tabular-nums"
+        >
+          {formatDate(object.latestEntryDate, locale)}
+        </time>
+      </div>
+    </Card>
   );
 }
 
-function ProfileJournalRow({
+/**
+ * One of the gardener's entries, as the system's `EntryCard`.
+ *
+ * The profile passes no `author` — every card on this page has the same one,
+ * and repeating the gardener's name under each entry on their own profile is
+ * noise a screen reader has to walk through.
+ */
+function ProfileJournalCard({
   journal,
   locale,
+  headingLevel,
+  priority,
 }: {
   journal: PublicProfileJournalEvidence;
   locale: InterfaceLocale;
+  headingLevel: 2 | 3;
+  priority: boolean;
 }) {
+  const copy = getPublicProfileCopy(locale);
+  const kindLabel =
+    journal.context.objectKind === "animal" ? copy.animals : copy.plants;
+
   return (
-    <article className="grid gap-3 py-4 sm:flex">
-      <Link
-        href={journal.publicPath}
-        aria-label={journal.title}
-        className="block shrink-0"
-      >
-        {journal.coverImageUrl ? (
-          <SubjectAwareMediaImage
-            src={journal.coverImageUrl}
-            srcSet={
-              buildPublicMediaSourceSet({
+    <EntryCard
+      id={journal.entryId}
+      href={journal.publicPath}
+      title={journal.title}
+      headingLevel={headingLevel}
+      dateTime={dateTimeValue(journal.entryDate)}
+      dateLabel={formatDate(journal.entryDate, locale)}
+      excerpt={journal.bodyPreview}
+      subject={{
+        label: journal.context.label,
+        href: journal.context.publicPath ?? undefined,
+        kindLabel:
+          journal.context.kind === "object" ? kindLabel : copy.objectsTitle,
+        icon:
+          journal.context.kind === "object" ? (
+            <ObjectKindIcon kind={journal.context.objectKind ?? "plant"} />
+          ) : (
+            <BookOpen className="size-6" aria-hidden="true" />
+          ),
+      }}
+      cover={
+        journal.coverImageUrl
+          ? {
+              src: journal.coverImageUrl,
+              srcSet: buildPublicMediaSourceSet({
                 publicUrl: journal.coverImageUrl,
                 intrinsicWidth: journal.coverIntrinsicWidth,
                 intrinsicHeight: journal.coverIntrinsicHeight,
                 variantLongEdges: journal.coverVariantLongEdges,
-              }).srcSet
+              }).srcSet,
+              alt: journal.coverImageAlt,
+              placeholderDataUri: journal.coverPlaceholderDataUri,
+              focalX: journal.coverFocalX,
+              focalY: journal.coverFocalY,
+              intrinsicWidth: journal.coverIntrinsicWidth,
+              intrinsicHeight: journal.coverIntrinsicHeight,
+              sizes: "(max-width: 767px) 100vw, 704px",
             }
-            placeholderDataUri={journal.coverPlaceholderDataUri}
-            alt={journal.coverImageAlt}
-            width={320}
-            height={240}
-            sizes="120px"
-            presentationMode="cover"
-            focalX={journal.coverFocalX}
-            focalY={journal.coverFocalY}
-            intrinsicWidth={journal.coverIntrinsicWidth}
-            intrinsicHeight={journal.coverIntrinsicHeight}
-            className="aspect-4/3 w-full rounded-md border border-border bg-muted sm:w-30"
-          />
-        ) : (
-          <span className="flex aspect-4/3 w-full items-center justify-center rounded-md border border-border bg-muted text-muted-foreground sm:w-30">
-            <BookOpen className="size-6" aria-hidden="true" />
-          </span>
-        )}
-      </Link>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-          <CalendarDays className="size-3.5" aria-hidden="true" />
-          <time dateTime={dateTimeValue(journal.entryDate)}>
-            {formatDate(journal.entryDate, locale)}
-          </time>
-          <span aria-hidden="true">·</span>
-          {journal.context.publicPath ? (
-            <Link
-              href={journal.context.publicPath}
-              className="font-medium hover:text-primary hover:underline"
-            >
-              {journal.context.label}
-            </Link>
-          ) : (
-            <span>{journal.context.label}</span>
-          )}
-        </div>
-        <h3 className="mt-1 text-base font-semibold break-words text-foreground">
-          <Link
-            href={journal.publicPath}
-            className="hover:text-primary hover:underline"
-          >
-            {journal.title}
-          </Link>
-        </h3>
-        <p className="mt-1 line-clamp-2 text-sm leading-6 break-words text-muted-foreground">
-          {journal.bodyPreview}
-        </p>
-      </div>
-    </article>
-  );
-}
-
-function ProfileEmptyState({
-  message,
-  ownerAction,
-}: {
-  message: string;
-  ownerAction?: string | null;
-}) {
-  return (
-    <div className="grid gap-3 border-y border-dashed border-border py-6 text-sm text-muted-foreground">
-      <p>{message}</p>
-      {ownerAction ? (
-        <Link
-          href="/garden#first-entry-composer"
-          className={buttonVariants({ size: "sm", className: "w-fit" })}
-        >
-          <Sprout aria-hidden="true" />
-          {ownerAction}
-        </Link>
-      ) : null}
-    </div>
+          : null
+      }
+      priority={priority}
+    />
   );
 }
 
@@ -705,8 +757,8 @@ function ObjectKindIcon({
   kind: PublicProfileObjectEvidence["objectKind"];
 }) {
   if (kind === "animal")
-    return <PawPrint className="size-4" aria-hidden="true" />;
-  return <Sprout className="size-4" aria-hidden="true" />;
+    return <PawPrint className="size-6" aria-hidden="true" />;
+  return <Sprout className="size-6" aria-hidden="true" />;
 }
 
 export function buildPublicProfileContextModules(
@@ -714,15 +766,30 @@ export function buildPublicProfileContextModules(
   locale: InterfaceLocale,
 ): SiteShellContextRailModule[] {
   const copy = getPublicProfileCopy(locale);
+  const basePath = publicProfilePath(locale, profile.handle);
+  // A rail item points at a panel, and a panel that is not the open one is
+  // `hidden` — so every one of these carries the `?tab=` that opens it. A bare
+  // `#profile-journals` would scroll a reader to nothing.
+  const objectsHref = publicProfileTabHref(
+    basePath,
+    "objects",
+    "#profile-objects",
+  );
+  const journalsHref = publicProfileTabHref(
+    basePath,
+    "entries",
+    "#profile-journals",
+  );
+  const aboutHref = publicProfileTabHref(basePath, "about", "#profile-about");
   const relationshipItems = profile.summary.relationships
     ? [
         {
-          href: "#profile-about",
+          href: aboutHref,
           label: copy.followers,
           meta: String(profile.summary.relationships.followers),
         },
         {
-          href: "#profile-about",
+          href: aboutHref,
           label: copy.following,
           meta: String(profile.summary.relationships.following),
         },
@@ -734,7 +801,7 @@ export function buildPublicProfileContextModules(
   ]
     .filter((item) => item.value > 0)
     .map((item) => ({
-      href: "#profile-objects",
+      href: objectsHref,
       label: item.label,
       meta: String(item.value),
     }));
@@ -751,12 +818,12 @@ export function buildPublicProfileContextModules(
       title: copy.activity,
       items: [
         {
-          href: "#profile-journals",
+          href: journalsHref,
           label: copy.publicEntries,
           meta: String(profile.summary.publicEntryCount),
         },
         {
-          href: "#profile-about",
+          href: aboutHref,
           label: copy.lineage,
           meta: String(profile.summary.confirmedLineageEdgeCount),
         },
@@ -767,8 +834,8 @@ export function buildPublicProfileContextModules(
       key: "profile-navigation",
       title: copy.navigation,
       items: [
-        { href: "#profile-objects", label: copy.objectsTitle },
-        { href: "#profile-journals", label: copy.journalsTitle },
+        { href: objectsHref, label: copy.objectsTitle },
+        { href: journalsHref, label: copy.journalsTitle },
         {
           href: localizedPath(locale, "/feed"),
           label: copy.followedFeed,
@@ -786,18 +853,6 @@ function profileActionMessage(
   const messages = getPublicProfileCopy(locale).actionMessages;
   if (!status || !(status in messages)) return null;
   return messages[status as keyof typeof messages];
-}
-
-function initials(displayName: string, handle: string) {
-  const value = displayName.startsWith("@") ? handle : displayName;
-  return (
-    value
-      .split(/\s+/u)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || handle.slice(0, 2).toUpperCase()
-  );
 }
 
 function dateTimeValue(value: Date | string) {
