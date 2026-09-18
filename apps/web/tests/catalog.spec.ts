@@ -107,10 +107,9 @@ test.describe("the catalogue's one door", () => {
     // Merging entrances changes navigation, never addresses. What this proves
     // is that the merge left the three route families alone: an organism's
     // address is answered where it is asked for, with no redirect anywhere.
-    // What the *page* under it renders is `tests/catalog-addresses.spec.ts`'s
-    // subject and needs a database with the organism graph behind the names —
-    // this one holds the names only, and the detail page 404s here on `main`
-    // exactly as it does on this branch.
+    // What the page under it *renders* is `tests/catalog-addresses.spec.ts`'s
+    // subject, which is why this asks for the status and the absence of a
+    // `Location` rather than for the body.
     const listing = await request.get(`${baseURL}/catalog`, {
       headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
     });
