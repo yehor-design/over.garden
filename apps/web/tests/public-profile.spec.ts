@@ -56,6 +56,17 @@ interface ProfileFixture {
 
 let pool: Pool;
 let fixture: ProfileFixture | null = null;
+/**
+ * Two signed-in gardeners, signed in **once** for the whole file.
+ *
+ * Better Auth rate-limits sign-up: the fourth call in a window answers 429 and
+ * writes nothing, and Playwright runs spec files in parallel, so a spec that
+ * signs a fresh gardener in per test spends the budget of every other spec in
+ * the run. This one cost `owner-catalog-curation.spec.ts` its owner on CI.
+ * Two contexts are created here and reused; no test signs anybody in.
+ */
+let authorRequest: APIRequestContext | null = null;
+let strangerRequest: APIRequestContext | null = null;
 
 async function selectLocale(context: BrowserContext, baseURL: string) {
   await context.addCookies([
@@ -256,25 +267,22 @@ test.describe("the public profile and the object passport", () => {
   test.beforeAll(async ({ playwright, baseURL }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
-    const request = await playwright.request.newContext();
-    try {
-      const gardener = await signInSyntheticGardener({
-        baseURL,
-        context: { request },
-        pool,
-        prefix: `${FIXTURE_PREFIX}-author`,
-      });
-      const stranger = await signInSyntheticGardener({
-        baseURL,
-        context: { request },
-        pool,
-        prefix: `${FIXTURE_PREFIX}-empty`,
-      });
-      const seeded = await seedPublishedWork(gardener);
-      fixture = { gardener, stranger, ...seeded };
-    } finally {
-      await request.dispose();
-    }
+    authorRequest = await playwright.request.newContext();
+    strangerRequest = await playwright.request.newContext();
+    const gardener = await signInSyntheticGardener({
+      baseURL,
+      context: { request: authorRequest },
+      pool,
+      prefix: `${FIXTURE_PREFIX}-author`,
+    });
+    const stranger = await signInSyntheticGardener({
+      baseURL,
+      context: { request: strangerRequest },
+      pool,
+      prefix: `${FIXTURE_PREFIX}-visitor`,
+    });
+    const seeded = await seedPublishedWork(gardener);
+    fixture = { gardener, stranger, ...seeded };
   });
 
   test.afterAll(async () => {
@@ -297,6 +305,8 @@ test.describe("the public profile and the object passport", () => {
       await removeSyntheticGardener(pool, fixture.gardener.id);
       await removeSyntheticGardener(pool, fixture.stranger.id);
     }
+    await authorRequest?.dispose();
+    await strangerRequest?.dispose();
     await pool.end();
   });
 
@@ -517,22 +527,12 @@ test.describe("the public profile and the object passport", () => {
     }
   });
 
-  test("follow submits with no client bundle at all", async ({
-    playwright,
-    baseURL,
-  }) => {
+  test("follow submits with no client bundle at all", async ({ baseURL }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    const request: APIRequestContext = await playwright.request.newContext();
-    try {
-      // A signed-in stranger, because a gardener does not follow themselves.
-      await signInSyntheticGardener({
-        baseURL,
-        context: { request },
-        pool,
-        prefix: `${FIXTURE_PREFIX}-follower`,
-        password: undefined,
-      });
-
+    // The second gardener's own session, signed in once in `beforeAll`. A
+    // gardener does not follow themselves, which is why it is not the author's.
+    const request = strangerRequest!;
+    {
       const profileUrl = `${baseURL}/uk/@${fixture!.gardener.handle}`;
       const page = await request.get(profileUrl);
       expect(page.status()).toBe(200);
@@ -564,32 +564,18 @@ test.describe("the public profile and the object passport", () => {
         `the follow endpoint answered ${posted.status()}`,
       ).toBeLessThan(400);
       expect(await followCount(fixture!.gardener.id)).toBe(before + 1);
-    } finally {
-      await request.dispose();
     }
   });
 
   test("the passport's lineage forms are real endpoints with scripts off", async ({
-    playwright,
     baseURL,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    const request: APIRequestContext = await playwright.request.newContext();
-    try {
-      // The interaction panel renders only for someone the edge authorizes —
-      // here, the gardener who owns both of its ends.
-      await signInSyntheticGardener({
-        baseURL,
-        context: { request },
-        pool,
-        prefix: `${FIXTURE_PREFIX}-owner`,
-      });
-      await pool.query(
-        `update lineage_provenance_edges set owner_user_id = owner_user_id
-          where id = $1::uuid`,
-        [fixture!.edgeId],
-      );
-
+    // The interaction panel renders only for someone the edge authorizes —
+    // here the gardener who owns both of its ends, whose session was opened
+    // once in `beforeAll`.
+    const request = authorRequest!;
+    {
       const passportUrl = `${baseURL}/uk/lineage/objects/${fixture!.objectIds[0]}`;
       const response = await request.get(passportUrl);
       expect(response.status()).toBe(200);
@@ -621,8 +607,6 @@ test.describe("the public profile and the object passport", () => {
       // Both converted call sites are server actions, so at least one form
       // here must carry a reference rather than an endpoint of its own.
       expect(html).toMatch(/\$ACTION_(ID|REF)/u);
-    } finally {
-      await request.dispose();
     }
   });
 });

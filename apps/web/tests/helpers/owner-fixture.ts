@@ -16,3 +16,55 @@ export const OWNER_BROWSER_FIXTURE = {
 } as const;
 
 export const OWNER_BROWSER_FIXTURE_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
+
+/**
+ * Signs the sealed owner in, and survives the rate limiter.
+ *
+ * Better Auth rate-limits the auth endpoints per window, and Playwright runs
+ * spec files in parallel — so a sign-in can answer `429` because a *different*
+ * spec in the same run signed somebody up a moment earlier. The failure then
+ * reads "Run `pnpm owner:seed-browser-fixture` before this spec", which names
+ * a cause that is not the cause; it cost CI a red run on 2026-09-18.
+ *
+ * The retries are the same shape as `synthetic-gardener.ts`'s, and the error
+ * reports the statuses actually seen so the next reader is not misled again.
+ */
+const OWNER_SIGN_IN_RETRY_DELAYS_MS = [1_500, 4_000, 9_000] as const;
+
+export async function signInOwnerFixture(input: {
+  request: {
+    post: (
+      url: string,
+      options: { headers: Record<string, string>; data: unknown },
+    ) => Promise<{ ok: () => boolean; status: () => number }>;
+  };
+  baseURL: string;
+}) {
+  const statuses: number[] = [];
+  for (
+    let attempt = 0;
+    attempt <= OWNER_SIGN_IN_RETRY_DELAYS_MS.length;
+    attempt += 1
+  ) {
+    const response = await input.request.post(
+      `${input.baseURL}/api/auth/sign-in/email`,
+      {
+        headers: { origin: input.baseURL },
+        data: {
+          email: OWNER_BROWSER_FIXTURE.email,
+          password: OWNER_BROWSER_FIXTURE.password,
+        },
+      },
+    );
+    if (response.ok()) return;
+    statuses.push(response.status());
+    const delay = OWNER_SIGN_IN_RETRY_DELAYS_MS[attempt];
+    if (delay === undefined) break;
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+  throw new Error(
+    `The owner fixture could not sign in (statuses: ${statuses.join(", ")}). ` +
+      "A 429 is the rate limiter and another spec in this run; anything else " +
+      "means `pnpm owner:seed-browser-fixture` has not been run.",
+  );
+}
