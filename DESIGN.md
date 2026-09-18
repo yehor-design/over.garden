@@ -728,6 +728,31 @@ that, and closing it (`OVE-451`) fixed four rules worth keeping:
   404 for, so a merge that adds its redirect below them turns a published
   address into a 404 — which is what the first draft of this did.
 
+### 5.9 Articles and reference pages
+
+Everything the product publishes that is not a gardener's entry — the blog,
+the guides, the answers, the market landings, and the legal and support pages
+— is one article shape, and every index over them is one hub shape.
+
+- **The article is `OVE-449`'s reading column, reused.** 704 px at 18/29, one
+  byline row, one `MediaFigure`, and the same contents rail above `xl`. A
+  reference page differs from an entry in what it says, not in how wide its
+  lines are.
+- **A section heading is a real heading with a real id.** The rail links to
+  them, a screen reader lists them, and a reader can share one. A bold
+  paragraph is none of those things.
+- **A reference page with no photograph is type and space** (ADR-0031 D3).
+  There is no decorative illustration slot on an article: a cover is a real
+  photograph or it is absent.
+- **Legal copy gets structure, never edits.** Headings, a contents list and a
+  measure a person can read are design decisions. The wording of a disclosure
+  is a legal one, and `src/lib/privacy/disclosures.test.ts` is what stops the
+  two being confused.
+- **An instrumented path is a contract.** Nine paths carry the product's only
+  analytics. A redesign may change everything on them and must change none of
+  their addresses; the set is enumerated in
+  `src/app/google-analytics.test.tsx` so a move fails there first.
+
 ---
 
 ## 6. Language and locale

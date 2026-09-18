@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AnalyticsPrivacyControls } from "@/app/google-analytics";
 import { MetaMarketingPrivacyControls } from "@/app/meta-marketing";
-import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
+import { PublicArticle } from "@/components/public/public-article";
+import { Link } from "@/components/ui/link";
 import {
-  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
@@ -58,92 +57,89 @@ export default async function LocalizedPrivacyNoticePage({
   const copy = getTrustSurfaceCopy(localeParam).privacy;
 
   return (
-    <main
-      lang={localeParam}
-      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8"
-    >
-      <PublicLocalizedHeader
-        locale={localeParam}
-        basePath="/privacy"
-        availableLocales={getLanguageSwitcherLocales()}
-      />
-      <header className="border-b border-border pb-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {copy.intro}
-        </p>
-      </header>
-      <div className="grid gap-4 text-sm leading-6 text-foreground">
-        <p>
-          {copy.statusPrefix} <strong>{copy.statusLabel}</strong>.
-        </p>
-        <PolicyList title={copy.controlsTitle} lines={copy.controls} />
-        <PolicyList title={copy.retentionTitle} lines={copy.retention} />
-        <PolicyList title={copy.boundariesTitle} lines={copy.boundaries} />
-        <AnalyticsPrivacyControls locale={localeParam} />
-        <MetaMarketingPrivacyControls locale={localeParam} />
-        <section className="grid gap-2">
-          <h2 className="text-base font-semibold text-foreground">
-            {copy.contactTitle}
-          </h2>
-          <p className="text-muted-foreground">
-            {copy.contactBeforeEmail}
-            <a
-              href={`mailto:${SUPPORT_EMAIL}`}
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {SUPPORT_EMAIL}
-            </a>
-            {copy.contactAfterEmail}
-          </p>
-        </section>
-        <section className="grid gap-2">
-          <h2 className="text-base font-semibold text-foreground">
-            {copy.relatedTitle}
-          </h2>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/erasure"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              {copy.erasureLink}
-            </Link>
-            <Link
-              href="/support"
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              {copy.supportLink}
-            </Link>
-            <Link
-              href={localizedPath(localeParam, "/first-publication-disclosure")}
-              className="text-primary underline-offset-4 hover:underline"
-            >
-              {copy.firstPublicationLink} {FIRST_PUBLICATION_DISCLOSURE_VERSION}
-            </Link>
-          </div>
-        </section>
-      </div>
-    </main>
+    // The legal wording is unchanged, and changing it would be a legal
+    // decision rather than a design one (`OVE-453` criterion 5). What changes
+    // is that it is now the product's one article shape: real headings with
+    // real ids, a contents list that is the rail above `xl` and a list at the
+    // foot below it, and the reading column's measure instead of a wall.
+    <PublicArticle
+      locale={localeParam}
+      dataset={{ "data-trust-surface": "privacy" }}
+      title={copy.title}
+      description={copy.intro}
+      contentsLabel={copy.title}
+      sections={[
+        {
+          id: "privacy-status",
+          heading: copy.statusPrefix,
+          body: <strong>{copy.statusLabel}</strong>,
+        },
+        {
+          id: "privacy-controls",
+          heading: copy.controlsTitle,
+          body: <PolicyList lines={copy.controls} />,
+        },
+        {
+          id: "privacy-retention",
+          heading: copy.retentionTitle,
+          body: <PolicyList lines={copy.retention} />,
+        },
+        {
+          id: "privacy-boundaries",
+          heading: copy.boundariesTitle,
+          body: <PolicyList lines={copy.boundaries} />,
+        },
+        {
+          id: "privacy-choices",
+          heading: copy.contactTitle,
+          body: (
+            <div className="grid gap-4">
+              <AnalyticsPrivacyControls locale={localeParam} />
+              <MetaMarketingPrivacyControls locale={localeParam} />
+              <p className="text-text-secondary">
+                {copy.contactBeforeEmail}
+                <Link href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>
+                {copy.contactAfterEmail}
+              </p>
+            </div>
+          ),
+        },
+        {
+          id: "privacy-related",
+          heading: copy.relatedTitle,
+          body: (
+            <ul className="flex list-none flex-wrap gap-4">
+              <li>
+                <Link href="/erasure">{copy.erasureLink}</Link>
+              </li>
+              <li>
+                <Link href="/support">{copy.supportLink}</Link>
+              </li>
+              <li>
+                <Link
+                  href={localizedPath(
+                    localeParam,
+                    "/first-publication-disclosure",
+                  )}
+                >
+                  {copy.firstPublicationLink}{" "}
+                  {FIRST_PUBLICATION_DISCLOSURE_VERSION}
+                </Link>
+              </li>
+            </ul>
+          ),
+        },
+      ]}
+    />
   );
 }
 
-function PolicyList({
-  title,
-  lines,
-}: {
-  title: string;
-  lines: readonly string[];
-}) {
+function PolicyList({ lines }: { lines: readonly string[] }) {
   return (
-    <section className="grid gap-2">
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
-      <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-        {lines.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
-      </ul>
-    </section>
+    <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
+      {lines.map((line) => (
+        <li key={line}>{line}</li>
+      ))}
+    </ul>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { PublicArticle } from "@/components/public/public-article";
+import { Link } from "@/components/ui/link";
 import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 import { localizedPath } from "@/lib/public-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
@@ -20,65 +21,45 @@ export default async function SupportPage() {
   const copy = getTrustSurfaceCopy(locale).support;
 
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8"
-    >
-      <Link href="/" className="text-sm text-muted-foreground">
-        OverGarden
-      </Link>
-      <header className="border-b border-border pb-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+    <PublicArticle
+      locale={locale}
+      dataset={{ "data-trust-surface": "support" }}
+      title={copy.title}
+      description={
+        <>
           {copy.introBeforeEmail}
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
-            {SUPPORT_EMAIL}
-          </a>
+          <Link href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>
           {copy.introAfterEmail} {copy.statusLabel}.
-        </p>
-      </header>
-      <section className="grid gap-3 text-sm leading-6 text-foreground">
-        <h2 className="text-base font-semibold text-foreground">
-          {copy.pathsTitle}
-        </h2>
-        <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-          <li>
-            {copy.accountBeforeLink}
-            <Link
-              href="/auth/help"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {copy.accountLink}
-            </Link>
-            {copy.accountAfterLink}
-          </li>
-          <li>
-            {copy.erasureBeforeLink}
-            <Link
-              href="/erasure"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {copy.erasureLink}
-            </Link>
-            {copy.erasureAfterLink}
-          </li>
-          <li>
-            {copy.privacyBeforeLink}
-            <Link
-              href={localizedPath(locale, "/privacy")}
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {copy.privacyLink}
-            </Link>
-            {copy.privacyAfterLink}
-          </li>
-        </ul>
-      </section>
-    </main>
+        </>
+      }
+      contentsLabel={copy.pathsTitle}
+      sections={[
+        {
+          id: "support-paths",
+          heading: copy.pathsTitle,
+          body: (
+            <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
+              <li>
+                {copy.accountBeforeLink}
+                <Link href="/auth/help">{copy.accountLink}</Link>
+                {copy.accountAfterLink}
+              </li>
+              <li>
+                {copy.erasureBeforeLink}
+                <Link href="/erasure">{copy.erasureLink}</Link>
+                {copy.erasureAfterLink}
+              </li>
+              <li>
+                {copy.privacyBeforeLink}
+                <Link href={localizedPath(locale, "/privacy")}>
+                  {copy.privacyLink}
+                </Link>
+                {copy.privacyAfterLink}
+              </li>
+            </ul>
+          ),
+        },
+      ]}
+    />
   );
 }

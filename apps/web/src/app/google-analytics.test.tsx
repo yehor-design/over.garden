@@ -81,6 +81,48 @@ describe("public analytics consent", () => {
     expect(isGoogleAnalyticsRoute("/api/auth/callback/google")).toBe(false);
   });
 
+  it("keeps the instrumented set closed, whatever the pages look like", () => {
+    // These nine patterns are the only paths the product measures, and
+    // `OVE-453` redesigned every one of them. A silent analytics regression
+    // here is invisible until a month of data is missing, so the set is
+    // enumerated rather than sampled: a redesign that moved one of these
+    // addresses would fail here before anybody noticed the gap.
+    const instrumented = [
+      "/",
+      "/blog",
+      "/privacy",
+      "/support",
+      "/first-publication-disclosure",
+      "/answers/yellow-tomato-leaves",
+      "/blog/field-note",
+      "/guides/start-a-living-plant-record",
+      "/markets/ua",
+    ];
+    for (const path of instrumented) {
+      expect(isGoogleAnalyticsRoute(path), path).toBe(true);
+      // And in every locale, because a prefixed spelling is the same page.
+      for (const locale of ["uk", "bg", "ru"]) {
+        expect(isGoogleAnalyticsRoute(`/${locale}${path === "/" ? "" : path}`), 
+          `/${locale}${path}`).toBe(true);
+      }
+    }
+
+    // Nothing the redesign touched joined the set by accident: the catalogue
+    // and the profile families are not measured and did not become so.
+    for (const path of [
+      "/catalog",
+      "/catalog?kingdom=fungi",
+      "/species/solanum-lycopersicum",
+      "/@yehor",
+      "/@yehor/polyv",
+      "/knowledge",
+      "/topics/care-checks",
+      "/sources/eppo",
+    ]) {
+      expect(isGoogleAnalyticsRoute(path), path).toBe(false);
+    }
+  });
+
   it("keeps Microsoft Clarity disabled until both public env values are configured", () => {
     expect(
       resolveMicrosoftClarityPublicConfig({

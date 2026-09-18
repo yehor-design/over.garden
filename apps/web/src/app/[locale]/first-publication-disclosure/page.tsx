@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
+import { PublicArticle } from "@/components/public/public-article";
 import {
-  getLanguageSwitcherLocales,
   isPublicLocale,
   PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
@@ -53,32 +52,30 @@ export default async function LocalizedFirstPublicationDisclosurePage({
   const copy = getTrustSurfaceCopy(localeParam).firstPublication;
 
   return (
-    <main
-      lang={localeParam}
-      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8"
-    >
-      <PublicLocalizedHeader
-        locale={localeParam}
-        basePath="/first-publication-disclosure"
-        availableLocales={getLanguageSwitcherLocales()}
-      />
-      <header className="border-b border-border pb-5">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          {copy.title}
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {copy.version} {FIRST_PUBLICATION_DISCLOSURE_VERSION}.{" "}
-          {copy.statusLabel}.
-        </p>
-      </header>
-      <div className="grid gap-4 text-sm leading-6 text-foreground">
-        <p>{copy.body}</p>
-        <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-          {copy.lines.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-      </div>
-    </main>
+    // The wording is a legal disclosure and is unchanged (`OVE-453`
+    // criterion 5). The shape is the product's one article shape.
+    <PublicArticle
+      locale={localeParam}
+      dataset={{ "data-trust-surface": "first-publication" }}
+      title={copy.title}
+      description={`${copy.version} ${FIRST_PUBLICATION_DISCLOSURE_VERSION}. ${copy.statusLabel}.`}
+      contentsLabel={copy.title}
+      sections={[
+        {
+          id: "first-publication-body",
+          heading: copy.title,
+          body: (
+            <div className="grid gap-4">
+              <p>{copy.body}</p>
+              <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
+                {copy.lines.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+        },
+      ]}
+    />
   );
 }

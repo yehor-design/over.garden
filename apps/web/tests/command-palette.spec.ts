@@ -11,6 +11,7 @@ import {
   seedOrganismFixture,
   type OrganismFixture,
 } from "./helpers/organism-fixture";
+import { openCommandPalette } from "./helpers/command-palette";
 import {
   removeSyntheticGardener,
   signInSyntheticGardener,
@@ -142,7 +143,7 @@ test.describe("the command palette", () => {
       page.locator('[data-site-shell-region="header"]'),
     ).toBeVisible();
 
-    await page.keyboard.press("ControlOrMeta+k");
+    await openCommandPalette(page);
     await expect(page.locator('[data-command-palette="true"]')).toBeVisible();
 
     // The combobox holds focus from the first keystroke; the arrows move a
@@ -245,7 +246,7 @@ test.describe("the command palette", () => {
       await expect(
         page.locator('[data-site-shell-region="header"]'),
       ).toBeVisible();
-      await page.keyboard.press("ControlOrMeta+k");
+      await openCommandPalette(page);
       await expect(page.locator('[data-command-palette="true"]')).toBeVisible();
       await page.keyboard.type(query);
       await expect
@@ -278,7 +279,7 @@ test.describe("the command palette", () => {
     await expect(
       page.locator('[data-site-shell-region="header"]'),
     ).toBeVisible();
-    await page.keyboard.press("ControlOrMeta+k");
+    await openCommandPalette(page);
     await page.keyboard.type("zzzqqqxxxнічого");
     await expect(
       page.locator('[data-screen-state="empty-no-results"]'),

@@ -1,12 +1,4 @@
-import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpen,
-  CircleAlert,
-  HelpCircle,
-  Search,
-  Tags,
-} from "lucide-react";
+import { BookOpen, HelpCircle, Search, Tags } from "lucide-react";
 
 import {
   SiteShellContextRailModules,
@@ -14,7 +6,15 @@ import {
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
 import { CatalogFrontDoor } from "@/components/public/catalog-front-door";
-import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { FilterBar } from "@/components/ui/filter-bar";
+import { Link } from "@/components/ui/link";
+import { ListRow } from "@/components/ui/list-row";
+import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   buildPublicKnowledgeHref,
@@ -29,7 +29,6 @@ import type { PlantObjectKind } from "@/db/schema";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { Field } from "@/components/ui/field";
 import { SearchInput } from "@/components/ui/search-input";
-import { Select } from "@/components/ui/select";
 
 export type PublicKnowledgeHubState = "ready" | "empty" | "loading" | "error";
 
@@ -72,7 +71,7 @@ export function PublicKnowledgeHub({
       lang={locale}
       data-public-knowledge-hub="true"
       data-public-knowledge-state={state}
-      className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       {serializePublicSurfaceJsonLd(jsonLd ?? null) ? (
         <script
@@ -84,77 +83,91 @@ export function PublicKnowledgeHub({
       ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
-      <header className="grid gap-2 border-b border-border pb-4">
-        <h1 className="text-3xl font-semibold text-foreground">
-          {copy.heading}
-        </h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {copy.intro}
-        </p>
-      </header>
+      <PageHeader title={copy.heading} description={copy.intro} />
 
-      <form
-        method="get"
+      {/* The same bar `/journals` and `/catalog` use, so a reader who has
+          filtered one has filtered all three: apply on change, one parameter
+          per facet, chips above the results, a sheet below `lg`
+          (DESIGN.md §5.1). */}
+      <FilterBar
         action={buildPublicKnowledgeHref(locale, {
           query: "",
           type: "all",
           kind: "all",
         })}
-        aria-label={copy.filtersLabel}
-        className="grid gap-4 border-b border-border py-4"
-      >
-        <div className="grid items-end gap-2 sm:flex">
-          <Field
-            label={copy.searchLabel}
-            id="knowledge-hub-search"
-            className="min-w-0 flex-1"
-          >
-            <SearchInput
-              name="q"
-              defaultValue={request.query}
-              maxLength={112}
-              placeholder={copy.searchPlaceholder}
-            />
-          </Field>
-          <button type="submit" className={buttonVariants()}>
-            <Search aria-hidden="true" />
-            {copy.applyFilters}
-          </button>
-        </div>
+        search={
+          <div className="flex items-end gap-2">
+            <Field
+              label={copy.searchLabel}
+              id="knowledge-hub-search"
+              className="min-w-0 flex-1"
+            >
+              <SearchInput
+                name="q"
+                defaultValue={request.query}
+                maxLength={112}
+                placeholder={copy.searchPlaceholder}
+              />
+            </Field>
+            <Button type="submit" className="shrink-0">
+              <Search aria-hidden="true" />
+              {copy.applyFilters}
+            </Button>
+          </div>
+        }
+        facets={[
+          {
+            key: "type",
+            label: copy.typeLabel,
+            value: request.type === "all" ? [] : [request.type],
+            anyLabel: copy.filters.types.all,
+            options: Object.entries(copy.filters.types)
+              .filter(([value]) => value !== "all")
+              .map(([value, label]) => ({ value, label })),
+          },
+          {
+            key: "kind",
+            label: copy.kindLabel,
+            value: request.kind === "all" ? [] : [request.kind],
+            anyLabel: copy.filters.kinds.all,
+            options: Object.entries(copy.filters.kinds)
+              .filter(([value]) => value !== "all")
+              .map(([value, label]) => ({ value, label })),
+          },
+        ]}
+        chips={buildKnowledgeChips(locale, copy, request)}
+        clearAllHref={buildPublicKnowledgeHref(locale, {
+          query: "",
+          type: "all",
+          kind: "all",
+        })}
+        labels={{
+          filters: copy.filtersLabel,
+          openFilters: copy.filtersLabel,
+          sheetDescription: copy.intro,
+          apply: copy.applyFilters,
+          clear: copy.resetFilters,
+          clearAll: copy.resetFilters,
+          activeFilters: copy.filtersLabel,
+          sort: copy.typeLabel,
+        }}
+      />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <KnowledgeSelect
-            label={copy.typeLabel}
-            name="type"
-            value={request.type}
-            options={Object.entries(copy.filters.types)}
-          />
-          <KnowledgeSelect
-            label={copy.kindLabel}
-            name="kind"
-            value={request.kind}
-            options={Object.entries(copy.filters.kinds)}
-          />
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Link
-            href={buildPublicKnowledgeHref(locale, {
-              query: "",
-              type: "all",
-              kind: "all",
-            })}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            {copy.resetFilters}
-          </Link>
-          {state === "ready" || state === "empty" ? (
-            <span className="text-sm text-muted-foreground tabular-nums">
-              {copy.resultsTitle}: {formatCount(items.length, locale)}
-            </span>
-          ) : null}
-        </div>
-      </form>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-3">
+        <h2 className="text-h2 text-text-heading">{copy.resultsTitle}</h2>
+        {/* Always rendered, so the node survives a filter change and the new
+            number is announced into it rather than arriving with a fresh
+            document that announces nothing. */}
+        <p
+          data-knowledge-result-count="true"
+          aria-live="polite"
+          className="text-body-sm text-text-muted tabular-nums"
+        >
+          {state === "ready" || state === "empty"
+            ? formatCount(items.length, locale)
+            : ""}
+        </p>
+      </div>
 
       {state === "loading" ? (
         <KnowledgeLoading label={copy.loadingLabel} />
@@ -169,40 +182,17 @@ export function PublicKnowledgeHub({
         <KnowledgeResults locale={locale} copy={copy} items={items} />
       ) : null}
 
-      <section className="mt-6 border-t border-border pt-6">
+      <section className="border-t border-border pt-6">
         <CatalogFrontDoor locale={locale} />
       </section>
 
-      <div className="mt-6 border-t border-border pt-6 xl:hidden">
+      <div className="border-t border-border pt-6 xl:hidden">
         <SiteShellContextRailModules modules={contextModules} />
       </div>
     </main>
   );
 }
 
-function KnowledgeSelect({
-  label,
-  name,
-  value,
-  options,
-}: {
-  label: string;
-  name: "type" | "kind";
-  value: string;
-  options: Array<[string, string]>;
-}) {
-  return (
-    <Field label={label} className="min-w-0">
-      <Select name={name} defaultValue={value}>
-        {options.map(([optionValue, optionLabel]) => (
-          <option key={`${name}:${optionValue}`} value={optionValue}>
-            {optionLabel}
-          </option>
-        ))}
-      </Select>
-    </Field>
-  );
-}
 
 function KnowledgeResults({
   locale,
@@ -214,61 +204,56 @@ function KnowledgeResults({
   items: readonly PublicKnowledgeHubItem[];
 }) {
   return (
-    <div className="grid gap-7 py-5">
+    <div className="grid gap-7">
       {(["guide", "answer", "topic"] as const).map((kind) => {
         const sectionItems = items.filter((item) => item.kind === kind);
         if (sectionItems.length === 0) return null;
 
         return (
-          <section key={kind} className="grid gap-3">
-            <h2 className="text-lg font-semibold text-foreground">
-              {sectionTitle(copy, kind)}
-            </h2>
-            <ol className="grid border-x border-b border-border">
+          <Section
+            key={kind}
+            id={`knowledge-${kind}`}
+            level={3}
+            title={sectionTitle(copy, kind)}
+            headingClassName="text-h3"
+          >
+            {/* A list of things is a list (DESIGN.md §4.1). Each row is the
+                title, the sentence under it, and the facts a reader chooses
+                on — what it is, how much first-hand evidence stands behind
+                it, and when it was last touched. */}
+            <ul className="grid list-none">
               {sectionItems.map((item) => (
-                <li
+                <ListRow
                   key={`${item.kind}:${item.path}`}
-                  className="grid min-w-0 gap-3 border-t border-border p-4"
                   data-trust-state={
                     item.kind === "topic" ? "user-evidence" : "editorial"
                   }
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5 font-semibold uppercase">
-                      {item.kind === "guide" ? (
-                        <BookOpen className="size-4" aria-hidden="true" />
-                      ) : item.kind === "answer" ? (
-                        <HelpCircle className="size-4" aria-hidden="true" />
-                      ) : (
-                        <Tags className="size-4" aria-hidden="true" />
-                      )}
-                      {item.kind === "topic"
-                        ? copy.journalEvidenceLabel
-                        : copy.editorialLabel}
-                    </span>
-                    <span className="tabular-nums">
-                      {formatPublicKnowledgeEvidenceCount(
-                        item.evidenceCount,
-                        locale,
-                        copy,
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-1.5">
-                    <Link
-                      href={itemHref(locale, item.path)}
-                      className="text-xl leading-7 font-semibold text-foreground hover:text-primary"
-                    >
-                      {item.title}
-                    </Link>
-                    <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-                      {item.description}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-end justify-between gap-3 border-t border-border pt-3">
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  href={itemHref(locale, item.path)}
+                  title={item.title}
+                  description={item.description}
+                  meta={
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        tone={item.kind === "topic" ? "neutral" : "info"}
+                      >
+                        {item.kind === "guide" ? (
+                          <BookOpen aria-hidden="true" />
+                        ) : item.kind === "answer" ? (
+                          <HelpCircle aria-hidden="true" />
+                        ) : (
+                          <Tags aria-hidden="true" />
+                        )}
+                        {item.kind === "topic"
+                          ? copy.journalEvidenceLabel
+                          : copy.editorialLabel}
+                      </Badge>
+                      <span>
+                        {formatPublicKnowledgeEvidenceCount(
+                          item.evidenceCount,
+                          locale,
+                          copy,
+                        )}
+                      </span>
                       {item.objectKinds.map((objectKind) => (
                         <span key={objectKind}>
                           {copy.filters.kinds[objectKind]}
@@ -287,22 +272,12 @@ function KnowledgeResults({
                             : copy.topicNoindex}
                         </span>
                       ) : null}
-                    </div>
-                    <Link
-                      href={itemHref(locale, item.path)}
-                      className={buttonVariants({
-                        variant: "secondary",
-                        size: "sm",
-                      })}
-                    >
-                      {itemCta(copy, item.kind)}
-                      <ArrowRight aria-hidden="true" />
-                    </Link>
-                  </div>
-                </li>
+                    </span>
+                  }
+                />
               ))}
-            </ol>
-          </section>
+            </ul>
+          </Section>
         );
       })}
     </div>
@@ -311,20 +286,19 @@ function KnowledgeResults({
 
 function KnowledgeLoading({ label }: { label: string }) {
   return (
-    <div
-      role="status"
+    <ul
       aria-label={label}
       aria-busy="true"
-      className="grid gap-px bg-border py-5"
+      className="grid list-none gap-3"
     >
       {[0, 1, 2].map((item) => (
-        <div key={item} className="grid gap-3 bg-background p-4">
+        <li key={item} className="grid gap-2 border-b border-border py-4">
           <Skeleton className="h-4 w-36" />
           <Skeleton className="h-6 w-3/4" />
           <Skeleton className="h-4 w-full" />
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -338,21 +312,15 @@ function KnowledgeError({
   request: PublicKnowledgeRequest;
 }) {
   return (
-    <section className="grid gap-3 border-b border-border py-8">
-      <h2 className="flex items-center gap-2 text-xl font-semibold text-foreground">
-        <CircleAlert className="size-5" aria-hidden="true" />
-        {copy.errorTitle}
-      </h2>
-      <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-        {copy.errorBody}
-      </p>
-      <Link
-        href={buildPublicKnowledgeHref(locale, request)}
-        className={buttonVariants({ variant: "secondary", className: "w-fit" })}
-      >
-        {copy.retry}
-      </Link>
-    </section>
+    <ErrorState
+      failureClass="unknown"
+      digest="0000000"
+      title={copy.errorTitle}
+      description={copy.errorBody}
+      reference={copy.errorTitle}
+      retryHref={buildPublicKnowledgeHref(locale, request)}
+      retryLabel={copy.retry}
+    />
   );
 }
 
@@ -364,25 +332,68 @@ function KnowledgeEmpty({
   copy: PublicKnowledgeCopy;
 }) {
   return (
-    <section className="grid gap-3 border-b border-border py-8">
-      <h2 className="text-xl font-semibold text-foreground">
-        {copy.emptyTitle}
-      </h2>
-      <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-        {copy.emptyBody}
-      </p>
-      <Link
-        href={buildPublicKnowledgeHref(locale, {
-          query: "",
-          type: "all",
-          kind: "all",
-        })}
-        className={buttonVariants({ variant: "secondary", className: "w-fit" })}
-      >
-        {copy.resetFilters}
-      </Link>
-    </section>
+    // Something does exist and the filters excluded it, so this state carries
+    // no illustration — what the reader needs is the way back out
+    // (DESIGN.md §5.4).
+    <EmptyState
+      variant="no-results"
+      illustration={null}
+      title={copy.emptyTitle}
+      description={copy.emptyBody}
+      action={
+        <Link
+          href={buildPublicKnowledgeHref(locale, {
+            query: "",
+            type: "all",
+            kind: "all",
+          })}
+        >
+          {copy.resetFilters}
+        </Link>
+      }
+    />
   );
+}
+
+/** The filters a reader has set, each removable on its own. */
+function buildKnowledgeChips(
+  locale: PublicLocale,
+  copy: PublicKnowledgeCopy,
+  request: PublicKnowledgeRequest,
+) {
+  const chips: {
+    key: string;
+    label: string;
+    removeHref: string;
+    removeLabel: string;
+  }[] = [];
+  if (request.query) {
+    chips.push({
+      key: "q",
+      label: request.query,
+      removeHref: buildPublicKnowledgeHref(locale, { ...request, query: "" }),
+      removeLabel: `${copy.resetFilters}: ${request.query}`,
+    });
+  }
+  if (request.type !== "all") {
+    const label = copy.filters.types[request.type];
+    chips.push({
+      key: `type:${request.type}`,
+      label,
+      removeHref: buildPublicKnowledgeHref(locale, { ...request, type: "all" }),
+      removeLabel: `${copy.resetFilters}: ${label}`,
+    });
+  }
+  if (request.kind !== "all") {
+    const label = copy.filters.kinds[request.kind];
+    chips.push({
+      key: `kind:${request.kind}`,
+      label,
+      removeHref: buildPublicKnowledgeHref(locale, { ...request, kind: "all" }),
+      removeLabel: `${copy.resetFilters}: ${label}`,
+    });
+  }
+  return chips;
 }
 
 export function buildPublicKnowledgeContextModules(
@@ -421,16 +432,6 @@ function sectionTitle(
   }[kind];
 }
 
-function itemCta(
-  copy: PublicKnowledgeCopy,
-  kind: PublicKnowledgeHubItem["kind"],
-) {
-  return {
-    guide: copy.readGuide,
-    answer: copy.readAnswer,
-    topic: copy.exploreTopic,
-  }[kind];
-}
 
 function formatCount(value: number, locale: PublicLocale) {
   return new Intl.NumberFormat(localeTag(locale)).format(value);

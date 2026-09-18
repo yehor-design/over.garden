@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { ArrowLeft, Tags } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -11,7 +10,9 @@ import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
-import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Link } from "@/components/ui/link";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   formatPublicKnowledgeEvidenceCount,
   type PublicKnowledgeCopy,
@@ -46,7 +47,7 @@ export function PublicKnowledgeTopicPage({
       lang={locale}
       data-public-knowledge-topic="true"
       data-trust-state="user-evidence"
-      className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       {serializedJsonLd ? (
         <script
@@ -56,38 +57,42 @@ export function PublicKnowledgeTopicPage({
       ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
-      <header className="grid gap-4 border-b border-border pb-5">
-        <Link
-          href={knowledgeHubPath(locale)}
-          className={buttonVariants({
-            variant: "secondary",
-            size: "sm",
-            className: "w-fit",
-          })}
-        >
-          <ArrowLeft aria-hidden="true" />
-          {copy.backToKnowledge}
-        </Link>
-        <div className="grid gap-2">
-          <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+      <PageHeader
+        breadcrumb={
+          <Link
+            href={knowledgeHubPath(locale)}
+            variant="muted"
+            className="inline-flex min-h-11 w-fit items-center gap-1.5 text-body-sm font-medium"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            {copy.backToKnowledge}
+          </Link>
+        }
+        eyebrow={
+          <span className="inline-flex items-center gap-2">
             <Tags className="size-4" aria-hidden="true" />
             {copy.publicTopicLabel}
-          </p>
-          <h1 className="max-w-3xl text-3xl font-semibold text-foreground">
-            {topic.topic.label}
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-            {formatPublicKnowledgeEvidenceCount(topic.entryCount, locale, copy)}
-            .{" "}
-            {topic.indexState.isIndexable
-              ? copy.topicIndexable
-              : copy.topicNoindex}
-          </p>
-          {actions ? (
-            <div className="flex flex-wrap gap-2">{actions}</div>
-          ) : null}
-        </div>
-      </header>
+          </span>
+        }
+        title={topic.topic.label}
+        description={formatPublicKnowledgeEvidenceCount(
+          topic.entryCount,
+          locale,
+          copy,
+        )}
+        actions={actions}
+      />
+
+      {/* Whether a topic is indexable is a fact about it, and the page says
+          it in a word rather than leaving a reader to infer it (DESIGN.md
+          §8: colour is never the only signal, and nor is an absence). */}
+      <p>
+        <Badge tone={topic.indexState.isIndexable ? "success" : "neutral"}>
+          {topic.indexState.isIndexable
+            ? copy.topicIndexable
+            : copy.topicNoindex}
+        </Badge>
+      </p>
 
       <PublicKnowledgeEvidenceList
         locale={locale}

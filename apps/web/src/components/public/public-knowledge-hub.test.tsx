@@ -55,10 +55,21 @@ describe("PublicKnowledgeHub", () => {
 
     expect(html).toContain('data-public-knowledge-hub="true"');
     expect(html).toContain('data-public-knowledge-state="ready"');
-    expect(html).toContain('aria-label="Фільтри знань"');
+    // The same bar `/journals` and `/catalog` use (`OVE-453`): one real GET
+    // form, one parameter per facet, applying on change once hydrated.
+    expect(html).toContain('data-filter-bar-form="true"');
+    expect(html).toContain('method="get"');
     expect(html).toContain('name="q"');
+    expect(html).toContain('data-filter-bar-facet="type"');
+    expect(html).toContain('data-filter-bar-facet="kind"');
     expect(html).toContain('name="type"');
     expect(html).toContain('name="kind"');
+    // A list of things is a list, and the count survives a filter change in
+    // one live region rather than arriving with a fresh document.
+    expect(html).toContain('data-slot="list-row"');
+    expect(html).toMatch(
+      /data-knowledge-result-count="true"[^>]*aria-live="polite"/u,
+    );
     expect(html).toContain("Авторський матеріал");
     expect(html).toContain("Досвід із публічних журналів");
     expect(html).toContain("11 публічних записів");
@@ -66,7 +77,9 @@ describe("PublicKnowledgeHub", () => {
     expect(html).toContain("/topics/care-checks");
     expect(html).toContain('data-site-shell-context="route-owned"');
     expect(html).not.toContain("/garden");
-    expect(html).not.toContain("rounded-full");
+    // Nothing here reaches for the pre-redesign palette any more.
+    expect(html).not.toContain("text-muted-foreground");
+    expect(html).not.toContain("text-foreground");
   });
 
   it("renders honest loading, error, and zero-result states", () => {
@@ -86,5 +99,10 @@ describe("PublicKnowledgeHub", () => {
     expect(render("loading")).toContain(copy.loadingLabel);
     expect(render("error")).toContain(copy.errorTitle);
     expect(render("empty")).toContain(copy.emptyTitle);
+    // The two empties are told apart, and only one carries a picture — this
+    // is the filtered one, so it carries none (DESIGN.md §5.4).
+    expect(render("empty")).toContain('data-screen-state="empty-no-results"');
+    expect(render("empty")).not.toContain("/illustrations/");
+    expect(render("error")).toContain('data-screen-state="error"');
   });
 });

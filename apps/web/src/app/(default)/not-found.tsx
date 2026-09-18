@@ -23,8 +23,8 @@ export async function LocalizedNotFound() {
       lang={locale}
       className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-5 px-5 py-16 sm:px-8"
     >
-      <p className="text-sm font-medium text-muted-foreground">OverGarden</p>
-      <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
+      <p className="text-overline text-text-muted uppercase">OverGarden</p>
+      <h1 className="text-h1 text-balance text-text-heading">
         {copy.notFound.title}
       </h1>
       <Link href="/" className={buttonVariants({ className: "w-fit" })}>
