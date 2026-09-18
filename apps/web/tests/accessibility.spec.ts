@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
+
+import { openCommandPalette } from "./helpers/command-palette";
 import { Pool } from "pg";
 
 import {
@@ -532,9 +534,7 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
       page.locator('[data-site-shell-region="header"]'),
     ).toBeVisible();
 
-    await page.keyboard.press("ControlOrMeta+k");
-    const palette = page.locator('[data-command-palette="true"]');
-    await expect(palette).toBeVisible();
+    const palette = await openCommandPalette(page);
     const field = page.locator('[data-command-palette-input="true"]');
     await expect(field).toBeFocused();
 
