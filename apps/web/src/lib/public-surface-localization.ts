@@ -90,6 +90,8 @@ interface PublicSurfaceCopy {
     showMoreComments: string;
     signInComplete: string;
     moreActions: string;
+    /** `OVE-454`: every comment is a place a reader can link to. */
+    commentPermalink: string;
     reportReasons: {
       spam: string;
       harassment: string;
@@ -324,6 +326,7 @@ const COPY = {
       showMoreComments: "Показати більше коментарів",
       signInComplete: "Вхід завершено. Підтвердьте дію нижче, щоб продовжити.",
       moreActions: "Інші дії",
+      commentPermalink: "Посилання на коментар",
       reportReasons: {
         spam: "Спам",
         harassment: "Переслідування",
@@ -573,6 +576,7 @@ const COPY = {
       signInComplete:
         "Влизането е завършено. Потвърдете действието по-долу, за да продължите.",
       moreActions: "Още действия",
+      commentPermalink: "Връзка към коментара",
       reportReasons: {
         spam: "Спам",
         harassment: "Тормоз",
@@ -821,6 +825,7 @@ const COPY = {
       signInComplete:
         "Вход завершён. Подтвердите действие ниже, чтобы продолжить.",
       moreActions: "Другие действия",
+      commentPermalink: "Ссылка на комментарий",
       reportReasons: {
         spam: "Спам",
         harassment: "Преследование",

@@ -64,8 +64,8 @@ describe("community actions", () => {
     formData.set("membershipState", "active");
     formData.set("journalEntryId", "00000000-0000-4000-8000-000000000401");
 
-    await setCommunityMembershipAction(formData);
-    await contributeJournalToCommunityAction(formData);
+    await setCommunityMembershipAction(undefined, formData);
+    await contributeJournalToCommunityAction(undefined, formData);
 
     expect(mocks.setCommunityMembership).toHaveBeenCalledWith(scope, {
       slug: "observation-and-care",
@@ -95,8 +95,8 @@ describe("community actions", () => {
     formData.set("contributionId", "00000000-0000-4000-8000-000000000201");
     formData.set("reason", "privacy");
 
-    await reportCommunityContributionAction(formData);
-    await blockCommunityContributionAuthorAction(formData);
+    await reportCommunityContributionAction(undefined, formData);
+    await blockCommunityContributionAuthorAction(undefined, formData);
 
     expect(mocks.reportCommunityContribution).toHaveBeenCalledWith(scope, {
       slug: "observation-and-care",
@@ -117,7 +117,7 @@ describe("community actions", () => {
       throw new Error("NEXT_REDIRECT");
     });
 
-    await expect(setCommunityMembershipAction(formData)).rejects.toThrow(
+    await expect(setCommunityMembershipAction(undefined, formData)).rejects.toThrow(
       "NEXT_REDIRECT",
     );
 

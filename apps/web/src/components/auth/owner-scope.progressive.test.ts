@@ -28,6 +28,8 @@ const PROGRESSIVE_SURFACES = [
   // the first six converted, and each page-family task carries its own share.
   "components/public/public-profile.tsx",
   "app/[locale]/lineage/objects/[objectId]/page.tsx",
+  // `OVE-454`: join, leave, contribute, report and block on a community.
+  "components/public/public-community.tsx",
 ] as const;
 
 const PROGRESSIVE_ACTIONS = [
@@ -36,6 +38,7 @@ const PROGRESSIVE_ACTIONS = [
   "app/catalog-owner-card-actions.ts",
   "app/[locale]/[profileHandle]/actions.ts",
   "app/[locale]/lineage/objects/[objectId]/actions.ts",
+  "app/[locale]/communities/[slug]/actions.ts",
 ] as const;
 
 describe("owner forms that decide before hydration", () => {

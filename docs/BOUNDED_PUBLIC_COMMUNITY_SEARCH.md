@@ -18,6 +18,8 @@ Public community search reuses the `journal_entries` Meilisearch index only for 
 
 The `uk`, `bg`, and `ru` community pages preserve the query and controls and announce one non-blocking `role=status` notice. There is no automatic retry. A visitor can explicitly resubmit or reset the filters.
 
+`OVE-454` changed the shape of those controls and none of this contract. The search field and the kind filter are now the `FilterBar` every faceted listing uses (DESIGN.md §5.1): one query parameter per facet, a real `GET` submit before hydration and router navigation after it, chips above the results, and `q` bounded to 100 code units exactly as before. Two consequences worth stating, because both are load-bearing here: the reader's words stay in the field on a degraded or empty result, which is what this section requires; and a community with **nothing in it** renders `empty-first-run` with no bar at all, because there is nothing to search and a search field over nothing is a control that cannot succeed.
+
 ## Verification
 
 ```bash

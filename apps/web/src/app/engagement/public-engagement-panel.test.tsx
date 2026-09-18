@@ -165,3 +165,97 @@ describe("PublicEngagementPanel", () => {
     expect(resumedHtml).not.toContain('id="engagement-comment" autofocus');
   });
 });
+
+describe("buildCommentThreads", () => {
+  const comment = (
+    token: string,
+    parentReplyToken: string | null,
+    body: string,
+  ) => ({
+    key: `comment:${token}`,
+    replyToken: token,
+    body,
+    authorLabel: "@gardener",
+    authorHandle: "gardener",
+    parentReplyToken,
+    createdAt: "2026-07-04T08:00:00.000Z",
+  });
+
+  it("flattens a third level into the thread rather than losing it", async () => {
+    const { buildCommentThreads } = await import("./public-engagement-panel");
+    // The previous shape filed replies under `parentReplyToken` and only ever
+    // read the map at a root's token, so `deep` — a reply to a reply — was
+    // present in the database, counted, and absent from the page
+    // (`OVE-454` criterion 3).
+    const threads = buildCommentThreads([
+      comment("root", null, "the first"),
+      comment("reply", "root", "the second"),
+      comment("deep", "reply", "the third"),
+    ]);
+
+    expect(threads).toHaveLength(1);
+    expect(threads[0]!.root.replyToken).toBe("root");
+    expect(threads[0]!.replies.map((reply) => reply.replyToken)).toEqual([
+      "reply",
+      "deep",
+    ]);
+  });
+
+  it("opens a thread for a comment whose parent is on another page", async () => {
+    const { buildCommentThreads } = await import("./public-engagement-panel");
+    const threads = buildCommentThreads([comment("orphan", "gone", "hello")]);
+
+    expect(threads).toHaveLength(1);
+    expect(threads[0]!.root.replyToken).toBe("orphan");
+  });
+
+  it("survives a cycle rather than following it", async () => {
+    const { buildCommentThreads } = await import("./public-engagement-panel");
+    const threads = buildCommentThreads([
+      comment("a", "b", "one"),
+      comment("b", "a", "two"),
+    ]);
+
+    expect(threads.length + threads[0]!.replies.length).toBeGreaterThan(0);
+  });
+
+  it("gives every comment an address of its own", async () => {
+    const { commentAnchorId } = await import("./public-engagement-panel");
+    const html = renderToStaticMarkup(
+      <PublicEngagementPanel
+        isAuthenticated
+        locale="uk"
+        target={{
+          kind: "community_contribution",
+          ref: "00000000-0000-4000-8000-000000000201",
+        }}
+        returnTo="/communities/observation-and-care/discussions/00000000-0000-4000-8000-000000000201"
+        commentOnly
+        summary={{
+          target: {
+            kind: "community_contribution",
+            ref: "00000000-0000-4000-8000-000000000201",
+          },
+          comments: [
+            comment("root", null, "the first"),
+            comment("reply", "root", "the second"),
+          ],
+        }}
+      />,
+    );
+
+    const rootRef = createAuthIntentControlRef("reply", "root");
+    const replyRef = createAuthIntentControlRef("reply", "reply");
+    expect(html).toContain(`id="${commentAnchorId(rootRef)}"`);
+    expect(html).toContain(`id="${commentAnchorId(replyRef)}"`);
+    expect(html).toContain(`href="#${commentAnchorId(replyRef)}"`);
+    // The address is the opaque ref, never the comment's own id.
+    expect(html).not.toContain('id="comment-root"');
+    // Every Reply in the thread leads to the one box under the root: that is
+    // the flatten, and no reader is offered a depth the server refuses.
+    expect(
+      html.match(new RegExp(`href="#engagement-${rootRef}"`, "gu")) ?? [],
+    ).toHaveLength(2);
+    expect(html).toContain('dateTime="2026-07-04T08:00:00.000Z"');
+  });
+});

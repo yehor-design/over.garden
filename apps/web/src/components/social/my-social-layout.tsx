@@ -43,18 +43,18 @@ export function MySocialLayout({
       className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-4 sm:px-6 sm:py-5"
     >
       <header className="grid gap-3 border-b border-border pb-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase">
+        <p className="text-overline text-text-muted uppercase">
           {copy.my}
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="grid gap-1">
-            <h1 className="text-2xl font-semibold text-foreground">{title}</h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            <h1 className="text-h1 break-words text-text-heading">{title}</h1>
+            <p className="max-w-prose text-body-sm text-text-muted">
               {description}
             </p>
           </div>
           {typeof count === "number" ? (
-            <p className="text-sm whitespace-nowrap text-muted-foreground">
+            <p className="text-body-sm whitespace-nowrap text-text-muted tabular-nums">
               {countLabel ?? copy.common.itemCount(count)}
             </p>
           ) : null}
@@ -67,10 +67,10 @@ export function MySocialLayout({
                 key={tab}
                 href={localizedPath(locale, `/${tab}`)}
                 aria-current={active === tab ? "page" : undefined}
-                className={`flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-sm font-medium transition-colors ${
+                className={`flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-body-sm font-medium transition-colors duration-instant ease-out outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring ${
                   active === tab
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted-foreground hover:text-foreground"
+                    ? "border-action text-text-heading"
+                    : "border-transparent text-text-muted hover:text-text"
                 }`}
               >
                 <Icon className="size-4" aria-hidden="true" />
@@ -89,7 +89,7 @@ export function MySocialLayout({
 
 export function SocialEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="border-y border-dashed border-border py-10 text-center text-sm leading-6 text-muted-foreground">
+    <div className="border-y border-dashed border-border py-10 text-center text-body-sm text-text-muted">
       {children}
     </div>
   );

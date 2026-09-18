@@ -604,6 +604,68 @@ index and knowledge; the EPPO archive keeping its attribution and its
 observation date; and **axe clean at 375 px and 1440 px on seven pages**, one
 of each shape.
 
+**A community stopped advertising its own emptiness** (`OVE-454`, 2026-09-18).
+The one community on the site rendered `0 Записи · 0 Живі об'єкти · 0 Учасники`
+as its entire card footer — three numbers spending the most valuable row on the
+card to tell a visitor that nothing was happening. `communityFacts` returns
+what a community *has*; a zero is absent, and a community with nothing yet
+carries one badge that is true of it instead.
+
+**Three things were wrong beneath the surface, and only one of them showed.**
+
+- **Nothing on the community page worked before hydration.** Join, leave,
+  contribute, report and block all submitted through `OwnerScopedActionForm`,
+  which wraps the action in a client closure — and React answers a closure with
+  `action="javascript:throw new Error('React form unexpectedly submitted.')"`,
+  a placeholder it replaces on hydration and never before. Five controls on a
+  page whose whole point is that a reader can act on it. All five are
+  `OwnerScopedProgressiveForm` now, and the four actions carry the
+  `(previousState, formData)` shape `useActionState` calls (ADR-0024 D3).
+- **The rules of participation were `xl:hidden`.** Above `xl`, where the
+  context rail took them, the community's own page carried no rules at all — so
+  the widest reader was the one told least. They are a `Section` at every width
+  now, and the rail carries what a rail is for: other communities.
+- **A reply to a reply was invisible.** `buildCommentThreads` filed every reply
+  under its `parentReplyToken` and then only ever read that map at a *root's*
+  token, so a third-level comment was in the database, counted, and absent from
+  the page. The server already refuses to store one, so nobody had met it — but
+  a renderer that drops a row it does not recognise is a defect waiting for the
+  first shape it has not met. Depth is now capped by construction, and every
+  Reply in a thread leads to the one box under its root.
+
+**What the browser found.** A permalink built from a comment's id would have
+undone a real invariant: `createAuthIntentControlRef` exists so a guest's
+sign-in round trip can name a control without the page printing the row it
+refers to, and `public-engagement-panel.test.tsx` asserts a guest's rendered
+thread contains no raw token. The anchor is the opaque ref instead.
+
+**Membership is not a roster.** The community shows the people *writing* in it
+— Circle's and Whop's active-members panel — and not everyone who pressed Join.
+That is a privacy decision as much as a design one: a contributor published
+their participation by publishing an entry, and `lib/privacy/disclosures.ts`
+carries no disclosure covering a list of members.
+
+**Three links this task wrote and then took back.** `localizedPath` is wrong
+for `/garden` and `/account/**`: the prefixed tree is a subset of the
+unprefixed one, so `/bg/garden` is a `404` the proxy decides before rendering.
+And the empty state's one action anchored `#community-contribute`, which
+first-run mode did not render — a button that scrolls nowhere. The member's
+picker is on the page now, and the spec loads all three pages in all three
+markets and fails on a prefixed workspace link.
+
+Proven in `tests/communities.spec.ts`, into `pnpm gates:browser` and the CI
+list: **axe clean at 375 px and 1440 px, signed out and signed in**, on the
+list, the community, a filtered community and a discussion — a member's view
+carries the membership form, the contribution picker, the report disclosure and
+the reply box, and those are where a label goes missing. Plus: a card that
+prints no nought; the rules present at both widths; the `kind` facet
+round-tripping through the address; `empty-first-run` on a community with
+nothing in it, and `empty-no-results` with no illustration on a filtered miss,
+whose canonical points at the community so `?q=` never mints a thin page; all
+three pages answering `200` in all three markets; a no-JavaScript POST for
+membership and for a reply, each asserted to carry the `$ACTION_*` reference;
+and no comment three levels deep in the database afterwards.
+
 A flake worth recording: `tests/journals-directory.spec.ts` located its facets
 document-wide, and the streamed shell leaves the loading skeleton's copy of the
 form in the DOM until the reveal — so a full gate run, where the server is
