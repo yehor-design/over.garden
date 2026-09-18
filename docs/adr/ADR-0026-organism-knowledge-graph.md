@@ -167,8 +167,16 @@ canonical path; the old `/variety/*` and `/breed/*` paths redirect. Redirects an
 
 Section order: a fact-only first paragraph built from structured fields; the
 gardener experience with spread by oblast; relations (forms, pests, hosts);
-"Names and sources" collapsed; attribution with the last-updated date and an
-outbound link per source. JSON-LD is `Taxon` with `@id`, `scientificName`,
+"Names and sources"; attribution with the last-updated date and an outbound
+link per source.
+
+**Amended 2026-09-18 (`OVE-452`).** "Names and sources" was written here as
+*collapsed*, and it is open now. A collapsed section is invisible to a crawler
+even though it is in the DOM, and that section holds the identifiers `sameAs`
+is built from, the source behind every fact, and the licence attribution — all
+facts that matter for indexing. The order above is unchanged and is asserted
+rather than eyeballed. The owner's own controls stay behind a disclosure:
+those are tools for one person, not facts. JSON-LD is `Taxon` with `@id`, `scientificName`,
 `taxonRank`, `parentTaxon`, `sameAs` to Wikidata, Catalogue of Life, GBIF, EPPO
 and WFO, `dateModified`, plus `BreadcrumbList`. A card whose content comes only
 from sources is reachable but `noindex` until a gardener publishes on it or the

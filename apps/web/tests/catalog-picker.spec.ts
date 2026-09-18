@@ -176,12 +176,13 @@ test.describe("OVE-387 catalog picker", () => {
       ].map((marker) => cardHtml.indexOf(marker));
       expect(sectionOrder.every((index) => index >= 0)).toBe(true);
       expect([...sectionOrder].sort((a, b) => a - b)).toEqual(sectionOrder);
+      // Open, not collapsed, since `OVE-452`: a crawler cannot read a
+      // `<details>` that ships closed, and this section holds the
+      // identifiers and the source behind every fact.
       const namesPanel = page.locator(
-        'details[data-organism-section="names-and-sources"]',
+        'section[data-organism-section="names-and-sources"]',
       );
-      await expect(namesPanel).toHaveJSProperty("open", false);
-      await namesPanel.locator("summary").click();
-      await expect(namesPanel).toHaveJSProperty("open", true);
+      await expect(namesPanel).toBeVisible();
       await expect(namesPanel).toContainText("Solanum lycopersicum");
       await expect(
         page.locator('[data-organism-relations="forms"]'),

@@ -208,6 +208,10 @@ interface PublicSurfaceCopy {
       downloadedOn: string;
       observedOn: string;
       identifier: string;
+      /** The heading over the outbound identifiers (`OVE-452`). */
+      identifiers: string;
+      /** The contents rail's own name, above `xl` (`OVE-452`). */
+      onThisPage: string;
     };
     /** The four words a presence badge may say, and nothing else (D11). */
     presence: Record<"present" | "absent" | "transient" | "unknown", string>;
@@ -451,6 +455,8 @@ const COPY = {
         downloadedOn: "Завантажено",
         observedOn: "Спостережено",
         identifier: "Ідентифікатор",
+        identifiers: "Ідентифікатори у джерелах",
+        onThisPage: "На цій сторінці",
       },
       hostClass: {
         major_host: "основний живитель",
@@ -698,6 +704,8 @@ const COPY = {
         downloadedOn: "Изтеглено",
         observedOn: "Наблюдавано",
         identifier: "Идентификатор",
+        identifiers: "Идентификатори в източниците",
+        onThisPage: "На тази страница",
       },
       hostClass: {
         major_host: "основен гостоприемник",
@@ -944,6 +952,8 @@ const COPY = {
         downloadedOn: "Загружено",
         observedOn: "Наблюдалось",
         identifier: "Идентификатор",
+        identifiers: "Идентификаторы в источниках",
+        onThisPage: "На этой странице",
       },
       hostClass: {
         major_host: "основной хозяин",

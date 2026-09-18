@@ -22,7 +22,17 @@ import {
 
 const WISHLIST_STATUS_PARAM = "wishlist";
 
-export async function addCatalogPublicSlugToWishlistAction(formData: FormData) {
+/**
+ * `(previousState, formData)` because `OwnerScopedProgressiveForm` passes the
+ * reference straight through to `useActionState`, which is what gives the
+ * form a real endpoint and lets it submit before the bundle runs (ADR-0024
+ * D3). The first argument is the previous result and is unused: this action
+ * redirects rather than returning state.
+ */
+export async function addCatalogPublicSlugToWishlistAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const publicSlug = normalizeCatalogPublicSlugField(
     formData.get("catalogPublicSlug"),
   );

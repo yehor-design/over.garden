@@ -59,11 +59,15 @@ export function CatalogOwnerCardControls({
   const copy = getOperatorCatalogCopy(locale).card;
 
   return (
+    // The owner's controls are the one thing on this card that may stay
+    // behind a disclosure: they are not facts a crawler needs, they are tools
+    // for one person, and open by default they would bury the page they edit
+    // (`OVE-452` criterion 7 asks for one place, not for always-visible).
     <details
       data-owner-card-controls="true"
       className="rounded-lg border border-dashed border-border p-4"
     >
-      <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+      <summary className="min-h-11 cursor-pointer content-center text-body-sm font-medium text-text-muted">
         {copy.ownerTools}
       </summary>
       <div className="mt-3 grid gap-4">
@@ -84,7 +88,7 @@ export function CatalogOwnerCardControls({
           <Field label={copy.reason} id="owner-card-rename-reason">
             <Input name="reason" maxLength={240} />
           </Field>
-          <p className="text-xs text-muted-foreground">{copy.renameHint}</p>
+          <p className="text-caption text-text-muted">{copy.renameHint}</p>
           <button
             type="submit"
             className={buttonVariants({ variant: "secondary", size: "sm", className: "justify-self-start" })}
@@ -94,7 +98,7 @@ export function CatalogOwnerCardControls({
         </OwnerScopedProgressiveForm>
 
         <div className="grid gap-2">
-          <p className="text-sm text-muted-foreground">{copy.indexable}</p>
+          <p className="text-body-sm text-text-muted">{copy.indexable}</p>
           <div className="flex flex-wrap gap-2">
             {(
               [
@@ -148,7 +152,7 @@ export function CatalogOwnerCardControls({
             <Field label={copy.reason} id="owner-card-pin-reason">
               <Input name="reason" maxLength={240} />
             </Field>
-            <p className="text-xs text-muted-foreground">{copy.pinNameHint}</p>
+            <p className="text-caption text-text-muted">{copy.pinNameHint}</p>
             <button
               type="submit"
               className={buttonVariants({ variant: "secondary", size: "sm", className: "justify-self-start" })}
@@ -174,7 +178,7 @@ export function CatalogOwnerCardControls({
           <Field label={copy.reason} id="owner-card-merge-reason">
             <Input name="reason" maxLength={240} />
           </Field>
-          <p className="text-xs text-muted-foreground">{copy.mergeHint}</p>
+          <p className="text-caption text-text-muted">{copy.mergeHint}</p>
           <Checkbox
             name="confirmMerge"
             value="yes"
@@ -190,15 +194,15 @@ export function CatalogOwnerCardControls({
         </OwnerScopedProgressiveForm>
 
         <div className="grid gap-2" data-owner-card-audit="true">
-          <p className="text-sm text-muted-foreground">{copy.audit}</p>
+          <p className="text-body-sm text-text-muted">{copy.audit}</p>
           {audit.length === 0 ? (
-            <p className="text-xs text-muted-foreground">{copy.auditEmpty}</p>
+            <p className="text-caption text-text-muted">{copy.auditEmpty}</p>
           ) : (
             <ul className="grid gap-2">
               {audit.map((entry) => (
                 <li
                   key={entry.actionId}
-                  className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"
+                  className="flex flex-wrap items-center gap-2 text-caption text-text-muted"
                 >
                   <span>{entry.actionType}</span>
                   <span>{formatOperatorDate(locale, entry.performedAt)}</span>
