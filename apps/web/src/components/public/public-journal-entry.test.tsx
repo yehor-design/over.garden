@@ -193,10 +193,21 @@ describe("public journal entry V2", () => {
     expect(html).toContain('href="/@renamed_gardener"');
     expect(html).toContain("@renamed_gardener");
     expect(html).toContain("Згадані садівники");
+
+    // Criterion 2: exactly one `h1`, and it is the entry's title. A level-1
+    // heading inside the document renders as `h2` (ADR-0028).
+    expect(html.match(/<h1/g)).toHaveLength(1);
+    expect(html).toMatch(/<h1[^>]*>Перший урожай після спеки<\/h1>/u);
+
+    // Criterion 3: the cover reserves a 16:9 box and keeps its srcset; the
+    // rest of the photographs are 4:3 cards with their real captions.
+    expect(html).toContain('data-journal-cover="true"');
+    expect(html).toContain('data-media-aspect="cover"');
+    expect(html).toContain('data-media-aspect="card"');
+    expect(html).toContain("aspect-cover");
+    expect(html).toContain("aspect-card");
+    expect(html).not.toContain("/_next/image");
     expect(html).toContain('data-journal-media-count="2"');
-    expect(html).toContain('data-media-presentation="contain"');
-    // Contain mode keeps full-image visibility; object-position fail-closes to center.
-    expect(html).toContain('data-media-object-position="50% 50%"');
     // The caption is the `alt` (OVE-432): one sentence describes the photo,
     // wherever it is read from. The second photo has none, so it falls back to
     // the entry's title — never to a number, which is what it used to be.
@@ -204,26 +215,81 @@ describe("public journal entry V2", () => {
     expect(html).toContain('alt="Перший урожай після спеки"');
     expect(html).not.toContain('alt="Перший урожай після спеки, 1"');
     expect(html).not.toContain('alt="Перший урожай після спеки 2"');
-    expect(html).toContain("Перша китиця");
-    expect(html).toContain(
-      '<ul class="grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">',
-    );
-    expect(html).toContain(
-      '<li class="min-w-0"><figure class="grid min-w-0 grid-cols-1 gap-1.5">',
-    );
+    expect(html).toContain("<figcaption");
+
+    // Criterion 6: the entry says what it is about, and each of them is a
+    // link that was already in the entity graph.
+    expect(html).toContain('id="journal-entry-about"');
     expect(html).toContain('href="/topics/harvest"');
     expect(html).toContain('href="/journal/pered-tsvitinniam"');
     expect(html).toContain('data-journal-chronology="true"');
-    expect(html).toContain("max-w-full");
-    expect(html).toContain("min-w-0 items-center");
     expect(html).toContain(
       'href="/garden/objects/object-1#passport-entry-entry-1"',
     );
+
+    // Criterion 8: the rail is registered for the shell and **not** drawn a
+    // second time inside the column. Everything in it is reachable from the
+    // "what this is about" block or the related strip.
     expect(html).toContain('data-testid="registered-context-rail"');
-    expect(html).toContain('data-testid="mobile-context-rail"');
+    expect(html).not.toContain('data-testid="mobile-context-rail"');
+
     expect(html).not.toMatch(
       /ownerUserId|owner_user_id|derivativeKey|quarantine|coordinates|latitude|longitude/i,
     );
+  });
+
+  it("marks a species' canonical name as Latin, and a cultivar's not at all", () => {
+    if (objectPage.context.kind !== "object") {
+      throw new Error("the fixture is an object-context entry");
+    }
+    const objectContext = objectPage.context;
+    // DESIGN.md §6: a species' canonical name is Latin and says so; a variety's
+    // or a breed's is a cultivar name in somebody's language.
+    const withSpecies = renderToStaticMarkup(
+      <PublicJournalEntryView
+        locale="uk"
+        copy={getPublicJournalEntryCopy("uk")}
+        page={{
+          ...objectPage,
+          context: {
+            kind: "object",
+            space: objectPage.context.space,
+            object: {
+              ...objectContext.object,
+              catalogKind: "species",
+              catalogCanonicalName: "Solanum lycopersicum",
+            },
+          },
+        }}
+        directoryReturnTo="/journals"
+        ownerControl={null}
+      />,
+    );
+    expect(withSpecies).toContain('lang="la"');
+    expect(withSpecies).toContain("Solanum lycopersicum");
+
+    const withVariety = renderToStaticMarkup(
+      <PublicJournalEntryView
+        locale="uk"
+        copy={getPublicJournalEntryCopy("uk")}
+        page={{
+          ...objectPage,
+          context: {
+            kind: "object",
+            space: objectPage.context.space,
+            object: {
+              ...objectContext.object,
+              catalogKind: "plant_variety",
+              catalogCanonicalName: "Черрі Іванівський",
+            },
+          },
+        }}
+        directoryReturnTo="/journals"
+        ownerControl={null}
+      />,
+    );
+    expect(withVariety).toContain("Черрі Іванівський");
+    expect(withVariety).not.toContain('lang="la"');
   });
 
   it("renders a space chapter and only independently public mentioned objects", () => {

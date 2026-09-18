@@ -5,6 +5,8 @@ export interface PublicJournalEntryCopy {
   metadataDescription: string;
   journals: string;
   journal: string;
+  /** Heads the block that says what the entry is about (`OVE-449` crit. 6). */
+  aboutTitle: string;
   objectJournal: string;
   spaceJournal: string;
   by: string;
@@ -35,6 +37,7 @@ const COPY = {
       "Датований публічний запис із журналу живого об'єкта в OverGarden.",
     journals: "Журнали",
     journal: "Журнал",
+    aboutTitle: "Про що цей запис",
     objectJournal: "Журнал об'єкта",
     spaceJournal: "Журнал простору",
     by: "Автор",
@@ -63,6 +66,7 @@ const COPY = {
       "Датиран публичен запис от дневника на жив обект в OverGarden.",
     journals: "Дневници",
     journal: "Дневник",
+    aboutTitle: "За какво е този запис",
     objectJournal: "Дневник на обекта",
     spaceJournal: "Дневник на пространството",
     by: "Автор",
@@ -91,6 +95,7 @@ const COPY = {
       "Датированная публичная запись из журнала живого объекта в OverGarden.",
     journals: "Журналы",
     journal: "Журнал",
+    aboutTitle: "О чём эта запись",
     objectJournal: "Журнал объекта",
     spaceJournal: "Журнал пространства",
     by: "Автор",

@@ -32,6 +32,7 @@ import {
 } from "./engagement-controls";
 import type { ViewerLikeState } from "./engagement-viewer";
 import { buttonVariants } from "@/components/ui/button";
+import { EngagementBar } from "@/components/ui/engagement-bar";
 import type {
   AuthIntentAction,
   AuthIntentTarget,
@@ -145,7 +146,13 @@ export function PublicEngagementPanel({
       className="grid gap-4 border-y border-border py-5"
     >
       {!commentOnly && likeState ? (
-        <div className="flex flex-wrap items-start gap-3">
+        // The bar owns the arrangement and the one polite live region; each
+        // control inside it is still its own Server Action form on a real
+        // endpoint (ADR-0024 D3, DESIGN.md §5.6).
+        // No `status`: the like control carries the count and the one polite
+        // region, because its number is the optimistic one. A second region
+        // here would announce twice and print the number twice.
+        <EngagementBar label={copy.engagement.barLabel}>
           <EngagementLikeControl
             targetKind={target.kind}
             targetRef={target.ref}
@@ -199,7 +206,7 @@ export function PublicEngagementPanel({
               resumeAction={resumeControl ? null : resumeAction}
             />
           ) : null}
-        </div>
+        </EngagementBar>
       ) : null}
 
       {resumeAction === "comment" ||

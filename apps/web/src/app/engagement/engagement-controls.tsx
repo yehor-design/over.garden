@@ -114,11 +114,20 @@ function LikeButton({
     ? Math.max(0, state.activeLikeCount + (state.liked ? -1 : 1))
     : state.activeLikeCount;
 
+  const counted = formatPublicCount(locale, "like", count);
+
   return (
     <>
+      {/* The accessible name states the action **and** the count — "Подобається,
+          12 вподобань" becoming "Уже подобається, 13 вподобань" (DESIGN.md
+          §5.6). That is what a screen-reader user hears *before* pressing;
+          what they hear after is the polite region in `EngagementBar`, which
+          is why the count is not `aria-live` here as well. The visible label
+          stays the verb alone, because the number is beside it on screen. */}
       <button
         type="submit"
         aria-pressed={liked}
+        aria-label={`${liked ? labels.liked : labels.like}, ${counted}`}
         className={buttonVariants({
           variant: liked ? "primary" : "secondary",
           className: "self-start",
@@ -131,8 +140,16 @@ function LikeButton({
         />
         {liked ? labels.liked : labels.like}
       </button>
-      <p className="text-sm text-muted-foreground" role="status">
-        {formatPublicCount(locale, "like", count)}
+      {/* The count, visible and polite — and the only live region in the bar
+          (DESIGN.md §5.6). It is the optimistic number: `useFormStatus` moves
+          it on the press, so a reader hears the number they are about to have
+          rather than the one the server last rendered. */}
+      <p
+        data-engagement-status="true"
+        aria-live="polite"
+        className="text-body-sm text-text-muted tabular-nums"
+      >
+        {counted}
       </p>
     </>
   );
