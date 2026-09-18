@@ -1,7 +1,10 @@
 # ADR-0029 — The address law: one permanent address per thing, one rule per question
 
 - **Status:** Accepted (audit 2026-09-10, decisions 2026-09-11). To be executed
-  as SDD Slice 27, `OVE-419` onwards.
+  as SDD Slice 27, `OVE-419` onwards. **Amended 2026-09-18 by two owner
+  decisions: every address is ASCII, and a journal entry is addressed by a
+  number** — D4, D5, D6, D8, D9, D14 and D15 each carry the change where it
+  lands, and phase 5 of D15 is its execution.
 - **Date:** 2026-09-11
 - **Decision owner:** founder/owner
 - **Supersedes:** ADR-0026 D8 (Addresses) in full, and the addressing half of
@@ -96,16 +99,45 @@ real **404 document**. There is no fourth outcome, and specifically no `200`
 carrying a `noindex` apology, which is what Cache Components produces whenever
 the decision is deferred to the page (ADR-0023).
 
-### D4. Script follows the content
+### D4. Every address is ASCII
 
-| namespace | script | source |
+| namespace | the address is made of | source |
 | --- | --- | --- |
-| species, cultivar, breed | ASCII | the accepted scientific name / the registered denomination, romanized |
-| journal entry, object, topic tag, community | native (uk/bg Cyrillic preserved) | the author's own words |
-| profile handle | ASCII | already `^[a-z0-9][a-z0-9_]{2,29}$` |
+| species, cultivar, breed | a Latin name | the accepted scientific name / the registered denomination, romanized |
+| journal entry | a number | the author's own count of publishes (D9) |
+| object, topic tag, community | a Latin name | the author's own words, romanized by the language they were written in |
+| profile handle | unchanged | already `^[a-z0-9][a-z0-9_]{2,29}$` |
 
-Google states that non-Latin URLs are correct and recommended for non-Latin
-sites, and renders them decoded in results. One function, two modes.
+No address this product issues contains a character that percent-encodes. One
+slugifier, one mode that issues.
+
+**Amendment, 2026-09-18 (owner decision). What D4 said, and why it was wrong.**
+D4 was titled "Script follows the content". It kept the gardener's own alphabet
+in the address of an entry, an object, a topic tag and a community, on the
+ground that Google recommends non-Latin URLs for non-Latin sites and renders
+them decoded in results. That is true, and it is a statement about one surface:
+the search result. D4 never looked at the other one. A browser's address bar
+hands the clipboard the percent-encoded form, six characters for every Cyrillic
+letter, so the entry a gardener copied to send to a neighbour arrived as
+
+`https://over.garden/@yehor/%D0%BA%D1%80%D0%B0%D1%82%D1%8A%D0%BA-%D0%B8-…`
+
+— 181 characters that read as a broken or hostile link. The product has no
+share control, so the address bar is how every link travels, and D5 already
+knew the cost: it measured the slug budget after percent-encoding because of
+`OVE-377`. It treated the cost as a length to budget for rather than as the
+thing a reader sees. D1 ranks legibility second only to stability, and on the
+surface where links are actually exchanged a native-script address has less
+legibility than an opaque one.
+
+The romanization tables were already written for the catalog
+(`src/lib/address/romanize.ts`: the Cabinet of Ministers resolution 55 of 2010
+for Ukrainian, the 2009 transliteration law for Bulgarian, and the Bulgarian
+table for Russian). A name is romanized by the language it was written in,
+never by a constant: Bulgarian `домати` is `domati`, and the Ukrainian table
+would have spelled it `domaty`.
+Addresses issued in the native script before this amendment keep answering,
+with one 308 each (D3, D8).
 
 ### D5. The slug budget is measured after percent-encoding
 
@@ -115,6 +147,10 @@ current 96-character limit admits a 576-character segment. This is not
 theoretical: `OVE-377` records Like answering `500` on 7 of 8 entries because a
 capability token embedded a Cyrillic slug and overflowed its own bound. 60
 decoded characters is about four Ukrainian words.
+
+Since the amendment of 2026-09-18 every issued slug is ASCII, so the two bounds
+coincide at sixty characters. The encoded bound stays as the guard it was, and
+it is what an address from before the amendment is still measured against.
 
 ### D6. The disambiguator is a counter, never a hash
 
@@ -126,6 +162,9 @@ suffix destroys the only thing the slug was for.
 Corollary: within one species, two cultivars named *Advance* are almost
 certainly the same cultivar from two registers, so a catalog collision counter
 is a reconciliation signal (ADR-0026 D4) and is counted as one.
+
+A journal entry needs no disambiguator since 2026-09-18: its address is a
+number (D9), and two numbers under one author cannot collide.
 
 ### D7. The slug namespace matches the path namespace
 
@@ -143,11 +182,16 @@ Changing an address is a deliberate action that writes a history row and starts
 answering 308 from the old address, the way the `0054` trigger does for catalog
 items.
 
+An entry's number goes further than frozen (2026-09-18): nothing can rename it
+at all. The title is the only part of an entry a gardener might want to
+correct, and the address no longer contains it — a typing mistake in the first
+title used to live in the link for ever.
+
 ### D9. The address map
 
 | entity | address | locales |
 | --- | --- | --- |
-| journal entry | `/@{handle}/{slug}` | none |
+| journal entry | `/@{handle}/post/{n}` | none |
 | object passport | `/@{handle}/objects/{slug}` | none |
 | species | `/species/{slug}` | uk · bg · ru |
 | cultivar, breed | `/species/{species}/{form}` | uk · bg · ru |
@@ -158,10 +202,10 @@ items.
 | directories | `/journals`, `/objects`, `/feed`, `/knowledge`, `/communities` | uk · bg · ru |
 | permalink and aliases | `/id/{uuid}`, `/eppo/…`, `/col/…`, `/gbif/…`, `/wikidata/…` | n/a |
 
-`objects` is a reserved entry slug. Depth never exceeds three segments after the
-locale prefix.
+`objects` and `post` are reserved entry names. Depth never exceeds three
+segments after the locale prefix.
 
-The author-scoped namespace is why the random suffix disappears: a flat
+The author-scoped namespace is why the random suffix disappeared: a flat
 `/journal/{slug}` namespace is global, so "мій перший помідор" collides across
 gardeners and *forces* a disambiguator into every URL. Scoping to the handle
 makes collisions per-person and rare. It also puts the first-hand claim — the
@@ -169,6 +213,52 @@ product's whole proposition — where a reader and an answer engine both see it.
 Handles are immutable today (`handle_registry_state` is CHECK-constrained to
 `'current'`), so a future rename needs one prefix-level 308 rule, not a row per
 entry.
+
+**Amendment, 2026-09-18 (owner decision): an entry is addressed by its
+number.** Between 2026-09-12 and this amendment an entry lived at
+`/@{handle}/{slug}`, its name made from the title at first publish. It now
+lives at `/@{handle}/post/{n}`:
+
+- `n` is a plain decimal number, counted **per author** from 1. `/@yehor/post/1`
+  and `/@olena/post/1` are two entries; the handle tells them apart, the way a
+  flat number does in every building. A site-wide counter would have been
+  longer, would say nothing about the author, and would publish the size of the
+  platform in every link.
+- It is assigned at publish, in publish order, and it says nothing about the
+  date the entry describes.
+- It never changes, and it is **never reused**. When entry 5 is deleted the
+  next one is still 13, and `/post/5` answers 410 and then 404 — never somebody
+  else's entry. A durable counter per author guarantees this; `max() + 1` would
+  hand a purged entry's number to the next publish.
+- Entries that existed on the day of the amendment are numbered by publish
+  date, oldest first.
+- Digits only. The owner's first sketch was `A1`; every alphabet in the address
+  law is lower case and an upper-case address is itself a 308, so `A1` would
+  have redirected on arrival. A random code such as `k3f9x2` was offered and
+  declined: it cannot be guessed, and it also cannot be said aloud or
+  remembered, and everything here is public by rule (`AGENTS.md`, hard rule 4).
+  **If the product ever grows an entry that is not public, a guessable number
+  is the first thing to revisit.**
+- `post` keeps the numbers out of the namespace the names used, so every
+  `/@{handle}/{slug}` ever issued is still unambiguous and still answers.
+
+The one-hop rule: `/journal/{slug}`, `/{locale}/journal/{slug}`,
+`/@{handle}/{slug}` and `/{locale}/@{handle}/{slug}` each answer **one** 308 to
+`/@{handle}/post/{n}`. A chain is a defect — this is the third address these
+entries have had in a week, and a crawler follows a finite number of hops.
+
+What does not change: D2's permalink; the 200/308/404 rule of D3; one address
+with no locale prefix (D10); `source_language` driving `lang` and `inLanguage`
+(D11). Engagement references have been entry ids since migration `0073`, so a
+like, a comment and a bookmark stay where they are.
+
+The closed vocabulary the implementing tasks share, so that none invents its
+own: the path segment `post` (`PUBLIC_JOURNAL_ENTRY_SEGMENT`); the column
+`journal_entries.author_entry_number`; the table
+`journal_entry_number_counters`; the function
+`assign_journal_entry_number(uuid)`; the manifest namespace
+`journalEntryNumber` with the shape `ordinal`; the pattern `^[1-9][0-9]{0,8}$`;
+the matcher kinds `journalEntry` (a number) and `legacyJournalEntry` (a name).
 
 ### D10. Locale, and geography
 
@@ -298,6 +388,14 @@ Addressing is half of discovery. These six are the other half, approved
 - **A second markup vocabulary** beside JSON-LD.
 - **`/@{handle}/{object}/{entry}`** — four levels, and it moves entry addresses
   whenever a plant is renamed.
+- **A number with a readable tail — `/@{handle}/post/12-kratak-zapis`**
+  (2026-09-18). It is the shape Stack Overflow and Medium use, and it gives
+  every entry two spellings, so one of them is a redirect for ever; it makes the
+  link long again, which is what the owner asked to end; and it brings the
+  rename question back for a part of the address that identifies nothing. A
+  diary title is a poor keyword besides — the words a searcher types belong to
+  the organism and the topic pages, whose addresses do carry them.
+- **Native-script names** (2026-09-18) — D4 as first written. See its amendment.
 - **Indexing the source-built catalog** to use its scale. A hundred thousand
   pages reading "*Bactrocera dorsalis* — вид" is thin content; ADR-0026 D9 was
   right and stands.
@@ -313,10 +411,19 @@ Ordered so nothing moves before the layer that catches it exists.
 | 2 | the address manifest and one slugifier, which generates the `CHECK` `journal_entries.public_slug` has never had; topic tags; `publicCommunityPath` and the banned-literal lint; proxy-decided 404s; case 308; the two missing route halves; bounded pagination | yes, new content only |
 | 3 | `journal_entry_slug_history`; the backfill of every entry and ~101,619 catalog addresses behind 308s; resubmitted sitemap index | no |
 | 4 | D13: the entity graph, the catalog front door, image captions and image sitemap, aggregation hubs, IndexNow | yes |
+| 5 | the amendment of 2026-09-18: entry numbers and `/@{handle}/post/{n}` with every older address behind one 308; Latin names for object passports, topics and communities behind 308s; then the entry name stops being issued | no |
 
 Phase 3 is a bulk write to production and falls under `AGENTS.md` hard rule 10:
 it needs a separate explicit sign-off at the moment it runs, after the redirect
-layer is proven on a disposable database.
+layer is proven on a disposable database. Phase 5 is the same kind of write and
+carries the same condition, once for the entry numbers and once for the Latin
+names.
+
+Phase 5 keeps issuing the entry's name until its last task. Some twenty readers
+spell "this entry has a public address" as `public_slug is not null`; moving
+the address and flipping that predicate in one change would have made a single
+failure impossible to attribute. The name is retired only when every active
+entry in production already holds a number.
 
 ## Consequences
 
@@ -334,6 +441,17 @@ layer is proven on a disposable database.
   unprefixed page, or the reverse.
 - Phase 4 adds indexable aggregation pages. Each is an owner-facing surface and
   is approved individually before it reaches the menu.
+- Phase 5 moves entry addresses for the third time in a week. It is affordable
+  because the audit of 2026-09-10 counted eleven live entries, and it is the
+  last time it will be: a number has nothing in it that a later decision could
+  want to change.
+- A bare entry link no longer says what the entry is about. Where links are
+  exchanged a preview card carries the title and the photograph, and in a
+  search result the title and the breadcrumb do; the address was never the
+  place a reader learned it from.
+- An author's highest entry number is roughly their count of publishes, which
+  the profile already shows. Numbers are trivially enumerable, which costs
+  nothing while every entry is public and in the sitemap.
 
 ## Superseded clauses
 

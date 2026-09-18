@@ -43,6 +43,23 @@ issue body.
 Phases are ordered so nothing moves before the layer that catches it exists.
 Within a phase, tasks are independent unless a Dependencies line says otherwise.
 
+### Phase 5 — the amendment of 2026-09-18
+
+Two owner decisions amended ADR-0029 on 2026-09-18: every address is ASCII, and
+a journal entry is addressed by a number. Four tasks execute them, in this
+order. Their section is "Phase 5" at the end of this file.
+
+| # | Linear | Task |
+| --- | --- | --- |
+| 19 | `OVE-463` | The address law, amended: record the two decisions |
+| 20 | `OVE-464` | A journal entry lives at `/@{handle}/post/{n}`; every older address reaches it in one 308 |
+| 21 | `OVE-465` | Object passports, topics and communities take Latin names |
+| 22 | `OVE-466` | The entry name retires: nothing issues a slug nobody sees |
+
+What tasks 8 and 10 below say about the *script* of a topic tag, an entry name
+and a passport name is history from the day they shipped. Phase 5 supersedes
+it; everything else in those sections stands.
+
 ## Migrations
 
 Five tasks need SQL. The numbers are reserved in `docs/MIGRATION_ALLOCATION.md`
@@ -51,6 +68,9 @@ in the order the phases apply, against a `0066` high-water mark taken
 `OVE-428`, `0071` `OVE-429`. Every other task in the slice holds no allocation
 and may not inherit one.
 
+Phase 5 reserved two more on 2026-09-18, against a `0075` high-water mark:
+`0076` `OVE-464`, `0077` `OVE-465`. `OVE-463` and `OVE-466` need no SQL.
+
 ## The namespace vocabulary
 
 `OVE-425` fixes seven namespace identifiers — `species`, `form`, `journalEntry`,
@@ -58,6 +78,11 @@ and may not inherit one.
 uniqueness scope, a budget, reserved words and a pattern. `OVE-426`, `OVE-427`,
 `OVE-428`, `OVE-429` and `OVE-434` all read them, so a rename there is breaking
 for five successors. The set and its scopes are in `OVE-425`'s body.
+
+Phase 5 adds an eighth, `journalEntryNumber`, and renames none: `journalEntry`
+goes on meaning the entry's *name*, which resolves for ever and stops being
+issued in `OVE-466`. The words phase 5's tasks share are listed once, in
+ADR-0029 D9's amendment, and nowhere else.
 
 ---
 
@@ -1358,3 +1383,69 @@ entry id when `0073` replays with the older of two duplicates kept.
 `pnpm public:reads:prove-database` runs the ten new reads — the grouped
 notification queries with their correlated handle scalar included — on a real
 Postgres.
+
+## Phase 5 — every address ASCII, an entry by its number (2026-09-18)
+
+**Decided by the owner 2026-09-18**, looking at one shared link:
+`https://over.garden/@yehor/%D0%BA%D1%80%D0%B0%D1%82…`, 181 characters. ADR-0029
+D4 and D9 carry the decision and its reasons; the four tasks are `OVE-463`
+(this record), `OVE-464` (entry numbers), `OVE-465` (Latin names) and `OVE-466`
+(the entry name retires). What follows is what does not fit an issue body.
+
+**Order.** `OVE-464` before `OVE-465`: both rewrite `match-address-path.ts` and
+the author-scoped blocks of `src/proxy.ts`, the entry move is the one the owner
+asked for, and the second to land rebases. `OVE-466` last, and only after
+`0076`'s backfill is applied in production — it makes readers rely on the
+number, so every active entry must already hold one.
+
+**Why `OVE-464` keeps issuing the name.** `rg -n 'public_slug", "is not"'
+src/server` finds some twenty readers — the journal directory, the organism
+card, social return, the object catalog, the profile — that spell "this entry
+has a public address" as `public_slug is not null`. An entry published without a
+name would vanish from each of them, silently, and no unit test asserts
+presence on seven surfaces at once. So the name is issued exactly as before,
+answers 308 like any other non-canonical spelling (D3), and is retired in its
+own change with a browser proof that publishes one entry and then finds it
+everywhere.
+
+**Traps.**
+
+1. *Two hops from a prefixed legacy address.* `proxy()` strips a locale prefix
+   from every author-scoped path that is not a profile **before** the entry's
+   lifecycle block runs, and returns. `/bg/@h/{slug}` would therefore answer
+   308 to `/@h/{slug}` and then 308 again to `/@h/post/{n}`. The strip block has
+   to let the `legacyJournalEntry` kind through; the lifecycle block already
+   redirects a prefixed request to the unprefixed canonical in one step.
+2. *`max() + 1` is not "never reused".* Deletion purges the row after the
+   retention window (ADR-0021). If the purged entry was the author's newest,
+   `max() + 1` hands its number to the next publish and an old shared link
+   opens somebody's new entry. The number comes from
+   `journal_entry_number_counters`, which only ever grows.
+3. *The backfill cannot write every row.* The development database holds
+   sixteen rows in the retired `archived` lifecycle state, and two `NOT VALID`
+   constraints reject any `UPDATE` that touches them (see task 6 above). The
+   backfill carries `lifecycle_state = 'active'`, like `0067`'s did.
+4. *The per-owner advisory lock is not the serialization.* `prepareAtomicCreateTransaction`
+   serializes one owner's publishes, but it is not the only insert path — seeds,
+   scripts and tests insert rows directly. A `before insert` trigger that calls
+   the counter function is what makes a number unconditional, and the counter
+   row's own lock is what makes two concurrent inserts differ.
+5. *A Latin manifest unmatches every Cyrillic address.* `matchAuthorScopedPath`
+   and `matchAddressPath` validate with `isAddressSlug` before any lookup, so
+   the moment `object` and `topic` turn `latin`, `/@h/objects/чорний-принц` is
+   "not an address" and answers 404 where it must answer 308. `OVE-465` adds
+   `historicalScript` to the manifest and a generated
+   `isHistoricalAddressSlug`, used for one thing: deciding that a spelling is
+   worth a history lookup.
+6. *One romanization table per language.* `explicitTagTopicDefinition`
+   slugifies every tag with `language: "uk"`. That was invisible while the
+   output was Cyrillic. In Latin it spells Bulgarian `домати` as `domaty`.
+7. *What holds the old address after the deploy.* The Meilisearch document
+   stores the entry's address, and `use cache` pages hold the `href` they were
+   rendered with. Both keep working through the 308; the index is rebuilt and
+   the entry tags are revalidated as the last production step, not assumed.
+8. *`/id/{uuid}` is still catalog-only.* `resolveCatalogAliasRoute` resolves an
+   organism and nothing else, so D2's permalink for an entry does not exist
+   yet. Phase 5 neither depends on it nor adds it.
+9. *The migration list is pinned by hand* in `scripts/application-sql.test.ts`;
+   a new `sql/00NN_*.sql` without its line there fails CI at `Test`.

@@ -156,9 +156,13 @@ number in `apps/web/sql` when these were taken.
 | `0073` | `OVE-436` | the entry name becomes the author's (`journal_entries` unique per `(owner_user_id, public_slug)`), engagement refs for `journal_entry` targets move from the slug to the entry id, and the five system topics get their Ukrainian labels |
 | `0074` | `OVE-435` | the reconciliation ladder's rung from a gardener label to a taxon: `catalog_reconcile_thresholds` admits and seeds `label_scientific_name` and `label_scientific_synonym` |
 
+| `0075` | `OVE-451` | the indexes the catalogue's one door walks (SDD Slice 28, not this slice); recorded here after the fact under rule 4, because it landed on 2026-09-17 without a row and the next reservation needs a true high-water mark |
+| `0076` | `OVE-464` | **reserved 2026-09-18.** `journal_entries.author_entry_number`, its per-owner unique index, `journal_entry_number_counters`, `assign_journal_entry_number(uuid)` and the `before insert` trigger that calls it, and the backfill of `active` rows by publish date (ADR-0029 D9, amendment of 2026-09-18) |
+| `0077` | `OVE-465` | **reserved 2026-09-18.** `journal_topic_slug_history` with its sync trigger and seed, and the generated Latin `CHECK` on `plant_objects.public_slug` and `journal_topics.slug`, guarded on the absence of native-script rows (ADR-0029 D4, amendment of 2026-09-18) |
+
 `OVE-419` through `OVE-423`, `OVE-427` and `OVE-430` through `OVE-434` need no
 SQL and therefore hold no allocation; under rule 3 none of them may inherit a
-number from this block. `OVE-432` grows `JournalDocumentV1` additively at schema
+number from this block. The same holds for `OVE-463` and `OVE-466` of phase 5. `OVE-432` grows `JournalDocumentV1` additively at schema
 version 1 with no migration, the pattern ADR-0028 established.
 
 ## Rules
