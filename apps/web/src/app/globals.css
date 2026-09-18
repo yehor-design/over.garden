@@ -398,7 +398,11 @@
 
 @layer base {
   * {
-    @apply border-border outline-focus-ring/50;
+    /* The focus ring is `focus-ring` at full strength. It arrived from
+       shadcn's default as `/50`, and a 2 px ring of `green-600` at half alpha
+       over white measures about 2.0:1 — below WCAG 2.2 1.4.11's 3:1 for a
+       boundary that identifies a component, everywhere on the site. */
+    @apply border-border outline-focus-ring;
   }
   body {
     @apply bg-surface text-text;
@@ -579,4 +583,39 @@
     bottom: 20px;
     max-height: calc(100dvh - 40px);
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   The focus ring is drawn. DESIGN.md §8, WCAG 2.4.7.
+
+   Tailwind v4 compiles `outline-none` to
+   `--tw-outline-style: none; outline-style: none`, and it compiles every
+   `focus-visible:outline-*` to `outline-style: var(--tw-outline-style)`. So a
+   control that carries **both** — and thirty-seven places in this repository
+   did, `Button`, `IconButton`, `Input`, `Checkbox`, `Radio`, `Switch`, `Tabs`,
+   `Accordion`, `Dialog`, `Popover`, `Link`, `Chip`, `Pagination`, `ListRow`,
+   `CommandPalette` and `ErrorState` among them — resolves its focus ring to
+   `outline-style: none` and draws nothing at all. Measured in Chromium on
+   2026-09-17: `:focus-visible` matched, `outline-width` was `2px`,
+   `outline-color` was set, and `outline-style` was `none`.
+
+   Nothing caught it. axe does not test focus visibility, and gate 8 asserted
+   `outlineWidth !== "0px"`, which was true the whole time. `tests/accessibility.spec.ts`
+   asserts the *style* now, and this rule makes the ring impossible to remove
+   by accident: it is unlayered, so it wins over `@layer utilities` whatever a
+   component writes, and it only touches an element that asked for a ring —
+   `outline-style` on an element carrying `outline-none` alone is a literal
+   declaration and is not resolved through this variable.
+   ═══════════════════════════════════════════════════════════════════════════ */
+*:focus-visible {
+  /* Both, and for two different reasons. The variable is what a component's
+     own `focus-visible:outline-2` resolves through. The literal is for the
+     controls whose ring comes from the base layer above — a `<summary>`, an
+     `<a>` with no focus utility of its own — because `@layer utilities` beats
+     `@layer base` by layer order regardless of specificity, so `.outline-none`
+     would keep winning there. The footer's language control was exactly that
+     case, and the keyboard walk in `tests/accessibility.spec.ts` is what
+     found it after the variable alone had been declared a fix. */
+  --tw-outline-style: solid;
+  outline-style: solid;
 }

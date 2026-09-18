@@ -140,6 +140,28 @@ async function tabTo(
 }
 
 /**
+ * The focus ring as a reader sees it: a width, a style that is not `none`, and
+ * a colour that is not transparent. All three, because any one of them alone
+ * can be true while nothing is drawn.
+ */
+async function expectVisibleFocusRing(
+  locator: ReturnType<Page["locator"]>,
+  what: string,
+) {
+  const ring = await locator.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return {
+      width: style.outlineWidth,
+      style: style.outlineStyle,
+      color: style.outlineColor,
+    };
+  });
+  expect(ring.width, `${what}: outline-width`).not.toBe("0px");
+  expect(ring.style, `${what}: outline-style`).not.toBe("none");
+  expect(ring.color, `${what}: outline-color`).not.toBe("rgba(0, 0, 0, 0)");
+}
+
+/**
  * Publishes one entry through the composer, so `gate 7` has a public entry and
  * a public profile to scan. `gate 8` drives the same composer with the
  * keyboard alone; this one only needs the rows to exist.
@@ -321,6 +343,11 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
 
     const email = page.locator('input[type="email"]').first();
     const password = page.locator('input[type="password"]').first();
+    // Settle on the control before walking to it. The screen arrives through
+    // the document's Suspense boundary, so on a busy server `load` can fire
+    // while the form is still absent — and then `tabTo` walks sixty steps past
+    // a control that does not exist yet and reports it as unreachable.
+    await expect(email).toBeVisible({ timeout: 20_000 });
     await tabTo(page, email, "the email control");
     await page.keyboard.type(`${PREFIX}-keyboard@example.test`);
     // Two stops between the credentials since `OVE-455`: the forgotten-password
@@ -338,11 +365,16 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     await tabTo(page, submit, "the submit control");
     await expect(submit).toBeFocused();
     await expect(submit).toHaveAccessibleName(/\S/);
-    // Focus is visible on whatever holds it: `0px` would mean the ring was
-    // removed without an equal replacement (DESIGN.md §8).
-    expect(
-      await submit.evaluate((node) => getComputedStyle(node).outlineWidth),
-    ).not.toBe("0px");
+    // Focus is visible on whatever holds it (DESIGN.md §8, WCAG 2.4.7).
+    //
+    // The **style** is what this asserts, not only the width. Asserting the
+    // width alone is what let the ring disappear from every control in the
+    // product unnoticed: Tailwind v4 compiles `outline-none` to
+    // `--tw-outline-style: none` and `focus-visible:outline-2` to
+    // `outline-style: var(--tw-outline-style)`, so a control carrying both
+    // reported `2px` and a set colour while drawing nothing. Thirty-seven
+    // places carried both.
+    await expectVisibleFocusRing(submit, "the submit control");
     await page.keyboard.press("Enter");
     await expect(password).toBeVisible();
   });
@@ -438,6 +470,50 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
       [name],
     );
     expect(persisted.rows[0]?.id).toBeTruthy();
+  });
+
+  test("every control the keyboard reaches draws a ring", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    await selectLocale(context, baseURL);
+    await page.goto("/journals", { waitUntil: "load" });
+    await expect(
+      page.locator('[data-site-shell-region="header"]'),
+    ).toBeVisible();
+    // The page's own controls arrive after the shell does, and the walk counts
+    // them — settling on the shell alone made this flake in a full run while
+    // passing on its own.
+    await expect(page.locator('input[type="search"]').first()).toBeVisible({
+      timeout: 20_000,
+    });
+
+    // A walk rather than one control: the defect this catches was in the
+    // shared primitives — `Button`, `Link`, `Input`, `Chip`, `Pagination` —
+    // so a single assertion on a single screen would have passed while the
+    // rest of the product drew nothing.
+    const walked: string[] = [];
+    for (let step = 0; step < 24; step += 1) {
+      await page.keyboard.press("Tab");
+      const active = page.locator(":focus-visible");
+      if ((await active.count()) === 0) continue;
+      const name = await active.evaluate(
+        (node) =>
+          `${node.tagName.toLowerCase()}:${node.getAttribute("data-slot") ?? (node.textContent || "").trim().slice(0, 16)}`,
+      );
+      walked.push(name);
+      await expectVisibleFocusRing(active, name);
+    }
+    // The walk has to have found something, or the assertions above are
+    // vacuous — and it has to have found more than one *kind* of control,
+    // because the defect was in the shared primitives.
+    expect(walked.length, JSON.stringify(walked)).toBeGreaterThan(8);
+    const kinds = new Set(walked.map((name) => name.split(":")[0]));
+    expect([...kinds].sort(), JSON.stringify(walked)).toEqual(
+      expect.arrayContaining(["a", "button", "input"]),
+    );
   });
 
   test("open the command palette and reach a result", async ({

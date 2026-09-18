@@ -721,8 +721,26 @@ checks, not aspirations.
 **Keyboard**
 
 - Every interactive element reachable and operable by keyboard, in DOM order.
-- Focus visible on everything: 2 px `focus-ring` outline, 2 px offset. Never
-  `outline: none` without an equal replacement.
+- Focus visible on everything: 2 px `focus-ring` outline, 2 px offset, at
+  **full strength**. Never `outline: none` without an equal replacement.
+
+  **How this was broken for the whole product, and what makes it stay fixed.**
+  Tailwind v4 compiles `outline-none` to `--tw-outline-style: none` and every
+  `focus-visible:outline-*` to `outline-style: var(--tw-outline-style)`. A
+  control carrying both — thirty-seven places did, `Button`, `IconButton`,
+  `Input`, `Checkbox`, `Radio`, `Switch`, `Tabs`, `Accordion`, `Dialog`,
+  `Popover`, `Link`, `Chip`, `Pagination`, `ListRow`, `CommandPalette` and
+  `ErrorState` among them — resolved its ring to `outline-style: none` and drew
+  **nothing**, while reporting `outline-width: 2px` and a set colour. The ring
+  was also `focus-ring/50` from shadcn's default, which measures about 2.0:1
+  over white and fails 1.4.11's 3:1 even where it did draw. Nothing caught
+  either: axe does not test focus visibility, and the browser gate asserted
+  `outlineWidth !== "0px"`, which was true throughout. `globals.css` now
+  carries one **unlayered** `*:focus-visible { --tw-outline-style: solid }`,
+  which wins over `@layer utilities` whatever a component writes, and the gate
+  asserts the width, the style and the colour on every control a keyboard walk
+  reaches.
+
 - No keyboard trap. `Esc` closes every overlay. Focus returns to the trigger.
 - Skip link first. Roving tabindex in tab lists, menus and toolbars.
 

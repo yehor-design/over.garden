@@ -297,6 +297,23 @@ they read a card's own `data-entry-card` now. And an unscoped
 `button[aria-pressed]` would have found a filter chip instead of the like
 control the moment this task shipped one.
 
+**The focus ring was drawing nothing, on every control in the product** — found
+by measuring one chip and kept by a gate that now asserts the right thing.
+Tailwind v4 compiles `outline-none` to `--tw-outline-style: none` and every
+`focus-visible:outline-*` to `outline-style: var(--tw-outline-style)`, so the
+thirty-seven controls carrying both resolved their ring to
+`outline-style: none`. In Chromium: `:focus-visible` matched, `outline-width`
+was `2px`, `outline-color` was set, `outline-style` was `none`, and a
+screenshot of a keyboard-focused rail link showed no ring at all. It was
+`focus-ring/50` as well — about 2.0:1 over white, below WCAG 2.2 1.4.11's 3:1
+even where it drew. Neither check that should have caught it could: axe does
+not test focus visibility, and gate 8 asserted `outlineWidth !== "0px"`, which
+was true the whole time. `globals.css` carries one unlayered
+`*:focus-visible { --tw-outline-style: solid }` now — it wins over
+`@layer utilities` whatever a component writes — and gate 8 walks the keyboard
+across a screen asserting the width, the style **and** the colour on every
+control it reaches.
+
 **The §9 LCP budget is not reachable, and it is not the pages** (`OVE-461`).
 Measured through the Lighthouse CLI, three runs, median: `/` is **4.28 s** with
 **CLS 0**, of which 2.90 s is render delay while the cover photograph has
