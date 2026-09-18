@@ -17,10 +17,7 @@ import {
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
-import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
-} from "@/lib/garden/public-paths";
+import { publicJournalEntryAddress } from "@/lib/garden/public-paths";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -71,6 +68,8 @@ export interface NotificationCenterEvent {
 export interface FollowedFeedStoryRow {
   followId: string;
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   entryDate: Date | string;
   publishedAt: Date | string | null;
   ownerHandle: string | null;
@@ -253,6 +252,7 @@ export function buildFollowedFeedStoriesQuery(
     .select([
       "lineage_node_follows.id as followId",
       "target_public_entries.public_slug as publicSlug",
+      "target_public_entries.author_entry_number as entryNumber",
       "target_public_entries.entry_date as entryDate",
       "target_public_entries.published_at as publishedAt",
       "target_owner_profiles.handle as ownerHandle",
@@ -623,10 +623,13 @@ export function serializeFollowedFeedStories(
     return [
       {
         key: stableReadbackKey("followed-feed", row.followId),
-        // Under the author (ADR-0029 D9); legacy only for a handle-less one.
-        href: row.addressHandle
-          ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
-          : legacyPublicJournalEntryPath(row.publicSlug),
+        // Under the author, at its number (ADR-0029 D9); the legacy path
+        // only for an author who has no handle.
+        href: publicJournalEntryAddress({
+          authorHandle: row.addressHandle,
+          entryNumber: row.entryNumber,
+          publicSlug: row.publicSlug,
+        }),
         ownerMention: row.ownerHandle ? `@${row.ownerHandle}` : null,
         targetObject: mapTargetObject(row),
         entryDate: row.entryDate,

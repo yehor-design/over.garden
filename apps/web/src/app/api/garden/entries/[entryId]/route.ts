@@ -15,7 +15,7 @@ import {
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
 import {
-  legacyPublicJournalEntryPath,
+  publicJournalEntryAddress,
   publicJournalEntryPath,
 } from "@/lib/garden/public-paths";
 import { getPublicAuthorHandle } from "@/server/author-handle-repository";
@@ -365,6 +365,7 @@ function buildAtomicEditResponse(
       body: string;
       entry_date: Date | string;
       public_slug: string | null;
+      author_entry_number: number | null;
       journal_revision: number | string | null;
     };
     publicMedia: readonly { mediaAssetId: string; publicPath: string }[];
@@ -391,9 +392,11 @@ function buildAtomicEditResponse(
       coverUrl: cover ? getPublicDerivativeUrl(cover.publicPath) : null,
       // The link the gardener sees and shares (ADR-0029 D9); the legacy
       // address, which 308s there, only for an author who has no handle.
-      publicPath: authorHandle
-        ? publicJournalEntryPath(authorHandle, result.entry.public_slug)
-        : legacyPublicJournalEntryPath(result.entry.public_slug),
+      publicPath: publicJournalEntryAddress({
+        authorHandle,
+        entryNumber: result.entry.author_entry_number,
+        publicSlug: result.entry.public_slug,
+      }),
     },
     returnTo: normalizeJournalComposerReturnTo(
       body.returnTo,
@@ -445,6 +448,7 @@ async function convergeAndRevalidate(entry: {
   owner_user_id?: string | null;
   plant_object_id?: string | null;
   public_slug?: string | null;
+  author_entry_number?: number | null;
 }) {
   revalidatePath("/garden");
   if (entry.plant_object_id) {
@@ -458,14 +462,17 @@ async function convergeAndRevalidate(entry: {
     }),
     "expire",
   );
-  if (entry.public_slug) {
-    // Both addresses: the canonical one the entry answers at, and the legacy
-    // one the proxy 308s from — a redirect is cached too (ADR-0029 D9).
+  if (entry.author_entry_number) {
+    // The one address the entry answers at (ADR-0029 D9). Its older spellings
+    // are 308s decided in the proxy, which caches nothing to revalidate.
     const authorHandle = entry.owner_user_id
       ? await getPublicAuthorHandle(entry.owner_user_id)
       : null;
     if (authorHandle) {
-      const canonical = publicJournalEntryPath(authorHandle, entry.public_slug);
+      const canonical = publicJournalEntryPath(
+        authorHandle,
+        entry.author_entry_number,
+      );
       revalidatePath(canonical);
       // Only the canonical address, and only once the author's handle is
       // known: the legacy spelling below is a 308, and announcing a redirect

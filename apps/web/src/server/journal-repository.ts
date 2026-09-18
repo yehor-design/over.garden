@@ -1,7 +1,14 @@
 import "server-only";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
-import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
+import {
+  sql,
+  type Expression,
+  type Insertable,
+  type Kysely,
+  type SqlBool,
+  type Transaction,
+} from "kysely";
 import { cache } from "react";
 
 import { db } from "@/db";
@@ -21,13 +28,19 @@ import type {
 import type { Json } from "@/db/generated";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
+import { ADDRESS_ORDINAL_MAXIMUM } from "@/lib/address/address-manifest";
+import {
+  publicJournalEntryNameKey,
+  publicJournalEntryNumberKey,
+  type PublicJournalEntryKey,
+} from "@/lib/garden/public-journal-entry-key";
 import { assignJournalEntrySlug } from "@/server/journal-slug-repository";
 import { assignPlantObjectPublicSlug } from "@/server/plant-object-slug-repository";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import {
   legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicProfilePath,
   publicTopicPath,
@@ -395,6 +408,11 @@ export interface PublicJournalEntryPage {
      */
     sourceLanguage: PublicLocale;
     publicSlug: string;
+    /**
+     * The author's own count — the `{n}` of `/@{handle}/post/{n}` — or `null`
+     * for a row that was never numbered, which no public read returns.
+     */
+    entryNumber: number | null;
     publicPath: string;
     publishedAt: Date | string | null;
   };
@@ -549,6 +567,8 @@ interface PublicJournalEntryRootRow {
    * handle, and their published entries keep their addresses (ADR-0029 D9).
    */
   addressHandle: string | null;
+  /** The author's own count: the `{n}` of `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   authorDisplayName: string | null;
   authorAvatarUrl: string | null;
 }
@@ -590,6 +610,7 @@ interface PublicJournalEntryRelatedRow {
   publicSlug: string;
   /** The author's registry handle, for the address; `null` for a handle-less author. */
   addressHandle: string | null;
+  entryNumber: number | null;
 }
 
 export interface GonePublicJournalEntryPage {
@@ -610,9 +631,21 @@ export type PublicJournalEntryLookup =
       status: "not_found";
     };
 
+export {
+  publicJournalEntryNameKey,
+  publicJournalEntryNumberKey,
+  type PublicJournalEntryKey,
+};
+
 export type PublicJournalEntryLifecycleLookup =
-  | { status: "active"; publicSlug: string; addressHandle: string | null }
-  | { status: "gone"; publicSlug: string }
+  | {
+      status: "active";
+      publicSlug: string | null;
+      /** The `{n}` of the canonical address; `null` only for an unnumbered row. */
+      entryNumber: number | null;
+      addressHandle: string | null;
+    }
+  | { status: "gone" }
   | { status: "not_found" };
 
 interface PublicJournalEntryLifecycleRow {
@@ -625,6 +658,7 @@ interface PublicJournalEntryLifecycleRow {
   joinedPlantObjectId: string | null;
   /** The handle the entry's canonical address hangs from (ADR-0029 D9). */
   addressHandle: string | null;
+  entryNumber: number | null;
 }
 
 export interface FirstPlantEntryResult {
@@ -2652,10 +2686,13 @@ export async function updatePlantObjectLocation(
 function publicEntryAddress(row: {
   publicSlug: string | null;
   addressHandle: string | null;
+  entryNumber: number | null;
 }): string {
-  return row.addressHandle && row.publicSlug
-    ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
-    : legacyPublicJournalEntryPath(row.publicSlug ?? "");
+  return publicJournalEntryAddress({
+    authorHandle: row.addressHandle,
+    entryNumber: row.entryNumber,
+    publicSlug: row.publicSlug,
+  });
 }
 
 export async function listMyRecentJournalEntries(
@@ -2692,13 +2729,14 @@ export function isPublicTextReducingEdit(
   );
 }
 
+/** The page behind an entry's name — for the proofs that know only a slug. */
 export async function getPublicJournalEntryPage(
   publicSlug: string,
   executor: QueryExecutor = db,
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<PublicJournalEntryPage | null> {
-  const lookup = await getPublicJournalEntryLookup(
-    publicSlug,
+  const lookup = await loadPublicJournalEntryLookup(
+    publicJournalEntryNameKey(publicSlug),
     executor,
     locale,
   );
@@ -2706,32 +2744,24 @@ export async function getPublicJournalEntryPage(
 }
 
 export async function getPublicJournalEntryLifecycleLookup(
-  publicSlug: string,
+  key: PublicJournalEntryKey,
   executor: QueryExecutor = db,
-  /**
-   * The author's handle when the request carries one (`/@{handle}/{slug}`).
-   * The name is per author since `0073`, so without the handle a slug can
-   * name more than one entry; the legacy `/journal/{slug}` path resolves
-   * through `resolveJournalEntryAddress` instead.
-   */
-  options: { authorHandle?: string | null } = {},
 ): Promise<PublicJournalEntryLifecycleLookup> {
-  const slug = normalizePublicSlug(publicSlug);
-  if (!slug) return { status: "not_found" };
+  const normalized = normalizePublicJournalEntryKey(key);
+  if (!normalized) return { status: "not_found" };
 
   const row = (await buildPublicJournalEntryLifecycleQuery(
     executor,
-    slug,
-    options.authorHandle ?? null,
+    normalized,
   ).executeTakeFirst()) as PublicJournalEntryLifecycleRow | undefined;
-  if (!row?.publicSlug) return { status: "not_found" };
+  if (!row) return { status: "not_found" };
 
   if (
     row.publicGoneAt !== null &&
     (row.lifecycleState === "deleted_retention" ||
       row.lifecycleState === "archived")
   ) {
-    return { status: "gone", publicSlug: row.publicSlug };
+    return { status: "gone" };
   }
 
   const hasValidContext =
@@ -2749,35 +2779,71 @@ export async function getPublicJournalEntryLifecycleLookup(
         publicSlug: row.publicSlug,
         // The proxy needs the canonical address to 308 a legacy or prefixed
         // spelling at it, and this is the one lookup it already performs.
+        entryNumber: row.entryNumber,
         addressHandle: row.addressHandle,
       }
     : { status: "not_found" };
 }
 
-/** One lookup per request: `generateMetadata` and the page share it (React.cache). */
-export const getPublicJournalEntryLookup = cache(loadPublicJournalEntryLookup);
+/**
+ * A key a lookup can be asked about, or `null` when nothing could match it.
+ * A name is normalized the way it always was; a number has to be one the
+ * column could hold, so a caller that skipped the route matcher cannot hand
+ * Postgres `NaN` or a float and get an error where the answer is "not found".
+ */
+function normalizePublicJournalEntryKey(
+  key: PublicJournalEntryKey,
+): PublicJournalEntryKey | null {
+  if (key.kind === "name") {
+    const slug = normalizePublicSlug(key.publicSlug);
+    return slug ? { ...key, publicSlug: slug } : null;
+  }
+  return Number.isSafeInteger(key.entryNumber) &&
+    key.entryNumber >= 1 &&
+    key.entryNumber <= ADDRESS_ORDINAL_MAXIMUM
+    ? key
+    : null;
+}
+
+/**
+ * One lookup per request: `generateMetadata` and the page share it
+ * (React.cache). The arguments are the two primitives of the address rather
+ * than a key object, because `cache` memoizes by argument identity and two
+ * callers building `{ authorHandle, entryNumber }` would each miss.
+ */
+export const getPublicJournalEntryLookup = cache(
+  (
+    authorHandle: string,
+    entryNumber: number,
+    executor: QueryExecutor = db,
+    locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+  ) =>
+    loadPublicJournalEntryLookup(
+      publicJournalEntryNumberKey(authorHandle, entryNumber),
+      executor,
+      locale,
+    ),
+);
 
 async function loadPublicJournalEntryLookup(
-  publicSlug: string,
+  key: PublicJournalEntryKey,
   executor: QueryExecutor = db,
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
-  authorHandle: string | null = null,
 ): Promise<PublicJournalEntryLookup> {
-  const slug = normalizePublicSlug(publicSlug);
-  if (!slug) return { status: "not_found" };
+  const normalized = normalizePublicJournalEntryKey(key);
+  if (!normalized) return { status: "not_found" };
 
   const row = await buildPublicJournalEntryLookupQuery(
     executor,
-    slug,
-    authorHandle,
+    normalized,
   ).executeTakeFirst();
-  if (!row?.publicSlug) return { status: "not_found" };
+  if (!row) return { status: "not_found" };
 
   if (isGonePublicEntry(row)) {
     return {
       status: "gone",
       entry: {
-        publicSlug: row.publicSlug,
+        publicSlug: row.publicSlug ?? "",
         publicGoneAt: row.publicGoneAt,
       },
     };
@@ -2965,9 +3031,12 @@ export function serializePublicJournalEntryPage(input: {
       // in its JSON-LD, and is read by nothing that filters or sorts.
       sourceLanguage: normalizeSourceLanguage(root.sourceLanguage),
       publicSlug: root.publicSlug ?? "",
-      publicPath: root.addressHandle
-        ? publicJournalEntryPath(root.addressHandle, root.publicSlug ?? "")
-        : legacyPublicJournalEntryPath(root.publicSlug ?? ""),
+      entryNumber: root.entryNumber,
+      publicPath: publicJournalEntryAddress({
+        authorHandle: root.addressHandle,
+        entryNumber: root.entryNumber,
+        publicSlug: root.publicSlug,
+      }),
       publishedAt: root.publishedAt,
     },
     context,
@@ -3045,6 +3114,7 @@ function serializeRelatedPublicJournalEntries(
     entryDate: Date | string;
     publicSlug: string;
     addressHandle: string | null;
+    entryNumber: number | null;
   }>,
 ): PublicJournalEntryRelatedEntry[] {
   return rows.map((row) => serializeRelatedPublicJournalEntry(row)!);
@@ -3065,9 +3135,11 @@ function serializeRelatedPublicJournalEntry(
     // linked the legacy address, which 308s — a hop for every reader and a
     // redirect for every crawler that followed it. The legacy path stays only
     // for an author who has no handle, where it is the address that answers.
-    publicPath: row.addressHandle
-      ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
-      : legacyPublicJournalEntryPath(row.publicSlug),
+    publicPath: publicJournalEntryAddress({
+      authorHandle: row.addressHandle,
+      entryNumber: row.entryNumber,
+      publicSlug: row.publicSlug,
+    }),
   };
 }
 
@@ -3494,6 +3566,7 @@ export function buildPublicEntrySlugsForObjectQuery(
     .select([
       "journal_entries.id as entryId",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .where("journal_entries.owner_user_id", "=", scope.userId)
@@ -3791,9 +3864,9 @@ export function buildPlantObjectCatalogSourceCreditQuery(
 
 export function buildPublicJournalEntryPageQuery(
   executor: QueryExecutor,
-  publicSlug: string,
+  key: PublicJournalEntryKey,
 ) {
-  return buildPublicJournalEntryLookupQuery(executor, publicSlug)
+  return buildPublicJournalEntryLookupQuery(executor, key)
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null);
@@ -3801,8 +3874,7 @@ export function buildPublicJournalEntryPageQuery(
 
 export function buildPublicJournalEntryLifecycleQuery(
   executor: QueryExecutor,
-  publicSlug: string,
-  authorHandle: string | null = null,
+  key: PublicJournalEntryKey,
 ) {
   const query = executor
     .selectFrom("journal_entries")
@@ -3828,25 +3900,19 @@ export function buildPublicJournalEntryLifecycleQuery(
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.public_gone_at as publicGoneAt",
       "journal_entries.plant_object_id as plantObjectId",
       "plant_objects.id as joinedPlantObjectId",
     ])
-    .where("journal_entries.public_slug", "=", publicSlug)
+    .where(publicJournalEntryKeyPredicate(key))
     .where(publicLaunchSurfacePredicates());
-  return authorHandle === null
-    ? query
-    : query.where(
-        publicAuthorHandleSql("journal_entries.owner_user_id"),
-        "=",
-        authorHandle,
-      );
+  return query;
 }
 
 export function buildPublicJournalEntryLookupQuery(
   executor: QueryExecutor,
-  publicSlug: string,
-  authorHandle: string | null = null,
+  key: PublicJournalEntryKey,
 ) {
   const query = executor
     .selectFrom("journal_entries")
@@ -3907,6 +3973,7 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.source_language as sourceLanguage",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_gone_at as publicGoneAt",
@@ -3932,16 +3999,31 @@ export function buildPublicJournalEntryLookupQuery(
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
     ])
-    .where("journal_entries.public_slug", "=", publicSlug)
+    .where(publicJournalEntryKeyPredicate(key))
     .where(publicLaunchSurfacePredicates());
-  // The name is per author since `0073`; with the handle the pair is the key.
-  return authorHandle === null
-    ? query
-    : query.where(
-        publicAuthorHandleSql("journal_entries.owner_user_id"),
-        "=",
-        authorHandle,
-      );
+  return query;
+}
+
+/**
+ * The predicate a key stands for, shared by the proxy's bounded lookup and the
+ * page read so the two can never disagree about which row an address names.
+ *
+ * A number is always asked for with its author — it means nothing without one
+ * — and a name is asked for with the author only when the request carried the
+ * handle. The handle is compared through `publicAuthorHandleSql`, the registry's
+ * *current* handle, so an address under a handle the gardener no longer holds
+ * finds nothing here and is left to the history lookup.
+ */
+function publicJournalEntryKeyPredicate(
+  key: PublicJournalEntryKey,
+): Expression<SqlBool> {
+  const named =
+    key.kind === "number"
+      ? sql<SqlBool>`${sql.ref("journal_entries.author_entry_number")} = ${key.entryNumber}`
+      : sql<SqlBool>`${sql.ref("journal_entries.public_slug")} = ${key.publicSlug}`;
+  return key.authorHandle === null
+    ? named
+    : sql<SqlBool>`(${named} and ${publicAuthorHandleSql("journal_entries.owner_user_id")} = ${key.authorHandle})`;
 }
 
 export function buildRelatedPublicJournalEntriesQuery(
@@ -3958,6 +4040,7 @@ export function buildRelatedPublicJournalEntriesQuery(
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .where("journal_entries.plant_object_id", "=", plantObjectId)
@@ -4033,6 +4116,7 @@ export function buildAdjacentPublicJournalEntryQuery(
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .where("journal_entries.id", "!=", input.currentEntryId)

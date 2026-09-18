@@ -1,6 +1,6 @@
 {
   "schema": "overgarden.addressContract.v1",
-  "manifestVersion": "ove425.address.v1",
+  "manifestVersion": "ove464.address.v2",
   "namespaces": [
     {
       "namespace": "species",
@@ -24,6 +24,7 @@
         "constraint": "catalog_items_public_slug_check",
         "nullable": true,
         "maxCharacters": 96,
+        "columnType": "text",
         "checkInstalledBy": "0071"
       },
       "notes": "Shares a column, a unique index and a history table with `form`: a bare /species/{slug} request is looked up in both, so one slug names one organism."
@@ -55,6 +56,7 @@
         "constraint": "catalog_items_public_slug_check",
         "nullable": true,
         "maxCharacters": 96,
+        "columnType": "text",
         "checkInstalledBy": "0071"
       },
       "notes": "ADR-0029 D7. Two cultivars named Advance under different species both keep the name; within one species they are almost certainly the same cultivar from two registers, so the collision counter is a reconciliation signal (ADR-0026 D4)."
@@ -71,7 +73,8 @@
         "encodedCharacters": 180
       },
       "reservedWords": [
-        "objects"
+        "objects",
+        "post"
       ],
       "source": "the entry title at first publish",
       "pathPrefix": "/@",
@@ -85,9 +88,37 @@
         "constraint": "journal_entries_public_slug_check",
         "nullable": true,
         "maxCharacters": 96,
+        "columnType": "text",
         "checkInstalledBy": "0068"
       },
-      "notes": "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 gave the namespace its history table, which is what let the publish-id suffix go; 0073 made the live column unique per author to match, once nothing identified an entry by its slug alone."
+      "notes": "The entry's name, which resolves and is no longer the address. The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 gave the namespace its history table, which is what let the publish-id suffix go; 0073 made the live column unique per author to match, once nothing identified an entry by its slug alone. Since OVE-464 every spelling under this namespace answers 308 to the entry's number."
+    },
+    {
+      "namespace": "journalEntryNumber",
+      "script": "latin",
+      "shape": "ordinal",
+      "alphabet": "a-z0-9",
+      "pattern": "^[1-9][0-9]{0,8}$",
+      "uniquenessScope": "perAuthorHandle",
+      "budget": {
+        "decodedCharacters": 9,
+        "encodedCharacters": 9
+      },
+      "reservedWords": [],
+      "source": "the author's own count of publishes, assigned at publish, never changed and never reused",
+      "pathPrefix": "/@",
+      "pathBuilder": "publicJournalEntryPath",
+      "legacyPathPrefixes": [],
+      "storage": {
+        "table": "journal_entries",
+        "column": "author_entry_number",
+        "constraint": "journal_entries_author_entry_number_check",
+        "nullable": true,
+        "maxCharacters": 9,
+        "columnType": "integer",
+        "checkInstalledBy": "0076"
+      },
+      "notes": "ADR-0029 D9, amendment of 2026-09-18. The number comes from journal_entry_number_counters through assign_journal_entry_number(uuid), called by a before-insert trigger, so no insert path can forget it and a purged entry's number is never handed to the next publish."
     },
     {
       "namespace": "object",
@@ -113,6 +144,7 @@
         "constraint": "plant_objects_public_slug_check",
         "nullable": true,
         "maxCharacters": 96,
+        "columnType": "text",
         "checkInstalledBy": "0070"
       },
       "notes": "A passport is addressed by slug from OVE-428. The column is nullable because a private object has no public address, and only an object with a public entry is given one."
@@ -139,6 +171,7 @@
         "constraint": "journal_topics_slug_check",
         "nullable": false,
         "maxCharacters": 64,
+        "columnType": "text",
         "checkInstalledBy": "0069"
       },
       "notes": "The column's CHECK is still ASCII-only, which is why a Cyrillic tag becomes a hash today. OVE-426 widens it in migration 0069; this manifest already declares the shape it will widen to."
@@ -165,6 +198,7 @@
         "constraint": "communities_slug_check",
         "nullable": false,
         "maxCharacters": 64,
+        "columnType": "text",
         "checkInstalledBy": null
       },
       "notes": "Communities are seeded, not authored, so every slug is ASCII today; the namespace is native because the next one need not be."
@@ -196,6 +230,7 @@
       "column": "public_slug",
       "nullable": true,
       "maxCharacters": 96,
+      "columnType": "text",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "checkInstalledBy": "0071",
       "namespaces": [
@@ -209,10 +244,24 @@
       "column": "slug",
       "nullable": false,
       "maxCharacters": 64,
+      "columnType": "text",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
       "checkInstalledBy": null,
       "namespaces": [
         "community"
+      ]
+    },
+    {
+      "constraint": "journal_entries_author_entry_number_check",
+      "table": "journal_entries",
+      "column": "author_entry_number",
+      "nullable": true,
+      "maxCharacters": 9,
+      "columnType": "integer",
+      "pattern": "^[1-9][0-9]{0,8}$",
+      "checkInstalledBy": "0076",
+      "namespaces": [
+        "journalEntryNumber"
       ]
     },
     {
@@ -221,6 +270,7 @@
       "column": "public_slug",
       "nullable": true,
       "maxCharacters": 96,
+      "columnType": "text",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
       "checkInstalledBy": "0068",
       "namespaces": [
@@ -233,6 +283,7 @@
       "column": "slug",
       "nullable": false,
       "maxCharacters": 64,
+      "columnType": "text",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
       "checkInstalledBy": "0069",
       "namespaces": [
@@ -245,6 +296,7 @@
       "column": "public_slug",
       "nullable": true,
       "maxCharacters": 96,
+      "columnType": "text",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
       "checkInstalledBy": "0070",
       "namespaces": [
@@ -352,6 +404,7 @@
       "prefix": "/@",
       "namespaces": [
         "journalEntry",
+        "journalEntryNumber",
         "object",
         "profileHandle"
       ]

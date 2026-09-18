@@ -51,6 +51,8 @@ import {
   buildResolvePlantObjectCatalogQuery,
   buildUpdatePlantObjectLocationQuery,
   serializePublicJournalEntryPage,
+  publicJournalEntryNameKey,
+  publicJournalEntryNumberKey,
 } from "./journal-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -678,7 +680,7 @@ describe("journal repository query contracts", () => {
   it("reads public entries by slug without owner-private fields", () => {
     const compiled = buildPublicJournalEntryPageQuery(
       testDb,
-      "first-flowers-abc123",
+      publicJournalEntryNameKey("first-flowers-abc123"),
     ).compile();
 
     expect(compiled.sql).toContain('left join "plant_objects"');
@@ -746,7 +748,7 @@ describe("journal repository query contracts", () => {
   it("can look up a public slug tombstone without owner-private fields", () => {
     const compiled = buildPublicJournalEntryLookupQuery(
       testDb,
-      "first-flowers-abc123",
+      publicJournalEntryNameKey("first-flowers-abc123"),
     ).compile();
 
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = ');
@@ -790,7 +792,7 @@ describe("journal repository query contracts", () => {
   it("classifies journal lifecycle without selecting content or enrichment", () => {
     const compiled = buildPublicJournalEntryLifecycleQuery(
       testDb,
-      "first-flowers-abc123",
+      publicJournalEntryNameKey("first-flowers-abc123"),
     ).compile();
 
     expect(compiled.sql).toContain('inner join "spaces"');
@@ -806,6 +808,50 @@ describe("journal repository query contracts", () => {
       /title|body|catalog_items|user_public_profiles|media_assets|topic|email|quarantine|coordinates|latitude|longitude/i,
     );
     expect(compiled.parameters).toEqual(["first-flowers-abc123"]);
+  });
+
+  /**
+   * The address is the author and the number (ADR-0029 D9, amendment of
+   * 2026-09-18), so that pair is what the proxy's bounded lookup and the page
+   * read ask for — through one shared predicate, so the two can never
+   * disagree about which row `/@yehor/post/12` names.
+   */
+  it("finds an entry by its author and its number, in both reads", () => {
+    const key = publicJournalEntryNumberKey("yehor", 12);
+    for (const compiled of [
+      buildPublicJournalEntryLifecycleQuery(testDb, key).compile(),
+      buildPublicJournalEntryLookupQuery(testDb, key).compile(),
+    ]) {
+      expect(compiled.sql).toContain(
+        '"journal_entries"."author_entry_number" = ',
+      );
+      // The registry's *current* handle: an address under a handle the
+      // gardener no longer holds finds nothing here.
+      expect(compiled.sql).toContain("handle_registry.normalized_handle");
+      expect(compiled.sql).toContain("handle_registry.lifecycle_state = 'current'");
+      expect(compiled.sql).not.toContain('"journal_entries"."public_slug" = ');
+      expect(compiled.parameters).toContain(12);
+      expect(compiled.parameters).toContain("yehor");
+    }
+    // And the number is on the row both reads return, because it is what the
+    // canonical address and every 308 are built from.
+    expect(
+      buildPublicJournalEntryLifecycleQuery(testDb, key).compile().sql,
+    ).toContain('"journal_entries"."author_entry_number" as "entryNumber"');
+  });
+
+  it("keeps a name lookup free of the handle when the request carried none", () => {
+    const flat = buildPublicJournalEntryLifecycleQuery(
+      testDb,
+      publicJournalEntryNameKey("first-flowers-abc123"),
+    ).compile();
+    const scoped = buildPublicJournalEntryLifecycleQuery(
+      testDb,
+      publicJournalEntryNameKey("first-flowers-abc123", "yehor"),
+    ).compile();
+
+    expect(flat.parameters).toEqual(["first-flowers-abc123"]);
+    expect(scoped.parameters).toEqual(["first-flowers-abc123", "yehor"]);
   });
 
   it("selects related public logbook entries for the same object only", () => {
@@ -987,6 +1033,7 @@ describe("journal repository query contracts", () => {
         visibility: "public",
         lifecycleState: "active",
         publicSlug: "pershyi-urozhai",
+        entryNumber: 8,
         publishedAt: "2026-07-10T10:00:00.000Z",
         publicGoneAt: null,
         spaceId: "00000000-0000-4000-8000-000000000002",
@@ -1027,6 +1074,7 @@ describe("journal repository query contracts", () => {
           entryDate: "2026-07-03",
           publicSlug: "tyzhden-ranishe",
           addressHandle: "olena",
+          entryNumber: 7,
         },
       ],
       newerRow: null,
@@ -1037,6 +1085,7 @@ describe("journal repository query contracts", () => {
         entryDate: "2026-07-03",
         publicSlug: "tyzhden-ranishe",
         addressHandle: "olena",
+        entryNumber: 7,
       },
       mentionedRows: [],
       mentionedProfileRows: [
@@ -1048,7 +1097,10 @@ describe("journal repository query contracts", () => {
       locale: "bg",
     });
 
-    expect(page.entry.publicPath).toBe("/@olena/pershyi-urozhai");
+    // The author's handle and the entry's number (ADR-0029 D9): the name is
+    // still on the row, and it is no longer in the address.
+    expect(page.entry.publicPath).toBe("/@olena/post/8");
+    expect(page.entry.entryNumber).toBe(8);
     expect(page.context.kind).toBe("object");
     expect(page.context).toMatchObject({
       kind: "object",
@@ -1088,10 +1140,10 @@ describe("journal repository query contracts", () => {
     ]);
     expect(page.adjacentEntries).toMatchObject({
       newer: null,
-      older: { publicPath: "/@olena/tyzhden-ranishe" },
+      older: { publicPath: "/@olena/post/7" },
     });
     expect(page.relatedEntries[0]?.publicPath).toBe(
-      "/@olena/tyzhden-ranishe",
+      "/@olena/post/7",
     );
     expect(JSON.stringify(page)).not.toMatch(
       /ownerUserId|owner_user_id|email|quarantine|coordinates|latitude|longitude/i,

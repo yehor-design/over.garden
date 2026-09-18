@@ -1,29 +1,22 @@
-import PublicJournalEntryRoute, {
-  generateMetadata as generateLocalizedMetadata,
-} from "@/app/[locale]/journal/[slug]/page";
+import { redirectLegacyJournalEntry } from "@/app/legacy-journal-entry-route";
+import { decodeRouteSegment } from "@/lib/address/route-segments";
 
-import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
-
-interface RootPublicJournalEntryRouteProps {
+/**
+ * `/journal/{slug}` — an entry's first address: a flat, global namespace that
+ * forced twelve hexadecimal characters of the publish id into every URL. The
+ * proxy answers a document request with one 308; this catches the client-side
+ * transition (see `legacy-journal-entry-route.tsx`).
+ */
+interface LegacyJournalEntryRouteProps {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export function generateMetadata({ params }: RootPublicJournalEntryRouteProps) {
-  return params.then(({ slug }) =>
-    generateLocalizedMetadata({
-      params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, slug }),
-    }),
-  );
-}
-
-export default async function RootPublicJournalEntryRoute({
+export default async function LegacyJournalEntryRoute({
   params,
-  searchParams,
-}: RootPublicJournalEntryRouteProps) {
+}: LegacyJournalEntryRouteProps) {
   const { slug } = await params;
-  return PublicJournalEntryRoute({
-    params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, slug }),
-    searchParams,
+  return redirectLegacyJournalEntry({
+    slug: decodeRouteSegment(slug),
+    authorHandle: null,
   });
 }

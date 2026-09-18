@@ -8,7 +8,10 @@ import {
   matchCatalogSpeciesHubPath,
   matchPublicCatalogAddressPath,
 } from "@/lib/catalog/addresses";
-import { PUBLIC_OBJECT_PASSPORT_SEGMENT } from "@/lib/garden/public-paths";
+import {
+  PUBLIC_JOURNAL_ENTRY_SEGMENT,
+  PUBLIC_OBJECT_PASSPORT_SEGMENT,
+} from "@/lib/garden/public-paths";
 import { stripLocalePrefix } from "@/lib/public-localization";
 
 /**
@@ -57,18 +60,47 @@ export interface AuthorScopedAddress {
   readonly slug: string;
 }
 
+export interface AuthorScopedEntryAddress {
+  readonly handle: string;
+  readonly entryNumber: number;
+}
+
 /**
- * The three shapes that live under one author (ADR-0029 D9).
+ * What an address under `/@{handle}` names. A discriminated union rather than
+ * `{ kind, slug: string | null }`: a number is not a slug, and the four shapes
+ * carry four different things.
+ */
+export type AuthorScopedPathMatch =
+  | { readonly kind: "profile"; readonly handle: string }
+  | {
+      readonly kind: "journalEntry";
+      readonly handle: string;
+      readonly entryNumber: number;
+    }
+  | {
+      readonly kind: "legacyJournalEntry";
+      readonly handle: string;
+      readonly slug: string;
+    }
+  | { readonly kind: "object"; readonly handle: string; readonly slug: string };
+
+/**
+ * The four shapes that live under one author (ADR-0029 D9).
  *
- * `/@{handle}` is the profile, `/@{handle}/{slug}` an entry, and
- * `/@{handle}/objects/{slug}` an object passport. They share a prefix because
- * they share an owner, and `objects` is a reserved entry slug for exactly this
- * reason: an entry called *objects* would take its own author's passports with
- * it.
+ * `/@{handle}` is the profile, `/@{handle}/post/{n}` an entry,
+ * `/@{handle}/objects/{slug}` an object passport, and `/@{handle}/{slug}` the
+ * address an entry had between 2026-09-12 and 2026-09-18, which answers 308 to
+ * its number. They share a prefix because they share an owner, and `objects`
+ * and `post` are reserved entry names for exactly this reason: an entry called
+ * *objects* would take its own author's passports with it.
+ *
+ * A number is matched by the manifest's `ordinal` shape and by nothing looser:
+ * `/post/012`, `/post/0`, `/post/-1` and `/post/1a` are not second spellings
+ * of an address, because nothing ever issued them, so they are not addresses.
  */
 export function matchAuthorScopedPath(
   pathname: string,
-): { kind: "profile" | "journalEntry" | "object"; handle: string; slug: string | null } | null {
+): AuthorScopedPathMatch | null {
   const path = pathWithoutTrailingSlash(stripLocalePrefix(pathname).path);
   // `%40` is `@`, and a browser address bar produces it. The old profile
   // matcher decoded the whole path to see it; decoding only the handle keeps
@@ -86,14 +118,29 @@ export function matchAuthorScopedPath(
   if (handle === null || !isAddressSlug("profileHandle", handle)) return null;
 
   if (segments.length === 1) {
-    return { kind: "profile", handle, slug: null };
+    return { kind: "profile", handle };
   }
 
   if (segments.length === 2) {
     const slug = decodeSegment(segments[1]!);
-    if (slug === null || slug === PUBLIC_OBJECT_PASSPORT_SEGMENT) return null;
+    if (
+      slug === null ||
+      slug === PUBLIC_OBJECT_PASSPORT_SEGMENT ||
+      slug === PUBLIC_JOURNAL_ENTRY_SEGMENT
+    ) {
+      return null;
+    }
     return isAddressSlug("journalEntry", slug)
-      ? { kind: "journalEntry", handle, slug }
+      ? { kind: "legacyJournalEntry", handle, slug }
+      : null;
+  }
+
+  if (segments.length === 3 && segments[1] === PUBLIC_JOURNAL_ENTRY_SEGMENT) {
+    // Not decoded: the digits are ASCII, and `%31` is not how anything spells
+    // `1`. A segment that needs decoding is refused by the pattern.
+    const digits = segments[2]!;
+    return isAddressSlug("journalEntryNumber", digits)
+      ? { kind: "journalEntry", handle, entryNumber: Number(digits) }
       : null;
   }
 
@@ -108,13 +155,26 @@ export function matchAuthorScopedPath(
   return null;
 }
 
-/** `/@{handle}/{slug}`, or `null`. */
+/** `/@{handle}/post/{n}`, or `null`. */
 export function matchAuthorScopedEntryPath(
+  pathname: string,
+): AuthorScopedEntryAddress | null {
+  const matched = matchAuthorScopedPath(pathname);
+  return matched?.kind === "journalEntry"
+    ? { handle: matched.handle, entryNumber: matched.entryNumber }
+    : null;
+}
+
+/**
+ * `/@{handle}/{slug}` — the entry's name under its author, which was its
+ * address until 2026-09-18 — or `null`.
+ */
+export function matchLegacyAuthorScopedEntryPath(
   pathname: string,
 ): AuthorScopedAddress | null {
   const matched = matchAuthorScopedPath(pathname);
-  return matched?.kind === "journalEntry"
-    ? { handle: matched.handle, slug: matched.slug! }
+  return matched?.kind === "legacyJournalEntry"
+    ? { handle: matched.handle, slug: matched.slug }
     : null;
 }
 
@@ -124,7 +184,7 @@ export function matchAuthorScopedObjectPath(
 ): AuthorScopedAddress | null {
   const matched = matchAuthorScopedPath(pathname);
   return matched?.kind === "object"
-    ? { handle: matched.handle, slug: matched.slug! }
+    ? { handle: matched.handle, slug: matched.slug }
     : null;
 }
 

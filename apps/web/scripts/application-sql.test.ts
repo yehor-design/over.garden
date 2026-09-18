@@ -74,6 +74,7 @@ describe("versioned application SQL bootstrap", () => {
       "0073_ove436_entry_names_per_author_engagement_refs_by_id.sql",
       "0074_ove435_label_scientific_name_rules.sql",
       "0075_ove451_catalog_one_door_indexes.sql",
+      "0076_ove464_journal_entry_numbers.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

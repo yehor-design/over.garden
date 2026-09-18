@@ -4,9 +4,18 @@ import { judgeRenderedPage } from "./prove-public-addresses-render";
 
 const ADDRESS = {
   kind: "entry" as const,
-  path: "/@yehor/полив",
+  path: "/@yehor/post/12",
   name: "Полив без календарної пастки",
   expects: "page" as const,
+};
+
+/** An older spelling of the same entry: its name under its author. */
+const OLDER_SPELLING = {
+  kind: "entry" as const,
+  path: "/bg/@yehor/полив",
+  name: "полив → /@yehor/post/12",
+  expects: "redirect" as const,
+  redirectsTo: "/@yehor/post/12",
 };
 
 const NOTHING = {
@@ -91,5 +100,53 @@ describe("the address render proof", () => {
     });
     // Without a language on the address, nothing is asked about it.
     expect(judgeRenderedPage(ADDRESS, 200, RENDERED)).toMatchObject({ ok: true });
+  });
+
+  // An entry is addressed by its number (ADR-0029 D9); every address it had
+  // before must reach the number in one response.
+  it("accepts one 308 straight to the entry's number", () => {
+    expect(
+      judgeRenderedPage(
+        OLDER_SPELLING,
+        308,
+        "",
+        "https://over.garden/@yehor/post/12",
+      ),
+    ).toMatchObject({ ok: true, why: null });
+    // A relative `Location` names the same path.
+    expect(
+      judgeRenderedPage(OLDER_SPELLING, 308, "", "/@yehor/post/12"),
+    ).toMatchObject({ ok: true });
+  });
+
+  // The defect the first draft had: the locale prefix was stripped first, so
+  // `/bg/@yehor/полив` answered 308 to `/@yehor/полив`, which answered 308
+  // again. Each response was correct; the chain was the defect.
+  it("refuses a 308 that lands on another older spelling", () => {
+    expect(
+      judgeRenderedPage(
+        OLDER_SPELLING,
+        308,
+        "",
+        `https://over.garden/@yehor/${encodeURIComponent("полив")}`,
+      ),
+    ).toMatchObject({
+      ok: false,
+      why: `308 to /@yehor/${encodeURIComponent("полив")}, not to /@yehor/post/12: a second hop`,
+    });
+  });
+
+  it("refuses an older spelling that renders, or is temporary, or is gone", () => {
+    for (const status of [200, 301, 302, 307, 404]) {
+      expect(
+        judgeRenderedPage(OLDER_SPELLING, status, "", "/@yehor/post/12"),
+      ).toMatchObject({
+        ok: false,
+        why: `status ${status} for an address that must answer 308`,
+      });
+    }
+    expect(judgeRenderedPage(OLDER_SPELLING, 308, "", null)).toMatchObject({
+      ok: false,
+    });
   });
 });

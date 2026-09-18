@@ -131,12 +131,18 @@ export function buildTakenJournalEntrySlugsQuery(
 
 export interface JournalEntryAddress {
   readonly handle: string;
-  readonly slug: string;
+  /** The `{n}` of `/@{handle}/post/{n}` (ADR-0029 D9, amendment of 2026-09-18). */
+  readonly entryNumber: number;
 }
 
 /**
- * The address an entry has now, found from any address it has ever had
- * (ADR-0029 D8).
+ * The address an entry has now — its author and its number — found from any
+ * name it has ever had (ADR-0029 D8).
+ *
+ * This is what turns every older spelling into **one** 308: the flat
+ * `/journal/{slug}`, the author-scoped `/@{handle}/{slug}` of 2026-09-12, and
+ * each of their locale-prefixed spellings all resolve here, straight to the
+ * numbered address, without passing through one another.
  *
  * With the handle — an author-scoped request — the live column answers first
  * for `(handle, slug)`, then the history for the same pair, including rows
@@ -169,10 +175,11 @@ export async function resolveJournalEntryAddress(
     )
     .select([
       "user_handle_registry.normalized_handle as handle",
-      "journal_entries.public_slug as slug",
+      "journal_entries.author_entry_number as entryNumber",
     ])
     .where("journal_entries.public_slug", "=", slug)
     .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.author_entry_number", "is not", null)
     .limit(2);
   if (authorHandle !== null) {
     liveQuery = liveQuery.where(
@@ -182,8 +189,8 @@ export async function resolveJournalEntryAddress(
     );
   }
   const live = await liveQuery.execute();
-  if (live.length === 1 && live[0]!.slug) {
-    return { handle: live[0]!.handle, slug: live[0]!.slug };
+  if (live.length === 1 && live[0]!.entryNumber !== null) {
+    return { handle: live[0]!.handle, entryNumber: live[0]!.entryNumber };
   }
 
   let historyQuery = executor
@@ -204,11 +211,11 @@ export async function resolveJournalEntryAddress(
     )
     .select([
       "user_handle_registry.normalized_handle as handle",
-      "journal_entries.public_slug as slug",
+      "journal_entries.author_entry_number as entryNumber",
     ])
     .where("journal_entry_slug_history.slug", "=", slug)
     .where("journal_entries.lifecycle_state", "=", "active")
-    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.author_entry_number", "is not", null)
     .orderBy("journal_entry_slug_history.valid_from", "asc")
     .orderBy("journal_entry_slug_history.id", "asc");
   if (authorHandle !== null) {
@@ -219,7 +226,7 @@ export async function resolveJournalEntryAddress(
     );
   }
   const historical = await historyQuery.executeTakeFirst();
-  return historical?.slug
-    ? { handle: historical.handle, slug: historical.slug }
+  return historical && historical.entryNumber !== null
+    ? { handle: historical.handle, entryNumber: historical.entryNumber }
     : null;
 }

@@ -231,7 +231,7 @@ describe("public living-object catalog serialization", () => {
       representativeObject: {
         path: `/@yehor/objects/${encodeURIComponent("тестовий-живий-обєкт")}`,
       },
-      latestJournal: { path: "/@yehor/catalog-entry" },
+      latestJournal: { path: "/@yehor/post/2" },
     });
     expect(page.cards[1]).toMatchObject({
       objectKind: "animal",
@@ -330,6 +330,7 @@ function row(
     latestAuthorHandle: "yehor",
     latestEntryTitle: "Спостереження за сезоном",
     latestEntryPublicSlug: "catalog-entry",
+    latestEntryNumber: 2,
     latestEntryDate: "2026-07-10",
     mediaDerivativeKey: null,
     totalCount: 1,

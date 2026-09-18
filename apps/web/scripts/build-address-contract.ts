@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import {
   ADDRESS_MANIFEST,
   ADDRESS_MANIFEST_VERSION,
+  ADDRESS_ORDINAL_MAXIMUM,
   addressAlphabet,
   addressLowerCasePathPrefixes,
   addressSlugPattern,
@@ -56,6 +57,7 @@ export interface AddressConstraintDefinition {
   readonly column: string;
   readonly nullable: boolean;
   readonly maxCharacters: number;
+  readonly columnType: "text" | "integer";
   readonly pattern: string;
   readonly checkInstalledBy: string | null;
   readonly namespaces: readonly string[];
@@ -87,6 +89,7 @@ export function buildAddressContractDocument() {
           constraint: entry.storage.constraint,
           nullable: entry.storage.nullable,
           maxCharacters: entry.storage.maxCharacters,
+          columnType: entry.storage.columnType ?? "text",
           checkInstalledBy: entry.storage.checkInstalledBy,
         }
       : null,
@@ -125,6 +128,7 @@ function collectConstraints(): AddressConstraintDefinition[] {
       column: entry.storage.column,
       nullable: entry.storage.nullable,
       maxCharacters: entry.storage.maxCharacters,
+      columnType: entry.storage.columnType ?? "text",
       pattern: addressSlugPattern(entry),
       checkInstalledBy: entry.storage.checkInstalledBy,
       namespaces: [entry.namespace],
@@ -180,7 +184,13 @@ function renderJson(
 export function renderConstraintSql(
   definition: AddressConstraintDefinition,
 ): string {
-  const body = `char_length(${definition.column}) between 1 and ${definition.maxCharacters}
+  // A number is a range, not a pattern: an `integer` column cannot hold `012`
+  // or a letter, so all that is left to refuse is zero, a negative, and
+  // anything past the nine digits the route pattern admits.
+  const body =
+    definition.columnType === "integer"
+      ? `${definition.column} between 1 and ${ADDRESS_ORDINAL_MAXIMUM}`
+      : `char_length(${definition.column}) between 1 and ${definition.maxCharacters}
         and ${definition.column} ~ '${definition.pattern}'`;
   const guarded = definition.nullable
     ? `${definition.column} is null

@@ -88,7 +88,7 @@ export async function listPublicJournalEntrySitemapUrls(
     .select([
       "journal_entries.id as entryId",
       "journal_entries.title as title",
-      "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.updated_at as updatedAt",
       publicAuthorHandleSql("journal_entries.owner_user_id").as(
         "addressHandle",
@@ -137,12 +137,13 @@ export async function listPublicJournalEntrySitemapUrls(
   }
   // An entry whose author has no handle has no canonical address, and a
   // sitemap that submitted its legacy one would be submitting a 308
-  // (ADR-0022 D3: a sitemap lists canonicals and nothing else).
+  // (ADR-0022 D3: a sitemap lists canonicals and nothing else). The same goes
+  // for a row without a number: its only address is a name, and a name 308s.
   return rows.flatMap((row) =>
-    row.publicSlug && row.addressHandle
+    row.entryNumber && row.addressHandle
       ? [
           {
-            url: publicJournalEntryPath(row.addressHandle, row.publicSlug),
+            url: publicJournalEntryPath(row.addressHandle, row.entryNumber),
             lastModified: toDate(row.updatedAt),
             images: (imagesByEntryId.get(row.entryId) ?? []).map((image) => ({
               url: image.url,

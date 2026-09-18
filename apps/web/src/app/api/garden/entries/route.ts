@@ -61,10 +61,7 @@ import {
   listClaimedPublicPaths,
   type ClaimedEphemeralPublicationMedia,
 } from "@/lib/media/claimed-media";
-import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
-} from "@/lib/garden/public-paths";
+import { publicJournalEntryAddress } from "@/lib/garden/public-paths";
 import {
   mutationScopeResponse,
   ownerUserIdFromRequest,
@@ -318,7 +315,7 @@ async function createEntry(request: Request, scope: RequestScope) {
     // exist a second ago, and the sitemap will not be read for days (OVE-434).
     announceJournalEntry({
       ownerUserId: scope.userId,
-      publicSlug: result.entry.public_slug,
+      entryNumber: result.entry.author_entry_number,
     });
     return Response.json(response);
   } catch (error) {
@@ -576,6 +573,7 @@ function buildAtomicCreateResponse(input: {
     body: string;
     entry_date: Date | string;
     public_slug: string | null;
+    author_entry_number: number | null;
     journal_revision: number | string | null;
   };
   publicMedia: readonly { mediaAssetId: string; publicPath: string }[];
@@ -614,11 +612,15 @@ function buildAtomicCreateResponse(input: {
       coverUrl: coverMedia
         ? getPublicDerivativeUrl(coverMedia.publicPath)
         : null,
-      // The link the gardener sees first and shares (ADR-0029 D9). It used
-      // to be the legacy address, so every share went through a 308.
-      publicPath: input.authorHandle
-        ? publicJournalEntryPath(input.authorHandle, input.entry.public_slug)
-        : legacyPublicJournalEntryPath(input.entry.public_slug),
+      // The link the gardener sees first and shares: the author's handle and
+      // the entry's number (ADR-0029 D9), `/@yehor/post/12`. It used to be the
+      // name in the gardener's own alphabet, which a clipboard receives as six
+      // characters a letter.
+      publicPath: publicJournalEntryAddress({
+        authorHandle: input.authorHandle,
+        entryNumber: input.entry.author_entry_number,
+        publicSlug: input.entry.public_slug,
+      }),
     },
     returnTo,
   };

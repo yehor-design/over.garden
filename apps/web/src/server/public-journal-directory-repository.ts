@@ -10,7 +10,7 @@ import { db } from "@/db";
 import type { CatalogKind, Database, PlantObjectKind } from "@/db/schema";
 import {
   publicCatalogEvidencePath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -401,7 +401,11 @@ export function serializePublicJournalDirectoryPage(
       sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
-      publicPath: publicJournalEntryPath(row.addressHandle, row.publicSlug),
+      publicPath: publicJournalEntryAddress({
+        authorHandle: row.addressHandle,
+        entryNumber: row.entryNumber,
+        publicSlug: row.publicSlug,
+      }),
       season: seasonForDate(row.entryDate),
       safeRegionCode: normalizeCoarseRegionCode(row.safeRegionCode),
       object: {

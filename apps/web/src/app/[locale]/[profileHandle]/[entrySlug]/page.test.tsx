@@ -1,97 +1,161 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const entryRoute = vi.fn(async () => "entry");
-const entryMetadata = vi.fn(async () => ({
-  title: "Полив без календарної пастки | OverGarden",
+/**
+ * The three routes an entry's older addresses still reach, and the one helper
+ * behind them (ADR-0029 D9, amendment of 2026-09-18).
+ *
+ * A document request never gets here — the proxy answers it with one 308. What
+ * does is a client-side transition from a page rendered while the name was
+ * still the address, and the route has to send the router on to the number
+ * rather than hand it a not-found page for an entry that exists.
+ */
+const mocks = vi.hoisted(() => ({
+  resolveJournalEntryAddress: vi.fn(),
+  connection: vi.fn().mockResolvedValue(undefined),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+  permanentRedirect: vi.fn((path: string) => {
+    throw new Error(`NEXT_REDIRECT:${path}`);
+  }),
+  logAddressRefusal: vi.fn(),
 }));
-const getPublicJournalEntryLifecycleLookup = vi.fn(async (slug: string) =>
-  slug === "полив-без-календарної-пастки"
-    ? { status: "active" as const, publicSlug: slug, addressHandle: "yehor" }
-    : { status: "not_found" as const },
-);
 
-vi.mock("@/app/[locale]/journal/[slug]/page", () => ({
-  default: (...args: unknown[]) => entryRoute(...(args as [])),
-  generateMetadata: (...args: unknown[]) => entryMetadata(...(args as [])),
-}));
-vi.mock("@/server/journal-repository", () => ({
-  getPublicJournalEntryLifecycleLookup: (slug: string) =>
-    getPublicJournalEntryLifecycleLookup(slug),
+vi.mock("next/navigation", () => ({
+  notFound: mocks.notFound,
+  permanentRedirect: mocks.permanentRedirect,
 }));
 
-const { default: AuthorScopedEntryRoute, generateMetadata } = await import(
-  "./page"
-);
+vi.mock("next/server", () => ({ connection: mocks.connection }));
+
+vi.mock("@/server/journal-slug-repository", () => ({
+  resolveJournalEntryAddress: mocks.resolveJournalEntryAddress,
+}));
+
+vi.mock("@/server/address-refusal-log", () => ({
+  logAddressRefusal: mocks.logAddressRefusal,
+}));
 
 const SLUG = "полив-без-календарної-пастки";
 
 /**
- * The two spellings a router can hand a route.
- *
- * A URL carries a Cyrillic slug percent-encoded and `@` as either itself or
- * `%40`, and an address builder encodes whatever it is handed — so a route that
- * assumes one spelling refuses its own address in the other. This route had no
- * test at all, and the passport route beside it shipped exactly that defect.
+ * A route receives its segments as the URL carried them. Both spellings must
+ * name the same entry, or every Cyrillic name — which is all of them — would
+ * resolve to nothing and a working old link would become a 404.
  */
-describe("a journal entry at its author's address", () => {
+const SPELLINGS = [
+  ["decoded", { profileHandle: "@yehor", entrySlug: SLUG }],
+  [
+    "percent-encoded",
+    { profileHandle: "%40yehor", entrySlug: encodeURIComponent(SLUG) },
+  ],
+] as const;
+
+describe("an entry's older addresses send the router to its number", () => {
   beforeEach(() => {
-    entryRoute.mockClear();
-    entryMetadata.mockClear();
-    getPublicJournalEntryLifecycleLookup.mockClear();
+    vi.clearAllMocks();
+    mocks.resolveJournalEntryAddress.mockResolvedValue({
+      handle: "yehor",
+      entryNumber: 12,
+    });
   });
 
-  for (const [name, params] of [
-    [
-      "percent-encoded, as a URL carries them",
-      {
-        locale: "uk",
-        profileHandle: "%40yehor",
-        entrySlug: encodeURIComponent(SLUG),
-      },
-    ],
-    ["decoded", { locale: "uk", profileHandle: "@yehor", entrySlug: SLUG }],
-  ] as const) {
-    it(`renders the entry when the segments arrive ${name}`, async () => {
-      await AuthorScopedEntryRoute({ params: Promise.resolve(params) });
+  it.each(SPELLINGS)(
+    "redirects /@{handle}/{slug} when the segments arrive %s",
+    async (_name, segments) => {
+      const { default: Route } = await import(
+        "@/app/[locale]/[profileHandle]/[entrySlug]/page"
+      );
 
-      expect(getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(SLUG);
-      expect(entryRoute).toHaveBeenCalledTimes(1);
-    });
+      await expect(
+        Route({ params: Promise.resolve({ locale: "uk", ...segments }) }),
+      ).rejects.toThrow("NEXT_REDIRECT:/@yehor/post/12");
+      // The handle is part of the key, not a check made afterwards: the name
+      // is per author since `0073`.
+      expect(mocks.resolveJournalEntryAddress).toHaveBeenCalledWith(
+        SLUG,
+        undefined,
+        "yehor",
+      );
+    },
+  );
 
-    it(`names the entry in its metadata when the segments arrive ${name}`, async () => {
-      const metadata = await generateMetadata({
-        params: Promise.resolve(params),
-      });
+  it("redirects the flat /journal/{slug} without a handle, prefixed or not", async () => {
+    const { default: Localized } = await import(
+      "@/app/[locale]/journal/[slug]/page"
+    );
+    const { default: Root } = await import("@/app/(default)/journal/[slug]/page");
 
-      expect(metadata).toEqual({
-        title: "Полив без календарної пастки | OverGarden",
-      });
-    });
-  }
-
-  it("refuses the entry under another gardener's handle", async () => {
     await expect(
-      AuthorScopedEntryRoute({
+      Localized({
         params: Promise.resolve({
-          locale: "uk",
-          profileHandle: "@someone-else",
-          entrySlug: SLUG,
+          locale: "bg",
+          slug: encodeURIComponent(SLUG),
         }),
       }),
-    ).rejects.toThrowError(/NEXT_HTTP_ERROR_FALLBACK;404/u);
-    expect(entryRoute).not.toHaveBeenCalled();
+    ).rejects.toThrow("NEXT_REDIRECT:/@yehor/post/12");
+    await expect(
+      Root({ params: Promise.resolve({ slug: SLUG }) }),
+    ).rejects.toThrow("NEXT_REDIRECT:/@yehor/post/12");
+
+    for (const call of mocks.resolveJournalEntryAddress.mock.calls) {
+      expect(call).toEqual([SLUG, undefined, null]);
+    }
   });
 
-  it("refuses a slug no entry holds", async () => {
+  it("says a build may not reach the database before it reads it", async () => {
+    const { default: Route } = await import(
+      "@/app/[locale]/[profileHandle]/[entrySlug]/page"
+    );
     await expect(
-      AuthorScopedEntryRoute({
+      Route({
         params: Promise.resolve({
           locale: "uk",
           profileHandle: "@yehor",
-          entrySlug: "no-such-entry",
+          entrySlug: SLUG,
         }),
       }),
-    ).rejects.toThrowError(/NEXT_HTTP_ERROR_FALLBACK;404/u);
-    expect(entryRoute).not.toHaveBeenCalled();
+    ).rejects.toThrow("NEXT_REDIRECT");
+
+    expect(mocks.connection.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.resolveJournalEntryAddress.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("answers not found for a name no entry ever held", async () => {
+    mocks.resolveJournalEntryAddress.mockResolvedValue(null);
+    const { default: Route } = await import(
+      "@/app/[locale]/[profileHandle]/[entrySlug]/page"
+    );
+
+    await expect(
+      Route({
+        params: Promise.resolve({
+          locale: "uk",
+          profileHandle: "@yehor",
+          entrySlug: "такого-запису-немає",
+        }),
+      }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mocks.permanentRedirect).not.toHaveBeenCalled();
+  });
+
+  it("refuses a segment that could never have been a name, without a lookup", async () => {
+    const { default: Route } = await import(
+      "@/app/[locale]/[profileHandle]/[entrySlug]/page"
+    );
+
+    for (const entrySlug of ["Не слаг", "a--b", "%E0%A4%A", ""]) {
+      await expect(
+        Route({
+          params: Promise.resolve({
+            locale: "uk",
+            profileHandle: "@yehor",
+            entrySlug,
+          }),
+        }),
+      ).rejects.toThrow("NEXT_NOT_FOUND");
+    }
+    expect(mocks.resolveJournalEntryAddress).not.toHaveBeenCalled();
   });
 });

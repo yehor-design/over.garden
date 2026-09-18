@@ -29,7 +29,7 @@ describe("OVE-348 atomic journal edit smoke", () => {
     const commitStatus = read(
       "src/server/media/ephemeral-staging-commit-status.ts",
     );
-    const publicPage = read("src/app/[locale]/journal/[slug]/page.tsx");
+    const publicPage = read("src/app/[locale]/[profileHandle]/post/[entryNumber]/page.tsx");
     const workspaceRepository = read(
       "src/server/garden-workspace-repository.ts",
     );
@@ -56,11 +56,16 @@ describe("OVE-348 atomic journal edit smoke", () => {
     // loop is gone and only the canonical address (plus its tags) remains.
     expect(route).not.toContain("for (const locale of PUBLIC_LOCALES)");
     expect(route).not.toContain("revalidatePath(localizedPath(locale, legacyPath))");
-    // One address: the canonical one under the author (ADR-0029 D9). The
-    // legacy locale-prefixed spellings are 308s the proxy answers itself, so
-    // there is nothing behind them to revalidate.
-    expect(route).toContain(
-      "const canonical = publicJournalEntryPath(authorHandle, entry.public_slug)",
+    // One address: the author's handle and the entry's number (ADR-0029 D9).
+    // Every older spelling — the flat one, the name under the author, their
+    // locale-prefixed forms — is a 308 the proxy answers itself, so there is
+    // nothing behind them to revalidate. The source is compared with its
+    // whitespace folded: the call is long enough for the formatter to wrap.
+    expect(route.replace(/\s+/gu, " ")).toContain(
+      "const canonical = publicJournalEntryPath( authorHandle, entry.author_entry_number, );",
+    );
+    expect(route).not.toContain(
+      "publicJournalEntryPath(authorHandle, entry.public_slug)",
     );
     expect(route).toContain("revalidatePath(canonical)");
     // Only the canonical address is announced to IndexNow: announcing a

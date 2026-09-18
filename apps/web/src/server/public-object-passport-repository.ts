@@ -18,7 +18,7 @@ import {
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import {
   publicCatalogEvidencePath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicLineageObjectPath,
   publicObjectPassportPath,
   publicProfilePath,
@@ -167,6 +167,8 @@ interface PublicObjectPassportTimelineRow {
   entryBody: string;
   entryDate: Date | string;
   entryPublicSlug: string;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   mediaId: string | null;
   mediaDerivativeKey: string | null;
   mediaFocalX: number | null;
@@ -610,6 +612,7 @@ export function buildPublicObjectPassportTimelineQuery(
       "journal_entries.body as entryBody",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "first_public_media.mediaId as mediaId",
       "first_public_media.derivativeKey as mediaDerivativeKey",
       "first_public_media.focalX as mediaFocalX",
@@ -696,7 +699,11 @@ export function serializePublicObjectPassportPage(
     bodyPreview: publicJournalBodyPreview(entry.entryBody),
     entryDate: entry.entryDate,
     publicSlug: entry.entryPublicSlug,
-    publicPath: publicJournalEntryPath(authorHandle, entry.entryPublicSlug),
+    publicPath: publicJournalEntryAddress({
+      authorHandle,
+      entryNumber: entry.entryNumber,
+      publicSlug: entry.entryPublicSlug,
+    }),
     mediaPublicUrl: entry.mediaDerivativeKey
       ? getPublicDerivativeUrl(entry.mediaDerivativeKey)
       : null,

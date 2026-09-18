@@ -35,25 +35,25 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
  */
 
 /**
- * A published entry, at the one address it has (D9).
+ * A published entry, at the one address it has (D9): `/@{handle}/post/{n}`.
  *
- * Nothing is announced for an entry that is not public — no `public_slug` —
- * or whose author has no current handle, because then the entry has no
- * canonical address to send anybody to.
+ * Nothing is announced for an entry without a number, or whose author has no
+ * current handle, because then the entry has no canonical address to send
+ * anybody to — and announcing one of its older spellings would ask an engine
+ * to fetch a redirect.
  */
 export function announceJournalEntry(input: {
   ownerUserId: string | null | undefined;
-  publicSlug: string | null | undefined;
+  entryNumber: number | null | undefined;
 }): void {
   // `afterResponse`, not a bare promise: the read below has to survive the
   // response, and on this platform an unawaited promise does not.
   afterResponse(async () => {
-    if (!input.ownerUserId || !input.publicSlug) return;
-    const handle = await getPublicAuthorHandle(input.ownerUserId);
+    const { ownerUserId, entryNumber } = input;
+    if (!ownerUserId || !entryNumber) return;
+    const handle = await getPublicAuthorHandle(ownerUserId);
     if (!handle) return;
-    announcePublicUrlsToIndexNow([
-      publicJournalEntryPath(handle, input.publicSlug),
-    ]);
+    announcePublicUrlsToIndexNow([publicJournalEntryPath(handle, entryNumber)]);
   });
 }
 

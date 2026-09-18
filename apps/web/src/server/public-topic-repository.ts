@@ -10,8 +10,7 @@ import type { Database, PlantObjectKind } from "@/db/schema";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
 import {
@@ -96,6 +95,8 @@ export interface PublicTopicEntryRow {
   publicSlug: string | null;
   /** The author's registry handle, for the address; `null` for a handle-less author. */
   addressHandle: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
 }
 
 export async function getPublicTopicAggregationPage(
@@ -264,6 +265,7 @@ export function buildPublicTopicAggregationEntriesQuery(
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
     ])
     .orderBy("journal_entries.published_at", "desc")
@@ -284,11 +286,13 @@ export function serializePublicTopicEntries(
             bodyPreview: publicTopicBodyPreview(entry.body),
             entryDate: entry.entryDate,
             publishedAt: entry.publishedAt,
-            // Under its author (ADR-0029 D9); the legacy address, which
-            // 308s there, only for an author who has no handle.
-            publicPath: entry.addressHandle
-              ? publicJournalEntryPath(entry.addressHandle, entry.publicSlug)
-              : legacyPublicJournalEntryPath(entry.publicSlug),
+            // Under its author, at its number (ADR-0029 D9); the legacy
+            // address, which 308s there, only for an author with no handle.
+            publicPath: publicJournalEntryAddress({
+              authorHandle: entry.addressHandle,
+              entryNumber: entry.entryNumber,
+              publicSlug: entry.publicSlug,
+            }),
           },
         ]
       : [],

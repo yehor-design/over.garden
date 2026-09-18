@@ -226,7 +226,7 @@ describe("OVE-347 atomic journal creation smoke", () => {
   it("browser public and owner reads remain free of Lexical and codec WASM", () => {
     for (const file of [
       "src/server/public-journal-directory-repository.ts",
-      "src/app/[locale]/journal/[slug]/page.tsx",
+      "src/app/[locale]/[profileHandle]/post/[entryNumber]/page.tsx",
       "src/app/(default)/garden/(home)/page.tsx",
     ]) {
       const source = read(file);

@@ -12,6 +12,8 @@ import {
 import {
   ADDRESS_MANIFEST,
   ADDRESS_NAMESPACES,
+  ADDRESS_ORDINAL_MAXIMUM,
+  ADDRESS_ORDINAL_PATTERN,
   addressSlugPattern,
   assertAddressManifestConsistency,
 } from "./address-manifest";
@@ -44,7 +46,34 @@ describe("the address contract is generated, not restated (ADR-0029 D12)", () =>
     const document = buildAddressContractDocument();
     for (const constraint of document.constraints) {
       const sql = renderConstraintSql(constraint);
+      if (constraint.columnType === "integer") continue;
       expect(sql).toContain(`~ '${constraint.pattern}'`);
+    }
+  });
+
+  /**
+   * A number is stored as a number, so its `CHECK` is a range and holds no
+   * pattern to compare. What has to agree instead is the *bound*: the route
+   * admits nine digits, and a column that admitted ten would hold entries no
+   * address could reach.
+   */
+  it("bounds the entry number by the same nine digits the route admits", () => {
+    const definition = buildAddressContractDocument().constraints.find(
+      (candidate) =>
+        candidate.constraint === "journal_entries_author_entry_number_check",
+    );
+    expect(definition).toMatchObject({ columnType: "integer", nullable: true });
+    expect(renderConstraintSql(definition!)).toContain(
+      `author_entry_number between 1 and ${ADDRESS_ORDINAL_MAXIMUM}`,
+    );
+    const pattern = new RegExp(ADDRESS_ORDINAL_PATTERN, "u");
+    expect(pattern.test(String(ADDRESS_ORDINAL_MAXIMUM))).toBe(true);
+    expect(pattern.test(String(ADDRESS_ORDINAL_MAXIMUM + 1))).toBe(false);
+    for (const refused of ["0", "012", "-1", "1a", "", "１２", "1.0", " 1"]) {
+      expect(isAddressSlug("journalEntryNumber", refused)).toBe(false);
+    }
+    for (const admitted of ["1", "12", "999999999"]) {
+      expect(isAddressSlug("journalEntryNumber", admitted)).toBe(true);
     }
   });
 
@@ -83,6 +112,11 @@ describe("the address contract is generated, not restated (ADR-0029 D12)", () =>
       "0071",
       "sql/0071_ove429_catalog_public_slug_check.sql",
       "catalog_items_public_slug_check",
+    ],
+    [
+      "0076",
+      "sql/0076_ove464_journal_entry_numbers.sql",
+      "journal_entries_author_entry_number_check",
     ],
   ])(
     "finds migration %s's block inside the generated SQL, verbatim",

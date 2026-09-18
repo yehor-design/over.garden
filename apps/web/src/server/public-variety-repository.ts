@@ -12,7 +12,7 @@ import type {
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import {
   publicCatalogEvidencePath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
 } from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
@@ -290,12 +290,13 @@ export async function getPublicVarietyPageByCatalogItemId(
       title: entry.entryTitle,
       body: entry.entryBody,
       entryDate: entry.entryDate,
-      // An organism card gathers entries from every gardener, and this row
-      // carries no handle. The legacy address 308s to the canonical one.
-      publicPath: publicJournalEntryPath(
-        entry.addressHandle,
-        entry.entryPublicSlug,
-      ),
+      // An organism card gathers entries from every gardener, so each row
+      // carries its own author's handle and the entry's number (ADR-0029 D9).
+      publicPath: publicJournalEntryAddress({
+        authorHandle: entry.addressHandle,
+        entryNumber: entry.entryNumber,
+        publicSlug: entry.entryPublicSlug,
+      }),
       plantObjectDisplayName: entry.objectDisplayName,
       // ADR-0026 D6: an object linked by curation keeps the gardener's own
       // name in variety_text; the public page names the card, never the label.
@@ -740,6 +741,7 @@ export function buildPublicVarietyEntriesQuery(
       "journal_entries.body as entryBody",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       publicAuthorHandleSql("journal_entries.owner_user_id").as(
         "addressHandle",
       ),

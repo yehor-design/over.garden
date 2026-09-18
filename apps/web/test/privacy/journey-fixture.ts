@@ -120,6 +120,7 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
       entryScope: "object",
       sourceLanguage: "uk",
       publicSlug: JOURNEY.publicSlug,
+      entryNumber: null,
       publicPath: `/journal/${JOURNEY.publicSlug}`,
       publishedAt: JOURNEY.publishedAt,
     },

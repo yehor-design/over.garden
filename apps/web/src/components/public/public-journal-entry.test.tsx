@@ -74,7 +74,8 @@ const objectPage: PublicJournalEntryPage = {
     entryScope: "object",
     sourceLanguage: "uk",
     publicSlug: "pershyi-urozhai",
-    publicPath: "/journal/pershyi-urozhai",
+    entryNumber: 7,
+    publicPath: "/@gardener/post/7",
     publishedAt: "2026-07-10T10:00:00.000Z",
   },
   context: {

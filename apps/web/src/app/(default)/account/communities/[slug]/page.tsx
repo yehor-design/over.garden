@@ -23,8 +23,7 @@ import {
   setCommunityParticipationAction,
 } from "./actions";
 import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
 } from "@/lib/garden/public-paths";
 import { HiddenField } from "@/components/ui/hidden-field";
 
@@ -182,11 +181,11 @@ export default async function CommunityModerationPage({
                   </p>
                   {item.publicSlug ? (
                     <Link
-                      href={
-                        item.addressHandle
-                          ? publicJournalEntryPath(item.addressHandle, item.publicSlug)
-                          : legacyPublicJournalEntryPath(item.publicSlug)
-                      }
+                      href={publicJournalEntryAddress({
+                        authorHandle: item.addressHandle,
+                        entryNumber: item.entryNumber,
+                        publicSlug: item.publicSlug,
+                      })}
                       className="w-fit text-sm font-medium text-primary hover:underline"
                     >
                       {copy.community.openJournal}

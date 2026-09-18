@@ -36,7 +36,7 @@ import type {
   JournalEntrySearchContractDocument,
   JournalSearchCoverSource,
 } from "@/server/search/documents";
-import { matchAuthorScopedEntryPath } from "@/lib/address/match-address-path";
+import { matchAuthorScopedPath } from "@/lib/address/match-address-path";
 
 /** Mirrors `contracts/search/public-journal-entry-search-document.json`. */
 export const REQUIRED_JOURNAL_DOCUMENT_FIELDS = [
@@ -501,13 +501,17 @@ export function normalizePublicDerivativeUrl(
 /**
  * Whether a projected path is an address this entry answers at.
  *
- * Two shapes are legal: `/@{handle}/{slug}`, the canonical one, and
- * `/journal/{slug}`, which every document written before `OVE-428` carries and
- * which answers 308 forever. Refusing the second would fail the search-parity
- * gate for every document in the index until a full reprojection finished.
+ * Three shapes are legal. `/@{handle}/post/{n}` is the canonical one
+ * (ADR-0029 D9, amendment of 2026-09-18); the document carries no number to
+ * compare it with, so the shape is what is checked. `/@{handle}/{slug}` and
+ * `/journal/{slug}` are what every document written before that carries, and
+ * both answer 308 for as long as the entry exists. Refusing them would fail
+ * the search-parity gate for every document in the index until a full
+ * reprojection finished.
  */
 function isPublicJournalEntryAddress(path: string, publicSlug: string) {
   if (path === legacyPublicJournalEntryPath(publicSlug)) return true;
-  const matched = matchAuthorScopedEntryPath(path);
-  return matched !== null && matched.slug === publicSlug;
+  const matched = matchAuthorScopedPath(path);
+  if (matched?.kind === "journalEntry") return true;
+  return matched?.kind === "legacyJournalEntry" && matched.slug === publicSlug;
 }

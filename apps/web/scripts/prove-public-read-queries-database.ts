@@ -51,6 +51,7 @@ const CATALOG_PROOF_REQUEST = {
 } as const;
 const ABSENT_SLUG = "no-such-address";
 const ABSENT_HANDLE = "nobody_at_all";
+const ABSENT_NUMBER = 999_999_999;
 
 interface ReadCase {
   readonly name: string;
@@ -77,6 +78,8 @@ async function readCases(): Promise<ReadCase[]> {
     journalSlug,
     socialReturn,
     requestScope,
+    socialReadback,
+    palette,
   ] = await Promise.all([
     import("../src/server/public-object-passport-repository"),
     import("../src/server/public-lineage-repository"),
@@ -96,6 +99,8 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/journal-slug-repository"),
     import("../src/server/social-return-repository"),
     import("../src/server/request-scope"),
+    import("../src/server/social-readback-repository"),
+    import("../src/server/public-palette-search"),
   ]);
   const absentScope = requestScope.scopedToUser(ABSENT_UUID);
 
@@ -120,6 +125,51 @@ async function readCases(): Promise<ReadCase[]> {
       name: "object passport sitemap chunk",
       run: (db) => sitemap.listPublicObjectPassportSitemapUrls(0, db),
     },
+    // Every read below carries `author_entry_number`, the `{n}` of an entry's
+    // address (ADR-0029 D9, OVE-464). None of them was executed by this proof
+    // before, and one of them cannot fail loudly on its own.
+    {
+      name: "journal entry sitemap chunk",
+      run: (db) => sitemap.listPublicJournalEntrySitemapUrls(0, db),
+    },
+    {
+      name: "followed feed candidates",
+      run: (db) =>
+        socialReturn.buildFollowedFeedCandidatesQuery(db, absentScope).execute(),
+    },
+    {
+      name: "followed feed stories",
+      run: (db) =>
+        socialReadback.buildFollowedFeedStoriesQuery(db, absentScope).execute(),
+    },
+    {
+      name: "community contributions",
+      run: (db) =>
+        community
+          .buildPublicCommunityContributionsQuery(db, {
+            communityId: ABSENT_UUID,
+            viewerScope: null,
+          })
+          .execute(),
+    },
+    {
+      name: "community moderation queue",
+      run: (db) =>
+        community.buildCommunityModerationQueueQuery(db, ABSENT_UUID).execute(),
+    },
+    {
+      name: "community discussion target",
+      run: (db) =>
+        engagement
+          .buildPublicCommunityContributionCommentTargetQuery(db, ABSENT_UUID)
+          .executeTakeFirst(),
+    },
+    {
+      // `searchPublicPalette` answers a group that threw with an empty one,
+      // so a query Postgres refuses would read as "no journals" for ever.
+      name: "palette journals",
+      run: (db) => palette.searchPaletteJournals("томат", "uk", db),
+    },
     {
       // A grouped query with a correlated handle scalar: the 42803 class.
       name: "engagement lineage object target",
@@ -136,11 +186,25 @@ async function readCases(): Promise<ReadCase[]> {
           .executeTakeFirst(),
     },
     {
-      name: "journal entry lifecycle lookup by handle and slug",
+      name: "journal entry lifecycle lookup by handle and number",
       run: (db) =>
-        journal.getPublicJournalEntryLifecycleLookup(ABSENT_SLUG, db, {
-          authorHandle: ABSENT_HANDLE,
-        }),
+        journal.getPublicJournalEntryLifecycleLookup(
+          journal.publicJournalEntryNumberKey(ABSENT_HANDLE, ABSENT_NUMBER),
+          db,
+        ),
+    },
+    {
+      name: "journal entry lifecycle lookup by handle and name",
+      run: (db) =>
+        journal.getPublicJournalEntryLifecycleLookup(
+          journal.publicJournalEntryNameKey(ABSENT_SLUG, ABSENT_HANDLE),
+          db,
+        ),
+    },
+    {
+      name: "journal entry page lookup by handle and number",
+      run: (db) =>
+        journal.getPublicJournalEntryLookup(ABSENT_HANDLE, ABSENT_NUMBER, db),
     },
     {
       name: "journal entry address from history, legacy",
@@ -283,7 +347,10 @@ async function readCases(): Promise<ReadCase[]> {
     {
       name: "journal entry lifecycle lookup",
       run: (db) =>
-        journal.getPublicJournalEntryLifecycleLookup(ABSENT_SLUG, db),
+        journal.getPublicJournalEntryLifecycleLookup(
+          journal.publicJournalEntryNameKey(ABSENT_SLUG),
+          db,
+        ),
     },
     {
       name: "community lifecycle lookup",

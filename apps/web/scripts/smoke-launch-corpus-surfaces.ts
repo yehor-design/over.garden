@@ -13,6 +13,7 @@ import { PUBLIC_LAUNCH_JOURNAL_CALLERS } from "@/server/launch-corpus/public-sur
 import {
   buildPublicJournalEntryLifecycleQuery,
   buildPublicJournalEntryLookupQuery,
+  publicJournalEntryNameKey,
 } from "@/server/journal-repository";
 import {
   buildPublicObjectPassportRootQuery,
@@ -98,11 +99,11 @@ async function main() {
     for (const row of rows) {
       const direct = await buildPublicJournalEntryLookupQuery(
         trx,
-        row.public_slug,
+        publicJournalEntryNameKey(row.public_slug),
       ).executeTakeFirst();
       const lifecycle = await buildPublicJournalEntryLifecycleQuery(
         trx,
-        row.public_slug,
+        publicJournalEntryNameKey(row.public_slug),
       ).executeTakeFirst();
       if (allowed.has(row.content_class)) {
         if (!direct || !lifecycle)

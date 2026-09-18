@@ -12,7 +12,7 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -48,6 +48,8 @@ export interface FollowedFeedQueryInput {
 export interface FollowedFeedCandidateRow {
   entryId: string;
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   title: string;
   body: string;
   entryDate: Date | string;
@@ -196,6 +198,8 @@ interface NotificationCommentRow {
   /** The entry id (the engagement ref since `0073`). */
   targetRef: string;
   entryPublicSlug: string;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   /** The author's registry handle; the entry's address hangs from it. */
   addressHandle: string;
 }
@@ -319,6 +323,7 @@ export function buildFollowedFeedCandidatesQuery(
     .select([
       "entries.id as entryId",
       "entries.public_slug as publicSlug",
+      "entries.author_entry_number as entryNumber",
       "entries.title",
       "entries.body",
       "entries.entry_date as entryDate",
@@ -398,7 +403,11 @@ export function serializeFollowedFeedPage(
         key: stableOpaqueKey("feed", row.entryId),
         // Under the author (ADR-0029 D9); this feed used to link the legacy
         // address, a 308 on every story.
-        href: publicJournalEntryPath(row.addressHandle, row.publicSlug),
+        href: publicJournalEntryAddress({
+          authorHandle: row.addressHandle,
+          entryNumber: row.entryNumber,
+          publicSlug: row.publicSlug,
+        }),
         title: row.title,
         excerpt: summarizePublicText(row.body, 240),
         entryDate: row.entryDate,
@@ -664,6 +673,7 @@ export function buildNotificationCommentEventsQuery(
       "profiles.handle as actorHandle",
       "comments.target_ref as targetRef",
       "entries.public_slug as entryPublicSlug",
+      "entries.author_entry_number as entryNumber",
       "owner_handles.normalized_handle as addressHandle",
     ])
     .where("comments.comment_state", "=", "active")
@@ -1318,9 +1328,13 @@ function mapCommentNotification(
     actorHandle: row.actorHandle,
     targetRef: row.targetRef,
     targetLabel: null,
-    // Under the author (ADR-0029 D9): the ref is an id now, and the row
-    // carries the slug and the handle the address is built from.
-    href: publicJournalEntryPath(row.addressHandle, row.entryPublicSlug),
+    // Under the author, at its number (ADR-0029 D9): the ref is an id, and
+    // the row carries the handle and the number the address is built from.
+    href: publicJournalEntryAddress({
+      authorHandle: row.addressHandle,
+      entryNumber: row.entryNumber,
+      publicSlug: row.entryPublicSlug,
+    }),
     summaryKey: reply ? "reply_to_comment" : "comment_on_journal",
     groupRef: `journal:${row.targetRef}`,
     actionKind: "open_journal",

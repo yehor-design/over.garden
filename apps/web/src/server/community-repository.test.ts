@@ -580,6 +580,7 @@ describe("OVE-184 community repository contracts", () => {
       discussionState: index === 1 ? "closed" : "open",
       entryId: `00000000-0000-4000-8000-${String(800 + index).padStart(12, "0")}`,
       publicSlug: `public-observation-${index}`,
+      entryNumber: index + 1,
       title: `Спостереження ${index}`,
       body: "Щоденникове спостереження з перевіреним контекстом. ".repeat(10),
       entryDate: "2026-07-13",
@@ -609,8 +610,8 @@ describe("OVE-184 community repository contracts", () => {
 
     expect(page.items).toHaveLength(12);
     expect(page.items[0]).toMatchObject({
-      // Under its author (ADR-0029 D9), not the legacy address that 308s.
-      href: "/@keeper_0/public-observation-0",
+      // Under its author, at its number (ADR-0029 D9), not a name that 308s.
+      href: "/@keeper_0/post/1",
       object: {
         // Under the author, as the passport's canonical is (ADR-0029 D9).
         href: `/@keeper_0/objects/${encodeURIComponent("обєкт-0")}`,

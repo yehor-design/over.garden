@@ -654,6 +654,7 @@ export interface JobQueue {
 
 export interface JournalEntries {
   archived_at: Timestamp | null;
+  author_entry_number: number | null;
   body: string;
   client_mutation_id: string;
   content_class: Generated<string>;
@@ -699,6 +700,12 @@ export interface JournalEntryMutationReceipts {
   mutation_kind: string;
   owner_user_id: string;
   result_revision: Int8;
+}
+
+export interface JournalEntryNumberCounters {
+  last_number: number;
+  owner_user_id: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface JournalEntryObjectMentions {
@@ -1146,6 +1153,7 @@ export interface DB {
   journal_entries: JournalEntries;
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;
   journal_entry_mutation_receipts: JournalEntryMutationReceipts;
+  journal_entry_number_counters: JournalEntryNumberCounters;
   journal_entry_object_mentions: JournalEntryObjectMentions;
   journal_entry_slug_history: JournalEntrySlugHistory;
   journal_entry_topic_signals: JournalEntryTopicSignals;

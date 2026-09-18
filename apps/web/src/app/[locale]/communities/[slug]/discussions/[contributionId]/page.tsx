@@ -19,7 +19,7 @@ import {
 } from "@/lib/public-localization";
 import { communityDiscussionPath } from "@/lib/public-community-view";
 import {
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -136,6 +136,7 @@ function describeDiscussedEntry(
   contribution: {
     entryTitle: string;
     entryPublicSlug: string | null;
+    entryNumber: number | null;
     entryDate: Date | string;
     objectDisplayName: string;
     objectKind: string;
@@ -154,7 +155,11 @@ function describeDiscussedEntry(
 
   return {
     title: contribution.entryTitle,
-    href: publicJournalEntryPath(contribution.addressHandle, publicSlug),
+    href: publicJournalEntryAddress({
+      authorHandle: contribution.addressHandle,
+      entryNumber: contribution.entryNumber,
+      publicSlug,
+    }),
     authorLabel: handle
       ? contribution.authorDisplayName?.trim() || `@${handle}`
       : null,

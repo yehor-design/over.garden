@@ -166,6 +166,9 @@ jobs:
       - name: Prove the author-scoped address migration, its triggers and its rollback
         run: pnpm schema:author-addresses:prove-database
 
+      - name: Prove the entry number migration, its counter under concurrency and its rollback
+        run: pnpm schema:entry-numbers:prove-database
+
       - name: Prove the Stable Registry retirement migration and its rollback
         run: pnpm schema:retirement:prove-database
 
@@ -224,8 +227,11 @@ jobs:
       - name: Public hydration, catalog picker, address, curation and accessibility proofs
         # The picker spec signs a synthetic gardener in over the API, and Better
         # Auth checks the request origin against BETTER_AUTH_URL: it must be the
-        # origin the server answers on, not the build-time value. The address
-        # spec asserts real HTTP statuses (200, 308, 404) over HTTP alone. The
+        # origin the server answers on, not the build-time value. The two
+        # address specs assert real HTTP statuses (200, 308, 404, 410) over
+        # HTTP alone, without following a redirect: an entry's older addresses
+        # must each reach its number in one response, and a client that
+        # follows would hide the second hop. The
         # curation spec needs the sealed owner id the step above wrote. The
         # full-catalogue spec skips itself here: a Catalogue of Life release is
         # a gigabyte, so CI holds no snapshot and the Python database tests
@@ -247,7 +253,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts
+            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/entry-addresses.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts
 
   matching:
     name: Python matching tier

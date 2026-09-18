@@ -225,19 +225,21 @@ async function publishFixtureEntry(page: Page, name: string): Promise<string> {
     // Playwright runs spec *files* in parallel, so another file publishing at
     // the same moment used to hand this one its slug — which failed here and
     // looked like a defect in whatever was being reviewed.
-    const row = await pool.query<{ public_slug: string }>(
-      `select public_slug from journal_entries
-       where public_slug is not null and title like $1::text
+    const row = await pool.query<{ author_entry_number: number }>(
+      `select author_entry_number from journal_entries
+       where author_entry_number is not null and title like $1::text
        order by created_at desc limit 1`,
       // The composer titles an entry "{plant name} - {date}", so the plant
       // name this call passed is the prefix of exactly its own entry.
       [`${name} - %`],
     );
-    const slug = row.rows[0]?.public_slug;
-    if (!slug) {
-      throw new Error(`The published entry "${name}" has no public slug.`);
+    const entryNumber = row.rows[0]?.author_entry_number;
+    if (!entryNumber) {
+      throw new Error(`The published entry "${name}" has no number.`);
     }
-    return encodeURIComponent(slug);
+    // The segments after the handle: an entry lives at `/@{handle}/post/{n}`
+    // (ADR-0029 D9), and its name would reach the page through a 308.
+    return `post/${entryNumber}`;
   } finally {
     await pool.end();
   }

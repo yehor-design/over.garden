@@ -396,7 +396,7 @@ describe("public journal directory serialization", () => {
     expect(page.totalCount).toBe(2);
     expect(page.cards[0]).toMatchObject({
       title: "Після холодної ночі",
-      publicPath: "/@demo_olena/after-cold-night",
+      publicPath: "/@demo_olena/post/21",
       safeRegionCode: "UA-30",
       object: {
         displayName: "Черрі біля стінки",
@@ -499,6 +499,7 @@ function row(
     entryDate: "2026-07-10",
     publishedAt: "2026-07-10T12:00:00.000Z",
     publicSlug: "after-cold-night",
+    entryNumber: 21,
     objectId: "00000000-0000-4000-8000-000000000201",
     objectPublicSlug: "тестовий-живий-обєкт",
     objectDisplayName: "Тестовий живий об'єкт",
