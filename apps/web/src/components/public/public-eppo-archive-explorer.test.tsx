@@ -15,9 +15,9 @@ const RECORD: PublicEppoSourceRecord = {
   taxonomicRank: "species",
   parentDisplayName: "Solanum",
   aliases: ["Lycopersicon esculentum"],
-  evidenceState: "source_only",
+  evidenceState: "source_record_not_approved",
   href: "/sources/eppo/LYPES",
-  qualityClass: "full",
+  qualityClass: "partial",
   observedAt: "2026-09-03T00:00:00.000Z",
   source: {
     name: "EPPO Global Database",
