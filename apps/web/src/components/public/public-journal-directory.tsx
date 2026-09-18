@@ -1,46 +1,42 @@
-import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  BookOpen,
-  CalendarDays,
-  ImageOff,
-  MapPin,
-  PawPrint,
-  Search,
-  Sprout,
-  UserRound,
-  X,
-} from "lucide-react";
+import { MapPin, MessageCircle, PawPrint, Search, Sprout } from "lucide-react";
 
-import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
-import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { Chip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EntryCard } from "@/components/ui/entry-card";
+import { ErrorState } from "@/components/ui/error-state";
+import { Field } from "@/components/ui/field";
+import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
+import { PageHeader } from "@/components/ui/page-header";
+import { Pagination } from "@/components/ui/pagination";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { resolveIllustration } from "@/lib/illustrations";
+import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import type { PublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
 import {
   contentLanguageAttribute,
+  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { cn } from "@/lib/utils";
+import { publicMediaAltText } from "@/lib/public-media-alt";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import type {
   PublicJournalDirectoryCard,
   PublicJournalDirectoryFacets,
   PublicJournalDirectoryPage,
   PublicJournalDirectoryRequest,
 } from "@/server/public-journal-directory-repository";
-import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
-import { localizeTopicLabel } from "@/lib/system-topic-labels";
-import { Field } from "@/components/ui/field";
-import { SearchInput } from "@/components/ui/search-input";
-import { Select } from "@/components/ui/select";
+import type { WorkspaceFailureDescription } from "@/server/workspace-failure";
 
 export { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 
@@ -50,12 +46,31 @@ export type PublicJournalDirectoryState =
   | "loading"
   | "error";
 
+const KIND_ICONS = {
+  plant: <Sprout aria-hidden="true" className="size-4" />,
+  animal: <PawPrint aria-hidden="true" className="size-4" />,
+} as const;
+
+/**
+ * The journals directory, as the faceted pattern rather than as a form.
+ *
+ * Six `<select>`s stacked above the results behind an "Застосувати" button
+ * became a `FilterBar`: filters apply on change, the active ones sit above the
+ * results as removable chips, the count is always visible and announced once
+ * per settled change, sort is its own right-aligned control, and below `lg` it
+ * all collapses into one button opening a sheet (DESIGN.md §5.1).
+ *
+ * The page stays a full, crawlable, no-JavaScript search page — it is one of
+ * the product's main index surfaces (ADR-0022 D3) — which is why the bar is a
+ * real `<form method="get">` and the search field submits on `Enter`.
+ */
 export function PublicJournalDirectory({
   locale,
   copy,
   page,
   facets,
   state,
+  failure = null,
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -63,6 +78,8 @@ export function PublicJournalDirectory({
   page: PublicJournalDirectoryPage;
   facets: PublicJournalDirectoryFacets;
   state: PublicJournalDirectoryState;
+  /** The settled failure class behind `state="error"` (ADR-0023). */
+  failure?: WorkspaceFailureDescription | null;
   jsonLd?: Record<string, unknown> | null;
 }) {
   const contextModules = buildPublicJournalDirectoryContextModules(
@@ -70,9 +87,13 @@ export function PublicJournalDirectory({
     copy,
     facets,
   );
-  const activeFilters = buildActiveFilters(copy, page.request, facets);
-  const filterStateHref = buildPublicJournalDirectoryHref(locale, page.request);
+  const activeFilters = buildActiveFilters(copy, page.request, facets, locale);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
+  const listingPath = localizedPath(locale, "/journals");
+  const countLabel =
+    state === "ready" || state === "empty"
+      ? copy.resultCount(page.totalCount)
+      : "";
 
   return (
     <main
@@ -80,7 +101,7 @@ export function PublicJournalDirectory({
       data-public-journal-directory="true"
       data-public-journal-directory-state={state}
       data-public-journal-search-source={page.searchSource}
-      className="mx-auto flex w-full max-w-5xl flex-col px-4 py-4 sm:px-6 sm:py-5"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
     >
       {serializedJsonLd ? (
         <script
@@ -90,420 +111,341 @@ export function PublicJournalDirectory({
       ) : null}
       <SiteShellContextRailRegistration modules={contextModules} />
 
-      <header className="grid gap-2 border-b border-border pb-4">
-        <h1 className="text-3xl font-semibold text-foreground">
-          {copy.heading}
-        </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {copy.intro}
-        </p>
-      </header>
+      <PageHeader title={copy.heading} description={copy.intro} />
 
-      <form
-        key={filterStateHref}
-        data-journal-filter-state={filterStateHref}
-        method="get"
-        action={buildPublicJournalDirectoryHref(locale, defaultRequest())}
-        aria-label={copy.filtersLabel}
-        className="grid gap-4 border-b border-border py-4"
-      >
-        <div className="grid items-end gap-2 sm:flex">
-          <Field
-            label={copy.searchLabel}
-            id="journal-directory-search"
-            className="min-w-0 flex-1"
-          >
-            <SearchInput
-              name="q"
-              defaultValue={page.request.query}
-              maxLength={120}
-              placeholder={copy.searchPlaceholder}
-            />
-          </Field>
-          <button
-            type="submit"
-            className={buttonVariants({ variant: "primary" })}
-          >
-            <Search aria-hidden="true" />
-            {copy.searchSubmit}
-          </button>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <FilterSelect
-            label={copy.kindLabel}
-            name="kind"
-            value={page.request.kind === "all" ? "" : page.request.kind}
-            options={[
-              { value: "", label: copy.kinds.all },
-              { value: "plant", label: copy.kinds.plant },
-              { value: "animal", label: copy.kinds.animal },
-            ]}
-          />
-          <FilterSelect
-            label={copy.catalogLabel}
-            name="catalog"
-            value={page.request.catalog ?? ""}
-            options={[
-              { value: "", label: copy.allCatalogs },
-              ...facets.catalogs.map((catalog) => ({
-                value: catalog.slug,
-                label: `${catalog.label} (${catalog.count})`,
-              })),
-            ]}
-          />
-          <FilterSelect
-            label={copy.topicLabel}
-            name="topic"
-            value={page.request.topic ?? ""}
-            options={[
-              { value: "", label: copy.allTopics },
-              ...facets.topics.map((topic) => ({
-                value: topic.slug,
-                label: `${localizeTopicLabel(locale, topic.slug, topic.label)} (${topic.count})`,
-              })),
-            ]}
-          />
-          <FilterSelect
-            label={copy.seasonLabel}
-            name="season"
-            value={page.request.season === "all" ? "" : page.request.season}
-            options={Object.entries(copy.seasons).map(([value, label]) => ({
-              value: value === "all" ? "" : value,
-              label,
-            }))}
-          />
-          <FilterSelect
-            label={copy.regionLabel}
-            name="region"
-            value={page.request.region ?? ""}
-            options={[
-              { value: "", label: copy.allRegions },
-              ...facets.regions.map((region) => ({
-                value: region.code,
-                label: `${region.code} (${region.count})`,
-              })),
-            ]}
-          />
-          <FilterSelect
-            label={copy.sortLabel}
-            name="sort"
-            value={page.request.sort}
-            options={Object.entries(copy.sorts).map(([value, label]) => ({
-              value,
-              label,
-            }))}
-          />
-        </div>
-
-        <button
-          type="submit"
-          className={buttonVariants({
-            variant: "secondary",
-            className: "w-fit",
-          })}
-        >
-          {copy.applyFilters}
-        </button>
-      </form>
-
-      {activeFilters.length > 0 ? (
-        <nav
-          aria-label={copy.activeFiltersLabel}
-          className="flex flex-wrap items-center gap-2 border-b border-border py-3"
-        >
-          {activeFilters.map((filter) => (
-            <Link
-              key={filter.key}
-              href={buildPublicJournalDirectoryHref(locale, filter.request)}
-              aria-label={`${copy.removeFilter}: ${filter.label}`}
-              className={buttonVariants({ variant: "secondary", size: "sm" })}
+      <FilterBar
+        action={listingPath}
+        /* The search field and its own submit. The submit is not an "Apply
+           filters" button — the facets apply on change (DESIGN.md §5.1) — it
+           is the search control's own action, the shape Etsy and Tripadvisor
+           both ship. It is also the **real submit** criterion 7 asks the form
+           to keep: pressing it sends the facets with the query, which is what
+           makes this page filter for a crawler and for a reader whose bundle
+           never arrived. */
+        search={
+          <div className="flex items-end gap-2">
+            <Field
+              label={copy.searchLabel}
+              id="journal-directory-search"
+              className="min-w-0 flex-1"
             >
-              <span className="max-w-56 truncate">{filter.label}</span>
-              <X aria-hidden="true" />
-            </Link>
-          ))}
-          <Link
-            href={buildPublicJournalDirectoryHref(locale, defaultRequest())}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            {copy.resetFilters}
-          </Link>
-        </nav>
-      ) : null}
+              <SearchInput
+                name="q"
+                defaultValue={page.request.query}
+                maxLength={120}
+                placeholder={copy.searchPlaceholder}
+              />
+            </Field>
+            <Button type="submit" className="shrink-0">
+              <Search aria-hidden="true" />
+              {copy.searchSubmit}
+            </Button>
+          </div>
+        }
+        facets={buildFilterFacets(copy, page.request, facets, locale)}
+        sort={{
+          key: "sort",
+          value: page.request.sort,
+          // A search is ordered by relevance and a browse by recency, so the
+          // default depends on whether there is a query — and the default is
+          // what the URL leaves out.
+          defaultValue: page.request.query ? "relevance" : "recent",
+          options: Object.entries(copy.sorts).map(([value, label]) => ({
+            value,
+            label,
+          })),
+        }}
+        chips={activeFilters.map((filter) => ({
+          key: filter.key,
+          label: filter.label,
+          removeHref: buildPublicJournalDirectoryHref(locale, filter.request),
+          removeLabel: `${copy.removeFilter}: ${filter.label}`,
+        }))}
+        clearAllHref={listingPath}
+        labels={{
+          filters: copy.filtersLabel,
+          openFilters: copy.filtersWithCount(activeFilters.length),
+          sheetDescription: copy.filterSheetDescription,
+          apply: copy.applyFilters,
+          clear: copy.resetFilters,
+          clearAll: copy.resetFilters,
+          activeFilters: copy.activeFiltersLabel,
+          sort: copy.sortLabel,
+        }}
+      />
 
-      <section className="flex min-h-14 items-center justify-between gap-4 border-b border-border py-3">
-        <h2 className="text-lg font-semibold text-foreground">
-          {copy.resultsTitle}
-        </h2>
-        {state === "ready" || state === "empty" ? (
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {formatCount(page.totalCount, locale)}
-          </span>
-        ) : null}
-      </section>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-3">
+        <h2 className="text-h2 text-text-heading">{copy.resultsTitle}</h2>
+        {/* Always rendered, so the node survives a filter change and the new
+            number is announced *into* it. A live region that arrives with a
+            fresh document announces nothing, which is why a filter change is a
+            router navigation rather than a form submit once hydrated. */}
+        <p
+          data-journal-result-count="true"
+          aria-live="polite"
+          className="text-body-sm text-text-muted tabular-nums"
+        >
+          {countLabel}
+        </p>
+      </div>
 
       {page.request.query && page.searchSource === "bounded_fallback" ? (
-        <aside
-          role="status"
+        <Callout
+          tone="warning"
+          live="polite"
+          title={copy.degradedSearchTitle}
           data-public-journal-search-degraded="true"
-          className="grid gap-1 border-b border-border bg-muted/40 px-3 py-3 text-sm"
         >
-          <strong className="font-medium text-foreground">
-            {copy.degradedSearchTitle}
-          </strong>
-          <span className="text-muted-foreground">
-            {copy.degradedSearchBody}
-          </span>
-        </aside>
+          <p>{copy.degradedSearchBody}</p>
+        </Callout>
       ) : null}
 
       {state === "loading" ? (
         <DirectoryLoading label={copy.loadingLabel} />
       ) : null}
+
       {state === "error" ? (
-        <DirectoryError locale={locale} copy={copy} request={page.request} />
+        <ErrorState
+          failureClass={failure?.failureClass ?? "unknown"}
+          digest={failure?.digest ?? "0000000"}
+          title={copy.errorTitle}
+          description={copy.errorBody}
+          reference={`${copy.errorReference} ${failure?.digest ?? "0000000"}`}
+          retryHref={buildPublicJournalDirectoryHref(locale, page.request)}
+          retryLabel={copy.retry}
+        />
       ) : null}
+
       {state === "empty" ? (
-        <DirectoryEmpty locale={locale} copy={copy} />
+        <DirectoryEmpty
+          locale={locale}
+          copy={copy}
+          filters={activeFilters}
+          listingPath={listingPath}
+        />
       ) : null}
+
       {state === "ready" ? (
         <>
-          <ol className="grid gap-px overflow-hidden border-x border-b border-border bg-border">
-            {page.cards.map((card) => (
-              <li key={card.publicPath} className="min-w-0 bg-background">
-                <JournalResult
+          <ol className="grid list-none gap-4">
+            {page.cards.map((card, index) => (
+              <li key={card.publicPath} className="min-w-0">
+                <DirectoryResultCard
                   locale={locale}
                   copy={copy}
                   request={page.request}
                   card={card}
+                  priority={index === 0}
                 />
               </li>
             ))}
           </ol>
-          <DirectoryPagination locale={locale} copy={copy} page={page} />
+          {/* One page of results needs no navigation: two disabled edges with
+              "Сторінка 1 з 1" between them is three controls saying the same
+              nothing, and at 375 px they wrap into three columns of two words
+              each. The count above already says how many there are. */}
+          {page.hasPreviousPage || page.hasNextPage ? (
+            <Pagination
+              label={copy.paginationLabel}
+              previousLabel={copy.previousPage}
+              previousHref={
+                page.hasPreviousPage
+                  ? buildPublicJournalDirectoryHref(locale, {
+                      ...page.request,
+                      page: Math.max(1, page.request.page - 1),
+                    })
+                  : null
+              }
+              nextLabel={copy.loadMore}
+              nextHref={
+                page.hasNextPage
+                  ? buildPublicJournalDirectoryHref(locale, {
+                      ...page.request,
+                      page: page.request.page + 1,
+                    })
+                  : null
+              }
+              status={formatPageLabel(
+                copy.pageLabel,
+                page.request.page,
+                page.totalPages,
+                locale,
+              )}
+            />
+          ) : null}
         </>
       ) : null}
 
-      <div className="mt-6 border-t border-border pt-6 xl:hidden">
+      <div className="border-t border-border pt-6 xl:hidden">
         <SiteShellContextRailModules modules={contextModules} />
       </div>
     </main>
   );
 }
 
-function FilterSelect({
-  label,
-  name,
-  value,
-  options,
-}: {
-  label: string;
-  name: string;
-  value: string;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <Field label={label} className="min-w-0">
-      <Select name={name} defaultValue={value}>
-        {options.map((option) => (
-          <option key={`${name}:${option.value}`} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </Select>
-    </Field>
-  );
+function buildFilterFacets(
+  copy: PublicJournalDirectoryCopy,
+  request: PublicJournalDirectoryRequest,
+  facets: PublicJournalDirectoryFacets,
+  locale: PublicLocale,
+): FilterBarFacet[] {
+  return [
+    {
+      key: "kind",
+      label: copy.kindLabel,
+      anyLabel: copy.kinds.all,
+      value: request.kind === "all" ? [] : [request.kind],
+      options: [
+        { value: "plant", label: copy.kinds.plant },
+        { value: "animal", label: copy.kinds.animal },
+      ],
+    },
+    {
+      key: "catalog",
+      label: copy.catalogLabel,
+      anyLabel: copy.allCatalogs,
+      value: request.catalog ? [request.catalog] : [],
+      options: facets.catalogs.map((catalog) => ({
+        value: catalog.slug,
+        label: catalog.label,
+        count: catalog.count,
+      })),
+    },
+    {
+      key: "topic",
+      label: copy.topicLabel,
+      anyLabel: copy.allTopics,
+      value: request.topic ? [request.topic] : [],
+      options: facets.topics.map((topic) => ({
+        value: topic.slug,
+        label: localizeTopicLabel(locale, topic.slug, topic.label),
+        count: topic.count,
+      })),
+    },
+    {
+      key: "season",
+      label: copy.seasonLabel,
+      anyLabel: copy.seasons.all,
+      value: request.season === "all" ? [] : [request.season],
+      options: (["winter", "spring", "summer", "autumn"] as const).map(
+        (season) => ({ value: season, label: copy.seasons[season] }),
+      ),
+    },
+    {
+      key: "region",
+      label: copy.regionLabel,
+      anyLabel: copy.allRegions,
+      value: request.region ? [request.region] : [],
+      options: facets.regions.map((region) => ({
+        value: region.code,
+        label: region.code,
+        count: region.count,
+      })),
+    },
+  ];
 }
 
-function JournalResult({
+function DirectoryResultCard({
   locale,
   copy,
   request,
   card,
+  priority,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
   request: PublicJournalDirectoryRequest;
   card: PublicJournalDirectoryCard;
+  priority: boolean;
 }) {
   const directoryHref = buildPublicJournalDirectoryHref(locale, request);
   const entryHref = addDirectoryReturnTo(card.publicPath, directoryHref);
-  const KindIcon = {
-    plant: Sprout,
-    animal: PawPrint,
-  }[card.object.kind];
+  const [cover] = card.media;
+  const sourceSet = cover ? buildPublicMediaSourceSet(cover) : null;
 
   return (
-    <article className="grid min-w-0 gap-4 p-4 md:grid-cols-5">
-      <ResultMedia card={card} copy={copy} />
-
-      <div className="flex min-w-0 flex-col gap-3 md:col-span-4">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <KindIcon className="size-3.5" aria-hidden="true" />
-            {copy.kinds[card.object.kind]}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarDays className="size-3.5" aria-hidden="true" />
-            <time dateTime={toIsoDate(card.entryDate)}>
-              {formatDate(card.entryDate, locale)}
-            </time>
-            · {copy.seasons[card.season]}
-          </span>
-          {card.safeRegionCode ? (
-            <span className="inline-flex items-center gap-1.5">
-              <MapPin className="size-3.5" aria-hidden="true" />
-              {copy.safeRegion} {card.safeRegionCode}
-            </span>
-          ) : null}
-        </div>
-
-        {/* The gardener's own words carry the gardener's own language, and
-            only when it is not the page's (WCAG 3.1.2). The object's display
-            name sits inside this block too: it is the gardener's naming of
-            their own plant, not interface copy. */}
-        <div
-          {...contentLanguageAttribute(card.sourceLanguage, locale)}
-          className="min-w-0"
-        >
-          <Link href={entryHref} className="hover:text-primary">
-            <h3 className="text-xl leading-7 font-semibold text-foreground">
-              {card.title}
-            </h3>
-          </Link>
-          <p className="mt-1 text-sm font-medium text-foreground">
-            {card.object.displayName}
-          </p>
+    <EntryCard
+      id={card.publicPath}
+      href={entryHref}
+      title={card.title}
+      headingLevel={3}
+      contentLanguage={
+        contentLanguageAttribute(card.sourceLanguage, locale).lang
+      }
+      subject={{
+        label: card.object.displayName,
+        href: card.object.publicPath,
+        kindLabel: copy.kinds[card.object.kind],
+        icon: KIND_ICONS[card.object.kind],
+        // `undefined`, not an empty fragment: a fragment is truthy, and the
+        // card drew its separator with nothing after it.
+        meta: card.safeRegionCode ? (
+          <>
+            <MapPin aria-hidden="true" className="size-3.5" />
+            {copy.safeRegion} {card.safeRegionCode}
+          </>
+        ) : undefined,
+      }}
+      dateTime={toIsoDate(card.entryDate)}
+      dateLabel={`${formatDate(card.entryDate, locale)} · ${copy.seasons[card.season]}`}
+      excerpt={card.excerpt}
+      cover={
+        cover && sourceSet
+          ? {
+              src: sourceSet.src,
+              srcSet: sourceSet.srcSet,
+              alt: publicMediaAltText({}, card.title),
+              placeholderDataUri: cover.placeholderDataUri,
+              focalX: cover.focalX,
+              focalY: cover.focalY,
+              intrinsicWidth: cover.intrinsicWidth,
+              intrinsicHeight: cover.intrinsicHeight,
+            }
+          : null
+      }
+      author={
+        card.author
+          ? {
+              displayName: card.author.displayName,
+              href: card.author.profilePath,
+              avatarUrl: card.author.avatarUrl,
+            }
+          : null
+      }
+      authorPrefix={copy.publishedBy}
+      topics={card.topics.map((topic) => ({
+        label: localizeTopicLabel(locale, topic.slug, topic.label),
+        href: buildPublicJournalDirectoryHref(locale, {
+          ...request,
+          topic: topic.slug,
+          page: 1,
+        }),
+      }))}
+      engagement={
+        <>
           {card.object.catalogPath ? (
             <Link
               href={card.object.catalogPath}
-              className="mt-1 inline-block text-xs text-primary hover:underline"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
               {card.object.identityLabel}
             </Link>
           ) : (
-            <span className="mt-1 block text-xs text-muted-foreground">
+            <span className="text-caption text-text-muted">
               {card.object.identityLabel ?? copy.identityPending}
             </span>
           )}
-        </div>
-
-        <p
-          {...contentLanguageAttribute(card.sourceLanguage, locale)}
-          className="line-clamp-4 text-sm leading-6 text-muted-foreground"
-        >
-          {card.excerpt}
-        </p>
-
-        {card.topics.length > 0 ? (
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {card.topics.map((topic) => (
-              <Link
-                key={topic.slug}
-                href={buildPublicJournalDirectoryHref(locale, {
-                  ...request,
-                  topic: topic.slug,
-                  page: 1,
-                })}
-                className="inline-flex min-h-6 items-center hover:text-primary hover:underline"
-              >
-                #{topic.label}
-              </Link>
-            ))}
-          </div>
-        ) : null}
-
-        <footer className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
-          {card.author ? (
-            <Link
-              href={card.author.profilePath}
-              className="inline-flex min-w-0 items-center gap-2 text-sm text-muted-foreground hover:text-primary"
-            >
-              {card.author.avatarUrl ? (
-                <Image
-                  src={card.author.avatarUrl}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="size-7 rounded-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted">
-                  <UserRound className="size-4" aria-hidden="true" />
-                </span>
-              )}
-              <span className="truncate">
-                {copy.publishedBy} {card.author.displayName}
-              </span>
-            </Link>
-          ) : (
-            <span />
-          )}
           <Link
-            href={entryHref}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
+            href={`${card.publicPath}#comments`}
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            {copy.readEntry}
-            <ArrowRight data-icon="inline-end" aria-hidden="true" />
+            <MessageCircle aria-hidden="true" />
+            {copy.discuss}
           </Link>
-        </footer>
-      </div>
-    </article>
-  );
-}
-
-function ResultMedia({
-  card,
-  copy,
-}: {
-  card: PublicJournalDirectoryCard;
-  copy: PublicJournalDirectoryCopy;
-}) {
-  const media = card.media.slice(0, 3);
-
-  return (
-    <div
-      data-journal-result-media-count={media.length}
-      className={cn(
-        "grid aspect-4/3 w-full shrink-0 overflow-hidden rounded-md border border-border bg-muted md:aspect-square",
-        media.length === 2 && "grid-cols-2",
-        media.length === 3 && "grid-cols-2 grid-rows-2",
-      )}
-    >
-      {media.length === 0 ? (
-        <div className="flex h-full items-center justify-center gap-2 p-3 text-center text-xs text-foreground">
-          <ImageOff className="size-4" aria-hidden="true" />
-          {copy.noPublicPhoto}
-        </div>
-      ) : null}
-      {media.map((item, index) => (
-        <div
-          key={item.publicUrl}
-          className={cn(
-            "relative min-h-0 overflow-hidden",
-            media.length === 3 && index === 0 && "row-span-2",
-          )}
-        >
-          <SubjectAwareMediaImage
-            src={item.publicUrl}
-            srcSet={buildPublicMediaSourceSet(item).srcSet}
-            placeholderDataUri={item.placeholderDataUri}
-            alt={`${card.object.displayName}: ${card.title}`}
-            fill
-            sizes="(max-width: 767px) 100vw, 192px"
-            presentationMode="cover"
-            focalX={item.focalX}
-            focalY={item.focalY}
-            intrinsicWidth={item.intrinsicWidth}
-            intrinsicHeight={item.intrinsicHeight}
-            className="absolute inset-0 h-full w-full"
-            unoptimized
-          />
-        </div>
-      ))}
-    </div>
+        </>
+      }
+      priority={priority}
+    />
   );
 }
 
@@ -513,128 +455,78 @@ function DirectoryLoading({ label }: { label: string }) {
       role="status"
       aria-label={label}
       aria-busy="true"
-      className="grid gap-px bg-border"
+      className="grid gap-4"
     >
       {[0, 1, 2].map((item) => (
-        <div key={item} className="grid gap-4 bg-background p-4 md:grid-cols-5">
-          <Skeleton className="aspect-4/3 w-full md:aspect-square" />
-          <div className="grid content-start gap-3 md:col-span-4">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-7 w-4/5" />
-            <Skeleton className="h-20 w-full" />
-          </div>
+        <div
+          key={item}
+          className="grid gap-3 rounded-lg border border-border p-4 sm:p-5"
+        >
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-6 w-4/5" />
+          <Skeleton className="aspect-card w-full" />
+          <Skeleton className="h-4 w-44" />
         </div>
       ))}
     </div>
   );
 }
 
+/**
+ * Nothing matched.
+ *
+ * `empty-no-results` and never `empty-first-run`: this page is reached with a
+ * search or a filter set, so what a reader needs is the filters they set and a
+ * way to clear them — not a picture (DESIGN.md §5.4). The one case that is a
+ * genuine first run is a directory with no filters at all and still nothing in
+ * it, which means the product has no public entries yet.
+ */
 function DirectoryEmpty({
   locale,
   copy,
+  filters,
+  listingPath,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
+  filters: ReturnType<typeof buildActiveFilters>;
+  listingPath: string;
 }) {
-  return (
-    <section className="flex flex-col items-start gap-3 py-10">
-      <BookOpen aria-hidden="true" />
-      <h2 className="text-xl font-semibold text-foreground">
-        {copy.emptyTitle}
-      </h2>
-      <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-        {copy.emptyBody}
-      </p>
-      <Link
-        href={buildPublicJournalDirectoryHref(locale, defaultRequest())}
-        className={buttonVariants({ variant: "secondary" })}
-      >
-        {copy.resetFilters}
-      </Link>
-    </section>
-  );
-}
-
-function DirectoryError({
-  locale,
-  copy,
-  request,
-}: {
-  locale: PublicLocale;
-  copy: PublicJournalDirectoryCopy;
-  request: PublicJournalDirectoryRequest;
-}) {
-  return (
-    <section role="alert" className="flex flex-col items-start gap-3 py-10">
-      <h2 className="text-xl font-semibold text-foreground">
-        {copy.errorTitle}
-      </h2>
-      <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-        {copy.errorBody}
-      </p>
-      <Link
-        href={buildPublicJournalDirectoryHref(locale, request)}
-        className={buttonVariants({ variant: "secondary" })}
-      >
-        {copy.retry}
-      </Link>
-    </section>
-  );
-}
-
-function DirectoryPagination({
-  locale,
-  copy,
-  page,
-}: {
-  locale: PublicLocale;
-  copy: PublicJournalDirectoryCopy;
-  page: PublicJournalDirectoryPage;
-}) {
-  return (
-    <footer className="grid min-h-16 grid-cols-3 items-center gap-2 border-t border-border py-4">
-      <div>
-        {page.hasPreviousPage ? (
+  if (filters.length === 0) {
+    return (
+      <EmptyState
+        illustration={resolveIllustration("empty-journal")}
+        title={copy.firstRunTitle}
+        description={copy.firstRunBody}
+        action={
           <Link
-            href={buildPublicJournalDirectoryHref(locale, {
-              ...page.request,
-              page: Math.max(1, page.request.page - 1),
-            })}
-            aria-label={copy.previousPage}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
+            href={localizedPath(locale, "/guides/start-a-living-plant-record")}
+            className={buttonVariants({})}
           >
-            <ArrowLeft aria-hidden="true" />
-            <span className="hidden sm:inline">{copy.previousPage}</span>
+            {copy.firstRunAction}
           </Link>
-        ) : null}
-      </div>
-      <p className="text-center text-xs text-muted-foreground tabular-nums">
-        {formatPageLabel(
-          copy.pageLabel,
-          page.request.page,
-          page.totalPages,
-          locale,
-        )}
-      </p>
-      <div className="flex justify-end">
-        {page.hasNextPage ? (
-          <Link
-            href={buildPublicJournalDirectoryHref(locale, {
-              ...page.request,
-              page: page.request.page + 1,
-            })}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            {copy.loadMore}
-            <ArrowRight data-icon="inline-end" aria-hidden="true" />
-          </Link>
-        ) : (
-          <span className="text-right text-xs text-muted-foreground">
-            {copy.endOfResults}
-          </span>
-        )}
-      </div>
-    </footer>
+        }
+      />
+    );
+  }
+
+  return (
+    <EmptyState
+      variant="no-results"
+      title={copy.emptyTitle}
+      description={copy.emptyBody}
+      filters={filters.map((filter) => (
+        <Chip key={filter.key} label={filter.label} />
+      ))}
+      action={
+        <Link
+          href={listingPath}
+          className={buttonVariants({ variant: "secondary" })}
+        >
+          {copy.resetFilters}
+        </Link>
+      }
+    />
   );
 }
 
@@ -643,6 +535,8 @@ export function buildPublicJournalDirectoryContextModules(
   copy: PublicJournalDirectoryCopy,
   facets: PublicJournalDirectoryFacets,
 ): SiteShellContextRailModule[] {
+  // A module with nothing in it is a heading with nothing under it, which is
+  // the row of zeros in another shape (`OVE-447` criterion 5).
   return [
     {
       key: "journal-topics",
@@ -652,7 +546,7 @@ export function buildPublicJournalDirectoryContextModules(
           ...defaultRequest(),
           topic: topic.slug,
         }),
-        label: topic.label,
+        label: localizeTopicLabel(locale, topic.slug, topic.label),
         meta: String(topic.count),
       })),
     },
@@ -668,13 +562,14 @@ export function buildPublicJournalDirectoryContextModules(
         meta: String(catalog.count),
       })),
     },
-  ];
+  ].filter((module) => module.items.length > 0);
 }
 
 function buildActiveFilters(
   copy: PublicJournalDirectoryCopy,
   request: PublicJournalDirectoryRequest,
   facets: PublicJournalDirectoryFacets,
+  locale: PublicLocale,
 ) {
   const filters: Array<{
     key: string;
@@ -706,11 +601,12 @@ function buildActiveFilters(
     });
   }
   if (request.topic) {
+    const facet = facets.topics.find((item) => item.slug === request.topic);
     filters.push({
       key: "topic",
-      label:
-        facets.topics.find((item) => item.slug === request.topic)?.label ??
-        request.topic,
+      label: facet
+        ? localizeTopicLabel(locale, facet.slug, facet.label)
+        : request.topic,
       request: { ...resetPage, topic: null },
     });
   }
@@ -763,10 +659,6 @@ function formatDate(value: Date | string, locale: PublicLocale) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
-}
-
-function formatCount(value: number, locale: PublicLocale) {
-  return new Intl.NumberFormat(localeTag(locale)).format(value);
 }
 
 function formatPageLabel(

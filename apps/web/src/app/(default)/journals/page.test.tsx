@@ -17,6 +17,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   notFound: vi.fn(),
   redirect: mocks.redirect,
+  // `FilterBar` navigates through the router once hydrated. A static render
+  // only needs the hook to exist; the behaviour is proven against a real
+  // interaction in `src/components/ui/filter-bar.test.tsx`.
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock(
@@ -103,6 +107,11 @@ describe("/journals", () => {
     expect(mocks.listFacets).toHaveBeenCalledTimes(2);
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Дневници");
+    // The page is the faceted bar now, not a form behind an Apply button.
+    expect(html).toContain('data-filter-bar-form="true"');
+    expect(html).toContain('data-filter-bar-facet="kind"');
+    expect(html).toContain('data-filter-bar-sort="true"');
+    expect(html).toContain('aria-live="polite"');
     // The mocked directory lists nothing: an empty listing stays noindex (ADR-0022, D3).
     expect(metadata).toMatchObject({
       robots: { index: false, follow: false },
@@ -121,6 +130,10 @@ describe("/journals", () => {
     );
 
     expect(html).toContain("Журнали тимчасово недоступні");
+    // ADR-0023: the class and the digest travel with the failure, so the
+    // reader and the log line quote the same string.
+    expect(html).toMatch(/data-section-failure="[a-z_]+"/u);
+    expect(html).toContain("Код звернення:");
     expect(html).not.toMatch(/sign.?in|register|увійти|створити акаунт/i);
   });
 

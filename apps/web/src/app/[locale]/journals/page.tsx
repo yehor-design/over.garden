@@ -30,6 +30,10 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 import {
+  describeWorkspaceFailure,
+  type WorkspaceFailureDescription,
+} from "@/server/workspace-failure";
+import {
   readPublicJournalDirectoryFacets,
   readPublicJournalDirectoryPage,
 } from "@/server/public-cache";
@@ -120,6 +124,15 @@ export async function renderPublicJournalsPage(
     : page.cards.length === 0
       ? "empty"
       : "ready";
+  // ADR-0023: the failure is a value, not an exception the screen inherits.
+  // Whichever read failed, its class and digest are what the reader and the
+  // log line quote to each other.
+  const failure: WorkspaceFailureDescription | null =
+    pageResult.status === "rejected"
+      ? describeWorkspaceFailure(pageResult.reason)
+      : facetsResult.status === "rejected"
+        ? describeWorkspaceFailure(facetsResult.reason)
+        : null;
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
     buildJournalDirectoryDiscoverySource(locale, page, facets),
   );
@@ -132,6 +145,7 @@ export async function renderPublicJournalsPage(
       page={page}
       facets={facets}
       state={state}
+      failure={failure}
       jsonLd={surface.jsonLd}
     />
   );

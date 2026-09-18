@@ -5,6 +5,14 @@
  * Meilisearch-degraded branch, verifies its query shape and query plan, and
  * measures the complete candidate -> results + facets journey. It prints only
  * aggregate timing, count, and plan-node evidence.
+ *
+ * Its synthetic insert named `journal_entries.public_noindex` until
+ * 2026-09-18, and migration `0046` dropped that column on 2026-09-03 — so
+ * every run since had failed at the first statement with
+ * `column "public_noindex" ... does not exist`. Nothing noticed: this script
+ * is in a `package.json` script and in no CI list, which is the same way five
+ * browser specs rotted (`OVE-462`). The column is gone from the insert; every
+ * entry is indexable now and the rule lives in the projection, not in a row.
  */
 
 import process from "node:process";
@@ -101,7 +109,6 @@ async function main() {
           visibility,
           lifecycle_state,
           public_slug,
-          public_noindex,
           published_at,
           first_publication_disclosure_version,
           first_publication_disclosed_at,
@@ -120,7 +127,6 @@ async function main() {
           'public',
           'active',
           'ove-220-budget-' || generated.ordinal::text,
-          true,
           now() - (generated.ordinal * interval '1 second'),
           'ove-220-proof',
           now(),

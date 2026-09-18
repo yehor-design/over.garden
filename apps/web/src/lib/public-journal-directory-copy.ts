@@ -27,29 +27,51 @@ export interface PublicJournalDirectoryCopy {
   sortLabel: string;
   sorts: Record<PublicJournalDirectorySort, string>;
   applyFilters: string;
+  /** "Фільтри (3)" below `lg`, and "Фільтри" when nothing is set. */
+  filtersWithCount: (count: number) => string;
+  filterSheetDescription: string;
   resultsTitle: string;
+  /** "18 записів" — pluralised here, because `FilterBar` carries no locale. */
+  resultCount: (count: number) => string;
   activeFiltersLabel: string;
   resetFilters: string;
   removeFilter: string;
   loadingLabel: string;
   emptyTitle: string;
   emptyBody: string;
+  firstRunTitle: string;
+  firstRunBody: string;
+  firstRunAction: string;
   errorTitle: string;
   errorBody: string;
+  errorReference: string;
   degradedSearchTitle: string;
   degradedSearchBody: string;
   retry: string;
+  paginationLabel: string;
   previousPage: string;
   loadMore: string;
-  endOfResults: string;
   pageLabel: string;
-  readEntry: string;
+  discuss: string;
   publishedBy: string;
   safeRegion: string;
-  noPublicPhoto: string;
   identityPending: string;
   contextTopicsTitle: string;
   contextCatalogsTitle: string;
+}
+
+/**
+ * Ukrainian and Russian pick one of three forms by the last digits of the
+ * count. Bulgarian does not — it takes a plain singular/plural — so it is
+ * written inline in its own block rather than pretending to share this.
+ */
+function slavicPlural(count: number, one: string, few: string, many: string) {
+  const mod100 = Math.abs(count) % 100;
+  const mod10 = mod100 % 10;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
 }
 
 const COPY = {
@@ -90,7 +112,12 @@ const COPY = {
       oldest: "Спочатку давні",
     },
     applyFilters: "Застосувати",
+    filtersWithCount: (count) => (count > 0 ? `Фільтри (${count})` : "Фільтри"),
+    filterSheetDescription:
+      "Виберіть фільтри й застосуйте їх — результати під ними.",
     resultsTitle: "Знайдені журнали",
+    resultCount: (count) =>
+      `${count} ${slavicPlural(count, "запис", "записи", "записів")}`,
     activeFiltersLabel: "Активні фільтри",
     resetFilters: "Скинути все",
     removeFilter: "Прибрати фільтр",
@@ -98,21 +125,25 @@ const COPY = {
     emptyTitle: "Журналів не знайдено",
     emptyBody:
       "Змініть пошук або один із фільтрів, щоб побачити інші публічні спостереження.",
+    firstRunTitle: "Публічних журналів ще немає",
+    firstRunBody:
+      "Перший опублікований запис з'явиться тут і стане доступним у пошуку.",
+    firstRunAction: "Як почати живий журнал",
     errorTitle: "Журнали тимчасово недоступні",
     errorBody:
       "Запит не вдалося виконати. Параметри збережені, тому його можна безпечно повторити.",
+    errorReference: "Код звернення:",
     degradedSearchTitle: "Пошук тимчасово обмежений",
     degradedSearchBody:
       "Показуємо збіги з обмеженої добірки свіжих публічних журналів. Повторіть пошук, щоб перевірити весь індекс.",
     retry: "Спробувати ще раз",
+    paginationLabel: "Сторінки журналів",
     previousPage: "Попередня сторінка",
     loadMore: "Показати більше журналів",
-    endOfResults: "Усі знайдені журнали показані",
     pageLabel: "Сторінка",
-    readEntry: "Читати запис",
+    discuss: "Обговорення",
     publishedBy: "Автор",
     safeRegion: "Регіон",
-    noPublicPhoto: "Без публічного фото",
     identityPending: "Ідентичність не підтверджено",
     contextTopicsTitle: "Теми з досвідом",
     contextCatalogsTitle: "Живі ідентичності",
@@ -154,7 +185,11 @@ const COPY = {
       oldest: "Първо старите",
     },
     applyFilters: "Прилагане",
+    filtersWithCount: (count) => (count > 0 ? `Филтри (${count})` : "Филтри"),
+    filterSheetDescription:
+      "Изберете филтри и ги приложете — резултатите са под тях.",
     resultsTitle: "Намерени дневници",
+    resultCount: (count) => `${count} ${count === 1 ? "запис" : "записа"}`,
     activeFiltersLabel: "Активни филтри",
     resetFilters: "Нулиране на всичко",
     removeFilter: "Премахване на филтър",
@@ -162,21 +197,25 @@ const COPY = {
     emptyTitle: "Няма намерени дневници",
     emptyBody:
       "Променете търсенето или някой филтър, за да видите други публични наблюдения.",
+    firstRunTitle: "Още няма публични дневници",
+    firstRunBody:
+      "Първият публикуван запис ще се появи тук и ще стане намираем.",
+    firstRunAction: "Как да започнете жив дневник",
     errorTitle: "Дневниците временно не са достъпни",
     errorBody:
       "Заявката не можа да бъде изпълнена. Параметрите са запазени и може безопасно да опитате отново.",
+    errorReference: "Код за справка:",
     degradedSearchTitle: "Търсенето временно е ограничено",
     degradedSearchBody:
       "Показваме съвпадения от ограничен набор скорошни публични дневници. Повторете търсенето, за да проверите целия индекс.",
     retry: "Опитайте отново",
+    paginationLabel: "Страници на дневниците",
     previousPage: "Предишна страница",
     loadMore: "Покажи още дневници",
-    endOfResults: "Всички намерени дневници са показани",
     pageLabel: "Страница",
-    readEntry: "Прочетете записа",
+    discuss: "Обсъждане",
     publishedBy: "Автор",
     safeRegion: "Регион",
-    noPublicPhoto: "Без публична снимка",
     identityPending: "Идентичността не е потвърдена",
     contextTopicsTitle: "Теми с опит",
     contextCatalogsTitle: "Живи идентичности",
@@ -218,7 +257,12 @@ const COPY = {
       oldest: "Сначала старые",
     },
     applyFilters: "Применить",
+    filtersWithCount: (count) => (count > 0 ? `Фильтры (${count})` : "Фильтры"),
+    filterSheetDescription:
+      "Выберите фильтры и примените их — результаты под ними.",
     resultsTitle: "Найденные журналы",
+    resultCount: (count) =>
+      `${count} ${slavicPlural(count, "запись", "записи", "записей")}`,
     activeFiltersLabel: "Активные фильтры",
     resetFilters: "Сбросить всё",
     removeFilter: "Убрать фильтр",
@@ -226,21 +270,25 @@ const COPY = {
     emptyTitle: "Журналы не найдены",
     emptyBody:
       "Измените поиск или один из фильтров, чтобы увидеть другие публичные наблюдения.",
+    firstRunTitle: "Публичных журналов пока нет",
+    firstRunBody:
+      "Первая опубликованная запись появится здесь и станет доступной в поиске.",
+    firstRunAction: "Как начать живой журнал",
     errorTitle: "Журналы временно недоступны",
     errorBody:
       "Запрос не удалось выполнить. Параметры сохранены, поэтому его можно безопасно повторить.",
+    errorReference: "Код обращения:",
     degradedSearchTitle: "Поиск временно ограничен",
     degradedSearchBody:
       "Показываем совпадения из ограниченной подборки свежих публичных журналов. Повторите поиск, чтобы проверить весь индекс.",
     retry: "Повторить",
+    paginationLabel: "Страницы журналов",
     previousPage: "Предыдущая страница",
     loadMore: "Показать больше журналов",
-    endOfResults: "Все найденные журналы показаны",
     pageLabel: "Страница",
-    readEntry: "Читать запись",
+    discuss: "Обсуждение",
     publishedBy: "Автор",
     safeRegion: "Регион",
-    noPublicPhoto: "Без публичного фото",
     identityPending: "Идентичность не подтверждена",
     contextTopicsTitle: "Темы с опытом",
     contextCatalogsTitle: "Живые идентичности",

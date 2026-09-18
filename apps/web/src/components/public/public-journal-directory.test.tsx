@@ -11,12 +11,11 @@ import {
   PublicJournalDirectory,
 } from "./public-journal-directory";
 
-vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => (
-    // Production still uses next/image; SSR assertions only need public output.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img alt={alt} src={src} />
-  ),
+// `FilterBar` applies on change through the router once hydrated; a static
+// render only needs the hook to exist. What the bar does with it is asserted
+// in `src/components/ui/filter-bar.test.tsx`, against a real interaction.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
 }));
 
 vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
@@ -197,7 +196,7 @@ describe("public journal directory", () => {
     expect(html).not.toContain('data-public-journal-directory-state="error"');
   });
 
-  it("renders dense real result context and retains the exact directory URL through detail", () => {
+  it("renders the facets, the count and every card as a named article", () => {
     const html = renderToStaticMarkup(
       <PublicJournalDirectory
         locale="uk"
@@ -211,23 +210,37 @@ describe("public journal directory", () => {
     expect(html).toContain('data-public-journal-directory="true"');
     expect(html).toContain('data-public-journal-directory-state="ready"');
     expect(html).toContain(">Журнали</h1>");
+    // Criterion 5: one parameter per facet, named for the facet, and the sort
+    // as its own control beside them.
+    expect(html).toContain('data-filter-bar-form="true"');
     expect(html).toContain('name="q"');
-    expect(html).toContain('name="kind"');
-    expect(html).toContain('name="catalog"');
-    expect(html).toContain('name="topic"');
-    expect(html).toContain('name="season"');
-    expect(html).toContain('name="region"');
-    expect(html).toContain('name="sort"');
-    expect(html).toContain("18");
+    expect(html).toContain('data-filter-bar-facet="kind"');
+    expect(html).toContain('data-filter-bar-facet="catalog"');
+    expect(html).toContain('data-filter-bar-facet="topic"');
+    expect(html).toContain('data-filter-bar-facet="season"');
+    expect(html).toContain('data-filter-bar-facet="region"');
+    expect(html).toContain('data-filter-bar-sort="true"');
+    // Criterion 3: the count is visible and lives in a polite live region.
+    expect(html).toContain('data-journal-result-count="true"');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("18 записів");
+    // Criterion 6: one button below `lg`, labelled with the active count.
+    expect(html).toContain('data-filter-bar-open="true"');
+    expect(html).toContain("Фільтри (7)");
+
     expect(html).toContain("Кішка після адаптації");
     expect(html).toContain('href="/breed/domestic-shorthair"');
     expect(html).toContain('href="/@demo_danylo"');
-    expect(html).toContain('data-journal-result-media-count="3"');
-    expect(html).toContain('data-journal-result-media-count="0"');
+    // Each result is an `<article>` a reader can be told the name of, and it
+    // keeps the exact directory URL it came from.
+    expect(html).toContain('aria-labelledby="entry-card-/journal/recovery-check-title"');
     expect(html).toContain(
       'href="/journal/recovery-check?from=%2Fjournals%3Fq%3D',
     );
-    expect(html.match(/<img /g)).toHaveLength(3);
+    // One cover per card, and the card with no photograph reserves the box.
+    expect(html).toContain('data-entry-card-media="cover"');
+    expect(html).toContain('data-entry-card-media="fallback"');
+    expect(html.match(/<img /g)).toHaveLength(1);
     expect(html).not.toMatch(
       /ownerUserId|entryId|spaceId|derivativeKey|quarantine|latitude|longitude|href="[^"]*(?:sign-in|register)|>Створити акаунт</i,
     );
@@ -246,6 +259,9 @@ describe("public journal directory", () => {
 
     expect(html).toContain('aria-label="Активные фильтры"');
     expect(html).toContain('href="/ru/journals"');
+    // Criterion 2: a chip's removal is a real link, so it works unhydrated.
+    expect(html).toMatch(/<a[^>]*aria-label="Убрать фильтр: [^"]+"/u);
+    expect(html).toContain('data-slot="chip"');
     expect(html).toContain(
       'href="/ru/journals?q=%D0%B2%D1%96%D0%B4%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F&amp;catalog=visual-domestic-shorthair',
     );
@@ -254,38 +270,90 @@ describe("public journal directory", () => {
     expect(html).toContain("page=3");
   });
 
-  it("keeps loading, empty, error, and exhausted states useful and read-open", () => {
+  it("tells the two empty states apart, and settles a failure into a class", () => {
     const copy = getPublicJournalDirectoryCopy("bg");
-    const states = (["loading", "empty", "error"] as const).map((state) =>
-      renderToStaticMarkup(
-        <PublicJournalDirectory
-          locale="bg"
-          copy={copy}
-          page={{ ...page, cards: [], totalCount: 0, hasNextPage: false }}
-          facets={facets}
-          state={state}
-        />,
-      ),
-    );
-    const exhausted = renderToStaticMarkup(
+    const emptyPage = {
+      ...page,
+      cards: [],
+      totalCount: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    };
+    const loading = renderToStaticMarkup(
       <PublicJournalDirectory
         locale="bg"
         copy={copy}
-        page={{ ...page, hasNextPage: false }}
+        page={emptyPage}
         facets={facets}
-        state="ready"
+        state="loading"
+      />,
+    );
+    const noResults = renderToStaticMarkup(
+      <PublicJournalDirectory
+        locale="bg"
+        copy={copy}
+        page={emptyPage}
+        facets={facets}
+        state="empty"
+      />,
+    );
+    const firstRun = renderToStaticMarkup(
+      <PublicJournalDirectory
+        locale="bg"
+        copy={copy}
+        page={{
+          ...emptyPage,
+          request: {
+            query: "",
+            kind: "all",
+            catalog: null,
+            topic: null,
+            season: "all",
+            region: null,
+            sort: "recent",
+            page: 1,
+          },
+        }}
+        facets={facets}
+        state="empty"
+      />,
+    );
+    const failed = renderToStaticMarkup(
+      <PublicJournalDirectory
+        locale="bg"
+        copy={copy}
+        page={emptyPage}
+        facets={facets}
+        state="error"
+        failure={{
+          failureClass: "query_timeout",
+          digest: "ABC1234",
+          relation: null,
+        }}
       />,
     );
 
-    expect(states[0]).toContain(
-      'aria-label="Зареждане на публичните дневници"',
-    );
-    expect(states[1]).toContain("Няма намерени дневници");
-    expect(states[1]).toContain('href="/bg/journals"');
-    expect(states[2]).toContain("Дневниците временно не са достъпни");
-    expect(states[2]).toContain("Опитайте отново");
-    expect(exhausted).toContain("Всички намерени дневници са показани");
-    for (const html of states) {
+    expect(loading).toContain('aria-label="Зареждане на публичните дневници"');
+
+    // Criterion 8: the filters that are on, a way to clear them, no picture.
+    expect(noResults).toContain('data-screen-state="empty-no-results"');
+    expect(noResults).toContain("Няма намерени дневници");
+    expect(noResults).toContain("Нулиране на всичко");
+    expect(noResults).not.toContain("/illustrations/");
+
+    // Nothing filtered and still nothing there is the other state entirely:
+    // the product has no public entries yet, and that one has a picture.
+    expect(firstRun).toContain('data-screen-state="empty-first-run"');
+    expect(firstRun).toContain("/illustrations/empty-journal.webp");
+    expect(firstRun).toContain("Още няма публични дневници");
+
+    // ADR-0023: a class the operator can read, a digest the reader can quote.
+    expect(failed).toContain('data-screen-state="error"');
+    expect(failed).toContain('data-section-failure="query_timeout"');
+    expect(failed).toContain("Код за справка: ABC1234");
+    expect(failed).toContain("Опитайте отново");
+
+    for (const html of [loading, noResults, firstRun, failed]) {
       expect(html).not.toMatch(
         /href="[^"]*(?:sign-in|register)|>Вход<|>Регистрация</i,
       );

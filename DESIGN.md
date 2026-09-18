@@ -555,8 +555,24 @@ Selfridges all do the opposite, and so do we.
 - Sort is a separate control, right-aligned, never mixed in with filters.
 - Below `lg`, filters collapse into one "Filters (3)" button opening a sheet;
   the sheet has Apply and Clear because a sheet hides the results.
-- Every filter is in the URL. A filtered view is linkable and survives reload.
-- Results update in an `aria-live="polite"` region announcing the new count.
+- Every filter is in the URL, in the vocabulary of
+  `src/lib/public-listing-filters.ts`: **one query parameter per facet, named
+  for the facet, repeated for multi-select, plus `sort` and `page`; absent
+  means unset.** No packed or encoded composite parameter. A filtered view is
+  linkable and survives reload and Back.
+- Results update in an `aria-live="polite"` region announcing the new count —
+  and **the change has to be a client navigation for that to happen at all.**
+  A plain anchor or a form submit replaces the document, and a live region that
+  arrives with a fresh document announces nothing. So a hydrated filter change
+  goes through the router, and a chip's removal is a `Link` rather than an
+  `<a>`: both keep a real href for the unhydrated case and keep the DOM for the
+  announcement. Measured, after a chip built as a plain anchor silently
+  announced nothing.
+- **One `<form method="get">` with a real submit is still the mechanism.** The
+  search control's own submit is that button; on-change is the enhancement
+  layered over it. There is no `<noscript>` block and no submit that appears
+  and then vanishes on hydration — the first risks a mismatch inside an element
+  the browser parses as text, the second flashes a control at every reader.
 
 ### 5.2 Search
 
