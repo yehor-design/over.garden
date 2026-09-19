@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-17.
+Last reviewed: 2026-09-18.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -48,6 +48,22 @@ The seven owner requirements have one committed production receipt:
 `pnpm prove:owner-mvp-reset`.
 
 ## Where the project is heading
+
+**Decided, 2026-09-18, not yet built: every address is ASCII, and an entry has
+a number.** The owner copied an entry's address to share it and got 181
+characters of `%D0%BA%D1%80…`: a browser hands the clipboard the percent-encoded
+form, six characters per Cyrillic letter, and the product has no share control,
+so that is how every link travels. ADR-0029 D4 had kept the gardener's alphabet
+in the address because a search result shows it decoded; it never looked at the
+clipboard. Amended the same day: a journal entry lives at
+`/@{handle}/post/{n}` — a plain number counted per author, assigned at publish,
+never changed, never reused after a deletion — and object passports, topics and
+communities take Latin names. Every address issued so far answers one 308.
+Species, forms and handles were already ASCII and do not move. Four tasks,
+`OVE-463`–`OVE-466`, in `docs/ADDRESS_LAW_EXECUTION.md` under "Phase 5"; two of
+them end in a bulk production write that needs the owner's sign-off when it
+runs. **Until they ship, production still issues and serves the Cyrillic
+addresses.**
 
 **Decided, 2026-09-17, not yet built.** The whole interface is redesigned onto
 one design system (ADR-0031, SDD Slice 28, `OVE-439`–`OVE-459`). `DESIGN.md`

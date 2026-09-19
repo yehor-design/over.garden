@@ -139,11 +139,14 @@ Every Linear task uses this shape and nothing more:
   lists of ADR-0015 and nothing else there.
   `docs/adr/ADR-0029-address-law.md` — one permanent address per public thing,
   one rule per question: the permalink and the name, 200/308/404 decided in the
-  proxy, script following the content, a slug budget measured after
-  percent-encoding, a collision counter instead of a hash, and a locale prefix
-  only where a translation of the main content exists. Feeds are never filtered
-  or badged by language. Supersedes ADR-0026 D8 and the addressing half of D9,
-  and the addressing sections of `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
+  proxy, every address ASCII (amended 2026-09-18: a journal entry is
+  `/@{handle}/post/{n}`, numbered per author and never reused; object passports,
+  topics and communities take Latin names; every older address answers one
+  308), a slug budget measured after percent-encoding, a collision counter
+  instead of a hash, and a locale prefix only where a translation of the main
+  content exists. Feeds are never filtered or badged by language. Supersedes
+  ADR-0026 D8 and the addressing half of D9, and the addressing sections of
+  `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
   `docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md` — the editorial
   pipeline that drafts news and blog articles from the owner's chosen sources
   is built inside OverGarden, for OverGarden only: no separate product, no
