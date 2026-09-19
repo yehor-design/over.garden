@@ -30,8 +30,10 @@ export interface ErasureCoverageEntry {
 // merged coverage is a new version rather than either side's v6. v10 adds the
 // owner digest recipient, the first outbox row addressed to an account. v12
 // drops the retired matcher's reviewer path with its table (OVE-399): a path
-// nobody can walk is not a path the manifest should keep classifying.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove399.erasure-schema.v12";
+// nobody can walk is not a path the manifest should keep classifying. v13 adds
+// the per-author entry counter (OVE-464): one row that says how many entries a
+// gardener has published, which is a fact about a person.
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove464.erasure-schema.v13";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -583,6 +585,17 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     kind: "soft_column",
     disposition: "delete",
     rationale: "Owned catalog mention rows are deleted before journal rekey.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "journal_entry_number_counters.owner_user_id",
+    table: "journal_entry_number_counters",
+    columnOrPath: "owner_user_id",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale:
+      "The counter behind /@{handle}/post/{n} (ADR-0029 D9) holds one number per author and nothing else, and how many entries a person published is theirs. Deleted with the account; the entries are re-keyed to a synthetic owner that never publishes, so nothing reads the counter again, and a handle is never reissued, so no number can collide later.",
     dryRunOwned: true,
     executionOwned: true,
   },

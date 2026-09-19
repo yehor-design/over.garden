@@ -28,6 +28,30 @@ describe("owner object passport presentation", () => {
     expect(presentation.identity.label).toBe("Вид або порода");
   });
 
+  // The owner opens their own entries from the workspace, and the link has to
+  // be the one they will copy and send: the handle and the number (ADR-0029
+  // D9). Without a handle there is no `/@…` to live under, and the flat legacy
+  // address is the one that answers — which the next test covers.
+  it("links the owner's public entries at their numbers", () => {
+    const presentation = buildOwnerObjectPassportPresentation(
+      ownerPage({
+        objectKind: "plant",
+        entries: [
+          ownerEntry("entry-2", "2026-06-01", "public", "active"),
+          ownerEntry("entry-1", "2025-12-10", "public", "active"),
+        ],
+      }),
+      emptyProvenance(),
+      "uk",
+      "yehor",
+    );
+
+    expect(presentation.timeline.entries[0]).toMatchObject({
+      id: "entry-2",
+      older: { id: "entry-1", href: "/@yehor/post/1" },
+    });
+  });
+
   it("preserves active owner chronology while keeping newest first", () => {
     const presentation = buildOwnerObjectPassportPresentation(
       ownerPage({
@@ -165,6 +189,9 @@ function ownerEntry(
     visibility,
     lifecycle_state: lifecycleState,
     public_slug: visibility === "public" ? `${id}-slug` : null,
+    // `entry-2` is the owner's second publish; the number is what its public
+    // address is made of once the owner has a handle.
+    author_entry_number: Number(id.replace("entry-", "")) || null,
     published_at:
       visibility === "public" ? new Date(`${entryDate}T12:00:00.000Z`) : null,
     archived_at: null,

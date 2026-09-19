@@ -300,6 +300,7 @@ describe("public object passport repository query contracts", () => {
             : `Public journal body ${index + 1}.`,
         entryDate: new Date(`2026-07-0${Math.min(index + 1, 9)}T12:00:00.000Z`),
         entryPublicSlug: index === 0 ? "first-flowering" : `entry-${index + 1}`,
+        entryNumber: index + 1,
         mediaId: null,
         mediaDerivativeKey:
           index === 0 ? "derivatives/first-flowering.webp" : null,
@@ -346,7 +347,7 @@ describe("public object passport repository query contracts", () => {
     expect(page.journalPreview[0]).toMatchObject({
       title: "First flowering",
       bodyPreview: "Two new flower clusters opened after the balcony warmed.",
-      publicPath: "/@green_thumb/first-flowering",
+      publicPath: "/@green_thumb/post/1",
       mediaPublicUrl:
         "https://media.over.garden/derivatives/first-flowering.webp",
     });

@@ -28,7 +28,15 @@
  * D3). For each family this now asks for a sibling that cannot exist and
  * requires a real `404` — the status a crawler reads, not the body.
  *
- * Read-only against the database, one bounded statement, and plain `GET`s
+ * The third half, since 2026-09-18: an entry is addressed by its number
+ * (ADR-0029 D9), and every address it had before — the flat `/journal/{slug}`,
+ * the author-scoped `/@{handle}/{slug}`, each with and without a locale prefix
+ * — must answer **one** 308 whose `Location` is the number. Not a 308 to
+ * another 308: this is the third address these entries have had, and a chain
+ * is what a crawler gives up on. So those requests are not followed; the first
+ * response is the whole answer.
+ *
+ * Read-only against the database, bounded statements, and plain `GET`s
  * against the site. Point it at any deployment:
  *
  *   pnpm exec tsx scripts/prove-public-addresses-render.ts \
@@ -43,8 +51,12 @@ import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 
 import type { Database } from "../src/db/schema";
+import { localizedPath } from "../src/lib/public-localization";
 import { publicCatalogRegisterHubPath } from "../src/lib/catalog/addresses";
 import {
+  PUBLIC_JOURNAL_ENTRY_SEGMENT,
+  legacyAuthorScopedJournalEntryPath,
+  legacyPublicJournalEntryPath,
   publicJournalEntryPath,
   publicObjectPassportPath,
   publicProfileBasePath,
@@ -59,8 +71,13 @@ interface Address {
   readonly kind: "root" | "profile" | "entry" | "passport" | "hub";
   readonly path: string;
   readonly name: string;
-  /** A page, or an address that must answer a real 404. */
-  readonly expects: "page" | "not_found";
+  /**
+   * A page, an address that must answer a real 404, or an older spelling that
+   * must answer one 308 to `redirectsTo`.
+   */
+  readonly expects: "page" | "not_found" | "redirect";
+  /** The path the first response's `Location` must name, for a `redirect`. */
+  readonly redirectsTo?: string;
   /**
    * The language the record is written in, when the page must declare it:
    * `<main lang>` on the content element and `inLanguage` in the graph
@@ -75,6 +92,9 @@ interface Address {
  * refused as malformed, and the proof measures the block and not the parser.
  */
 const NOTHING_HERE = "there-is-nothing-at-this-address-3f9c1";
+
+/** No author has published this many entries, and the grammar allows it. */
+const NO_SUCH_ENTRY_NUMBER = 999_999_999;
 
 /**
  * The public roots that carry a graph when they render. `/feed` is not one:
@@ -108,13 +128,13 @@ export async function listPublishedAddresses(
 ): Promise<Address[]> {
   const entries = await sql<{
     handle: string;
-    slug: string;
+    number: number;
     title: string;
     language: string | null;
   }>`
     select
       handles.normalized_handle as handle,
-      entries.public_slug as slug,
+      entries.author_entry_number as number,
       entries.title as title,
       entries.source_language as language
     from journal_entries as entries
@@ -123,8 +143,37 @@ export async function listPublishedAddresses(
      and handles.lifecycle_state = 'current'
     where entries.visibility = 'public'
       and entries.lifecycle_state = 'active'
-      and entries.public_slug is not null
+      and entries.author_entry_number is not null
     order by entries.published_at desc
+  `.execute(db);
+
+  // Every name an entry has ever had, from the history table the 308 itself
+  // reads. `sharedBy` counts how many entries ever held the name: the flat
+  // `/journal/{slug}` carries no handle, so a name two gardeners share
+  // resolves to whichever held it first, and asserting a destination for it
+  // here would be asserting the tie-break rather than the redirect.
+  const entryNames = await sql<{
+    handle: string;
+    number: number;
+    slug: string;
+    sharedBy: number;
+  }>`
+    select
+      handles.normalized_handle as handle,
+      entries.author_entry_number as number,
+      history.slug as slug,
+      (count(*) over (partition by history.slug))::int as "sharedBy"
+    from journal_entry_slug_history as history
+    join journal_entries as entries
+      on entries.id = history.journal_entry_id
+    join user_handle_registry as handles
+      on handles.user_id = entries.owner_user_id
+     and handles.lifecycle_state = 'current'
+    where entries.visibility = 'public'
+      and entries.lifecycle_state = 'active'
+      and entries.author_entry_number is not null
+      and history.author_handle = handles.normalized_handle
+    order by history.valid_from asc
   `.execute(db);
 
   const passports = await sql<{
@@ -180,11 +229,30 @@ export async function listPublishedAddresses(
     })),
     ...entries.rows.map((row) => ({
       kind: "entry" as const,
-      path: publicJournalEntryPath(row.handle, row.slug),
+      path: publicJournalEntryPath(row.handle, row.number),
       name: row.title,
       expects: "page" as const,
       language: row.language,
     })),
+    ...entryNames.rows.flatMap((row) => {
+      const redirectsTo = publicJournalEntryPath(row.handle, row.number);
+      const underAuthor = legacyAuthorScopedJournalEntryPath(
+        row.handle,
+        row.slug,
+      );
+      const flat = legacyPublicJournalEntryPath(row.slug);
+      return [
+        underAuthor,
+        localizedPath("bg", underAuthor),
+        ...(row.sharedBy === 1 ? [flat, localizedPath("ru", flat)] : []),
+      ].map((path) => ({
+        kind: "entry" as const,
+        path,
+        name: `${row.slug} → ${redirectsTo}`,
+        expects: "redirect" as const,
+        redirectsTo,
+      }));
+    }),
     ...passports.rows.map((row) => ({
       kind: "passport" as const,
       path: publicObjectPassportPath(row.handle, row.slug),
@@ -210,10 +278,24 @@ export async function listPublishedAddresses(
       ? [
           {
             kind: "entry" as const,
-            path: publicJournalEntryPath(firstHandle, NOTHING_HERE),
-            name: "an entry that does not exist",
+            path: publicJournalEntryPath(firstHandle, NO_SUCH_ENTRY_NUMBER),
+            name: "an entry number nobody has reached",
             expects: "not_found" as const,
           },
+          {
+            kind: "entry" as const,
+            path: legacyAuthorScopedJournalEntryPath(firstHandle, NOTHING_HERE),
+            name: "a name no entry ever held",
+            expects: "not_found" as const,
+          },
+          // Not second spellings of an address — nothing ever issued them —
+          // so they are nothing, rather than a redirect to `/post/12`.
+          ...["0", "012", "12a"].map((segment) => ({
+            kind: "entry" as const,
+            path: `${publicProfileBasePath(firstHandle)}/${PUBLIC_JOURNAL_ENTRY_SEGMENT}/${segment}`,
+            name: `a number no entry can have: ${segment}`,
+            expects: "not_found" as const,
+          })),
           {
             kind: "passport" as const,
             path: publicObjectPassportPath(firstHandle, NOTHING_HERE),
@@ -243,6 +325,8 @@ export function judgeRenderedPage(
   address: Address,
   status: number,
   html: string,
+  /** The first response's `Location`, for an address that must redirect. */
+  location: string | null = null,
 ): Result {
   const heading =
     /<h1[^>]*>([\s\S]*?)<\/h1>/u
@@ -259,8 +343,15 @@ export function judgeRenderedPage(
     (html.includes(`<main lang="${language}"`) &&
       html.includes(`"inLanguage":"${language}"`));
 
+  const redirectedTo = locationPath(location);
   const why =
-    address.expects === "not_found"
+    address.expects === "redirect"
+      ? status !== 308
+        ? `status ${status} for an address that must answer 308`
+        : redirectedTo !== address.redirectsTo
+          ? `308 to ${redirectedTo ?? "nothing"}, not to ${address.redirectsTo}: a second hop`
+          : null
+      : address.expects === "not_found"
       ? status === 404
         ? null
         : `status ${status} for an address that is nothing`
@@ -283,6 +374,16 @@ export function judgeRenderedPage(
     ok: why === null,
     why,
   };
+}
+
+/** The path a `Location` names, whether it came back absolute or relative. */
+function locationPath(location: string | null): string | null {
+  if (!location) return null;
+  try {
+    return new URL(location, "https://over.garden").pathname;
+  } catch {
+    return null;
+  }
 }
 
 async function main() {
@@ -323,7 +424,9 @@ async function main() {
   const results: Result[] = [];
   for (const address of addresses) {
     const response = await fetch(`${baseUrl}${address.path}`, {
-      redirect: "follow",
+      // An older spelling is judged by its first response alone: following it
+      // would hide exactly the second hop this is here to find.
+      redirect: address.expects === "redirect" ? "manual" : "follow",
       // A document navigation, as a browser or a crawler sends one: the
       // lifecycle blocks in the proxy answer only those, and a bare `fetch`
       // without these is not one.
@@ -334,7 +437,12 @@ async function main() {
       },
     });
     results.push(
-      judgeRenderedPage(address, response.status, await response.text()),
+      judgeRenderedPage(
+        address,
+        response.status,
+        await response.text(),
+        response.headers.get("location"),
+      ),
     );
   }
 
@@ -354,6 +462,8 @@ async function main() {
           hub: results.filter((r) => r.kind === "hub").length,
         },
         expectedNotFound: results.filter((r) => r.expects === "not_found")
+          .length,
+        expectedRedirect: results.filter((r) => r.expects === "redirect")
           .length,
         failures: failures.map((result) => ({
           kind: result.kind,

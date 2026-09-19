@@ -12,9 +12,8 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
@@ -105,6 +104,8 @@ export interface PublicObjectCatalogGroupRow {
   latestAuthorHandle: string | null;
   latestEntryTitle: string;
   latestEntryPublicSlug: string;
+  /** The `{n}` of the latest entry's address, `/@{handle}/post/{n}`. */
+  latestEntryNumber: number | null;
   latestEntryDate: Date | string;
   mediaDerivativeKey: string | null;
   totalCount: number | string | bigint;
@@ -220,6 +221,13 @@ export function buildPublicObjectCatalogGroupsQuery(
       ),
       sql<string>`(array_agg(${sql.ref("journal_entries.public_slug")} ${latestOrder}))[1]`.as(
         "latestEntryPublicSlug",
+      ),
+      // From the same row of the ordered aggregate as the slug and the handle,
+      // so the three always describe one entry.
+      sql<
+        number | null
+      >`(array_agg(${sql.ref("journal_entries.author_entry_number")} ${latestOrder}))[1]`.as(
+        "latestEntryNumber",
       ),
       sql<
         Date | string
@@ -370,11 +378,13 @@ function serializePublicObjectCatalogCard(
     },
     latestJournal: {
       title: row.latestEntryTitle,
-      // Under the author (ADR-0029 D9); the legacy path, which 308s there,
-      // only for an author who has no handle.
-      path: row.latestAuthorHandle
-        ? publicJournalEntryPath(row.latestAuthorHandle, row.latestEntryPublicSlug)
-        : legacyPublicJournalEntryPath(row.latestEntryPublicSlug),
+      // Under the author, at its number (ADR-0029 D9); the legacy path,
+      // which 308s there, only for an author who has no handle.
+      path: publicJournalEntryAddress({
+        authorHandle: row.latestAuthorHandle,
+        entryNumber: row.latestEntryNumber,
+        publicSlug: row.latestEntryPublicSlug,
+      }),
       entryDate: row.latestEntryDate,
     },
     mediaPublicUrl: row.mediaDerivativeKey

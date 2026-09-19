@@ -461,6 +461,7 @@ describe("public profile handle contracts", () => {
         {
           entryId: "00000000-0000-4000-8000-000000000301",
           publicSlug: "lemon-new-growth",
+          entryNumber: 6,
           title: "New growth after moving the pot",
           body: "The newest leaves stayed firm through the warm afternoon.",
           entryDate: "2026-07-10",
@@ -502,7 +503,7 @@ describe("public profile handle contracts", () => {
     });
     expect(page.journals[0]).toMatchObject({
       title: "New growth after moving the pot",
-      publicPath: "/@green_thumb/lemon-new-growth",
+      publicPath: "/@green_thumb/post/6",
       context: {
         kind: "object",
         // The passport under the same author (ADR-0029 D9).
@@ -534,6 +535,7 @@ describe("public profile handle contracts", () => {
       links: [
         {
           publicSlug: "first-public-entry",
+          entryNumber: 1,
           entryDate: "2026-07-04",
         },
       ],
@@ -552,7 +554,7 @@ describe("public profile handle contracts", () => {
       links: [
         {
           kind: "journal_entry",
-          href: "/@green_thumb/first-public-entry",
+          href: "/@green_thumb/post/1",
           entryDate: "2026-07-04",
         },
       ],

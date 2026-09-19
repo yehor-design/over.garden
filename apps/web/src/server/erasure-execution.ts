@@ -173,6 +173,10 @@ export async function executeApprovedErasureRequest(
         trx,
         requesterUserId,
       ).execute();
+      await buildDeleteOwnedJournalEntryNumberCounterForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
 
       await buildDetachOwnedPlantObjectsFromUserCatalogForErasureQuery(
         trx,
@@ -585,6 +589,22 @@ export function buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
 ) {
   return executor
     .deleteFrom("journal_entry_catalog_mentions")
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+/**
+ * The author's entry counter (ADR-0029 D9). It carries no foreign key to the
+ * account — `journal_entries.owner_user_id` has none either — so nothing
+ * cascades and the row is deleted here. The entries themselves are re-keyed
+ * to a synthetic owner by an `UPDATE`, which the numbering trigger does not
+ * see, so that owner never gets a counter of its own.
+ */
+export function buildDeleteOwnedJournalEntryNumberCounterForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("journal_entry_number_counters")
     .where("owner_user_id", "=", requesterUserId);
 }
 

@@ -69,6 +69,7 @@ import {
   matchAuthorScopedEntryPath,
   matchAuthorScopedObjectPath,
   matchAuthorScopedPath,
+  matchLegacyAuthorScopedEntryPath,
   unservableAddressNamespace,
 } from "@/lib/address/match-address-path";
 import {
@@ -86,10 +87,15 @@ import {
   isUnknownRootPath,
 } from "@/lib/root-route-segments";
 import {
+  legacyAuthorScopedJournalEntryPath,
   publicJournalEntryPath,
   publicObjectPassportPath,
   publicProfileBasePath,
 } from "@/lib/garden/public-paths";
+import {
+  publicJournalEntryNameKey,
+  publicJournalEntryNumberKey,
+} from "@/lib/garden/public-journal-entry-key";
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
@@ -410,13 +416,21 @@ function resolveRequestLocalization(request: NextRequest) {
  * `/uk/...` folds to the canonical unprefixed path: the default locale has no
  * prefix (ADR-0029 D10), so the prefixed spelling is a second address for the
  * same page.
+ *
+ * An entry's *name* is left to its own block. `/uk/@yehor/полив` is two
+ * spellings away from the address — a prefix and a name — and folding the
+ * prefix first would answer 308 to `/@yehor/полив`, which answers 308 again
+ * to `/@yehor/post/12`. The entry block resolves both in one redirect, the
+ * same way it does for `/bg` and `/ru` (ADR-0029 D9, the one-hop rule).
  */
 function getLocaleFoldResponse(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (
     isDocumentNavigationRequest(request) &&
     (pathname === "/uk" || pathname.startsWith("/uk/")) &&
-    !hasValidInternalProfileRewrite(request)
+    !hasValidInternalProfileRewrite(request) &&
+    matchPublicJournalEntryPath(pathname) === null &&
+    matchLegacyAuthorScopedEntryPath(pathname) === null
   ) {
     const url = request.nextUrl.clone();
     url.pathname = pathname === "/uk" ? "/" : pathname.slice("/uk".length);
@@ -464,12 +478,21 @@ function getAuthorScopedRewriteResponse(
         : rootAuthorScopedPath.kind === "journalEntry"
           ? publicJournalEntryPath(
               rootAuthorScopedPath.handle,
-              rootAuthorScopedPath.slug!,
+              rootAuthorScopedPath.entryNumber,
             )
-          : publicObjectPassportPath(
-              rootAuthorScopedPath.handle,
-              rootAuthorScopedPath.slug!,
-            );
+          : rootAuthorScopedPath.kind === "legacyJournalEntry"
+            ? // Only a request that is not a document navigation gets this far
+              // with a name: the lifecycle block has already answered every
+              // other one with a 308 or a 404. The route it lands on redirects
+              // the client router to the entry's number.
+              legacyAuthorScopedJournalEntryPath(
+                rootAuthorScopedPath.handle,
+                rootAuthorScopedPath.slug,
+              )
+            : publicObjectPassportPath(
+                rootAuthorScopedPath.handle,
+                rootAuthorScopedPath.slug,
+              );
 
     // `/@handle` is a canonical address and stays one whatever country the
     // request came from (ADR-0029 D10). It used to 307 to `/bg/@handle` here,
@@ -718,13 +741,20 @@ export async function proxy(request: NextRequest) {
   const initialStrippedPath = stripLocalePrefix(request.nextUrl.pathname);
 
   // An entry and an object passport have one address each, under their author
-  // and with no locale prefix (ADR-0029 D9, D10). `/bg/@yehor/полив` is a
+  // and with no locale prefix (ADR-0029 D9, D10). `/bg/@yehor/post/12` is a
   // second spelling of the same page, and a second spelling is a duplicate.
+  //
+  // An entry's *name* is left alone here. `/bg/@yehor/полив` is two spellings
+  // away from the address — a prefix and a name — and stripping the prefix
+  // first would answer 308 to `/@yehor/полив`, which answers 308 again. The
+  // entry block below resolves the name and the prefix in one redirect.
+  const prefixedAuthorScopedKind =
+    isDocumentNavigation && initialStrippedPath.locale !== null
+      ? (matchAuthorScopedPath(request.nextUrl.pathname)?.kind ?? null)
+      : null;
   if (
-    isDocumentNavigation &&
-    initialStrippedPath.locale !== null &&
-    matchAuthorScopedPath(request.nextUrl.pathname)?.kind !== "profile" &&
-    matchAuthorScopedPath(request.nextUrl.pathname) !== null
+    prefixedAuthorScopedKind === "journalEntry" ||
+    prefixedAuthorScopedKind === "object"
   ) {
     const url = request.nextUrl.clone();
     url.pathname = initialStrippedPath.path;
@@ -963,93 +993,26 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  const publicJournalSlug = isDocumentNavigationRequest(request)
-    ? (matchPublicJournalEntryPath(request.nextUrl.pathname) ??
-      matchAuthorScopedEntryPath(request.nextUrl.pathname)?.slug ??
-      null)
+  // The entry at its own address: `/@{handle}/post/{n}` (ADR-0029 D9, amendment
+  // of 2026-09-18). The handle and the number are the key, so the one bounded
+  // lookup says everything there is to say: the entry is there and the page
+  // renders it, it was deleted inside its retention window and the address is
+  // gone, or nothing answers here. There is no canonical to compare the request
+  // with — a number has one spelling, and the case rule and the prefix rule
+  // above have already dealt with the only two ways of misspelling it.
+  const numberedEntry = isDocumentNavigation
+    ? matchAuthorScopedEntryPath(request.nextUrl.pathname)
     : null;
-  if (publicJournalSlug) {
-    const [{ getPublicJournalEntryLifecycleLookup }, { resolveJournalEntryAddress }] =
-      await Promise.all([
-        import("@/server/journal-repository"),
-        import("@/server/journal-slug-repository"),
-      ]);
-    const authorScoped = matchAuthorScopedEntryPath(request.nextUrl.pathname);
-    // The name is per author since `0073`, so an author-scoped address is
-    // looked up by `(handle, slug)`. A legacy `/journal/{slug}` carries no
-    // handle and its slug may name more than one entry now; it is answered
-    // from the address history first — the legacy namespace was global, so
-    // the entry that held the slug first is the one the shared link meant —
-    // and the bare lookup only decides between 410 and 404 after that.
-    const lookup = await getPublicJournalEntryLifecycleLookup(
-      publicJournalSlug,
-      undefined,
-      { authorHandle: authorScoped?.handle ?? null },
+  if (numberedEntry) {
+    const { getPublicJournalEntryLifecycleLookup } = await import(
+      "@/server/journal-repository"
     );
-    // A slug that is not the entry's current one may still be one it used to
-    // have, and the history table is what turns that into a 308 rather than a
-    // 404 (ADR-0029 D8). Read only when the live lookup found nothing, so the
-    // ordinary request pays nothing for it.
-    const historical =
-      lookup.status === "not_found"
-        ? await resolveJournalEntryAddress(
-            publicJournalSlug,
-            undefined,
-            authorScoped?.handle ?? null,
-          ).catch(() => null)
-        : null;
-    if (historical) {
-      const url = request.nextUrl.clone();
-      url.pathname = publicJournalEntryPath(historical.handle, historical.slug);
-      url.search = sanitizeInterfaceRouteSearch(
-        url.pathname,
-        request.nextUrl.searchParams,
-      );
-      return withAppRouteContract(
-        NextResponse.redirect(url, { status: 308 }),
-        request,
-        localization,
-      );
-    }
-    if (lookup.status === "active" && lookup.addressHandle) {
-      const canonical = publicJournalEntryPath(
-        lookup.addressHandle,
-        lookup.publicSlug,
-      );
-      // Either the request used an older address — `/journal/{slug}` or one of
-      // its locale-prefixed spellings — or it used the canonical one under a
-      // handle that is not the author's. Both answer 308 to the one address
-      // the entry has (ADR-0029 D8, D9).
-      if (
-        stripLocalePrefix(request.nextUrl.pathname).path !== canonical ||
-        initialStrippedPath.locale !== null
-      ) {
-        const url = request.nextUrl.clone();
-        url.pathname = canonical;
-        url.search = sanitizeInterfaceRouteSearch(
-          canonical,
-          request.nextUrl.searchParams,
-        );
-        return withAppRouteContract(
-          NextResponse.redirect(url, { status: 308 }),
-          request,
-          localization,
-        );
-      }
-    }
-    if (
-      lookup.status === "active" &&
-      authorScoped &&
-      lookup.addressHandle !== authorScoped.handle
-    ) {
-      return withAppRouteContract(
-        notFoundDocument(
-          renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
-        ),
-        request,
-        localization,
-      );
-    }
+    const lookup = await getPublicJournalEntryLifecycleLookup(
+      publicJournalEntryNumberKey(
+        numberedEntry.handle,
+        numberedEntry.entryNumber,
+      ),
+    );
     if (lookup.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(
@@ -1068,6 +1031,84 @@ export async function proxy(request: NextRequest) {
         localization,
       );
     }
+  }
+
+  // Every address an entry had before its number: the flat `/journal/{slug}`
+  // and the author-scoped `/@{handle}/{slug}` of 2026-09-12, each with or
+  // without a locale prefix. All of them answer **one** 308, straight to the
+  // number — never to one another. This is the third address these entries
+  // have had, and a chain is what a crawler gives up on.
+  const legacyAuthorScoped = isDocumentNavigation
+    ? matchLegacyAuthorScopedEntryPath(request.nextUrl.pathname)
+    : null;
+  const legacyJournalSlug = isDocumentNavigation
+    ? (matchPublicJournalEntryPath(request.nextUrl.pathname) ??
+      legacyAuthorScoped?.slug ??
+      null)
+    : null;
+  if (legacyJournalSlug) {
+    const [{ getPublicJournalEntryLifecycleLookup }, { resolveJournalEntryAddress }] =
+      await Promise.all([
+        import("@/server/journal-repository"),
+        import("@/server/journal-slug-repository"),
+      ]);
+    // The name is per author since `0073`, so an author-scoped address is
+    // looked up by `(handle, slug)`. A flat `/journal/{slug}` carries no
+    // handle and its slug may name more than one entry now; it is answered
+    // from the address history first — the legacy namespace was global, so
+    // the entry that held the slug first is the one the shared link meant —
+    // and the bare lookup only decides between 410 and 404 after that.
+    const lookup = await getPublicJournalEntryLifecycleLookup(
+      publicJournalEntryNameKey(
+        legacyJournalSlug,
+        legacyAuthorScoped?.handle ?? null,
+      ),
+    );
+    const live =
+      lookup.status === "active" &&
+      lookup.addressHandle !== null &&
+      lookup.entryNumber !== null &&
+      (legacyAuthorScoped === null ||
+        lookup.addressHandle === legacyAuthorScoped.handle)
+        ? { handle: lookup.addressHandle, entryNumber: lookup.entryNumber }
+        : null;
+    // A name that is not the entry's current one may still be one it used to
+    // have, and the history table is what turns that into a 308 rather than a
+    // 404 (ADR-0029 D8). Read only when the live lookup found nothing, so the
+    // ordinary request pays nothing for it.
+    const address =
+      live ??
+      (lookup.status === "gone"
+        ? null
+        : await resolveJournalEntryAddress(
+            legacyJournalSlug,
+            undefined,
+            legacyAuthorScoped?.handle ?? null,
+          ).catch(() => null));
+    if (address) {
+      const url = request.nextUrl.clone();
+      url.pathname = publicJournalEntryPath(address.handle, address.entryNumber);
+      url.search = sanitizeInterfaceRouteSearch(
+        url.pathname,
+        request.nextUrl.searchParams,
+      );
+      return withAppRouteContract(
+        NextResponse.redirect(url, { status: 308 }),
+        request,
+        localization,
+      );
+    }
+    return withAppRouteContract(
+      lookup.status === "gone"
+        ? notFoundDocument(
+            renderGonePublicJournalEntryHtml(locale, lifecycleLocation), 410,
+          )
+        : notFoundDocument(
+            renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
+          ),
+      request,
+      localization,
+    );
   }
 
   // A hub under a species is a page only when the species has something to

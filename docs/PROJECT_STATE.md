@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-18.
+Last reviewed: 2026-09-19.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -49,21 +49,32 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
-**Decided, 2026-09-18, not yet built: every address is ASCII, and an entry has
+**Decided 2026-09-18, being delivered: every address is ASCII, and an entry has
 a number.** The owner copied an entry's address to share it and got 181
 characters of `%D0%BA%D1%80…`: a browser hands the clipboard the percent-encoded
 form, six characters per Cyrillic letter, and the product has no share control,
 so that is how every link travels. ADR-0029 D4 had kept the gardener's alphabet
 in the address because a search result shows it decoded; it never looked at the
-clipboard. Amended the same day: a journal entry lives at
-`/@{handle}/post/{n}` — a plain number counted per author, assigned at publish,
-never changed, never reused after a deletion — and object passports, topics and
-communities take Latin names. Every address issued so far answers one 308.
-Species, forms and handles were already ASCII and do not move. Four tasks,
-`OVE-463`–`OVE-466`, in `docs/ADDRESS_LAW_EXECUTION.md` under "Phase 5"; two of
-them end in a bulk production write that needs the owner's sign-off when it
-runs. **Until they ship, production still issues and serves the Cyrillic
-addresses.**
+clipboard. Amended the same day.
+
+- **Shipped, `OVE-464`, 2026-09-19: a journal entry lives at
+  `/@{handle}/post/{n}`** — a plain number counted per author, assigned at
+  publish by a `before insert` trigger from a durable counter (migration
+  `0076`), never changed, never reused after a deletion. `/journal/{slug}`,
+  `/@{handle}/{slug}`, a name held before a rename and every locale-prefixed
+  spelling of them answer **one** 308 to it; `/post/012`, `/post/0` and
+  `/post/1a` are a real 404. `https://over.garden/@yehor/post/12` is 34
+  characters where the same entry was 181.
+- **Next, `OVE-465`: object passports, topics and communities take Latin
+  names**, romanized by the language a name was written in; migration `0077`
+  and `pnpm address:names:romanize`. Until it ships, production still issues
+  and serves Cyrillic passport addresses — four of them.
+- **Then, `OVE-466`: the entry's name stops being issued.** It is still written
+  at publish, because some twenty readers spell "this entry has a public
+  address" as `public_slug is not null`.
+
+Species, forms and handles were already ASCII and do not move. The tasks and
+their traps are in `docs/ADDRESS_LAW_EXECUTION.md` under "Phase 5".
 
 **Decided, 2026-09-17, not yet built.** The whole interface is redesigned onto
 one design system (ADR-0031, SDD Slice 28, `OVE-439`–`OVE-459`). `DESIGN.md`

@@ -17,6 +17,12 @@ describe("auth intent contract", () => {
    */
   it("accepts the author-scoped addresses an entry and a passport have now", () => {
     for (const returnTo of [
+      // The entry's address since 2026-09-18: its author and its number. The
+      // entry page passes this as `returnTo`, so a contract that did not know
+      // the shape would send every guest who pressed like to `state=invalid`
+      // — the same defect, a second time.
+      "/@demo_olena/post/12",
+      // An intent minted on the page before the deploy still resumes.
       "/@demo_olena/balcony-tomato-check",
       `/@demo_olena/${encodeURIComponent("полив-без-календарної-пастки")}`,
       `/@demo_olena/objects/${encodeURIComponent("томат")}`,
@@ -32,7 +38,14 @@ describe("auth intent contract", () => {
   });
 
   it("still refuses a path under /@ that could not be an address", () => {
-    for (const returnTo of ["/@demo_olena/a/b/c", "/@Demo Olena/x", "/@/x"]) {
+    for (const returnTo of [
+      "/@demo_olena/a/b/c",
+      "/@Demo Olena/x",
+      "/@/x",
+      "/@demo_olena/post/012",
+      "/@demo_olena/post/0",
+      "/@demo_olena/post/12/x",
+    ]) {
       expect(() =>
         normalizeAuthIntentDraft({
           action: "bookmark",

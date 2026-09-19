@@ -1,4 +1,4 @@
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { legacyAuthorScopedJournalEntryPath } from "@/lib/garden/public-paths";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 
 /**
@@ -104,9 +104,14 @@ export const PRE_SLICE_26_DOCUMENT: JournalDocumentV1 = {
         {
           text: "минулим записом",
           // Built rather than spelled: `check-address-literals.ts` refuses a
-          // `/@…` written by hand, and the bytes are identical either way.
+          // `/@…` written by hand, and the bytes are identical either way. The
+          // address is the one an entry had when this document was persisted
+          // — a gardener's own link to it still answers, with one 308.
           marks: [
-            { type: "link", href: publicJournalEntryPath("olena", "polyv") },
+            {
+              type: "link",
+              href: legacyAuthorScopedJournalEntryPath("olena", "polyv"),
+            },
           ],
         },
         { text: " і з " },

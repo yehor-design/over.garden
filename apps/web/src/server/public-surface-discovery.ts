@@ -29,7 +29,7 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "localized_journal_entry",
     "journal_entry",
     "candidate",
-    "src/app/[locale]/journal/[slug]/page.tsx",
+    "src/app/[locale]/[profileHandle]/post/[entryNumber]/page.tsx",
   ),
   inventory(
     "localized_profile",

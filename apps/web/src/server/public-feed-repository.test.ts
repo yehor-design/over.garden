@@ -52,6 +52,7 @@ const firstRow = {
   entryDate: "2026-07-10",
   publishedAt: "2026-07-10T12:00:00.000Z",
   publicSlug: "morning-check",
+  entryNumber: 3,
   objectId: "00000000-0000-4000-8000-000000000101",
   objectPublicSlug: "томат-черрі",
   objectDisplayName: "Томат Черрі",
@@ -74,6 +75,7 @@ const secondRow = {
   sourceLanguage: "uk",
   publishedAt: "2026-07-09T12:00:00.000Z",
   publicSlug: "week-check",
+  entryNumber: 9,
   objectId: "00000000-0000-4000-8000-000000000102",
   objectPublicSlug: null,
   objectDisplayName: "Сім'я Карніка",
@@ -93,6 +95,7 @@ const thirdRow = {
   title: "Наступна сторінка",
   publishedAt: "2026-07-08T12:00:00.000Z",
   publicSlug: "next-page",
+  entryNumber: 10,
 };
 
 describe("public feed repository", () => {
@@ -319,7 +322,7 @@ describe("public feed repository", () => {
     );
     expect(page.entries[0]).toMatchObject({
       id: firstRow.entryId,
-      publicPath: "/@green_thumb/morning-check",
+      publicPath: "/@green_thumb/post/3",
       object: {
         id: firstRow.objectId,
         kind: "plant",

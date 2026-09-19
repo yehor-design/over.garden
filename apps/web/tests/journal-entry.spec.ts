@@ -81,19 +81,21 @@ async function axeViolations(page: Page) {
 async function publishedEntryPath(): Promise<string | null> {
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   try {
-    const row = await pool.query<{ handle: string; slug: string }>(
-      `select r.normalized_handle as handle, e.public_slug as slug
+    const row = await pool.query<{ handle: string; number: number }>(
+      `select r.normalized_handle as handle, e.author_entry_number as number
          from journal_entries e
          join user_handle_registry r
            on r.user_id = e.owner_user_id and r.lifecycle_state = 'current'
-        where e.public_slug is not null
+        where e.author_entry_number is not null
           and e.published_at is not null
           and e.lifecycle_state = 'active'
         order by e.created_at desc
         limit 1`,
     );
     const found = row.rows[0];
-    return found ? `/@${found.handle}/${encodeURIComponent(found.slug)}` : null;
+    // The entry's address is its author and its number (ADR-0029 D9). Its
+    // name would still open the page, through a 308 this gate has no use for.
+    return found ? `/@${found.handle}/post/${found.number}` : null;
   } finally {
     await pool.end();
   }

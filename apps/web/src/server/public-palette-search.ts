@@ -7,7 +7,7 @@ import type { Database } from "@/db/schema";
 import { getCommunityContentCopy } from "@/lib/community-copy";
 import {
   publicCommunityPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicProfileBasePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -87,7 +87,7 @@ export async function searchPublicPalette(
   const executor = options.executor ?? db;
 
   const [journals, organisms, gardeners, communities] = await Promise.all([
-    searchJournals(query, options.locale, executor).catch(() => []),
+    searchPaletteJournals(query, options.locale, executor).catch(() => []),
     searchOrganisms(query, options.locale).catch(() => []),
     searchGardeners(query, options.locale, executor).catch(() => []),
     searchCommunities(query, options.locale).catch(() => []),
@@ -104,7 +104,14 @@ export async function searchPublicPalette(
   };
 }
 
-async function searchJournals(
+/**
+ * Exported for the executed database proof and nothing else.
+ * `searchPublicPalette` answers a group that threw with an empty one — right
+ * for a reader, whose palette should not break because one group did — which
+ * also means a query Postgres refuses would simply look like "no journals"
+ * for ever. The proof runs this read directly so that it cannot.
+ */
+export async function searchPaletteJournals(
   query: string,
   locale: PublicLocale,
   executor: QueryExecutor,
@@ -116,6 +123,7 @@ async function searchJournals(
       "journal_entries.id as id",
       "journal_entries.title as title",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.source_language as sourceLanguage",
       publicAuthorHandleSql("journal_entries.owner_user_id").as(
         "addressHandle",
@@ -148,7 +156,11 @@ async function searchJournals(
         id: `journals:${row.id}`,
         label: row.title,
         detail: `@${row.addressHandle}`,
-        href: publicJournalEntryPath(row.addressHandle, row.publicSlug),
+        href: publicJournalEntryAddress({
+          authorHandle: row.addressHandle,
+          entryNumber: row.entryNumber,
+          publicSlug: row.publicSlug,
+        }),
         language: language === locale ? null : language,
       },
     ];

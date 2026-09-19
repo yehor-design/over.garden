@@ -42,6 +42,7 @@ function targetRow(overrides: Record<string, unknown> = {}) {
     communityContentKey: "observation-and-care",
     entryTitle: "Томат після тижня спеки",
     entryPublicSlug: "tomato-after-heat",
+    entryNumber: 4,
     entryDate: "2026-07-12",
     objectDisplayName: "Томат Чорний принц",
     objectKind: "plant",
@@ -104,7 +105,7 @@ describe("contribution discussion route", () => {
     expect(html).toContain('href="/communities/observation-and-care"');
     // The entry is the thread's subject line, and a real address to it
     // (ADR-0029 D9: under its author).
-    expect(html).toContain('href="/@demo_olena/tomato-after-heat"');
+    expect(html).toContain('href="/@demo_olena/post/4"');
     expect(html).toContain("Томат Чорний принц");
     expect(html).toContain("Олена");
     expect(html).toContain('data-engagement-panel="true"');
@@ -126,7 +127,7 @@ describe("contribution discussion route", () => {
     );
 
     expect(html).toContain("Обговорення закрито модератором");
-    expect(html).toContain('href="/@demo_olena/tomato-after-heat"');
+    expect(html).toContain('href="/@demo_olena/post/4"');
     expect(html).toContain("До спільноти");
     // No thread is read for a closed discussion.
     expect(mocks.commentThread).not.toHaveBeenCalled();

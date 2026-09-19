@@ -57,20 +57,24 @@ import {
  */
 
 export async function readPublicJournalEntry(
-  publicSlug: string,
+  /** The author's handle and the entry's number: the address is the key. */
+  authorHandle: string,
+  entryNumber: number,
   locale: PublicLocale,
-  /** The author's handle: the name is per author since `0073`, so the pair is the key. */
-  authorHandle: string | null = null,
 ) {
   "use cache";
   cacheLife("hours");
   const lookup = await getPublicJournalEntryLookup(
-    publicSlug,
+    authorHandle,
+    entryNumber,
     undefined,
     locale,
-    authorHandle,
   );
-  cacheTag(PUBLIC_CACHE_TAGS.journals, publicCacheTag.entrySlug(publicSlug));
+  // `journals` is what a publish revalidates, and it is what lets a cached
+  // "not found" for the author's *next* number expire the moment that number
+  // is published. The author's tag covers a handle change, which moves every
+  // address under it.
+  cacheTag(PUBLIC_CACHE_TAGS.journals, publicCacheTag.profile(authorHandle));
   if (lookup.status === "active") {
     const { page } = lookup;
     cacheTag(publicCacheTag.entry(page.entry.id));

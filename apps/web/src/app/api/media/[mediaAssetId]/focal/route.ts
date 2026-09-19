@@ -94,11 +94,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
 
     revalidatePath("/garden");
-    if (result.publicSlug) {
+    if (result.entryNumber) {
       const authorHandle = await getPublicAuthorHandle(scope.userId);
       if (authorHandle) {
         revalidatePath(
-          publicJournalEntryPath(authorHandle, result.publicSlug),
+          publicJournalEntryPath(authorHandle, result.entryNumber),
         );
       }
     }

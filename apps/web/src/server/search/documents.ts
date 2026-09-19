@@ -1,7 +1,4 @@
-import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
-} from "@/lib/garden/public-paths";
+import { publicJournalEntryAddress } from "@/lib/garden/public-paths";
 import {
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
@@ -50,6 +47,8 @@ export interface JournalEntrySearchContractRow {
    * and `/journal/{slug}` would make every result a redirect.
    */
   author_handle?: string | null;
+  /** The `{n}` of `/@{handle}/post/{n}`, beside the handle it hangs from. */
+  author_entry_number?: number | null;
   cover_source?: JournalSearchCoverSource | null;
   cover_public_url?: string | null;
   cover_projection_quality?: PublicProjectionQualityClass | null;
@@ -128,9 +127,11 @@ export function buildJournalEntrySearchDocumentContractFixture(
     title: entry.title,
     body: entry.body,
     publicSlug: entry.public_slug,
-    publicPath: entry.author_handle
-      ? publicJournalEntryPath(entry.author_handle, entry.public_slug)
-      : legacyPublicJournalEntryPath(entry.public_slug),
+    publicPath: publicJournalEntryAddress({
+      authorHandle: entry.author_handle,
+      entryNumber: entry.author_entry_number,
+      publicSlug: entry.public_slug,
+    }),
     locationVisibility,
     ...(coarseRegionCode ? { coarseRegionCode } : {}),
     noindex: false,

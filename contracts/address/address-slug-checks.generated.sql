@@ -52,6 +52,30 @@ begin
     );
 end $$;
 
+-- journal_entries_author_entry_number_check — journalEntryNumber
+-- installed by migration 0076
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_author_entry_number_check'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      drop constraint journal_entries_author_entry_number_check;
+  end if;
+
+  alter table journal_entries
+    add constraint journal_entries_author_entry_number_check
+    check (
+      author_entry_number is null
+      or (
+        author_entry_number between 1 and 999999999
+      )
+    );
+end $$;
+
 -- journal_entries_public_slug_check — journalEntry
 -- installed by migration 0068
 do $$

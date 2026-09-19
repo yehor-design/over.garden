@@ -202,6 +202,7 @@ describe("social readback repository contracts", () => {
       {
         followId,
         publicSlug: "public-story",
+        entryNumber: 2,
         entryDate: "2026-07-04",
         publishedAt: "2026-07-04T08:00:00.000Z",
         ownerHandle: "green_thumb",
@@ -217,7 +218,7 @@ describe("social readback repository contracts", () => {
     expect(stories).toMatchObject([
       {
         // Under the author (ADR-0029 D9), not the legacy address that 308s.
-        href: "/@green_thumb/public-story",
+        href: "/@green_thumb/post/2",
         ownerMention: "@green_thumb",
         targetObject: {
           displayName: "Balcony tomato",

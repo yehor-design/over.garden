@@ -35,8 +35,7 @@ import { EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE } from "@/lib/catal
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicLineageObjectPath,
   publicObjectPassportPath,
 } from "@/lib/garden/public-paths";
@@ -473,11 +472,11 @@ function OwnerEntryActions({
           </Link>
         ) : null}
         <Link
-          href={
-            authorHandle
-              ? publicJournalEntryPath(authorHandle, entry.public_slug)
-              : legacyPublicJournalEntryPath(entry.public_slug)
-          }
+          href={publicJournalEntryAddress({
+            authorHandle,
+            entryNumber: entry.author_entry_number,
+            publicSlug: entry.public_slug,
+          })}
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           {actionCopy.openPage}

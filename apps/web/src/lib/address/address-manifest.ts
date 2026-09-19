@@ -18,7 +18,7 @@
  * budget or a reserved word.
  */
 
-export const ADDRESS_MANIFEST_VERSION = "ove425.address.v1";
+export const ADDRESS_MANIFEST_VERSION = "ove464.address.v2";
 
 /**
  * `latin` romanizes the source before slugifying; `native` keeps the
@@ -43,8 +43,20 @@ export type AddressUniquenessScope = "global" | "perSpecies" | "perAuthorHandle"
  * between two non-empty runs rather than admitting it anywhere.
  * `handle` is the profile handle's own older shape, which uses `_` and has a
  * minimum length.
+ * `ordinal` is a plain decimal number with no leading zero, at most nine
+ * digits: a journal entry's place in its author's own count (ADR-0029 D9,
+ * amendment of 2026-09-18). Nine digits is every value an `integer` column
+ * holds with room to spare, and `012` is refused rather than folded into `12`
+ * — a second spelling of one address is a duplicate, and nothing ever issued
+ * one.
  */
-export type AddressSlugShape = "hyphenated" | "handle";
+export type AddressSlugShape = "hyphenated" | "handle" | "ordinal";
+
+/** The `ordinal` shape, in the one dialect JavaScript and Postgres share. */
+export const ADDRESS_ORDINAL_PATTERN = "^[1-9][0-9]{0,8}$";
+
+/** The largest number the `ordinal` shape admits: nine nines. */
+export const ADDRESS_ORDINAL_MAXIMUM = 999_999_999;
 
 /**
  * Every lower-case Cyrillic letter the three interface languages write, in
@@ -117,6 +129,14 @@ export interface AddressStorage {
   readonly nullable: boolean;
   readonly maxCharacters: number;
   /**
+   * `integer` for the one namespace whose address is a number. The generated
+   * `CHECK` is then a range rather than a pattern — a column that cannot hold
+   * a letter needs no regular expression to refuse one — and its upper bound
+   * is the same nine digits the route pattern admits, so the matcher and the
+   * column cannot disagree about which numbers exist. Absent means `text`.
+   */
+  readonly columnType?: "text" | "integer";
+  /**
    * The migration that installs the generated `CHECK` on this column, or
    * `null` while the column still carries an older, hand-written one.
    *
@@ -157,6 +177,7 @@ export type AddressNamespace =
   | "species"
   | "form"
   | "journalEntry"
+  | "journalEntryNumber"
   | "object"
   | "topic"
   | "community"
@@ -166,6 +187,7 @@ export const ADDRESS_NAMESPACES: readonly AddressNamespace[] = [
   "species",
   "form",
   "journalEntry",
+  "journalEntryNumber",
   "object",
   "topic",
   "community",
@@ -248,12 +270,17 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
     // `(handle, slug)` and answers a legacy `/journal/{slug}` from history.
     uniquenessScope: "perAuthorHandle",
     budget: DEFAULT_ADDRESS_BUDGET,
-    // OVE-428 puts object passports at /@{handle}/objects/{slug}, so an entry
-    // may never take `objects` from under its own author.
-    reservedWords: ["objects"],
+    // OVE-428 puts object passports at /@{handle}/objects/{slug}, and OVE-464
+    // puts the entry itself at /@{handle}/post/{n}, so an entry may never take
+    // `objects` or `post` from under its own author.
+    reservedWords: ["objects", "post"],
     source: "the entry title at first publish",
-    // An entry lives under its author (ADR-0029 D9). `/journal/{slug}` was the
-    // flat, global namespace that forced a random suffix into every URL.
+    // The name is no longer the address (ADR-0029 D9, amendment of
+    // 2026-09-18): an entry lives at its number, `journalEntryNumber` below,
+    // and both prefixes here are spellings that answer 308 to it.
+    // `/journal/{slug}` was the flat, global namespace that forced a random
+    // suffix into every URL; `/@{handle}/{slug}` carried the gardener's own
+    // alphabet, which a clipboard receives as six characters a letter.
     pathPrefix: "/@",
     pathBuilder: "publicJournalEntryPath",
     legacyPathPrefixes: ["/journal/"],
@@ -266,7 +293,38 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       checkInstalledBy: "0068",
     },
     notes:
-      "The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 gave the namespace its history table, which is what let the publish-id suffix go; 0073 made the live column unique per author to match, once nothing identified an entry by its slug alone.",
+      "The entry's name, which resolves and is no longer the address. The only slug column that has never carried a CHECK; migration 0068 gave it one. Migration 0070 gave the namespace its history table, which is what let the publish-id suffix go; 0073 made the live column unique per author to match, once nothing identified an entry by its slug alone. Since OVE-464 every spelling under this namespace answers 308 to the entry's number.",
+  },
+  {
+    namespace: "journalEntryNumber",
+    // Digits are ASCII; the script says which alphabet a *name* is folded
+    // into, and a number has no name to fold.
+    script: "latin",
+    shape: "ordinal",
+    // `/@yehor/post/1` and `/@olena/post/1` are two entries. A site-wide
+    // counter would be longer, would say nothing about the author, and would
+    // publish the size of the platform in every link.
+    uniquenessScope: "perAuthorHandle",
+    budget: { decodedCharacters: 9, encodedCharacters: 9 },
+    reservedWords: [],
+    source:
+      "the author's own count of publishes, assigned at publish, never changed and never reused",
+    pathPrefix: "/@",
+    pathBuilder: "publicJournalEntryPath",
+    legacyPathPrefixes: [],
+    storage: {
+      table: "journal_entries",
+      column: "author_entry_number",
+      constraint: "journal_entries_author_entry_number_check",
+      // Null on a row that was never an address: the development database's
+      // retired `archived` rows, which no statement can write to.
+      nullable: true,
+      maxCharacters: 9,
+      columnType: "integer",
+      checkInstalledBy: "0076",
+    },
+    notes:
+      "ADR-0029 D9, amendment of 2026-09-18. The number comes from journal_entry_number_counters through assign_journal_entry_number(uuid), called by a before-insert trigger, so no insert path can forget it and a purged entry's number is never handed to the next publish.",
   },
   {
     namespace: "object",
@@ -376,6 +434,7 @@ export function addressAlphabet(entry: AddressNamespaceEntry): string {
  */
 export function addressSlugPattern(entry: AddressNamespaceEntry): string {
   if (entry.shape === "handle") return "^[a-z0-9][a-z0-9_]{2,29}$";
+  if (entry.shape === "ordinal") return ADDRESS_ORDINAL_PATTERN;
   const alphabet = addressAlphabet(entry);
   return `^[${alphabet}]+(?:-[${alphabet}]+)*$`;
 }
@@ -466,12 +525,30 @@ export function assertAddressManifestConsistency(): void {
     const rendered = new Set(
       entries.map(
         (entry) =>
-          `${addressSlugPattern(entry)}|${entry.storage!.maxCharacters}|${entry.storage!.nullable}|${entry.storage!.checkInstalledBy}`,
+          `${addressSlugPattern(entry)}|${entry.storage!.maxCharacters}|${entry.storage!.nullable}|${entry.storage!.columnType ?? "text"}|${entry.storage!.checkInstalledBy}`,
       ),
     );
     if (rendered.size > 1) {
       throw new Error(
         `Namespaces sharing ${constraint} disagree about its shape.`,
+      );
+    }
+  }
+
+  // A number is stored as a number. An `ordinal` namespace over a text column
+  // would need a pattern `CHECK` to keep `012` out, and an `integer` column
+  // under any other shape would be handed a pattern it cannot be matched with.
+  for (const entry of ADDRESS_MANIFEST) {
+    if (!entry.storage) continue;
+    const isInteger = entry.storage.columnType === "integer";
+    if (isInteger !== (entry.shape === "ordinal")) {
+      throw new Error(
+        `Namespace ${entry.namespace} pairs the ${entry.shape} shape with a ${entry.storage.columnType ?? "text"} column.`,
+      );
+    }
+    if (isInteger && entry.storage.maxCharacters !== 9) {
+      throw new Error(
+        `Namespace ${entry.namespace} must admit nine digits, the ordinal pattern's own bound.`,
       );
     }
   }

@@ -49,16 +49,16 @@ describe("which address a mutation announces", () => {
 
   describe("a journal entry", () => {
     it("announces the one address it has, under its author", async () => {
-      announceJournalEntry({ ownerUserId: "user-1", publicSlug: "полив" });
+      announceJournalEntry({ ownerUserId: "user-1", entryNumber: 12 });
       await settled();
 
       expect(announce).toHaveBeenCalledWith([
-        "/@yehor/%D0%BF%D0%BE%D0%BB%D0%B8%D0%B2",
+        "/@yehor/post/12",
       ]);
     });
 
     it("says nothing for an entry that is not public", async () => {
-      announceJournalEntry({ ownerUserId: "user-1", publicSlug: null });
+      announceJournalEntry({ ownerUserId: "user-1", entryNumber: null });
       await settled();
 
       expect(announce).not.toHaveBeenCalled();
@@ -70,7 +70,7 @@ describe("which address a mutation announces", () => {
     it("says nothing when the author has no handle to hang the address from", async () => {
       getPublicAuthorHandle.mockResolvedValue(null);
 
-      announceJournalEntry({ ownerUserId: "user-1", publicSlug: "полив" });
+      announceJournalEntry({ ownerUserId: "user-1", entryNumber: 12 });
       await settled();
 
       expect(announce).not.toHaveBeenCalled();

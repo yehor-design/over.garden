@@ -1,118 +1,34 @@
-import { notFound } from "next/navigation";
-
-import PublicJournalEntryRoute, {
-  generateMetadata as generateEntryMetadata,
-} from "@/app/[locale]/journal/[slug]/page";
-import { matchAuthorScopedEntryPath } from "@/lib/address/match-address-path";
+import { redirectLegacyJournalEntry } from "@/app/legacy-journal-entry-route";
 import {
   decodeRouteSegment,
   routeHandleSegment,
 } from "@/lib/address/route-segments";
-import {
-  publicJournalEntryPath,
-  publicProfileBasePath,
-} from "@/lib/garden/public-paths";
-import { logAddressRefusal } from "@/server/address-refusal-log";
 
 /**
- * An entry at its own address: `/@{handle}/{slug}` (ADR-0029 D9).
+ * `/@{handle}/{slug}` — an entry's address between 2026-09-12 and 2026-09-18,
+ * its name under its author in the gardener's own alphabet. The entry lives at
+ * `/@{handle}/post/{n}` now (ADR-0029 D9); the proxy answers a document
+ * request with one 308, and this catches the client-side transition (see
+ * `legacy-journal-entry-route.tsx`).
  *
- * The implementation stays under `journal/[slug]`, which is where the proxy's
- * bounded lookup, the cache tags and the metadata builder already live; this
- * route is the address. The handle is checked rather than trusted — nothing
- * stops a reader typing `/@someone-else/{slug}`, and answering 200 there would
- * hand one gardener's entry a second address under another's name.
+ * The handle goes to the lookup rather than being checked afterwards: the name
+ * is per author since `0073`, so the pair is the key, and the same slug under
+ * another gardener's handle names a different entry or none.
  */
-interface AuthorScopedEntryRouteProps {
+interface LegacyAuthorScopedEntryRouteProps {
   params: Promise<{
     locale: string;
     profileHandle: string;
     entrySlug: string;
   }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-async function resolveAddress(
-  params: AuthorScopedEntryRouteProps["params"],
-): Promise<{ locale: string; handle: string; slug: string } | null> {
-  const { locale, profileHandle, entrySlug } = await params;
-  const matched = matchAuthorScopedEntryPath(
-    `${publicProfileBasePath(routeHandleSegment(profileHandle))}/${encodeURIComponent(
-      decodeRouteSegment(entrySlug),
-    )}`,
-  );
-  return matched
-    ? { locale, handle: matched.handle, slug: matched.slug }
-    : null;
-}
-
-export async function generateMetadata({
+export default async function LegacyAuthorScopedEntryRoute({
   params,
-}: AuthorScopedEntryRouteProps) {
-  const address = await resolveAddress(params);
-  if (!address) return {};
-  return generateEntryMetadata({
-    params: Promise.resolve({
-      locale: address.locale,
-      slug: address.slug,
-      authorHandle: address.handle,
-    }),
-  });
-}
-
-export default async function AuthorScopedEntryRoute({
-  params,
-  searchParams,
-}: AuthorScopedEntryRouteProps) {
+}: LegacyAuthorScopedEntryRouteProps) {
   const { profileHandle, entrySlug } = await params;
-  const address = await resolveAddress(params);
-  if (!address) {
-    logAddressRefusal({
-      route: "author_scoped_entry",
-      reason: "address_unparsed",
-      detail: { profileHandle, entrySlug },
-    });
-    notFound();
-  }
-
-  const { getPublicJournalEntryLifecycleLookup } = await import(
-    "@/server/journal-repository"
-  );
-  // The name is per author since `0073`, so the pair is the key: the lookup
-  // takes the handle rather than checking it afterwards.
-  const lookup = await getPublicJournalEntryLifecycleLookup(
-    address.slug,
-    undefined,
-    { authorHandle: address.handle },
-  );
-  const requested = publicJournalEntryPath(
-    routeHandleSegment(profileHandle),
-    decodeRouteSegment(entrySlug),
-  );
-  const canonical =
-    lookup.status === "active" && lookup.addressHandle !== null
-      ? publicJournalEntryPath(lookup.addressHandle, lookup.publicSlug)
-      : null;
-  if (canonical === null || canonical !== requested) {
-    logAddressRefusal({
-      route: "author_scoped_entry",
-      reason:
-        lookup.status !== "active"
-          ? `lookup_${lookup.status}`
-          : lookup.addressHandle === null
-            ? "author_without_handle"
-            : "handle_not_the_author",
-      detail: { slug: address.slug, canonical, requested },
-    });
-    notFound();
-  }
-
-  return PublicJournalEntryRoute({
-    params: Promise.resolve({
-      locale: address.locale,
-      slug: address.slug,
-      authorHandle: address.handle,
-    }),
-    searchParams,
+  return redirectLegacyJournalEntry({
+    slug: decodeRouteSegment(entrySlug),
+    authorHandle: routeHandleSegment(profileHandle),
   });
 }

@@ -195,6 +195,8 @@ export async function updateMediaAssetFocalForOwner(
   journalEntryId: string | null;
   journalRevision: number | null;
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, for the route's revalidation. */
+  entryNumber: number | null;
   visibility: string | null;
 }> {
   const asset = await getMediaAssetForOwner(scope, input.mediaAssetId);
@@ -239,6 +241,7 @@ export async function updateMediaAssetFocalForOwner(
         journalEntryId: null,
         journalRevision: null,
         publicSlug: null,
+        entryNumber: null,
         visibility: null,
       };
     }
@@ -263,7 +266,13 @@ export async function updateMediaAssetFocalForOwner(
       .where("id", "=", updated.journal_entry_id)
       .where("owner_user_id", "=", scope.userId)
       .where("journal_revision", "=", String(Math.trunc(expectedRevision)))
-      .returning(["id", "journal_revision", "public_slug", "visibility"])
+      .returning([
+        "id",
+        "journal_revision",
+        "public_slug",
+        "author_entry_number",
+        "visibility",
+      ])
       .executeTakeFirst();
 
     if (!bumped) {
@@ -289,6 +298,7 @@ export async function updateMediaAssetFocalForOwner(
       journalEntryId: bumped.id,
       journalRevision: Number(bumped.journal_revision),
       publicSlug: bumped.public_slug,
+      entryNumber: bumped.author_entry_number,
       visibility: bumped.visibility,
     };
   });

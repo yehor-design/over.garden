@@ -30,16 +30,21 @@ const mocks = vi.hoisted(() => ({
   }),
   resolvePlantObjectAddress: vi.fn().mockResolvedValue(null),
   hasCatalogRegisterHub: vi.fn().mockResolvedValue(true),
-  // Answers for the slug it was asked about, so an entry at its own address
-  // resolves to itself; a fixed slug would 308 every `/@yehor/{slug}` to one
-  // address now that the entry block is reachable for them.
-  getPublicJournalEntryLifecycleLookup: vi
-    .fn()
-    .mockImplementation(async (slug: string) => ({
+  // Answers for the key it was asked about: an entry asked for by its number
+  // is that number, and an entry asked for by a name it used to have is
+  // yehor's twelfth (ADR-0029 D9, amendment of 2026-09-18).
+  getPublicJournalEntryLifecycleLookup: vi.fn().mockImplementation(
+    async (key: {
+      kind: "number" | "name";
+      entryNumber?: number;
+      publicSlug?: string;
+    }) => ({
       status: "active",
-      publicSlug: slug,
+      publicSlug: key.kind === "name" ? key.publicSlug : "field-note",
+      entryNumber: key.kind === "number" ? key.entryNumber : 12,
       addressHandle: "yehor",
-    })),
+    }),
+  ),
   getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
   }),
@@ -440,7 +445,7 @@ describe("app route cache guardrail", () => {
   it.each([
     "/",
     "/privacy",
-    "/@yehor/smoke-slug",
+    "/@yehor/post/7",
     "/variety/smoke-variety",
     "/bg/journals",
   ])(
@@ -600,7 +605,6 @@ describe("app route cache guardrail", () => {
   it("hard-classifies root and localized public journal documents without intercepting RSC", async () => {
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "gone",
-      publicSlug: "removed-entry",
     });
     const gone = await responseFor("/journal/removed-entry", {
       accept: "text/html",
@@ -621,6 +625,7 @@ describe("app route cache guardrail", () => {
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "active",
       publicSlug: "active-entry",
+      entryNumber: 12,
       addressHandle: "yehor",
     });
     const active = await responseFor("/ru/journal/active-entry", {
@@ -647,19 +652,19 @@ describe("app route cache guardrail", () => {
     );
     expect(privateEntryHtml).not.toContain("opaque-journal-token");
     // An active entry asked for at `/ru/journal/{slug}` answers 308 to the one
-    // address it has, under its author and with no locale prefix (ADR-0029
-    // D9, D10).
+    // address it has: under its author, at its number, with no locale prefix
+    // (ADR-0029 D9, D10) — in one response, not by way of `/@yehor/{slug}`.
     expect(active.status).toBe(308);
     expect(active.headers.get("Location")).toBe(
-      "https://over.garden/@yehor/active-entry",
+      "https://over.garden/@yehor/post/12",
     );
     expect(rsc.status).toBe(200);
-    // A legacy `/journal/{slug}` carries no handle; the lookup says so.
-    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
-      "private-entry",
-      undefined,
-      { authorHandle: null },
-    );
+    // A legacy `/journal/{slug}` carries no handle; the key says so.
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith({
+      kind: "name",
+      publicSlug: "private-entry",
+      authorHandle: null,
+    });
   });
 
   it("returns a generic localized 410 for retired profile handles without redirecting to the current identity", async () => {
@@ -868,7 +873,7 @@ describe("app route cache guardrail", () => {
     // country header, which is what this test is about.
     expect(journal.status).toBe(308);
     expect(journal.headers.get("Location")).toBe(
-      "https://over.garden/@yehor/missing-entry",
+      "https://over.garden/@yehor/post/12",
     );
     expect(mocks.getPublicCommunityLifecycleLookup).toHaveBeenCalled();
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalled();
@@ -1152,7 +1157,7 @@ describe("app route cache guardrail", () => {
     const blogResponse = await responseFor("/blog/field-note", {
       cookie: interfaceCookies("bulgaria", "ru"),
     });
-    const ugcResponse = await responseFor("/@yehor/field-note", {
+    const ugcResponse = await responseFor("/@yehor/post/12", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
     const catalogResponse = await responseFor(
@@ -1169,7 +1174,7 @@ describe("app route cache guardrail", () => {
     for (const [name, response, language, rendered] of [
       ["privacy", privacyResponse, "bg", "/bg/privacy"],
       ["blog", blogResponse, "ru", "/ru/blog/field-note"],
-      ["journal", ugcResponse, "bg", "/bg/@yehor/field-note"],
+      ["journal", ugcResponse, "bg", "/bg/@yehor/post/12"],
       ["catalog", catalogResponse, "ru", "/ru/catalog"],
       ["topic", topicResponse, "bg", "/bg/topics/care-checks"],
     ] as const) {
@@ -1544,15 +1549,17 @@ describe("organism addresses (ADR-0026 D8)", () => {
       });
       mocks.resolveJournalEntryAddress.mockResolvedValueOnce({
         handle: "yehor",
-        slug: "полив-без-календарної-пастки",
+        entryNumber: 3,
       });
       const moved = await responseFor(
         "/journal/полив-без-календарноі-пастки-5364380c26",
         document,
       );
       expect(moved.status).toBe(308);
+      // Straight to the number. The name this slug was moved to on 2026-09-12
+      // is itself a 308 now, and landing there would make two hops of one.
       expect(moved.headers.get("Location")).toBe(
-        `https://over.garden/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
+        "https://over.garden/@yehor/post/3",
       );
     });
 
@@ -1620,23 +1627,153 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
   const document = { accept: "text/html", "sec-fetch-dest": "document" };
 
   it("still rewrites an entry that exists into the [locale] tree", async () => {
-    const response = await responseFor(
-      `/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
-      document,
-    );
+    mocks.resolveJournalEntryAddress.mockClear();
+    const response = await responseFor("/@yehor/post/12", document);
     expect(response.status).toBe(200);
     expect(response.headers.get("x-middleware-rewrite")).toBe(
-      `https://over.garden/uk/@yehor/${encodeURIComponent("полив-без-календарної-пастки")}`,
+      "https://over.garden/uk/@yehor/post/12",
     );
-    // By the pair, not the slug alone: the name is per author since `0073`.
-    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
-      "полив-без-календарної-пастки",
-      undefined,
-      { authorHandle: "yehor" },
+    // By the author and the number: that pair is the address (ADR-0029 D9),
+    // and the number reaches the lookup as a number.
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith({
+      kind: "number",
+      authorHandle: "yehor",
+      entryNumber: 12,
+    });
+    expect(mocks.resolveJournalEntryAddress).not.toHaveBeenCalled();
+  });
+
+  it("404s a number its author has not reached", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    const response = await responseFor("/@yehor/post/999", document);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(await response.text()).toContain("Запис не знайдено");
+  });
+
+  // A deleted entry keeps its number for ever — it is never handed to the
+  // next publish — so for the retention window the address says "gone", and
+  // after the purge it says "not found". It never opens somebody else's entry.
+  it("410s an entry that was deleted, at the number it keeps", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "gone",
+    });
+    const response = await responseFor("/@yehor/post/5", document);
+    expect(response.status).toBe(410);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await response.text()).toContain("Запис видалено");
+  });
+
+  /**
+   * Not second spellings of an address — nothing ever issued them — so they
+   * are nothing, rather than a redirect to `/post/12`. Folding `012` into `12`
+   * would give one entry two addresses.
+   */
+  it.each([
+    "/@yehor/post/0",
+    "/@yehor/post/012",
+    "/@yehor/post/-1",
+    "/@yehor/post/1a",
+    "/@yehor/post/1.0",
+    "/@yehor/post/9999999999",
+    "/@yehor/post/%31",
+    "/@yehor/post/12/x",
+    "/@yehor/post",
+  ])("answers a real 404 for %s without asking the database", async (path) => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockClear();
+    mocks.resolveJournalEntryAddress.mockClear();
+    const response = await responseFor(path, document);
+    expect(response.status).toBe(404);
+    expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.resolveJournalEntryAddress).not.toHaveBeenCalled();
+  });
+
+  // Wrong case is a spelling of a real address, so it is a 308 (ADR-0029 D3).
+  it("308s an upper-case spelling to the lower-case address", async () => {
+    const response = await responseFor("/@YEHOR/POST/12", document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/post/12",
     );
   });
 
-  it("404s an entry that does not exist under its author", async () => {
+  it("308s a locale-prefixed number to the one address the entry has", async () => {
+    const response = await responseFor("/bg/@yehor/post/12", document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/post/12",
+    );
+  });
+
+  /**
+   * The address an entry had between 2026-09-12 and 2026-09-18: its name,
+   * under its author, in the gardener's own alphabet. A browser hands the
+   * clipboard the percent-encoded form of it — this one is 181 characters —
+   * which is why it is no longer the address.
+   */
+  it("308s an entry's name under its author to its number", async () => {
+    const name = "кратък-и-отговорен-запис-след";
+    const response = await responseFor(
+      `/@yehor/${encodeURIComponent(name)}`,
+      document,
+    );
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/post/12",
+    );
+    // By the pair, not the slug alone: the name is per author since `0073`.
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith({
+      kind: "name",
+      publicSlug: name,
+      authorHandle: "yehor",
+    });
+  });
+
+  /**
+   * The chain the first draft would have shipped. The block that strips a
+   * locale prefix from an author-scoped path ran first and returned, so
+   * `/bg/@yehor/{slug}` answered 308 to `/@yehor/{slug}`, which answered 308
+   * again. Each response was right; two of them for one address was not.
+   */
+  it.each([
+    `/bg/@yehor/${encodeURIComponent("полив")}`,
+    `/ru/@yehor/${encodeURIComponent("полив")}`,
+    `/uk/@yehor/${encodeURIComponent("полив")}`,
+    `/bg/journal/${encodeURIComponent("полив")}`,
+    `/journal/${encodeURIComponent("полив")}`,
+  ])("reaches the number from %s in one response", async (path) => {
+    const response = await responseFor(path, document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/post/12",
+    );
+  });
+
+  it("308s a name the entry no longer has, from the history", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    mocks.resolveJournalEntryAddress.mockResolvedValueOnce({
+      handle: "yehor",
+      entryNumber: 4,
+    });
+    const response = await responseFor("/@yehor/an-older-name", document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/post/4",
+    );
+    expect(mocks.resolveJournalEntryAddress).toHaveBeenCalledWith(
+      "an-older-name",
+      undefined,
+      "yehor",
+    );
+  });
+
+  it("404s a name no entry of this author ever held", async () => {
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",
     });
@@ -1647,17 +1784,34 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     expect(await response.text()).toContain("Запис не знайдено");
   });
 
-  it("308s an entry asked for under a handle that is not its author's", async () => {
+  // The name is per author, so the same name under another gardener's handle
+  // names a different entry or none. It used to be answered with a 308 to the
+  // real author, which handed one gardener's entry a second address under
+  // another's name for as long as the redirect was cached.
+  it("404s a name asked for under a handle that is not its author's", async () => {
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "active",
       publicSlug: "field-note",
+      entryNumber: 12,
       addressHandle: "yehor",
     });
     const response = await responseFor("/@someone_else/field-note", document);
-    expect(response.status).toBe(308);
-    expect(response.headers.get("Location")).toBe(
-      "https://over.garden/@yehor/field-note",
+    expect(response.status).toBe(404);
+    expect(mocks.resolveJournalEntryAddress).toHaveBeenCalledWith(
+      "field-note",
+      undefined,
+      "someone_else",
     );
+  });
+
+  it("410s a deleted entry at the name it was shared under", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "gone",
+    });
+    mocks.resolveJournalEntryAddress.mockClear();
+    const response = await responseFor("/@yehor/removed-entry", document);
+    expect(response.status).toBe(410);
+    expect(mocks.resolveJournalEntryAddress).not.toHaveBeenCalled();
   });
 
   it("still rewrites a passport that exists, after one bounded lookup", async () => {

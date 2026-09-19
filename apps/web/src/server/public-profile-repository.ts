@@ -15,7 +15,7 @@ import type {
   UserPublicProfile,
 } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -208,6 +208,8 @@ interface PublicProfileLineageSummaryRow {
 
 interface PublicProfileLinkRow {
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   entryDate: Date | string;
 }
 
@@ -231,6 +233,8 @@ interface PublicProfileObjectRow {
 interface PublicProfileJournalRow {
   entryId: string;
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   title: string;
   body: string;
   entryDate: Date | string;
@@ -639,10 +643,11 @@ export function serializePublicProfilePage(input: {
               kind: "journal_entry" as const,
               // Every entry on a profile is that profile's own, so the page's
               // handle addresses all of them (ADR-0029 D9).
-              href: publicJournalEntryPath(
-                input.profile.handle,
-                link.publicSlug,
-              ),
+              href: publicJournalEntryAddress({
+                authorHandle: input.profile.handle,
+                entryNumber: link.entryNumber,
+                publicSlug: link.publicSlug,
+              }),
               entryDate: link.entryDate,
             },
           ]
@@ -741,10 +746,11 @@ export function serializePublicProfileEvidencePage(input: {
           bodyPreview: boundedBodyPreview(row.body),
           entryDate: row.entryDate,
           publishedAt: row.publishedAt,
-          publicPath: publicJournalEntryPath(
-            input.profile.handle,
-            row.publicSlug,
-          ),
+          publicPath: publicJournalEntryAddress({
+            authorHandle: input.profile.handle,
+            entryNumber: row.entryNumber,
+            publicSlug: row.publicSlug,
+          }),
           context: isObject
             ? {
                 kind: "object" as const,
@@ -1145,6 +1151,7 @@ export function buildPublicProfileJournalEvidenceQuery(
     .select([
       "journal_entries.id as entryId",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.title",
       "journal_entries.body",
       "journal_entries.entry_date as entryDate",
@@ -1378,6 +1385,7 @@ export function buildPublicProfileLinksQuery(
     .selectFrom("journal_entries")
     .select([
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.entry_date as entryDate",
     ])
     .where("journal_entries.owner_user_id", "=", userId)

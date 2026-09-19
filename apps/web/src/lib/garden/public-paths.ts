@@ -12,17 +12,74 @@ import type { CatalogKind } from "@/db/schema";
 export const MISSING_ADDRESS_SLUG = "missing";
 
 /**
- * Where a journal entry lives: under its author (ADR-0029 D9).
+ * The stand-in number beside `MISSING_ADDRESS_SLUG`, for the same case. Zero
+ * is deliberately not an entry number — the count starts at 1 — so the path a
+ * not-found document shows can never be mistaken for an entry that exists.
+ */
+export const MISSING_ENTRY_NUMBER = 0;
+
+/**
+ * The segment between an author and an entry's number, and the reason `post`
+ * is a reserved entry name in the manifest beside `objects`.
+ */
+export const PUBLIC_JOURNAL_ENTRY_SEGMENT = "post";
+
+/**
+ * Where a journal entry lives: under its author, at its number (ADR-0029 D9,
+ * amendment of 2026-09-18) — `/@yehor/post/12`.
  *
- * `/journal/{slug}` was a flat, global namespace, so "мій перший помідор"
- * collided across gardeners and *forced* a disambiguator into every URL — which
- * is why every published entry carried twelve hexadecimal characters of its
- * publish id. Scoping to the handle makes a collision per-person and rare, and
- * puts the first-hand claim where a reader and an answer engine both see it.
+ * The number is the author's own count of publishes. It is assigned at
+ * publish, never changes and is never reused, so this is the one address an
+ * entry will ever have; there is nothing in it a later decision could want to
+ * rename.
+ *
+ * What it replaced was `/@{handle}/{slug}`, the name made from the title in
+ * the gardener's own alphabet. A browser hands the clipboard the
+ * percent-encoded form of that, six characters for every Cyrillic letter, and
+ * the address bar is how a link travels here: one entry arrived as 181
+ * characters of `%D0%BA%D1%80…`. Before that it was `/journal/{slug}`, a flat
+ * global namespace that forced twelve hexadecimal characters of the publish id
+ * into every URL. Both still answer, with one 308 each.
+ *
+ * The parameter is a `number` on purpose. Every caller used to pass the slug,
+ * and a `string` parameter would have gone on accepting it.
  *
  * One address, no locale prefix: an entry is never translated (D10).
  */
 export function publicJournalEntryPath(
+  authorHandle: string,
+  entryNumber: number,
+): string {
+  return `${publicProfileBasePath(authorHandle)}/${PUBLIC_JOURNAL_ENTRY_SEGMENT}/${entryNumber}`;
+}
+
+/**
+ * The address to link an entry at, from whatever a listing row knows.
+ *
+ * The numbered address when the row carries the author's handle and the
+ * entry's number, which is every published entry of a gardener who has a
+ * handle. The flat legacy path stays for the one case where it is the address
+ * that answers: an author with no handle has no `/@…` to live under. A link
+ * into a redirect costs every reader a hop and tells a crawler the page lives
+ * somewhere else, so nothing links the legacy path when the canonical one can
+ * be built — the same rule `publicObjectPassportAddress` keeps for passports.
+ */
+export function publicJournalEntryAddress(input: {
+  authorHandle: string | null | undefined;
+  entryNumber: number | null | undefined;
+  publicSlug: string | null | undefined;
+}): string {
+  return input.authorHandle && input.entryNumber
+    ? publicJournalEntryPath(input.authorHandle, input.entryNumber)
+    : legacyPublicJournalEntryPath(input.publicSlug ?? "");
+}
+
+/**
+ * The entry's address between 2026-09-12 and 2026-09-18, kept for the 308.
+ * Nothing links here: it exists so that the proxy, the proofs and the tests
+ * spell the old address the way it was spelled.
+ */
+export function legacyAuthorScopedJournalEntryPath(
   authorHandle: string,
   publicSlug: string,
 ): string {
@@ -30,9 +87,9 @@ export function publicJournalEntryPath(
 }
 
 /**
- * The entry's previous address, kept for the 308 and for the places that hold
- * a slug without its author — a stored engagement ref, an old bookmark, a
- * link somebody published. It resolves through the slug history forever (D8).
+ * The entry's first address, kept for the 308 and for the places that hold
+ * a slug without its author — an old bookmark, a link somebody published. It
+ * resolves through the slug history forever (D8).
  */
 export function legacyPublicJournalEntryPath(publicSlug: string): string {
   return `/journal/${encodeURIComponent(publicSlug)}`;

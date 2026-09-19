@@ -1,0 +1,401 @@
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
+import { PublicJournalEntryView } from "@/components/public/public-journal-entry";
+import {
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+} from "@/lib/auth/auth-intent-contract";
+import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
+import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-directory-navigation";
+import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
+import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getEngagementSummary } from "@/server/engagement-repository";
+import type { PublicJournalEntryPage } from "@/server/journal-repository";
+import { getOwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
+import {
+  resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfacePayload,
+  resolveUnresolvedPublicSurfaceDiscovery,
+  type PublicSurfaceDiscoveryResult,
+  type PublicSurfaceDiscoverySource,
+} from "@/server/public-surface-discovery";
+import { publicMediaAltText } from "@/lib/public-media-alt";
+import { logAddressRefusal } from "@/server/address-refusal-log";
+import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
+import { scopedToUser } from "@/server/request-scope";
+import {
+  readGuestEngagementSummary,
+  readPublicJournalEntry,
+} from "@/server/public-cache";
+import { matchAuthorScopedEntryPath } from "@/lib/address/match-address-path";
+import { routeHandleSegment } from "@/lib/address/route-segments";
+import { publicCatalogPermalinkPath } from "@/lib/catalog/addresses";
+import {
+  PUBLIC_JOURNAL_ENTRY_SEGMENT,
+  publicCatalogEvidencePath,
+  publicProfileBasePath,
+} from "@/lib/garden/public-paths";
+import { absolutePublicUrl } from "@/lib/garden/public-url";
+
+/**
+ * An entry at its address: `/@{handle}/post/{n}` (ADR-0029 D9, amendment of
+ * 2026-09-18).
+ *
+ * The author's handle and the entry's number are the key, so there is no
+ * second gardener to check the entry against: `/@someone-else/post/{n}` names
+ * a different entry or none, where `/@someone-else/{slug}` could be typed over
+ * a real one. The segments still go through the address matcher rather than
+ * being trusted, because a route receives whatever the URL carried — `/post/012`
+ * and `/post/1a` reach this file too when a request skips the proxy's
+ * document-navigation check, and neither is an address.
+ */
+interface PublicJournalEntryRouteProps {
+  params: Promise<{
+    locale: string;
+    profileHandle: string;
+    entryNumber: string;
+  }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
+
+function resolveAddress(input: { profileHandle: string; entryNumber: string }) {
+  // The handle is decoded — `@` arrives as itself or as `%40` — and the number
+  // is not: digits are ASCII, `%31` is not how anything spells `1`, and the
+  // proxy refuses it on a document request, so the route refuses it too.
+  return matchAuthorScopedEntryPath(
+    `${publicProfileBasePath(routeHandleSegment(input.profileHandle))}/${PUBLIC_JOURNAL_ENTRY_SEGMENT}/${input.entryNumber}`,
+  );
+}
+
+export async function generateMetadata({
+  params,
+}: PublicJournalEntryRouteProps): Promise<Metadata> {
+  const { locale: localeParam, ...segments } = await params;
+  if (!isPublicLocale(localeParam)) return missingMetadata();
+  const address = resolveAddress(segments);
+  if (!address) return missingMetadata(localeParam);
+
+  const bounded = await resolvePublicSurfacePayload({
+    consumerId: "localized_journal_entry",
+    load: async () => {
+      const lookup = await readPublicJournalEntry(
+        address.handle,
+        address.entryNumber,
+        localeParam,
+      );
+      if (lookup.status !== "active") {
+        throw new Error("Public journal entry unavailable.");
+      }
+      return {
+        source: buildJournalDiscoverySource(lookup.page, localeParam),
+        payload: lookup.page,
+      };
+    },
+  });
+  if (!bounded.payload) return missingMetadata(localeParam);
+
+  return buildJournalSurface(localeParam, bounded.payload, bounded).metadata;
+}
+
+export default async function PublicJournalEntryRoute({
+  params,
+  searchParams,
+}: PublicJournalEntryRouteProps) {
+  const [{ locale: localeParam, ...segments }, query] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
+  ]);
+  if (!isPublicLocale(localeParam)) {
+    logAddressRefusal({
+      route: "journal_entry",
+      reason: "locale_not_public",
+      detail: { locale: localeParam, ...segments },
+    });
+    notFound();
+  }
+  const address = resolveAddress(segments);
+  if (!address) {
+    logAddressRefusal({
+      route: "journal_entry",
+      reason: "address_unparsed",
+      detail: { locale: localeParam, ...segments },
+    });
+    notFound();
+  }
+
+  const locale: PublicLocale = localeParam;
+  const lookup = await readPublicJournalEntry(
+    address.handle,
+    address.entryNumber,
+    locale,
+  );
+  if (lookup.status !== "active") {
+    logAddressRefusal({
+      route: "journal_entry",
+      reason: `lookup_${lookup.status}`,
+      detail: {
+        locale: localeParam,
+        handle: address.handle,
+        entryNumber: String(address.entryNumber),
+      },
+    });
+    notFound();
+  }
+
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+  // The entry's id (the engagement ref since `0073`): a like stored against
+  // the slug was orphaned the day the slug moved under the author.
+  const engagementTarget = {
+    kind: "journal_entry" as const,
+    ref: lookup.page.entry.id,
+  };
+  const [engagement, ownerControl, likeState] = await Promise.all([
+    scope
+      ? getEngagementSummary(engagementTarget, scope, {
+          commentCursor: firstParam(query.cursor),
+        })
+      : readGuestEngagementSummary(engagementTarget, firstParam(query.cursor)),
+    scope
+      ? getOwnerJournalEntryControl(scope, lookup.page.entry.publicSlug)
+      : Promise.resolve(null),
+    readViewerLikeState(engagementTarget),
+  ]);
+  const directoryReturnTo = normalizePublicJournalDirectoryReturnTo(
+    firstParam(query.from),
+    locale,
+  );
+  const engagementReturnTo = lookup.page.entry.publicPath;
+  const editOwnerControl = ownerControl
+    ? {
+        ...ownerControl,
+        managePath: `/garden/entries/${encodeURIComponent(ownerControl.entryId)}/edit?returnTo=${encodeURIComponent(lookup.page.entry.publicPath)}`,
+      }
+    : null;
+  const surface = buildJournalSurface(locale, lookup.page);
+  const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
+
+  return (
+    <>
+      {serializedJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
+        />
+      ) : null}
+      <PublicJournalEntryView
+        locale={locale}
+        copy={getPublicJournalEntryCopy(locale)}
+        page={lookup.page}
+        directoryReturnTo={directoryReturnTo}
+        ownerControl={editOwnerControl}
+      >
+        <PublicEngagementPanel
+          isAuthenticated={Boolean(userId)}
+          locale={locale}
+          target={engagementTarget}
+          summary={engagement}
+          likeState={likeState}
+          returnTo={engagementReturnTo}
+          resumeAction={normalizeAuthIntentResumeAction(
+            firstParam(query.authIntent) ?? undefined,
+          )}
+          resumeControl={normalizeAuthIntentResumeControl(
+            firstParam(query.authControl) ?? undefined,
+          )}
+        />
+      </PublicJournalEntryView>
+    </>
+  );
+}
+
+function missingMetadata(locale?: PublicLocale): Metadata {
+  return {
+    title: locale
+      ? `${getPublicJournalEntryCopy(locale).metadataTitleSuffix} | OverGarden`
+      : "OverGarden",
+    robots: resolveUnresolvedPublicSurfaceDiscovery("localized_journal_entry")
+      .decision.robots,
+  };
+}
+
+function buildJournalSurface(
+  locale: PublicLocale,
+  page: PublicJournalEntryPage,
+  discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
+    buildJournalDiscoverySource(page, locale),
+  ),
+) {
+  const copy = getPublicJournalEntryCopy(locale);
+  const subject = entrySubject(page);
+  return buildPublicSurfaceMetadata({
+    discovery,
+    locale,
+    // The entry's own language, not the reader's. `contentLocale` becomes
+    // `inLanguage` in the graph, and it was explicitly suppressed here because
+    // there was no honest value to put in it (ADR-0029 D11).
+    contentLocale: page.entry.sourceLanguage,
+    title: `${page.entry.title} · ${copy.metadataTitleSuffix} | OverGarden`,
+    description: summarize(page.entry.body),
+    visibleFacts: {
+      type: "BlogPosting",
+      name: page.entry.title,
+      description: summarize(page.entry.body),
+      datePublished: toIsoTimestamp(page.entry.publishedAt),
+      // The entry's whole graph used to be three facts: a name, a headline and
+      // a date. For a product whose claim is first-hand experience from real
+      // gardeners, nothing said who wrote it or what it was about (D13).
+      ...(page.author
+        ? {
+            author: {
+              // The `@id` is the unprefixed profile address, so an entry read
+              // in Bulgarian and the profile page read in Ukrainian name the
+              // same person. A locale-prefixed `@id` would make three.
+              id: absolutePublicUrl(
+                publicProfileBasePath(page.author.handle),
+              ),
+              name: page.author.displayName,
+              url: absolutePublicUrl(page.author.profilePath),
+              ...(page.author.avatarUrl
+                ? { image: page.author.avatarUrl }
+                : {}),
+            },
+          }
+        : {}),
+      ...(subject ? { about: subject } : {}),
+      // Every photo the page shows, with the caption a reader sees beneath it.
+      // The same sentence the page shows under the photo and gives a screen
+      // reader (OVE-432) — one rule, so the graph cannot describe a picture
+      // differently from the page it is on.
+      images: (page.media ?? []).map((media) => ({
+        url: media.publicUrl,
+        caption: publicMediaAltText(media, page.entry.title),
+      })),
+      breadcrumbs: breadcrumbsFor(page),
+    },
+  });
+}
+
+function buildJournalDiscoverySource(
+  page: PublicJournalEntryPage,
+  servedLocale: PublicLocale,
+): PublicSurfaceDiscoverySource {
+  const context = page.context;
+  const topics = page.topics ?? [];
+  const relatedEntries = page.relatedEntries ?? [];
+  const objectIds =
+    context?.kind === "object"
+      ? [context.object.plantObjectId]
+      : context?.kind === "space"
+        ? context.mentionedObjects.map((object) => object.plantObjectId)
+        : [];
+  const contextText =
+    context?.kind === "object"
+      ? [
+          context.object.displayName,
+          context.object.catalogCanonicalName ?? "",
+          context.object.varietyText ?? "",
+        ]
+      : context?.kind === "space"
+        ? context.mentionedObjects.flatMap((object) => [
+            object.displayName,
+            object.catalogCanonicalName ?? "",
+            object.varietyText ?? "",
+          ])
+        : [];
+  return {
+    consumerId: "localized_journal_entry",
+    candidateState: "candidate",
+    visibleText: [
+      page.entry.title,
+      page.entry.body,
+      context?.space.displayName ?? "",
+      ...contextText,
+      ...topics.map((topic) => topic.label),
+      ...relatedEntries.flatMap((entry) => [entry.title, entry.bodyPreview]),
+    ],
+    distinctPublicEntityIds: [
+      page.entry.id,
+      ...objectIds,
+      ...topics.map((topic) => `topic:${topic.slug}`),
+    ],
+    // A gardener's entry is never translated, so it has one address — under
+    // its author, with no locale prefix (ADR-0029 D9, D10). `publicPath` is
+    // that address, built where the handle is known; every other spelling of
+    // it 308s here.
+    canonicalPath: page.entry.publicPath,
+    servedLocale,
+    equivalentLocales: [],
+  };
+}
+
+function summarize(body: string) {
+  const normalized = body.replace(/\s+/g, " ").trim();
+  if (normalized.length <= 160) return normalized;
+  return `${normalized.slice(0, 157).trimEnd()}...`;
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
+}
+
+/**
+ * The organism the entry is about, by the permalink that survives every rename
+ * and merge (ADR-0029 D13).
+ *
+ * Only an object-scoped entry has one, and only when its object has been
+ * matched to a card: a gardener's free-text "помідор" is a name, not a subject,
+ * and pointing `about` at nothing would be worse than saying nothing.
+ */
+function entrySubject(page: PublicJournalEntryPage) {
+  const context = page.context;
+  if (context?.kind !== "object") return null;
+  const { catalogItemId, catalogCanonicalName, catalogPublicSlug } =
+    context.object;
+  if (!catalogItemId || !catalogCanonicalName || !catalogPublicSlug) {
+    return null;
+  }
+  return {
+    id: absolutePublicUrl(publicCatalogPermalinkPath(catalogItemId)),
+    name: catalogCanonicalName,
+    url: absolutePublicUrl(
+      publicCatalogEvidencePath({
+        catalogKind: context.object.catalogKind ?? "plant_variety",
+        publicSlug: catalogPublicSlug,
+        speciesSlug: context.object.catalogSpeciesSlug,
+      }),
+    ),
+  };
+}
+
+/**
+ * Home → author → entry. Both links are on the page: the shell's home link and
+ * the author line under the title (ADR-0022 D3). An entry with no author — a
+ * space-scoped one written before handles — stops at home.
+ */
+function breadcrumbsFor(page: PublicJournalEntryPage) {
+  return [
+    { name: "OverGarden", url: absolutePublicUrl("/") },
+    ...(page.author
+      ? [
+          {
+            name: page.author.displayName,
+            url: absolutePublicUrl(page.author.profilePath),
+          },
+        ]
+      : []),
+    { name: page.entry.title, url: absolutePublicUrl(page.entry.publicPath) },
+  ];
+}
+
+function toIsoTimestamp(value: Date | string | null | undefined) {
+  if (!value) return undefined;
+  return value instanceof Date ? value.toISOString() : value;
+}

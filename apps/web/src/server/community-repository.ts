@@ -19,7 +19,7 @@ import type {
 } from "@/db/schema";
 import {
   publicCommunityPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -105,6 +105,8 @@ export interface PublicCommunityContributionRow {
   discussionState: string;
   entryId: string;
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   title: string;
   body: string;
   entryDate: Date | string;
@@ -220,6 +222,8 @@ export interface CommunityModerationQueueItem {
   membershipId: string;
   journalTitle: string | null;
   publicSlug: string | null;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   authorHandle: string | null;
   /** The registry handle the entry's address hangs from (ADR-0029 D9). */
   addressHandle: string | null;
@@ -1082,9 +1086,13 @@ export function serializePublicCommunityContributionPage(
     return [
       {
         id: row.contributionId,
-        // Under its author (ADR-0029 D9): the query joins the current handle,
-        // so the row always has one.
-        href: publicJournalEntryPath(row.addressHandle, publicSlug),
+        // Under its author, at its number (ADR-0029 D9): the query joins the
+        // current handle, so the row always has one.
+        href: publicJournalEntryAddress({
+          authorHandle: row.addressHandle,
+          entryNumber: row.entryNumber,
+          publicSlug,
+        }),
         title: row.title,
         excerpt: publicExcerpt(row.body),
         entryDate: row.entryDate,
@@ -1532,6 +1540,7 @@ export function buildPublicCommunityContributionsQuery(
       "community_contributions.discussion_state as discussionState",
       "journal_entries.id as entryId",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.title as title",
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
@@ -2233,6 +2242,7 @@ export function buildCommunityModerationQueueQuery(
       "community_memberships.id as membershipId",
       "journal_entries.title as journalTitle",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "user_public_profiles.handle as authorHandle",
       "contributor_handles.normalized_handle as addressHandle",
     ])

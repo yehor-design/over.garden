@@ -5,7 +5,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -117,6 +117,8 @@ export interface PublicFeedEntryRow {
   entryDate: Date | string;
   publishedAt: Date | string;
   publicSlug: string;
+  /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
+  entryNumber: number | null;
   objectId: string;
   objectPublicSlug: string | null;
   objectDisplayName: string;
@@ -282,6 +284,7 @@ export function buildPublicFeedEntriesQuery(
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_slug as publicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "plant_objects.id as objectId",
       "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
@@ -576,7 +579,11 @@ export function serializePublicFeedPage(input: {
       sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
-      publicPath: publicJournalEntryPath(row.addressHandle, row.publicSlug),
+      publicPath: publicJournalEntryAddress({
+        authorHandle: row.addressHandle,
+        entryNumber: row.entryNumber,
+        publicSlug: row.publicSlug,
+      }),
       object: {
         id: row.objectId,
         displayName: row.objectDisplayName,

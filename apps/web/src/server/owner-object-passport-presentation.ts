@@ -9,9 +9,8 @@ import {
   type OwnerLivingObjectPassportPresentation,
 } from "@/lib/living-object-passport";
 import {
-  legacyPublicJournalEntryPath,
   publicCatalogEvidencePath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
 } from "@/lib/garden/public-paths";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 
@@ -43,9 +42,11 @@ export function buildOwnerObjectPassportPresentation(
         entry.lifecycle_state === "active" &&
         entry.public_slug &&
         !entry.public_gone_at
-          ? authorHandle
-            ? publicJournalEntryPath(authorHandle, entry.public_slug)
-            : legacyPublicJournalEntryPath(entry.public_slug)
+          ? publicJournalEntryAddress({
+              authorHandle,
+              entryNumber: entry.author_entry_number,
+              publicSlug: entry.public_slug,
+            })
           : `#passport-entry-${entry.id}`,
       mediaPublicUrl: entry.media?.publicUrl ?? null,
       mediaFocalX: entry.media?.focalX ?? null,

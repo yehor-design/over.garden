@@ -15,8 +15,7 @@ import type {
   EngagementTargetKind,
 } from "@/db/schema";
 import {
-  legacyPublicJournalEntryPath,
-  publicJournalEntryPath,
+  publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicTopicPath,
   publicVarietyPath,
@@ -862,9 +861,11 @@ export async function findPublicEngagementTarget(
             kind: target.kind,
             ref: row.id,
             label: row.title,
-            href: row.addressHandle
-              ? publicJournalEntryPath(row.addressHandle, row.publicSlug)
-              : legacyPublicJournalEntryPath(row.publicSlug),
+            href: publicJournalEntryAddress({
+              authorHandle: row.addressHandle,
+              entryNumber: row.entryNumber,
+              publicSlug: row.publicSlug,
+            }),
           }
         : null;
     }
@@ -1432,6 +1433,7 @@ export function buildPublicJournalEntryTargetQuery(
     .select([
       "id",
       "public_slug as publicSlug",
+      "author_entry_number as entryNumber",
       "title",
       "owner_user_id as ownerUserId",
       publicAuthorHandleSql("journal_entries.owner_user_id").as(
@@ -1645,6 +1647,7 @@ export function buildPublicCommunityContributionCommentTargetQuery(
       "communities.content_key as communityContentKey",
       "journal_entries.title as entryTitle",
       "journal_entries.public_slug as entryPublicSlug",
+      "journal_entries.author_entry_number as entryNumber",
       "journal_entries.entry_date as entryDate",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",

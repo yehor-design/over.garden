@@ -80,6 +80,7 @@ describe("OVE-183 social return read models", () => {
         {
           entryId: "00000000-0000-4000-8000-000000000201",
           publicSlug: "late-summer-check",
+          entryNumber: 14,
           title: "Late summer check",
           body: "The leaves stayed firm after a hot day.",
           entryDate: "2026-07-30",
@@ -105,7 +106,7 @@ describe("OVE-183 social return read models", () => {
 
     expect(page.items[0]).toMatchObject({
       // Under the author (ADR-0029 D9), not the legacy address that 308s.
-      href: "/@green_thumb/late-summer-check",
+      href: "/@green_thumb/post/14",
       author: { href: "/ru/@green_thumb" },
       object: { href: "/@green_thumb/objects/balcony-tomato" },
     });
