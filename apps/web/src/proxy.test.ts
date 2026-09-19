@@ -55,6 +55,7 @@ const mocks = vi.hoisted(() => ({
     status: "found",
     slug: "care-checks",
   }),
+  resolvePublicTopicAddress: vi.fn().mockResolvedValue(null),
   isListingPageBeyondTheEnd: vi.fn().mockResolvedValue(false),
   resolveJournalEntryAddress: vi.fn().mockResolvedValue(null),
   resolvePublicCatalogAddress: vi.fn().mockResolvedValue({
@@ -100,6 +101,7 @@ vi.mock("@/server/public-catalog-address-repository", () => ({
 
 vi.mock("@/server/public-topic-repository", () => ({
   getPublicTopicLifecycleLookup: mocks.getPublicTopicLifecycleLookup,
+  resolvePublicTopicAddress: mocks.resolvePublicTopicAddress,
 }));
 
 vi.mock("@/server/public-listing-bounds", () => ({
@@ -1576,6 +1578,38 @@ describe("organism addresses (ADR-0026 D8)", () => {
       expect(found.status).toBe(200);
     });
 
+    /**
+     * A tag kept its Cyrillic until OVE-465 romanized it (ADR-0029 D4,
+     * amendment of 2026-09-18). A topic page exists in every locale, so the
+     * prefix the reader asked under is the prefix they are sent to — one hop,
+     * not a fold to the unprefixed name and then a move.
+     */
+    it.each([
+      [`/topics/${encodeURIComponent("помідори")}`, "/topics/pomidory"],
+      [`/bg/topics/${encodeURIComponent("помідори")}`, "/bg/topics/pomidory"],
+      [`/ru/topics/${encodeURIComponent("помідори")}`, "/ru/topics/pomidory"],
+    ])("308s a topic's Cyrillic name at %s to its Latin one", async (path, target) => {
+      mocks.getPublicTopicLifecycleLookup.mockResolvedValueOnce({
+        status: "not_found",
+      });
+      mocks.resolvePublicTopicAddress.mockResolvedValueOnce("pomidory");
+      const response = await responseFor(path, document);
+      expect(response.status).toBe(308);
+      expect(response.headers.get("Location")).toBe(
+        `https://over.garden${target}`,
+      );
+      expect(mocks.resolvePublicTopicAddress).toHaveBeenLastCalledWith(
+        "помідори",
+      );
+    });
+
+    it("reads no history for a topic that is there", async () => {
+      mocks.resolvePublicTopicAddress.mockClear();
+      const found = await responseFor("/topics/plants", document);
+      expect(found.status).toBe(200);
+      expect(mocks.resolvePublicTopicAddress).not.toHaveBeenCalled();
+    });
+
     it("404s a listing page past the end, and reads nothing for page one", async () => {
       mocks.isListingPageBeyondTheEnd.mockClear();
       const first = await responseFor("/bg/journals", document);
@@ -1853,7 +1887,7 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     });
     mocks.resolvePlantObjectAddress.mockResolvedValueOnce({
       handle: "yehor",
-      slug: "томат-на-балконі",
+      slug: "tomat-na-balkoni",
     });
     const response = await responseFor(
       "/@yehor/objects/old-tomato?token=opaque&engagement=liked",
@@ -1864,7 +1898,41 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     // a token never rides a redirect and the destination sees only what its
     // own page would have accepted.
     expect(response.headers.get("Location")).toBe(
-      `https://over.garden/@yehor/objects/${encodeURIComponent("томат-на-балконі")}`,
+      "https://over.garden/@yehor/objects/tomat-na-balkoni",
+    );
+  });
+
+  /**
+   * A passport was named in the gardener's own alphabet until OVE-465. The
+   * block that strips a locale prefix from an author-scoped path used to run
+   * first and return, so `/bg/@yehor/objects/{name}` answered 308 to
+   * `/@yehor/objects/{name}`, which answered 308 again to the Latin name. The
+   * passport block resolves the prefix and the name together now.
+   */
+  it.each([
+    `/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
+    `/bg/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
+    `/uk/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
+  ])("reaches a passport's Latin name from %s in one response", async (path) => {
+    mocks.getPublicObjectPassportLifecycleBySlug.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    mocks.resolvePlantObjectAddress.mockResolvedValueOnce({
+      handle: "yehor",
+      slug: "chornyi-prynts",
+    });
+    const response = await responseFor(path, document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/objects/chornyi-prynts",
+    );
+  });
+
+  it("308s a locale-prefixed passport that is there to its one address", async () => {
+    const response = await responseFor("/bg/@yehor/objects/tomat", document);
+    expect(response.status).toBe(308);
+    expect(response.headers.get("Location")).toBe(
+      "https://over.garden/@yehor/objects/tomat",
     );
   });
 

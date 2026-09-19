@@ -25,6 +25,7 @@ import {
   ADDRESS_MANIFEST_VERSION,
   ADDRESS_ORDINAL_MAXIMUM,
   addressAlphabet,
+  addressHistoricalSlugPattern,
   addressLowerCasePathPrefixes,
   addressSlugPattern,
   assertAddressManifestConsistency,
@@ -72,6 +73,8 @@ export function buildAddressContractDocument() {
     shape: entry.shape,
     alphabet: addressAlphabet(entry),
     pattern: addressSlugPattern(entry),
+    historicalScript: entry.historicalScript ?? null,
+    historicalPattern: addressHistoricalSlugPattern(entry),
     uniquenessScope: entry.uniquenessScope,
     budget: {
       decodedCharacters: entry.budget.decodedCharacters,
@@ -255,6 +258,16 @@ function renderTypescript(
         `  ${entry.namespace}: ${typescriptString(entry.pattern)},`,
     )
     .join("\n");
+  const historicalPatterns = document.namespaces
+    .map(
+      (entry) =>
+        `  ${entry.namespace}: ${
+          entry.historicalPattern === null
+            ? "null"
+            : typescriptString(entry.historicalPattern)
+        },`,
+    )
+    .join("\n");
   const maxima = document.namespaces
     .map(
       (entry) =>
@@ -315,6 +328,17 @@ export const ADDRESS_SLUG_PATTERN_SOURCE: Readonly<
 ${patterns}
 };
 
+/**
+ * The wider pattern a namespace issued names under before it turned Latin, or
+ * \`null\` where it never did. Matched only to decide that a spelling is worth a
+ * history lookup — nothing is issued in it, and no \`CHECK\` holds it.
+ */
+export const ADDRESS_HISTORICAL_SLUG_PATTERN_SOURCE: Readonly<
+  Record<AddressNamespace, string | null>
+> = {
+${historicalPatterns}
+};
+
 /** What the column admits, which is not the budget — see the manifest. */
 export const ADDRESS_SLUG_MAX_CHARACTERS: Readonly<
   Record<AddressNamespace, number>
@@ -372,6 +396,35 @@ export function isAddressSlug(
   if (value.length === 0) return false;
   if ([...value].length > ADDRESS_SLUG_MAX_CHARACTERS[namespace]) return false;
   return COMPILED[namespace].test(value);
+}
+
+const COMPILED_HISTORICAL: Readonly<Record<AddressNamespace, RegExp | null>> =
+  Object.fromEntries(
+    Object.entries(ADDRESS_HISTORICAL_SLUG_PATTERN_SOURCE).map(
+      ([namespace, pattern]) => [
+        namespace,
+        pattern === null ? null : new RegExp(pattern, "u"),
+      ],
+    ),
+  ) as Record<AddressNamespace, RegExp | null>;
+
+/**
+ * Whether a segment is a name this namespace could *ever* have issued: what it
+ * issues now, or what it issued before it turned Latin (ADR-0029 D4, amendment
+ * of 2026-09-18). For a route matcher, which has to let an old Cyrillic
+ * address through to the history lookup that answers it with a 308. Never for
+ * deciding what to issue — that is \`isAddressSlug\`.
+ */
+export function isHistoricalAddressSlug(
+  namespace: AddressNamespace,
+  value: unknown,
+): value is string {
+  if (isAddressSlug(namespace, value)) return true;
+  const historical = COMPILED_HISTORICAL[namespace];
+  if (historical === null || typeof value !== "string") return false;
+  if (value.length === 0) return false;
+  if ([...value].length > ADDRESS_SLUG_MAX_CHARACTERS[namespace]) return false;
+  return historical.test(value);
 }
 
 /** A slug a route segment already owns. Taken, not invalid — see slugify.ts. */

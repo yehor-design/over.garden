@@ -1507,3 +1507,55 @@ against a production build, passing twice against one server; 56 public reads
 executed; `tests/journal-entry.spec.ts` in Chromium at the numbered address.
 `scripts/prove-public-addresses-render.ts` gained a `redirect` expectation: it
 asks every name in `journal_entry_slug_history` for one 308 to the number.
+
+### 21. `OVE-465` — object passports, topics and communities take Latin names
+
+**What landed.** The manifest turns `object`, `topic` and `community` Latin
+and gains `historicalScript`, from which the generator renders
+`isHistoricalAddressSlug`; the matcher uses it so that a Cyrillic name issued
+before this task still reaches the history lookup that answers it with a 308
+(trap 5 above). Migration `0077`: `journal_topic_slug_history`, its trigger and
+seed, and the two Latin `CHECK`s behind a guard. `pnpm address:names:romanize`:
+plan by default, `--apply` to write, the plan a bounded read-only transaction.
+
+**Decisions execution forced.**
+
+1. *One topic per label.* Romanizing by the entry's language (trap 6) has a
+   consequence the plan did not name: `рози` is `rozy` from a Ukrainian entry
+   and `rozi` from a Bulgarian one, so a tag looked up by slug alone would
+   found a second topic beside the first with the same word over it. A
+   gardener's tag now looks for its *label* first
+   (`buildFindJournalTopicByLabelQuery`, case-insensitive, oldest wins) and
+   keeps whatever address that topic was given. A curated or code-chosen topic
+   is still found by its slug.
+2. *What is romanized is the name a thing already has*, not the display name
+   it was once made from. A slug is frozen at publish (D8), and romanizing
+   `чорний-принц` gives exactly what romanizing "Чорний принц" gives: hyphens
+   are word boundaries to the positional rules for Є, Ї, Й, Ю, Я.
+3. *The Latin `CHECK` waits behind a guard.* A `CHECK` must admit the rows a
+   table holds. Each generated block runs only when its column holds no name
+   outside the Latin alphabet — at once on a fresh database, and on the replay
+   after the romanize run elsewhere. The run installs both blocks itself in the
+   same transaction as the moves, so it ends with the schema saying what the
+   data is.
+4. *Only a curated topic has a public page* (`buildPublicTopicLookupQuery`
+   requires `trust_state = 'curated'`), so the history resolver answers only
+   for one: a 308 to a page that answers 404 is a worse answer than 404.
+5. *Two more chains.* `/bg/@h/objects/{old}` and `/uk/@h/objects/{old}` were
+   stripped of their prefix before the passport block could read the history —
+   the same defect entries had. The passport block now resolves the prefix and
+   the name together, and folds the prefix itself when the lookup fails.
+
+**Deploy order, and why it is the reverse of `0076`'s.** The release goes
+first. It issues Latin names, which the wider constraints of `0069`/`0070`
+admit, and its topic lookup degrades to the old 404 while the history table is
+missing. Applying `0077` first would have narrowed the *topic* column at once —
+production held no Cyrillic topic — and the release still live would have had
+a Cyrillic tag refused with `23514` at publish.
+
+**Proofs.** `pnpm schema:latin-names:prove-database`: the guarded migration on
+an empty database and over Cyrillic rows, the plan by language, the counter
+past a taken name (`tomat` → `tomat-2`), the apply, both histories, the
+resolvers, the replay. `tests/latin-names.spec.ts` against a production build:
+200 at the Latin name, one 308 from the Cyrillic one under every prefix, 404
+for a Cyrillic name nothing ever held.

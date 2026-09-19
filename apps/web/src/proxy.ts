@@ -91,6 +91,7 @@ import {
   publicJournalEntryPath,
   publicObjectPassportPath,
   publicProfileBasePath,
+  publicTopicPath,
 } from "@/lib/garden/public-paths";
 import {
   publicJournalEntryNameKey,
@@ -422,6 +423,10 @@ function resolveRequestLocalization(request: NextRequest) {
  * prefix first would answer 308 to `/@yehor/полив`, which answers 308 again
  * to `/@yehor/post/12`. The entry block resolves both in one redirect, the
  * same way it does for `/bg` and `/ru` (ADR-0029 D9, the one-hop rule).
+ *
+ * A passport is left to its block for the same reason: the name in the
+ * address may be one the object used to have — its Cyrillic one, before
+ * OVE-465 — and only the history lookup knows where that leads.
  */
 function getLocaleFoldResponse(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -430,7 +435,8 @@ function getLocaleFoldResponse(request: NextRequest) {
     (pathname === "/uk" || pathname.startsWith("/uk/")) &&
     !hasValidInternalProfileRewrite(request) &&
     matchPublicJournalEntryPath(pathname) === null &&
-    matchLegacyAuthorScopedEntryPath(pathname) === null
+    matchLegacyAuthorScopedEntryPath(pathname) === null &&
+    matchAuthorScopedObjectPath(pathname) === null
   ) {
     const url = request.nextUrl.clone();
     url.pathname = pathname === "/uk" ? "/" : pathname.slice("/uk".length);
@@ -748,14 +754,16 @@ export async function proxy(request: NextRequest) {
   // away from the address — a prefix and a name — and stripping the prefix
   // first would answer 308 to `/@yehor/полив`, which answers 308 again. The
   // entry block below resolves the name and the prefix in one redirect.
+  //
+  // A passport is left alone for the same reason: its name may be one it used
+  // to have — its Cyrillic one, before OVE-465 — and the passport block below
+  // resolves the prefix and the name together. Only a number is stripped here,
+  // because a number has no older spelling to be.
   const prefixedAuthorScopedKind =
     isDocumentNavigation && initialStrippedPath.locale !== null
       ? (matchAuthorScopedPath(request.nextUrl.pathname)?.kind ?? null)
       : null;
-  if (
-    prefixedAuthorScopedKind === "journalEntry" ||
-    prefixedAuthorScopedKind === "object"
-  ) {
+  if (prefixedAuthorScopedKind === "journalEntry") {
     const url = request.nextUrl.clone();
     url.pathname = initialStrippedPath.path;
     return withAppRouteContract(
@@ -878,10 +886,33 @@ export async function proxy(request: NextRequest) {
     ? matchPublicTopicPath(request.nextUrl.pathname)
     : null;
   if (publicTopicSlug) {
-    const { getPublicTopicLifecycleLookup } =
+    const { getPublicTopicLifecycleLookup, resolvePublicTopicAddress } =
       await import("@/server/public-topic-repository");
     const lookup = await getPublicTopicLifecycleLookup(publicTopicSlug);
     if (lookup.status === "not_found") {
+      // A name the topic used to have — its Cyrillic one, before OVE-465
+      // romanized it — answers 308 from the history (ADR-0029 D8). A topic
+      // page exists in every locale, so the prefix the reader asked under is
+      // the prefix they are sent to: one hop, not a fold and then a move.
+      const current = await resolvePublicTopicAddress(publicTopicSlug).catch(
+        () => null,
+      );
+      if (current) {
+        const url = request.nextUrl.clone();
+        const canonical = publicTopicPath(current);
+        url.pathname = initialStrippedPath.locale
+          ? `/${initialStrippedPath.locale}${canonical}`
+          : canonical;
+        url.search = sanitizeInterfaceRouteSearch(
+          canonical,
+          request.nextUrl.searchParams,
+        );
+        return withAppRouteContract(
+          NextResponse.redirect(url, { status: 308 }),
+          request,
+          localization,
+        );
+      }
       return withAppRouteContract(
         notFoundDocument(
           renderNotFoundPublicTopicHtml(locale, lifecycleLocation),
@@ -953,6 +984,26 @@ export async function proxy(request: NextRequest) {
       authorScopedObject.handle,
       authorScopedObject.slug,
     ).catch(() => null);
+    // A passport has one address, with no locale prefix (ADR-0029 D10). The
+    // prefixed spelling of a passport that is there answers 308 here rather
+    // than in the block above, so that the prefixed spelling of a name it
+    // *used* to have reaches the history lookup below and costs one hop too.
+    //
+    // A lookup that *failed* takes the same branch: with the database down
+    // there is no history to read either, and folding the prefix is what this
+    // address did before the passport block was taught about it.
+    if (
+      (lookup === null || lookup.status === "active") &&
+      initialStrippedPath.locale !== null
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = initialStrippedPath.path;
+      return withAppRouteContract(
+        NextResponse.redirect(url, { status: 308 }),
+        request,
+        localization,
+      );
+    }
     if (lookup?.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(

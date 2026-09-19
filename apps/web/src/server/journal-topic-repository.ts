@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { type Kysely, type Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import type {
   CatalogKind,
@@ -18,6 +18,10 @@ import { addressManifestEntry } from "@/lib/address/address-manifest";
 import { isAddressSlug } from "@/lib/address/address-contract.generated";
 import { slugify } from "@/lib/address/slugify";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import type { RequestScope } from "@/server/request-scope";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
@@ -35,6 +39,12 @@ interface TopicDefinition {
   slug: string;
   label: string;
   trustState: JournalTopicTrustState;
+  /**
+   * A gardener's own tag joins the topic that already carries its label,
+   * whatever that topic's address is spelled like. Absent for a topic whose
+   * slug an editor or the code chose: those are found by that slug.
+   */
+  joinByLabel?: boolean;
 }
 
 interface TopicSignalCandidate {
@@ -82,6 +92,7 @@ export async function persistJournalEntryTopicSignals(
     scope,
     entry.id,
     input.explicitTagLabels,
+    normalizeTopicLanguage(entry.sourceLanguage),
   );
 
   await upsertTopicSignals(executor, entry.id, candidates);
@@ -144,7 +155,7 @@ export function buildJournalEntryForTopicSignalsQuery(
 ) {
   return executor
     .selectFrom("journal_entries")
-    .select(["id", "space_id as spaceId"])
+    .select(["id", "space_id as spaceId", "source_language as sourceLanguage"])
     .where("id", "=", journalEntryId)
     .where("owner_user_id", "=", scope.userId);
 }
@@ -304,6 +315,25 @@ export function buildFindJournalTopicBySlugQuery(
     .where("slug", "=", slug);
 }
 
+/**
+ * The topic that already carries a label, however its address is spelled.
+ * Case-insensitive, the way `normalizeJournalTopicTagLabels` dedupes a
+ * gardener's own list; the oldest wins, so the answer is stable when two
+ * topics share a label from before this lookup existed.
+ */
+export function buildFindJournalTopicByLabelQuery(
+  executor: QueryExecutor,
+  label: string,
+) {
+  return executor
+    .selectFrom("journal_topics")
+    .selectAll("journal_topics")
+    .where(sql<boolean>`lower(${sql.ref("label")}) = lower(${label})`)
+    .orderBy("created_at", "asc")
+    .orderBy("id", "asc")
+    .limit(1);
+}
+
 export function buildInsertJournalTopicQuery(
   executor: QueryExecutor,
   input: TopicDefinition,
@@ -373,11 +403,12 @@ async function buildTopicSignalCandidates(
   scope: RequestScope,
   journalEntryId: string,
   explicitTagLabels: unknown,
+  language: PublicLocale,
 ): Promise<TopicSignalCandidate[]> {
   const candidates: TopicSignalCandidate[] = normalizeJournalTopicTagLabels(
     explicitTagLabels,
   ).map((label) => ({
-    topic: explicitTagTopicDefinition(label),
+    topic: explicitTagTopicDefinition(label, language),
     source: "explicit_tag",
   }));
 
@@ -443,6 +474,21 @@ async function ensureJournalTopic(
   executor: QueryExecutor,
   input: TopicDefinition,
 ): Promise<JournalTopic> {
+  // One topic per label. A tag's address is its label romanized by the
+  // language of the entry that *first* used it (ADR-0029 D4, amendment of
+  // 2026-09-18), and the two tables spell the same letters differently: `рози`
+  // is `rozy` from a Ukrainian entry and `rozi` from a Bulgarian one. Looked up
+  // by slug alone, the second gardener's tag would found a second topic beside
+  // the first, with the same word over it. So a gardener's tag looks for its
+  // label first, and keeps whatever address that topic was given.
+  if (input.joinByLabel) {
+    const sameLabel = await buildFindJournalTopicByLabelQuery(
+      executor,
+      input.label,
+    ).executeTakeFirst();
+    if (sameLabel) return sameLabel as JournalTopic;
+  }
+
   const existing = await buildFindJournalTopicBySlugQuery(
     executor,
     input.slug,
@@ -520,39 +566,57 @@ function topicDefinitionForCatalogKind(
 }
 
 /**
- * A gardener's own word becomes the address (ADR-0029 D4).
+ * A gardener's own word becomes the address, in Latin letters (ADR-0029 D4,
+ * amendment of 2026-09-18): `помідори` opens `/topics/pomidory`.
  *
- * What stood here filtered with `/[^\w -]+/g`. Without the `u` flag `\w` is
- * `[A-Za-z0-9_]`, so every Cyrillic letter was deleted, the result was shorter
- * than two characters, and the fallback took over: `помідори` became
- * `tag-81e9f6d3034d`. Every tag written in the language this site is for came
- * out as an opaque hash, and the reader saw `/topics/tag-81e9f6d3034d`.
+ * Two earlier versions stood here. The first filtered with `/[^\w -]+/g`;
+ * without the `u` flag `\w` is `[A-Za-z0-9_]`, so every Cyrillic letter was
+ * deleted and the fallback took over — `помідори` became `tag-81e9f6d3034d`.
+ * The second kept the Cyrillic, which a browser hands the clipboard as six
+ * characters a letter. Romanized, the tag is readable in both places.
  *
- * The `tag-` prefix is gone with it. It kept a gardener's tag from landing on a
+ * **By the language of the entry, never by a constant.** The Ukrainian and
+ * Bulgarian tables spell the same letters differently, and this function used
+ * to hard-code `uk`, which was invisible while the output was Cyrillic:
+ * Bulgarian `домати` would now come out `domaty`, which is not how anybody
+ * spells it. The caller passes the entry's `source_language`.
+ *
+ * The `tag-` prefix is gone. It kept a gardener's tag from landing on a
  * curated topic's slug, and that turns out to be the wrong thing to prevent:
- * `ensureJournalTopic` looks a topic up by slug, keeps the curated trust state
- * and never downgrades it, so tagging *Species* joins the curated Species
- * topic instead of forking a near-duplicate beside it. Which is what a reader
- * would expect the word to mean.
+ * `ensureJournalTopic` keeps the curated trust state and never downgrades it,
+ * so tagging *Species* joins the curated Species topic instead of forking a
+ * near-duplicate beside it. Which is what a reader would expect the word to
+ * mean. For the same reason a tag joins a topic that already carries its
+ * *label* (`joinByLabel`), whatever that topic's address is spelled like.
  *
  * The hash survives as the fallback alone — for a label made of emoji, or
- * written in a script the address alphabet does not hold. It is stable, so the
- * same unslugifiable label keeps reaching the same topic.
- *
- * Not in scope, and worth knowing: an existing `tag-*` topic is not re-slugged.
- * Production holds none — its five topics are all curated — so nothing splits
- * in two there. Where one does exist, the old row keeps its entries and new
- * signals go to the new slug.
+ * written in a script no table here romanizes. It is stable, so the same
+ * unslugifiable label keeps reaching the same topic.
  */
-export function explicitTagTopicDefinition(label: string): TopicDefinition {
+export function explicitTagTopicDefinition(
+  label: string,
+  language: PublicLocale,
+): TopicDefinition {
   const slug = slugify(label, {
     script: TOPIC.script,
-    language: "uk",
+    language,
     budget: TOPIC.budget,
     fallback: `tag-${createStableTopicHash(label)}`,
   });
 
-  return { slug, label, trustState: "provisional" };
+  return { slug, label, trustState: "provisional", joinByLabel: true };
+}
+
+/**
+ * The language a tag is romanized by. An entry written before
+ * `source_language` was recorded has none (ADR-0029 D11 left the column
+ * nullable), and the render path treats that as the default locale; so does
+ * this.
+ */
+function normalizeTopicLanguage(value: string | null | undefined): PublicLocale {
+  return value === "bg" || value === "ru" || value === "uk"
+    ? value
+    : DEFAULT_PUBLIC_LOCALE;
 }
 
 /**

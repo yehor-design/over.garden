@@ -303,6 +303,17 @@ export async function runAddressContractDatabaseProof() {
     // Cyrillic topic makes that fail, which is correct — a schema change is
     // reversible exactly while nothing has used it, and transliterating or
     // deleting the row would take a public address or a gardener's tag away.
+    //
+    // A Cyrillic topic is a thing of the past since OVE-465 narrowed the column
+    // to Latin, so the scenario is rebuilt the way it existed: `0069` itself
+    // widens the stand-in column first, exactly as it did in production, and
+    // the manifest's Latin constraint goes back on when the section is done.
+    await pool.query(
+      readFileSync(
+        path.join(process.cwd(), "sql/0069_ove426_journal_topic_slug_check.sql"),
+        "utf8",
+      ),
+    );
     caseCount += 1;
     await pool.query("insert into journal_topics (slug) values ('помідори')");
     const rollback = readFileSync(
@@ -337,6 +348,22 @@ export async function runAddressContractDatabaseProof() {
     if (rolledBackClean !== "accepted") {
       failures.push(
         `0069 rollback: expected accepted on an empty table, got ${rolledBackClean}`,
+      );
+    }
+
+    // The column ends the proof the way the manifest says it is: Latin. A
+    // Cyrillic topic is refused again, which is the state `0077` leaves behind.
+    const topics = document.constraints.find(
+      (definition) => definition.constraint === "journal_topics_slug_check",
+    )!;
+    await pool.query(renderConstraintSql(topics));
+    caseCount += 1;
+    const cyrillicAgain = await observe(
+      insert(pool, "journal_topics", "slug", "помідори"),
+    );
+    if (cyrillicAgain !== "refused") {
+      failures.push(
+        `journal_topics_slug_check: expected a Cyrillic topic to be refused after the Latin constraint returns, got ${cyrillicAgain}`,
       );
     }
 

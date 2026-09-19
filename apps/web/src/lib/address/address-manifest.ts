@@ -18,14 +18,18 @@
  * budget or a reserved word.
  */
 
-export const ADDRESS_MANIFEST_VERSION = "ove464.address.v2";
+export const ADDRESS_MANIFEST_VERSION = "ove465.address.v3";
 
 /**
  * `latin` romanizes the source before slugifying; `native` keeps the
- * gardener's own alphabet (ADR-0029 D4). The distinction is about whose words
- * the slug is made of, not about who reads it: a scientific name and a
- * registered denomination are Latin by definition, and an entry title, an
- * object name, a tag and a community name are the author's own.
+ * gardener's own alphabet.
+ *
+ * Every namespace *issues* `latin` since the amendment of 2026-09-18
+ * (ADR-0029 D4): a browser hands the clipboard the percent-encoded form of an
+ * address, six characters for every Cyrillic letter, and the address bar is
+ * how a link travels here. `native` survives as a description of what was
+ * issued before that — a namespace's `historicalScript` — because every one of
+ * those addresses still has to answer, with one 308.
  */
 export type AddressScript = "latin" | "native";
 
@@ -151,6 +155,20 @@ export interface AddressStorage {
 export interface AddressNamespaceEntry {
   readonly namespace: AddressNamespace;
   readonly script: AddressScript;
+  /**
+   * The wider alphabet this namespace issued names in before it turned
+   * `latin`, when it did.
+   *
+   * The matcher validates a segment before any lookup, so that the proxy's
+   * bounded reads are only ever asked about names that could exist. The day a
+   * namespace turns `latin`, every name it issued in Cyrillic stops being one
+   * that "could exist" — and `/@yehor/objects/чорний-принц` answers 404 where
+   * it must answer 308. This is what keeps those names matchable, for one
+   * purpose only: deciding that a spelling is worth a history lookup. Nothing
+   * is ever *issued* in it again, and the column's `CHECK` does not admit it
+   * once the rows that held it have moved.
+   */
+  readonly historicalScript?: AddressScript;
   readonly shape: AddressSlugShape;
   readonly uniquenessScope: AddressUniquenessScope;
   readonly budget: AddressBudget;
@@ -328,7 +346,10 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
   },
   {
     namespace: "object",
-    script: "native",
+    script: "latin",
+    // Passports were named in the gardener's own alphabet from migration
+    // `0070` until OVE-465.
+    historicalScript: "native",
     shape: "hyphenated",
     uniquenessScope: "perAuthorHandle",
     budget: DEFAULT_ADDRESS_BUDGET,
@@ -345,14 +366,18 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       constraint: "plant_objects_public_slug_check",
       nullable: true,
       maxCharacters: 96,
-      checkInstalledBy: "0070",
+      // `0070` installed the native-script CHECK; `0077` narrows it to Latin
+      // once no row still holds a Cyrillic name.
+      checkInstalledBy: "0077",
     },
     notes:
-      "A passport is addressed by slug from OVE-428. The column is nullable because a private object has no public address, and only an object with a public entry is given one.",
+      "A passport is addressed by slug from OVE-428, and by a Latin one from OVE-465: the display name romanized by the language its first public entry was written in. The column is nullable because a private object has no public address, and only an object with a public entry is given one.",
   },
   {
     namespace: "topic",
-    script: "native",
+    script: "latin",
+    // A gardener's tag kept its alphabet from migration `0069` until OVE-465.
+    historicalScript: "native",
     shape: "hyphenated",
     uniquenessScope: "global",
     budget: DEFAULT_ADDRESS_BUDGET,
@@ -367,16 +392,18 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       constraint: "journal_topics_slug_check",
       nullable: false,
       maxCharacters: 64,
-      // OVE-426, migration 0069. Until then the column is ASCII-only and a
-      // Cyrillic tag becomes a hash.
-      checkInstalledBy: "0069",
+      // `0069` widened the column to the native script so that a Cyrillic tag
+      // stopped becoming a hash; `0077` narrows it to Latin once no row still
+      // holds a Cyrillic name. The tag is readable either way — `pomidory`
+      // rather than `tag-81e9f6d3034d`.
+      checkInstalledBy: "0077",
     },
     notes:
-      "The column's CHECK is still ASCII-only, which is why a Cyrillic tag becomes a hash today. OVE-426 widens it in migration 0069; this manifest already declares the shape it will widen to.",
+      "A gardener's tag, romanized by the language of the entry that first used it (OVE-465). One topic per label: a later tag with the same label joins the topic that exists, so the address does not fork on the second tagger's language.",
   },
   {
     namespace: "community",
-    script: "native",
+    script: "latin",
     shape: "hyphenated",
     uniquenessScope: "global",
     budget: DEFAULT_ADDRESS_BUDGET,
@@ -395,7 +422,7 @@ export const ADDRESS_MANIFEST: readonly AddressNamespaceEntry[] = [
       checkInstalledBy: null,
     },
     notes:
-      "Communities are seeded, not authored, so every slug is ASCII today; the namespace is native because the next one need not be.",
+      "Communities are seeded, not authored, so every slug has always been ASCII and the column's own CHECK never admitted anything else. The namespace is Latin like every other (OVE-465); it has no historical script because it never issued one.",
   },
   {
     namespace: "profileHandle",
@@ -436,6 +463,19 @@ export function addressSlugPattern(entry: AddressNamespaceEntry): string {
   if (entry.shape === "handle") return "^[a-z0-9][a-z0-9_]{2,29}$";
   if (entry.shape === "ordinal") return ADDRESS_ORDINAL_PATTERN;
   const alphabet = addressAlphabet(entry);
+  return `^[${alphabet}]+(?:-[${alphabet}]+)*$`;
+}
+
+/**
+ * The pattern of every name this namespace has ever issued: the historical
+ * alphabet where there was one, which contains the current one. `null` for a
+ * namespace that has only ever issued what it issues now.
+ */
+export function addressHistoricalSlugPattern(
+  entry: AddressNamespaceEntry,
+): string | null {
+  if (!entry.historicalScript || entry.shape !== "hyphenated") return null;
+  const alphabet = ADDRESS_ALPHABETS[entry.historicalScript];
   return `^[${alphabet}]+(?:-[${alphabet}]+)*$`;
 }
 
@@ -549,6 +589,22 @@ export function assertAddressManifestConsistency(): void {
     if (isInteger && entry.storage.maxCharacters !== 9) {
       throw new Error(
         `Namespace ${entry.namespace} must admit nine digits, the ordinal pattern's own bound.`,
+      );
+    }
+  }
+
+  // A historical script exists to keep *more* spellings matchable than the
+  // current one issues. One that is narrower, or the same, is a mistake.
+  for (const entry of ADDRESS_MANIFEST) {
+    if (!entry.historicalScript) continue;
+    if (
+      entry.historicalScript === entry.script ||
+      !ADDRESS_ALPHABETS[entry.historicalScript].startsWith(
+        ADDRESS_ALPHABETS[entry.script],
+      )
+    ) {
+      throw new Error(
+        `Namespace ${entry.namespace} declares a historical script that does not contain the one it issues.`,
       );
     }
   }

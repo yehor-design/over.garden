@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import type { Database } from "@/db/schema";
+import type { PublicLocale } from "@/lib/public-localization";
 import { addressManifestEntry } from "@/lib/address/address-manifest";
 import { isAddressSlug } from "@/lib/address/address-contract.generated";
 import {
@@ -29,7 +30,14 @@ const OBJECT = addressManifestEntry("object");
  * The base is the object's display name through the manifest's own slugifier,
  * the disambiguator is a counter (D6), and the scope is the gardener: "Томат"
  * is what half the gardens on this platform call their tomato, and each of
- * them gets `томат` under their own handle. The advisory lock serializes two
+ * them gets `tomat` under their own handle.
+ *
+ * The name is Latin (ADR-0029 D4, amendment of 2026-09-18), romanized by the
+ * language the publishing entry was written in — never by a constant. The
+ * two tables disagree about the same letters: `и` is `y` in Ukrainian and `i`
+ * in Bulgarian, `г` is `h` and `g`, `щ` is `shch` and `sht`. A Bulgarian
+ * gardener's "Люти чушки" read through the Ukrainian table would be
+ * `liuty-chushky`, which is nobody's spelling of anything. The advisory lock serializes two
  * publishes of the same name by the same gardener for the same reason
  * `assignJournalEntrySlug` takes one; it is keyed by owner and base so
  * unrelated gardeners never wait on each other. It is taken after the
@@ -40,7 +48,13 @@ const OBJECT = addressManifestEntry("object");
  */
 export async function assignPlantObjectPublicSlug(
   executor: QueryExecutor,
-  input: { plantObjectId: string; ownerUserId: string; displayName: string },
+  input: {
+    plantObjectId: string;
+    ownerUserId: string;
+    displayName: string;
+    /** The language the publishing entry was written in. */
+    language: PublicLocale;
+  },
 ): Promise<string> {
   const existing = await executor
     .selectFrom("plant_objects")
@@ -53,7 +67,7 @@ export async function assignPlantObjectPublicSlug(
 
   const base = slugify(input.displayName, {
     script: OBJECT.script,
-    language: "uk",
+    language: input.language,
     budget: OBJECT.budget,
     fallback: "object",
   });

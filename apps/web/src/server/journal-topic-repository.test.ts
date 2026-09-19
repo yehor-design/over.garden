@@ -18,6 +18,7 @@ import {
   buildCatalogMentionTopicContextQuery,
   buildDeleteAutomaticTopicSignalsForEntryQuery,
   buildDirectObjectTopicContextQuery,
+  buildFindJournalTopicByLabelQuery,
   buildInsertJournalTopicQuery,
   buildJournalEntryForTopicSignalsQuery,
   buildJournalEntryIdsForPlantObjectTopicRefreshQuery,
@@ -63,6 +64,24 @@ describe("journal topic repository query contracts", () => {
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
+    // The language the entry was written in: a tag is romanized by it
+    // (ADR-0029 D4, amendment of 2026-09-18), never by a constant.
+    expect(compiled.sql).toContain('"source_language" as "sourceLanguage"');
+  });
+
+  /**
+   * One topic per label. `рози` is `rozy` from a Ukrainian entry and `rozi`
+   * from a Bulgarian one, so a gardener's tag looked up by slug alone would
+   * found a second topic beside the first with the same word over it.
+   */
+  it("finds the topic that already carries a label, whatever its case, oldest first", () => {
+    const compiled = buildFindJournalTopicByLabelQuery(testDb, "Рози").compile();
+
+    expect(compiled.sql).toContain('from "journal_topics"');
+    expect(compiled.sql).toContain('lower("label") = lower($1)');
+    expect(compiled.sql).toContain('order by "created_at" asc, "id" asc');
+    expect(compiled.sql).toContain("limit $2");
+    expect(compiled.parameters).toEqual(["Рози", 1]);
   });
 
   it("derives automatic topic context from scoped object and catalog identity without raw journal content", () => {

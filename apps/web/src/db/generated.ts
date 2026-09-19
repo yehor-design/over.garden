@@ -744,6 +744,14 @@ export interface JournalTopics {
   updated_at: Generated<Timestamp>;
 }
 
+export interface JournalTopicSlugHistory {
+  id: Generated<string>;
+  journal_topic_id: string;
+  slug: string;
+  valid_from: Generated<Timestamp>;
+  valid_to: Timestamp | null;
+}
+
 export interface LearningActorAttributions {
   actor_class: string;
   classified_at: Generated<Timestamp>;
@@ -1157,6 +1165,7 @@ export interface DB {
   journal_entry_object_mentions: JournalEntryObjectMentions;
   journal_entry_slug_history: JournalEntrySlugHistory;
   journal_entry_topic_signals: JournalEntryTopicSignals;
+  journal_topic_slug_history: JournalTopicSlugHistory;
   journal_topics: JournalTopics;
   learning_actor_attributions: LearningActorAttributions;
   learning_attribution_outbox: LearningAttributionOutbox;
