@@ -210,11 +210,18 @@ test.describe("OVE-464 entry addresses", () => {
           /^\/@[a-z0-9][a-z0-9_]{2,29}\/post\/[1-9][0-9]{0,8}$/u,
         );
       }
+      // A copy rendered during this run knows this gardener: the two entries
+      // the fixture published, the fourth one published a moment ago, and never
+      // the deleted third. A copy from before the fixture knows none of them,
+      // and both are correct answers from a cache that lives for hours.
       const ownLocations = locations.filter((location) =>
         location.startsWith(`/@${handle}/`),
       );
-      if (ownLocations.length > 0) {
-        expect(ownLocations.sort()).toEqual([address, `/@${handle}/post/2`]);
+      expect(ownLocations).not.toContain(`/@${handle}/post/3`);
+      for (const location of ownLocations) {
+        expect([address, `/@${handle}/post/2`, `/@${handle}/post/4`]).toContain(
+          location,
+        );
       }
 
       console.info(

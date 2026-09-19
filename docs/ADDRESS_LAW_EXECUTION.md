@@ -1449,3 +1449,61 @@ everywhere.
    yet. Phase 5 neither depends on it nor adds it.
 9. *The migration list is pinned by hand* in `scripts/application-sql.test.ts`;
    a new `sql/00NN_*.sql` without its line there fails CI at `Test`.
+
+### 20. `OVE-464` — shipped 2026-09-19: an entry lives at `/@{handle}/post/{n}`
+
+**What landed.** Migration `0076` (the number, the per-author counter, the
+`before insert` trigger, the backfill by publish date); the manifest namespace
+`journalEntryNumber` with the `ordinal` shape, whose generated `CHECK` is a
+range because the column is an `integer`; `publicJournalEntryPath(handle,
+number)` and one listing helper, `publicJournalEntryAddress`; four kinds under
+`/@` in `matchAuthorScopedPath`; the numbered route, and the three older routes
+kept as thin redirects for a client-side transition from a listing cached while
+the name was still the address; every reader that builds an entry address
+selecting `author_entry_number`.
+
+**What execution found that the plan had not.**
+
+1. *Two redirect chains, not one.* The locale-strip block was the chain the
+   plan named (trap 1). `getLocaleFoldResponse` was a second: it folds `/uk/…`
+   before either block runs, so `/uk/@h/{slug}` answered 308 to `/@h/{slug}`
+   and then 308 again. Both now let an entry's *name* through to the entry
+   block. Only a test with `maxRedirects: 0` sees a chain — a client that
+   follows reports one happy 200.
+2. *A new `*_user_id` column is an erasure path.* `erasure-schema-coverage`
+   discovers it from the SQL and fails until it is classified. The counter
+   table carries no foreign key — `journal_entries.owner_user_id` has none, and
+   fixtures insert entries for owners with no account row — so account erasure
+   deletes it explicitly. Erasure re-keys entries with an `UPDATE` to a fresh
+   synthetic owner, which the trigger does not see and the per-owner unique
+   index does not mind.
+3. *`/@HANDLE/POST/1` is a 308, not a 404.* Wrong case is a spelling of a real
+   address (D3). `/post/012`, `/post/0`, `/post/1a` and `/post/%31` are not:
+   nothing ever issued them.
+4. *The search document's `publicPath` is read by nothing.* The journals search
+   takes `id` from a hit and hydrates from Postgres; both TypeScript projection
+   paths and the Python worker write `/journal/{slug}` there. The document
+   contract accepts all three shapes, and no worker release was needed.
+5. *A request spec meets hour-long caches.* `/journals` and the sitemap chunk
+   rendered before a fixture existed do not contain it, so a spec that asserts
+   presence passes once and fails on the rerun. The spec asserts on the
+   fixture gardener's own profile, and on invariants of the sitemap — every
+   `<loc>` is a number — rather than on an exact list.
+6. *`searchPublicPalette` answers a group that threw with an empty one*, so a
+   query Postgres refuses reads as "no journals" for ever.
+   `pnpm public:reads:prove-database` executes that read directly now, with six
+   others it had never run.
+7. *Run every `prove-database` step of `ci.yml`, not the ones that look
+   relevant.* `pnpm address:contract:prove-database` builds stand-in tables
+   that hold only a slug column; a constraint on any other column fails there.
+
+**Deploy order.** `0076` was applied to production *before* the merge: the
+release selects `author_entry_number` in nearly every public read, and the
+other order would have answered `column does not exist` on every listing.
+
+**Proofs.** `pnpm schema:entry-numbers:prove-database` (falsified by swapping in
+`max() + 1`: it fails on the concurrent publish); `tests/entry-addresses.spec.ts`
+against a production build, passing twice against one server; 56 public reads
+executed; `tests/journal-entry.spec.ts` in Chromium at the numbered address.
+`scripts/prove-public-addresses-render.ts` gained a `redirect` expectation: it
+asks every name in `journal_entry_slug_history` for one 308 to the number.

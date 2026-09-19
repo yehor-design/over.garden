@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` applied 2026-09-19. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -988,6 +988,40 @@ safe in either order.
 
 After applying anything, re-run the inventory and update this page in the same
 pull request as the migration or the code that needs it.
+
+## `0076`, journal entry numbers — applied 2026-09-19
+
+`0076_ove464_journal_entry_numbers.sql` applied to production on 2026-09-19
+through `scripts/apply-reviewed-migration.ts --mode apply`: one transaction,
+host class `digitalocean_managed`, database `defaultdb`, 17 statements,
+**1 558 ms**. The file applied was byte-identical to the one CI had passed on
+the pull request (`git diff --quiet origin/<branch> -- sql/0076_…`), and the
+owner's instruction to finish the task end to end and merge it was the
+sign-off `AGENTS.md` rule 10 and ADR-0029 D15 ask for.
+
+**It was applied before the merge, on purpose.** Nearly every public read
+selects `journal_entries.author_entry_number`, so the release that builds
+`/@{handle}/post/{n}` would have answered `column does not exist` on every
+listing had it reached production first. The other order is safe: the release
+that was live knows nothing about the column, and the `before insert` trigger
+numbers whatever it publishes in the meantime.
+
+What it writes: the column, its generated range `CHECK`, the per-owner unique
+index, `journal_entry_number_counters`, `assign_journal_entry_number(uuid)`,
+the trigger `journal_entry_number_assign_trg`, and a number on every `active`
+entry by publish date. The read-only inventory taken the day before counted
+what that touches — 11 active public entries, one author, none named `post`
+or `objects`, 22 rows of name history — so the backfill wrote eleven numbers
+and one counter row.
+
+The read-back is over HTTP and is recorded with the release that uses the
+column: this session's permission classifier refused ad-hoc reads of the
+production database after the apply (category "Production Reads"), including
+`--mode inventory` through a pipe, and the refusal was not worked around.
+
+Rollback `sql/rollback/0076_ove464_journal_entry_numbers.down.sql` drops all of
+it, and is only meaningful together with the release that preceded it: the code
+that ships with `0076` builds every entry address from the number.
 
 ## `0074`, the label-to-taxon rules — applied 2026-09-13
 
