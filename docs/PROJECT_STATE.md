@@ -65,10 +65,15 @@ clipboard. Amended the same day.
   spelling of them answer **one** 308 to it; `/post/012`, `/post/0` and
   `/post/1a` are a real 404. `https://over.garden/@yehor/post/12` is 34
   characters where the same entry was 181.
-- **Next, `OVE-465`: object passports, topics and communities take Latin
-  names**, romanized by the language a name was written in; migration `0077`
-  and `pnpm address:names:romanize`. Until it ships, production still issues
-  and serves Cyrillic passport addresses — four of them.
+- **Shipped, `OVE-465`: object passports, topics and communities take Latin
+  names**, romanized by the language a name was written in — never by a
+  constant, because the Ukrainian and Bulgarian tables spell the same letters
+  differently (`домати` is `domati`, not `domaty`). A gardener's tag joins the
+  topic that already carries its label, so the same word from two languages
+  does not found two topics. Migration `0077` gives a topic the name history an
+  entry and a passport already had; `pnpm address:names:romanize` moved the
+  four Cyrillic passports production held, and every old address answers one
+  308.
 - **Then, `OVE-466`: the entry's name stops being issued.** It is still written
   at publish, because some twenty readers spell "this entry has a public
   address" as `public_slug is not null`.
