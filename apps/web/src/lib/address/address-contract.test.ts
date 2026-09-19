@@ -98,14 +98,17 @@ describe("the address contract is generated, not restated (ADR-0029 D12)", () =>
       "sql/0068_ove425_journal_entry_public_slug_check.sql",
       "journal_entries_public_slug_check",
     ],
+    // `0069` and `0070` installed the native-script form of the next two. They
+    // are history now: `0077` narrows both columns to Latin (OVE-465), and it
+    // is the migration whose text has to match what the manifest renders.
     [
-      "0069",
-      "sql/0069_ove426_journal_topic_slug_check.sql",
+      "0077",
+      "sql/0077_ove465_latin_names.sql",
       "journal_topics_slug_check",
     ],
     [
-      "0070",
-      "sql/0070_ove428_author_scoped_addresses.sql",
+      "0077",
+      "sql/0077_ove465_latin_names.sql",
       "plant_objects_public_slug_check",
     ],
     [

@@ -1,6 +1,6 @@
 {
   "schema": "overgarden.addressContract.v1",
-  "manifestVersion": "ove464.address.v2",
+  "manifestVersion": "ove465.address.v3",
   "namespaces": [
     {
       "namespace": "species",
@@ -8,6 +8,8 @@
       "shape": "hyphenated",
       "alphabet": "a-z0-9",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "historicalScript": null,
+      "historicalPattern": null,
       "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 60,
@@ -35,6 +37,8 @@
       "shape": "hyphenated",
       "alphabet": "a-z0-9",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "historicalScript": null,
+      "historicalPattern": null,
       "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 60,
@@ -67,6 +71,8 @@
       "shape": "hyphenated",
       "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
       "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "historicalScript": null,
+      "historicalPattern": null,
       "uniquenessScope": "perAuthorHandle",
       "budget": {
         "decodedCharacters": 60,
@@ -99,6 +105,8 @@
       "shape": "ordinal",
       "alphabet": "a-z0-9",
       "pattern": "^[1-9][0-9]{0,8}$",
+      "historicalScript": null,
+      "historicalPattern": null,
       "uniquenessScope": "perAuthorHandle",
       "budget": {
         "decodedCharacters": 9,
@@ -122,10 +130,12 @@
     },
     {
       "namespace": "object",
-      "script": "native",
+      "script": "latin",
       "shape": "hyphenated",
-      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
-      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "alphabet": "a-z0-9",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "historicalScript": "native",
+      "historicalPattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
       "uniquenessScope": "perAuthorHandle",
       "budget": {
         "decodedCharacters": 60,
@@ -145,16 +155,18 @@
         "nullable": true,
         "maxCharacters": 96,
         "columnType": "text",
-        "checkInstalledBy": "0070"
+        "checkInstalledBy": "0077"
       },
-      "notes": "A passport is addressed by slug from OVE-428. The column is nullable because a private object has no public address, and only an object with a public entry is given one."
+      "notes": "A passport is addressed by slug from OVE-428, and by a Latin one from OVE-465: the display name romanized by the language its first public entry was written in. The column is nullable because a private object has no public address, and only an object with a public entry is given one."
     },
     {
       "namespace": "topic",
-      "script": "native",
+      "script": "latin",
       "shape": "hyphenated",
-      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
-      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "alphabet": "a-z0-9",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "historicalScript": "native",
+      "historicalPattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
       "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 60,
@@ -172,16 +184,18 @@
         "nullable": false,
         "maxCharacters": 64,
         "columnType": "text",
-        "checkInstalledBy": "0069"
+        "checkInstalledBy": "0077"
       },
-      "notes": "The column's CHECK is still ASCII-only, which is why a Cyrillic tag becomes a hash today. OVE-426 widens it in migration 0069; this manifest already declares the shape it will widen to."
+      "notes": "A gardener's tag, romanized by the language of the entry that first used it (OVE-465). One topic per label: a later tag with the same label joins the topic that exists, so the address does not fork on the second tagger's language."
     },
     {
       "namespace": "community",
-      "script": "native",
+      "script": "latin",
       "shape": "hyphenated",
-      "alphabet": "a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ",
-      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "alphabet": "a-z0-9",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "historicalScript": null,
+      "historicalPattern": null,
       "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 60,
@@ -201,7 +215,7 @@
         "columnType": "text",
         "checkInstalledBy": null
       },
-      "notes": "Communities are seeded, not authored, so every slug is ASCII today; the namespace is native because the next one need not be."
+      "notes": "Communities are seeded, not authored, so every slug has always been ASCII and the column's own CHECK never admitted anything else. The namespace is Latin like every other (OVE-465); it has no historical script because it never issued one."
     },
     {
       "namespace": "profileHandle",
@@ -209,6 +223,8 @@
       "shape": "handle",
       "alphabet": "a-z0-9",
       "pattern": "^[a-z0-9][a-z0-9_]{2,29}$",
+      "historicalScript": null,
+      "historicalPattern": null,
       "uniquenessScope": "global",
       "budget": {
         "decodedCharacters": 30,
@@ -245,7 +261,7 @@
       "nullable": false,
       "maxCharacters": 64,
       "columnType": "text",
-      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "checkInstalledBy": null,
       "namespaces": [
         "community"
@@ -284,8 +300,8 @@
       "nullable": false,
       "maxCharacters": 64,
       "columnType": "text",
-      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
-      "checkInstalledBy": "0069",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "checkInstalledBy": "0077",
       "namespaces": [
         "topic"
       ]
@@ -297,8 +313,8 @@
       "nullable": true,
       "maxCharacters": 96,
       "columnType": "text",
-      "pattern": "^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$",
-      "checkInstalledBy": "0070",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "checkInstalledBy": "0077",
       "namespaces": [
         "object"
       ]

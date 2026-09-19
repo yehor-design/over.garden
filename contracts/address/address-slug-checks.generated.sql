@@ -48,7 +48,7 @@ begin
     add constraint communities_slug_check
     check (
       char_length(slug) between 1 and 64
-      and slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'
+      and slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
     );
 end $$;
 
@@ -102,7 +102,7 @@ begin
 end $$;
 
 -- journal_topics_slug_check — topic
--- installed by migration 0069
+-- installed by migration 0077
 do $$
 begin
   if exists (
@@ -119,12 +119,12 @@ begin
     add constraint journal_topics_slug_check
     check (
       char_length(slug) between 1 and 64
-      and slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'
+      and slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
     );
 end $$;
 
 -- plant_objects_public_slug_check — object
--- installed by migration 0070
+-- installed by migration 0077
 do $$
 begin
   if exists (
@@ -143,7 +143,7 @@ begin
       public_slug is null
       or (
         char_length(public_slug) between 1 and 96
-        and public_slug ~ '^[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+(?:-[a-z0-9абвгдежзийклмнопрстуфхцчшщъыьэюяёєіїґ]+)*$'
+        and public_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'
       )
     );
 end $$;

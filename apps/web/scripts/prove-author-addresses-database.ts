@@ -167,7 +167,11 @@ export async function runAuthorAddressesDatabaseProof() {
     ]);
 
     await pool.query(
-      `update plant_objects set public_slug = 'томат' where id = $1`,
+      // A Latin name since OVE-465: every migration is applied here, and on a
+      // database with no Cyrillic passport `0077` has already narrowed the
+      // column. What this proves — the trigger writes the history row — never
+      // depended on the alphabet.
+      `update plant_objects set public_slug = 'tomat' where id = $1`,
       [OBJECT_ID],
     );
     const passport = await pool.query(
@@ -176,7 +180,7 @@ export async function runAuthorAddressesDatabaseProof() {
       [OBJECT_ID],
     );
     expect("passport history", passport.rows, [
-      { author_handle: handle, slug: "томат", open: true },
+      { author_handle: handle, slug: "tomat", open: true },
     ]);
 
     // The passport slug is unique per gardener, so a second object may not
@@ -184,7 +188,7 @@ export async function runAuthorAddressesDatabaseProof() {
     const duplicate = await pool
       .query(
         `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, variety_state, public_slug)
-         values (gen_random_uuid(), $1, $2, 'Томат', 'plant', 'unknown', 'томат')`,
+         values (gen_random_uuid(), $1, $2, 'Томат', 'plant', 'unknown', 'tomat')`,
         [USER_ID, SPACE_ID],
       )
       .then(() => "accepted")
@@ -206,24 +210,26 @@ export async function runAuthorAddressesDatabaseProof() {
         plantObjectId: secondObjectId,
         ownerUserId: USER_ID,
         displayName: "Томат",
+        language: "uk",
       }),
     );
-    expect("the next tomato's slug", assigned, "томат-2");
+    expect("the next tomato's slug", assigned, "tomat-2");
     const assignedAgain = await db.transaction().execute((trx) =>
       assignPlantObjectPublicSlug(trx, {
         plantObjectId: secondObjectId,
         ownerUserId: USER_ID,
         displayName: "Томат (renamed since)",
+        language: "uk",
       }),
     );
-    expect("a slug, once given, is frozen", assignedAgain, "томат-2");
+    expect("a slug, once given, is frozen", assignedAgain, "tomat-2");
     const secondHistory = await pool.query(
       `select author_handle, slug, valid_to is null as open
        from plant_object_slug_history where plant_object_id = $1`,
       [secondObjectId],
     );
     expect("the assigned slug wrote history", secondHistory.rows, [
-      { author_handle: handle, slug: "томат-2", open: true },
+      { author_handle: handle, slug: "tomat-2", open: true },
     ]);
 
     // 5. The entry's name is the gardener's (0073). The first gardener already

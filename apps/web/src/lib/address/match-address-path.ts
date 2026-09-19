@@ -1,6 +1,7 @@
 import {
   ADDRESS_LOWER_CASE_PATH_PREFIXES,
   isAddressSlug,
+  isHistoricalAddressSlug,
 } from "@/lib/address/address-contract.generated";
 import { addressManifestEntry } from "@/lib/address/address-manifest";
 import type { AddressNamespace } from "@/lib/address/address-manifest";
@@ -29,6 +30,14 @@ import { stripLocalePrefix } from "@/lib/public-localization";
  * Validation happens here rather than after, so the proxy's bounded lookups
  * are only ever asked about slugs that could exist. What this returns is
  * decoded: every caller compares it with a stored value, never with a URL.
+ *
+ * "Could exist" includes "did exist". A topic tag and an object passport were
+ * named in the gardener's own alphabet until OVE-465 turned every namespace
+ * Latin (ADR-0029 D4, amendment of 2026-09-18), and `/topics/помідори` has to
+ * reach the history lookup that answers it with a 308 rather than be refused
+ * here as something that was never an address. So a segment is matched
+ * against everything the namespace has ever issued; what it may issue *now* is
+ * a question for `isAddressSlug`, and nothing here answers it.
  */
 export function matchAddressPath(
   namespace: AddressNamespace,
@@ -50,7 +59,7 @@ export function matchAddressPath(
     if (remainder.length === 0 || remainder.includes("/")) continue;
     const decoded = decodeSegment(remainder);
     if (decoded === null) continue;
-    if (isAddressSlug(namespace, decoded)) return decoded;
+    if (isHistoricalAddressSlug(namespace, decoded)) return decoded;
   }
   return null;
 }
@@ -147,7 +156,9 @@ export function matchAuthorScopedPath(
   if (segments.length === 3 && segments[1] === PUBLIC_OBJECT_PASSPORT_SEGMENT) {
     const slug = decodeSegment(segments[2]!);
     if (slug === null) return null;
-    return isAddressSlug("object", slug)
+    // A passport's Cyrillic name from before OVE-465 is still an address: it
+    // answers 308 from the slug history.
+    return isHistoricalAddressSlug("object", slug)
       ? { kind: "object", handle, slug }
       : null;
   }

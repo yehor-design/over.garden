@@ -32,16 +32,38 @@ describe("one matcher for every public address (ADR-0029 D3)", () => {
    * the column carried before `OVE-426` widened it — so a Cyrillic community
    * would have stopped matching its own route the day one existed.
    */
-  it("reads a Cyrillic slug, decoded", () => {
+  /**
+   * Every namespace issues Latin names since OVE-465, and a name a namespace
+   * *used* to issue is still an address: `/topics/помідори` has to reach the
+   * history lookup that answers it with a 308. Refused here, it would be a 404
+   * for a link somebody already shared.
+   */
+  it("still reads the Cyrillic name a topic or a passport was issued before", () => {
     expect(
       matchAddressPath("topic", `/topics/${encodeURIComponent("помідори")}`),
     ).toBe("помідори");
+    expect(
+      matchAuthorScopedObjectPath(
+        `/bg/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
+      ),
+    ).toEqual({ handle: "yehor", slug: "чорний-принц" });
+    expect(matchAddressPath("topic", "/ru/topics/pomidory")).toBe("pomidory");
+  });
+
+  it("refuses a Cyrillic name where none was ever issued", () => {
+    // A community has only ever been seeded, in ASCII, so there is no older
+    // spelling for its matcher to keep alive.
     expect(
       matchAddressPath(
         "community",
         `/bg/communities/${encodeURIComponent("домати")}`,
       ),
-    ).toBe("домати");
+    ).toBeNull();
+    expect(
+      unservableAddressNamespace(
+        `/communities/${encodeURIComponent("домати")}`,
+      ),
+    ).toBe("community");
   });
 
   it("refuses what a lookup could only answer 'not found' about", () => {

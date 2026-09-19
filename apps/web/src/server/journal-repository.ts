@@ -1539,6 +1539,7 @@ export async function createFirstPlantEntry(
         plantObjectId: plantObject.id,
         ownerUserId: scope.userId,
         displayName: plantObject.display_name,
+        language: normalized.sourceLanguage,
       });
       await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
@@ -2216,6 +2217,7 @@ export async function createPlantObjectJournalEntry(
         plantObjectId: target.objectId,
         ownerUserId: scope.userId,
         displayName: target.objectDisplayName,
+        language: normalized.sourceLanguage,
       });
       await insertAtomicPublicationMedia(trx, scope, entry.id, normalized);
       const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {

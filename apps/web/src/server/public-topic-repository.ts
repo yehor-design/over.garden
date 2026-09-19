@@ -4,7 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
-import { isAddressSlug } from "@/lib/address/address-contract.generated";
+import { isHistoricalAddressSlug } from "@/lib/address/address-contract.generated";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
@@ -456,7 +456,10 @@ function buildPublicTopicMembershipBaseQuery(
  */
 function normalizePublicTopicSlug(value: string) {
   const normalized = value.trim().toLocaleLowerCase("uk");
-  return isAddressSlug("topic", normalized) ? normalized : null;
+  // Everything the namespace has ever issued, not only what it issues now: a
+  // topic whose Cyrillic name has not been romanized yet still has to resolve
+  // its own page (OVE-465), and one that has been is found in the history.
+  return isHistoricalAddressSlug("topic", normalized) ? normalized : null;
 }
 
 /**
@@ -479,6 +482,40 @@ export async function getPublicTopicLifecycleLookup(
   return topic
     ? { status: "found" as const, slug: topic.slug }
     : { status: "not_found" as const };
+}
+
+/**
+ * The name a topic has now, found from a name it used to have (ADR-0029 D8).
+ *
+ * A topic's slug never moved until OVE-465 romanized it, so this is the first
+ * reader of `journal_topic_slug_history` (migration `0077`). `null` when the
+ * name is the topic's current one, when nothing ever held it, or when the
+ * topic that held it has no public page — only a curated topic has an
+ * address, and a 308 to a page that answers 404 is a worse answer than 404.
+ */
+export async function resolvePublicTopicAddress(
+  slug: string,
+  executor: QueryExecutor = db,
+): Promise<string | null> {
+  const normalizedSlug = normalizePublicTopicSlug(slug);
+  if (!normalizedSlug) return null;
+  const row = await buildPublicTopicAddressHistoryQuery(
+    executor,
+    normalizedSlug,
+  ).executeTakeFirst();
+  return row && row.slug !== normalizedSlug ? row.slug : null;
+}
+
+export function buildPublicTopicAddressHistoryQuery(
+  executor: QueryExecutor,
+  slug: string,
+) {
+  return executor
+    .selectFrom("journal_topic_slug_history as history")
+    .innerJoin("journal_topics", "journal_topics.id", "history.journal_topic_id")
+    .select(["journal_topics.slug as slug"])
+    .where("history.slug", "=", slug)
+    .where("journal_topics.trust_state", "=", "curated");
 }
 
 function normalizePublicTopicSlugs(values?: readonly string[] | null) {
