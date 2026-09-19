@@ -1559,3 +1559,17 @@ past a taken name (`tomat` → `tomat-2`), the apply, both histories, the
 resolvers, the replay. `tests/latin-names.spec.ts` against a production build:
 200 at the Latin name, one 308 from the Cyrillic one under every prefix, 404
 for a Cyrillic name nothing ever held.
+
+**Production, 2026-09-19.** In the order above: the release (`1161af42`), then
+`0077` (393 ms), then `pnpm address:names:romanize --apply` — four passports,
+two through the Ukrainian table and two through the Bulgarian one, no topic,
+both Latin constraints installed by the run. Sixteen of sixteen Cyrillic
+spellings (four names under `/`, `/bg`, `/uk`, `/ru`) answer one 308 to the
+Latin address. The receipts are in `docs/PRODUCTION_SCHEMA_STATE.md`.
+
+**What is left of phase 5** is `OVE-466`, and it is larger than it first read.
+The search projection refuses an entry without a name in two codebases —
+`src/server/search/documents.ts` and `services/matching/app/search.py` both
+return nothing when `public_slug` is empty — so retiring the name needs a
+matching worker release and its deploy, sequenced before the web release that
+publishes a nameless entry. Nothing a reader sees depends on it.

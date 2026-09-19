@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` applied 2026-09-19. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -989,6 +989,47 @@ safe in either order.
 After applying anything, re-run the inventory and update this page in the same
 pull request as the migration or the code that needs it.
 
+## `0077`, Latin names, and the romanize run — applied 2026-09-19
+
+`0077_ove465_latin_names.sql` applied to production on 2026-09-19 through
+`scripts/apply-reviewed-migration.ts --mode apply`: one transaction, host class
+`digitalocean_managed`, database `defaultdb`, 24 statements, **393 ms** — after
+the release that issues Latin names was live (Vercel production deployment of
+`1161af42`), not before. Applied first, it would have narrowed
+`journal_topics.slug` at once, because production held no Cyrillic topic, and
+the release then still live would have had a Cyrillic tag refused with `23514`
+at publish. It created `journal_topic_slug_history` with its trigger, seeded
+one row per topic, installed the Latin `CHECK` on the topic column, and left
+the passport column alone: four passports still held Cyrillic names.
+
+`pnpm address:names:romanize --apply` ran next, one transaction. Its plan, read
+the day before and again a minute before, was the same both times — four
+passports, no topic — and each name went through the table of the language its
+object was first written about in:
+
+```
+/@yehor/objects/томат              -> /@yehor/objects/tomat              (uk)
+/@yehor/objects/бджолина-сімя      -> /@yehor/objects/bdzholyna-simia    (uk)
+/@yehor/objects/домат              -> /@yehor/objects/domat              (bg)
+/@yehor/objects/пчелно-семейство   -> /@yehor/objects/pchelno-semeystvo  (bg)
+checksInstalled: plant_objects_public_slug_check, journal_topics_slug_check
+```
+
+Read back over HTTP against `https://over.garden` right after, without
+following a redirect: the four Latin addresses answer 200, and the passport
+page is the passport (`<h1>Бджолина сім’я</h1>`, a self-referential canonical,
+JSON-LD present) rather than a not-found page inside a 200; each of the four
+Cyrillic names answers **one** 308 straight to its Latin address under `/`,
+`/bg`, `/uk` and `/ru` — sixteen of sixteen; a Cyrillic name nothing ever held
+answers 404, for a passport and for a topic; the five topics answer 200 in
+`uk` and `bg`; the profile, an entry that names a passport and
+`/sitemaps/passports-0.xml` all link the Latin names.
+
+Rollback `sql/rollback/0077_ove465_latin_names.down.sql` drops the topic
+history and restores the two wider constraints. It does not un-romanize a
+name: the Latin ones are legal under the wider constraints too, and the
+passports keep answering 308 from `plant_object_slug_history` of `0070`.
+
 ## `0076`, journal entry numbers — applied 2026-09-19
 
 `0076_ove464_journal_entry_numbers.sql` applied to production on 2026-09-19
@@ -1014,10 +1055,22 @@ what that touches — 11 active public entries, one author, none named `post`
 or `objects`, 22 rows of name history — so the backfill wrote eleven numbers
 and one counter row.
 
-The read-back is over HTTP and is recorded with the release that uses the
-column: this session's permission classifier refused ad-hoc reads of the
-production database after the apply (category "Production Reads"), including
-`--mode inventory` through a pipe, and the refusal was not worked around.
+The read-back is over HTTP, because this session's permission classifier
+refused ad-hoc reads of the production database after the apply (category
+"Production Reads"), including `--mode inventory` through a pipe, and the
+refusal was not worked around. Against `https://over.garden`, once the release
+was live, without following a redirect: `/@yehor/post/1` … `/post/11` answer
+200 and `/post/12` answers 404 — eleven numbers, as the inventory counted; the
+entry page is the entry (`<h1>`, a canonical and an `og:url` of
+`https://over.garden/@yehor/post/9`, `<main lang="bg">`, `BlogPosting.url` and
+the last breadcrumb naming the same address); the link the owner had copied —
+181 characters of `%D0%BA%D1%80…` — answers **one** 308 to `/@yehor/post/9`,
+and so does that name under `/bg`, `/ru`, `/uk`, `/journal/` and
+`/bg/journal/`; `/post/0`, `/post/012`, `/post/1a`, `/post` and `/post/9/x`
+answer 404; `/@YEHOR/POST/9` answers 308 to the lower-case address; the profile
+links all eleven entries at their numbers and none at a name; and
+`/sitemaps/entries-0.xml` lists the eleven numbered addresses and nothing
+else.
 
 Rollback `sql/rollback/0076_ove464_journal_entry_numbers.down.sql` drops all of
 it, and is only meaningful together with the release that preceded it: the code
