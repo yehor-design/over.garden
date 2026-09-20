@@ -145,10 +145,16 @@ export async function runEntryNumbersDatabaseProof() {
   targetUrl.pathname = `/${disposable}`;
 
   const admin = new Pool({ connectionString: adminUrl.toString(), max: 1 });
+  // `drop database … with (force)` terminates whatever is still connected, and
+  // pg raises that as an `error` event on the pool. Unhandled, it crashes the
+  // process after the receipt has already printed — which is how this proof
+  // failed in CI while passing locally, purely on teardown timing.
+  admin.on("error", () => undefined);
   await admin.query(`create database "${disposable}"`);
   // Three connections: the concurrency cases need two transactions open at
   // once and a third to look at what they left.
   const pool = new Pool({ connectionString: targetUrl.toString(), max: 3 });
+  pool.on("error", () => undefined);
   const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
 
   const failures: string[] = [];

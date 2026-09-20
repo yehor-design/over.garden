@@ -18,6 +18,11 @@ async function main() {
   const targetUrl = new URL(sourceUrl);
   targetUrl.pathname = `/${databaseName}`;
   const adminPool = new Pool({ connectionString: sourceUrl, max: 1 });
+  // `drop database … with (force)` terminates whatever is still connected, and
+  // pg raises that as an `error` event on the pool. Unhandled, it crashes the
+  // process after the receipt has already printed — which is how this proof
+  // failed in CI while passing locally, purely on teardown timing.
+  adminPool.on("error", () => undefined);
 
   try {
     await adminPool.query(`create database "${databaseName}"`);
@@ -34,6 +39,7 @@ async function main() {
     });
 
     const pool = new Pool({ connectionString: targetUrl.toString(), max: 1 });
+    pool.on("error", () => undefined);
     const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
     try {
       const digest = await collectNormalizedSchemaManifestDigest(db);
