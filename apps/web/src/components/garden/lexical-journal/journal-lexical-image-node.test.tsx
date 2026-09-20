@@ -61,6 +61,15 @@ describe("OverGarden Lexical image controls", () => {
             }),
             labels: {
               processing: "Processing",
+              phase: {
+                decoding: "Reading the photo",
+                encoding: "Preparing the variants",
+                staging: "Uploading",
+              },
+              failureReason: {
+                retry_limit_exceeded: "Three attempts failed.",
+                fallback: "Try again or choose another file.",
+              },
               failed: "Photo failed",
               retry: "Retry photo",
               replace: "Replace photo",
@@ -122,6 +131,15 @@ describe("OverGarden Lexical image controls", () => {
             getState: () => undefined,
             labels: {
               processing: "Processing",
+              phase: {
+                decoding: "Reading the photo",
+                encoding: "Preparing the variants",
+                staging: "Uploading",
+              },
+              failureReason: {
+                retry_limit_exceeded: "Three attempts failed.",
+                fallback: "Try again or choose another file.",
+              },
               failed: "Photo failed",
               retry: "Retry photo",
               replace: "Replace photo",
@@ -182,6 +200,15 @@ describe("OverGarden Lexical image controls", () => {
             }),
             labels: {
               processing: "Processing",
+              phase: {
+                decoding: "Reading the photo",
+                encoding: "Preparing the variants",
+                staging: "Uploading",
+              },
+              failureReason: {
+                retry_limit_exceeded: "Three attempts failed.",
+                fallback: "Try again or choose another file.",
+              },
               failed: "Photo failed",
               retry: "Retry photo",
               replace: "Replace photo",
@@ -264,6 +291,15 @@ describe("OverGarden Lexical image controls", () => {
             }),
             labels: {
               processing: "Processing",
+              phase: {
+                decoding: "Reading the photo",
+                encoding: "Preparing the variants",
+                staging: "Uploading",
+              },
+              failureReason: {
+                retry_limit_exceeded: "Three attempts failed.",
+                fallback: "Try again or choose another file.",
+              },
               failed: "Photo failed",
               retry: "Retry photo",
               replace: "Replace photo",

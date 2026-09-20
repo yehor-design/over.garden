@@ -22,6 +22,12 @@ export interface SaveProgressMomentCopy {
   eyebrow: string;
   title: string;
   body: string;
+  /**
+   * The entry that was just published, by its own name (`OVE-458` AC3). A
+   * receipt that says "saved" without saying *what* leaves a gardener who
+   * writes several entries in a row checking which one landed.
+   */
+  publishedEntry: string | null;
   progressLabel: string;
   progressValue: string;
   progressPercent: number;
@@ -50,6 +56,7 @@ export function buildSaveProgressMomentCopy(
     kind: SaveProgressMomentKind;
     objectName?: string | null;
     spaceName?: string | null;
+    entryTitle?: string | null;
     entryCount: number;
   },
   locale: InterfaceLocale,
@@ -62,10 +69,15 @@ export function buildSaveProgressMomentCopy(
   const progressValue = formatGardenWorkspaceTemplate(copy.progressValue, {
     count: Math.min(entryCount, 4),
   });
+  const entryTitle = (input.entryTitle ?? "").trim();
+  const publishedEntry = entryTitle
+    ? formatGardenWorkspaceTemplate(copy.publishedEntry, { title: entryTitle })
+    : null;
 
   if (input.kind === "first-entry") {
     return {
       eyebrow: copy.firstEntry.eyebrow,
+      publishedEntry,
       title: copy.firstEntry.title,
       body: formatGardenWorkspaceTemplate(copy.firstEntry.body, { objectName }),
       progressLabel: copy.firstEntry.progressLabel,
@@ -77,6 +89,7 @@ export function buildSaveProgressMomentCopy(
   if (input.kind === "space-entry") {
     return {
       eyebrow: copy.spaceEntry.eyebrow,
+      publishedEntry,
       title: copy.spaceEntry.title,
       body: formatGardenWorkspaceTemplate(copy.spaceEntry.body, { spaceName }),
       progressLabel: copy.spaceEntry.progressLabel,
@@ -87,6 +100,7 @@ export function buildSaveProgressMomentCopy(
 
   return {
     eyebrow: copy.followUp.eyebrow,
+    publishedEntry,
     title: copy.followUp.title,
     body: formatGardenWorkspaceTemplate(
       selectGardenPluralForm(locale, entryCount, {

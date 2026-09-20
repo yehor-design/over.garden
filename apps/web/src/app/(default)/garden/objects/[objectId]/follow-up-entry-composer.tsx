@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
+  journalCoverPhotoLabel,
   JournalCoverControls,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
@@ -14,6 +15,7 @@ import {
   LocalJournalComposerStatus,
   LocalJournalPublicationDisclosure,
 } from "@/components/garden/local-journal-composer-status";
+import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
@@ -131,15 +133,16 @@ export function FollowUpEntryComposer({
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
-  const local = useLocalJournalComposer({
-    enabled: true,
-    fallbackReturnTo: `/garden/objects/${objectId}`,
-    dirty: Boolean(
-      draft.title ||
+  const dirty = Boolean(
+    draft.title ||
       draft.body ||
       draft.contentDocument?.blocks.length ||
       photoFile,
-    ),
+  );
+  const local = useLocalJournalComposer({
+    enabled: true,
+    fallbackReturnTo: `/garden/objects/${objectId}`,
+    dirty,
   });
   const imageStates = useMemo(
     () =>
@@ -482,8 +485,13 @@ export function FollowUpEntryComposer({
     >
       <LocalJournalComposerStatus
         state={local.state}
+        lease={local.media.lease}
         copy={atomicCopy}
         onCancelPublishing={local.cancelPublishing}
+      />
+      <UnpublishedWorkGuard
+        active={dirty && local.state.status !== "published"}
+        copy={atomicCopy}
       />
 
       <fieldset disabled={persistenceFrozen} className="contents">
@@ -553,7 +561,7 @@ export function FollowUpEntryComposer({
             ).map((mediaAssetId, index) => ({
               mediaAssetId,
               previewUrl: imageStates.get(mediaAssetId)?.previewUrl ?? null,
-              label: `${coverCopy.useAsCover} ${index + 1}`,
+              label: journalCoverPhotoLabel(coverCopy, index),
             }))}
             disabled={persistenceFrozen}
             selectedLocalMediaState={
@@ -720,7 +728,15 @@ export function FollowUpEntryComposer({
         {message}
       </p>
 
-      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      {/* What Publish does, beside the control that does it (`OVE-458` AC3). */}
+      <p
+        data-publish-meaning="true"
+        className="max-w-prose text-body-sm text-text-muted"
+      >
+        {atomicCopy.publishMeaning}
+      </p>
+
+      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"

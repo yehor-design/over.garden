@@ -519,7 +519,12 @@ adds the confirmation; it never takes away the action.**
 **Tier 5 — product.**
 `EntryCard` · `OrganismCard` · `ProfileHeader` · `EngagementBar` (like, bookmark,
 follow, comment — all Server Actions) · `MediaFigure` · `CatalogPicker`
-(rewrite over `Combobox`) · `FilterBar` · `LocaleNotice` · `ConsentBanner`.
+(rewrite over `Combobox`) · `FilterBar` · `LocaleNotice` · `ConsentBanner` ·
+`JournalShortcutSheet` · `UnpublishedWorkGuard`.
+
+The last two are the composer's, and §5.11 says what they are for. Neither is a
+`ui/` primitive: one is generated from the editor's own rule modules, the other
+knows what "unpublished" means in this product.
 
 ### 4.2 The component contract
 
@@ -812,6 +817,39 @@ was happening.
 - **Membership is not a roster.** A community shows the people writing in it,
   which they published by publishing; who merely joined is theirs, and the
   product has no disclosure covering a list of them.
+
+### 5.11 The composer, where nothing is durable
+
+The composer is the one screen in the product where the reader's work exists
+only in the tab they are looking at. ADR-0022 D3 forbids a draft, an offline
+queue and any durable browser state; ADR-0028 fixes the canvas. Both are kept,
+and the consequences belong on the screen rather than in the reader's memory.
+
+- **Say the value, never only the fill.** The cover controls used to mark the
+  chosen mode by rendering one button `primary` — colour alone (WCAG 1.4.1),
+  announced to nobody, and two of the four buttons dispatched the same mode.
+  The section now prints "Обрано: <the photograph's own name>" and every toggle
+  carries `aria-pressed`. The same goes for the focal point, which said its
+  coordinates in `aria-valuetext` and to nobody else.
+- **A thumbnail is named, not instructed.** The label under a photograph is the
+  photograph — "Фото 2" — and the action stays on the control. The selected one
+  gets a word, not a hue.
+- **Leaving warns once, in the product's own dialog.** `beforeunload` covers a
+  reload, a close and an address typed into the bar, and none of the ways a
+  reader actually leaves: a press on a link in the shell is a client-side
+  navigation that fires no unload event at all, and the composer simply
+  unmounted. `UnpublishedWorkGuard` watches clicks in the capture phase, stops
+  only a same-origin link that leads somewhere else, and re-issues the
+  navigation the reader pressed once they have chosen. It asks **once**.
+- **The input rules are on the screen.** `## `, `[x] `, `~~` and the rest were
+  discoverable only by a reader who already knew Markdown. The shortcut sheet
+  lists every rule and every key — and **generates every row from the module
+  that implements it**, because a shortcut sheet that has gone stale teaches a
+  key that does nothing.
+- **708 px is a cap, not a width.** ADR-0028's column is `max-width`; inside the
+  shell's 704 px content column the canvas renders at 656, which is 70–75
+  Cyrillic characters and inside §3's measure. A proof that asserts a rendered
+  708 asserts something that is true on no screen the product has.
 
 ---
 

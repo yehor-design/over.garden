@@ -988,7 +988,55 @@ workspace page, the section order, the creation steps, the lineage sentences, a
 no-JavaScript POST on three surfaces, and the chrome and the page agreeing with
 a real session whose cookie cache has expired.
 
-The remaining page families (`OVE-458`, `OVE-459`) are still in Backlog.
+**The composer says what a keyboard can do, and what leaving costs**
+(`OVE-458`, 2026-09-20). The Notion shape ADR-0028 delivered is unchanged — the
+708 px column, the 56 px gutter, the flat `/` menu, the input rules and the
+shortcuts. What changed is everything the composer used to keep to itself.
+
+- **The cover states its value in words.** The chosen mode was a button
+  rendered `primary`: colour alone (WCAG 1.4.1), announced to nobody, and two
+  of the four buttons dispatched the same `{ mode: "automatic" }`. The section
+  now prints "Обрано: Фото 2", every toggle carries `aria-pressed`, and the
+  duplicate is gone. The focal point gained the same visible readout beside the
+  `aria-valuetext` only a screen reader could hear.
+- **A thumbnail carries the photograph's name**, not "Зробити обкладинкою" on
+  the one that already is the cover.
+- **Leaving with unpublished work warns once, in the product's own dialog.**
+  `beforeunload` had covered a reload and a close and none of the ways a reader
+  actually leaves: a press on a link in the shell is a client-side navigation
+  that fires no unload event, so the composer unmounted and hours of writing
+  were gone without a word. `UnpublishedWorkGuard` watches clicks in the
+  capture phase, stops only a same-origin link that leads elsewhere, and
+  re-issues the navigation once the reader has chosen.
+- **The input rules are on the screen.** `## `, `[x] `, `~~` and the rest were
+  findable only by a reader who already knew Markdown. `JournalShortcutSheet`
+  lists every rule and every key and **generates every row from the module that
+  implements it**, so it cannot teach a key that does nothing.
+- **The composer's files left the shadcn bridge**: 116 legacy class names
+  (`text-muted-foreground`, `bg-accent`, `text-destructive`, `text-xs`) retired
+  across fifteen files, and three hand-rolled dialog buttons became `Button`.
+  The names were aliases of the same colours, so nothing moved; `text-xs` at
+  12 px became `text-caption` at 13, which DESIGN.md §3 requires.
+
+Proven in a real browser, which is the only place three of these are visible:
+`tests/journal-notion-composer.spec.ts` now runs a keyboard-only pass — the
+column and gutter measured, a block moved by ArrowUp on the focused handle and
+its announcement read back, the sheet opened and checked against the rule
+modules, the cover's value changed by key, and the leave dialog both cancelled
+and confirmed — with axe over the whole document while the sheet is open.
+`tests/catalog-picker.spec.ts` gained the result-count announcement.
+
+Two things that axe pass found: the sheet's scroller was reachable by pointer
+and not by keyboard (`scrollable-region-focusable`), and `base-ui`'s focus
+guards report `aria-hidden-focus` wherever any overlay is open — the library's
+standard focus-lock sentinels, excluded by selector with the reason beside it.
+
+**708 px is a cap, not a width.** ADR-0028's column is a `max-width`; inside the
+shell's 704 px content column the canvas renders at 656 — 70–75 Cyrillic
+characters, inside DESIGN.md §3's measure. The card's "40 px gutter" is a slip:
+ADR-0028 D3 says 56, and 56 is what ships.
+
+The last page family (`OVE-459`) is still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

@@ -13,6 +13,23 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageChoose: "Додати фото",
     imageUploading: "Обробка фото…",
     imageFailed: "Фото не вдалося підготувати. Запис ще не опубліковано.",
+    imagePhase: {
+      decoding: "Читаємо фото…",
+      encoding: "Готуємо варіанти…",
+      staging: "Завантажуємо…",
+    },
+    imageFailureReason: {
+      operation_aborted: "Підготовку фото зупинено.",
+      retry_limit_exceeded:
+        "Три спроби поспіль не вдалися. Оберіть інший файл.",
+      media_limit_exceeded: "У записі забагато фото.",
+      media_preparation_failed:
+        "Не вдалося підготувати це фото. Спробуйте ще раз або оберіть інший файл.",
+      fallback:
+        "Не вдалося підготувати це фото. Спробуйте ще раз або оберіть інший файл.",
+    },
+    imageLeaseAtRisk:
+      "Не вдається продовжити зберігання завантажених фото. Опублікуйте зараз, щоб не втратити їх.",
     imageTooLarge: "Фото завелике. Оберіть фото до 50 MiB.",
     imageUnsupported: "Оберіть фото JPEG, PNG, WebP або HEIC.",
     imageRetry: "Повторити фото",
@@ -41,6 +58,16 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       cancelLink: "Скасувати",
       quoteAttribution: "Додати автора цитати",
       removeQuoteAttribution: "Прибрати автора цитати",
+    },
+    shortcuts: {
+      open: "Підказки та скорочення",
+      title: "Клавіатура редактора",
+      inputRules: "Правила введення",
+      inline: "Усередині рядка",
+      keys: "Скорочення",
+      slashMenu: "Меню команд",
+      blockMenu: "Меню блока",
+      moveBlock: "Перемістити блок, коли фокус на ручці",
     },
     reorder: {
       moveUp: "Перемістити вгору",
@@ -97,6 +124,22 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageUploading: "Обработка на снимка…",
     imageFailed:
       "Снимката не можа да бъде подготвена. Записът не е публикуван.",
+    imagePhase: {
+      decoding: "Четем снимката…",
+      encoding: "Подготвяме вариантите…",
+      staging: "Качваме…",
+    },
+    imageFailureReason: {
+      operation_aborted: "Подготовката на снимката е спряна.",
+      retry_limit_exceeded: "Три опита подред не успяха. Изберете друг файл.",
+      media_limit_exceeded: "В записа има твърде много снимки.",
+      media_preparation_failed:
+        "Тази снимка не можа да бъде подготвена. Опитайте отново или изберете друг файл.",
+      fallback:
+        "Тази снимка не можа да бъде подготвена. Опитайте отново или изберете друг файл.",
+    },
+    imageLeaseAtRisk:
+      "Съхранението на качените снимки не може да бъде подновено. Публикувайте сега, за да не ги загубите.",
     imageTooLarge: "Снимката е твърде голяма. Изберете снимка до 50 MiB.",
     imageUnsupported: "Изберете снимка JPEG, PNG, WebP или HEIC.",
     imageRetry: "Опитай снимката отново",
@@ -125,6 +168,16 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       cancelLink: "Отказ",
       quoteAttribution: "Добави автор на цитата",
       removeQuoteAttribution: "Премахни автора на цитата",
+    },
+    shortcuts: {
+      open: "Подсказки и съкращения",
+      title: "Клавиатурата на редактора",
+      inputRules: "Правила за въвеждане",
+      inline: "В реда",
+      keys: "Съкращения",
+      slashMenu: "Меню с команди",
+      blockMenu: "Меню на блока",
+      moveBlock: "Премести блока, когато фокусът е върху дръжката",
     },
     reorder: {
       moveUp: "Премести нагоре",
@@ -180,6 +233,23 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageChoose: "Добавить фото",
     imageUploading: "Обработка фото…",
     imageFailed: "Фото не удалось подготовить. Запись ещё не опубликована.",
+    imagePhase: {
+      decoding: "Читаем фото…",
+      encoding: "Готовим варианты…",
+      staging: "Загружаем…",
+    },
+    imageFailureReason: {
+      operation_aborted: "Подготовка фото остановлена.",
+      retry_limit_exceeded:
+        "Три попытки подряд не удались. Выберите другой файл.",
+      media_limit_exceeded: "В записи слишком много фото.",
+      media_preparation_failed:
+        "Не удалось подготовить это фото. Попробуйте снова или выберите другой файл.",
+      fallback:
+        "Не удалось подготовить это фото. Попробуйте снова или выберите другой файл.",
+    },
+    imageLeaseAtRisk:
+      "Не удаётся продлить хранение загруженных фото. Опубликуйте сейчас, чтобы не потерять их.",
     imageTooLarge: "Фото слишком большое. Выберите фото до 50 MiB.",
     imageUnsupported: "Выберите фото JPEG, PNG, WebP или HEIC.",
     imageRetry: "Повторить фото",
@@ -208,6 +278,16 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       cancelLink: "Отмена",
       quoteAttribution: "Добавить автора цитаты",
       removeQuoteAttribution: "Убрать автора цитаты",
+    },
+    shortcuts: {
+      open: "Подсказки и сокращения",
+      title: "Клавиатура редактора",
+      inputRules: "Правила ввода",
+      inline: "Внутри строки",
+      keys: "Сокращения",
+      slashMenu: "Меню команд",
+      blockMenu: "Меню блока",
+      moveBlock: "Переместить блок, когда фокус на ручке",
     },
     reorder: {
       moveUp: "Переместить вверх",

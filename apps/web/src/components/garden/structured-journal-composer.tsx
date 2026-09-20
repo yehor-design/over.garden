@@ -65,6 +65,27 @@ export interface StructuredJournalComposerLabels {
   imageChoose: string;
   imageUploading: string;
   imageFailed: string;
+  /**
+   * Where one photograph is in the three steps it takes — decode, encode,
+   * stage — so "processing" stops being the only thing a reader is told
+   * while a large photograph is converted (`OVE-458` AC4).
+   */
+  imagePhase: Record<"decoding" | "encoding" | "staging", string>;
+  /**
+   * Why a photograph failed, per code, with `fallback` for a code this list
+   * has not met. "It failed" is not a reason, and the one action a reader has
+   * — retry, or choose a different file — depends on which of these it was.
+   */
+  imageFailureReason: Record<
+    | "operation_aborted"
+    | "retry_limit_exceeded"
+    | "media_limit_exceeded"
+    | "media_preparation_failed"
+    | "fallback",
+    string
+  >;
+  /** The staging lease could not be renewed (`OVE-372`, `OVE-458` AC4). */
+  imageLeaseAtRisk: string;
   /** A dropped, pasted, or picked file over the 50 MiB limit (OVE-371). */
   imageTooLarge: string;
   /** A file that is not a JPEG, PNG, WebP, or HEIC photo. */
@@ -95,6 +116,21 @@ export interface StructuredJournalComposerLabels {
     cancelLink: string;
     quoteAttribution: string;
     removeQuoteAttribution: string;
+  };
+
+  /**
+   * The shortcut sheet's own words (`OVE-458`). Every *row* is generated from
+   * the module that implements the rule; these are the headings around them.
+   */
+  shortcuts: {
+    open: string;
+    title: string;
+    inputRules: string;
+    inline: string;
+    keys: string;
+    slashMenu: string;
+    blockMenu: string;
+    moveBlock: string;
   };
 
   reorder: JournalBlockReorderCopy;
@@ -242,7 +278,7 @@ function StructuredJournalComposerBound(props: StructuredJournalComposerProps) {
       >
         <div className="grid gap-1">
           <p className="font-medium">{labels.failureTitle}</p>
-          <p className="text-sm text-muted-foreground">{labels.failureBody}</p>
+          <p className="text-body-sm text-text-muted">{labels.failureBody}</p>
         </div>
         <JournalDocumentRenderer
           document={fallbackDocument}
@@ -253,7 +289,7 @@ function StructuredJournalComposerBound(props: StructuredJournalComposerProps) {
         />
         <button
           type="button"
-          className="min-h-11 justify-self-start rounded px-2 text-sm underline"
+          className="min-h-11 justify-self-start rounded px-2 text-body-sm underline"
           onClick={() => {
             if (initialInvalid) {
               const rebound = resolveInitialBinding(initialDocument);
@@ -309,7 +345,7 @@ function StructuredJournalComposerLoading({
       aria-busy="true"
       lang={locale}
     >
-      <p className="text-sm text-muted-foreground">{labels.loading}</p>
+      <p className="text-body-sm text-text-muted">{labels.loading}</p>
     </div>
   );
 }

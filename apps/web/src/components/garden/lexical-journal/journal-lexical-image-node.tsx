@@ -14,7 +14,17 @@ import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import { MAX_JOURNAL_IMAGE_CAPTION_CHARS } from "@/lib/garden/journal-document";
 import { $isOverGardenImageNode } from "./journal-lexical-nodes";
 import { FileDrop } from "@/components/ui/file-drop";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import { Textarea } from "@/components/ui/textarea";
+
+/** The three steps of preparing one photograph, as a share of the whole. */
+const MEDIA_PHASE_PROGRESS: Readonly<Record<string, number>> = {
+  selected: 5,
+  decoding: 25,
+  encoding: 60,
+  staging: 85,
+  ready: 100,
+};
 
 export interface JournalImageUiState {
   status: "selected" | "decoding" | "encoding" | "staging" | "ready" | "failed";
@@ -27,6 +37,10 @@ export interface JournalImagePreviewContextValue {
   getState(mediaAssetId: string): JournalImageUiState | undefined;
   labels: {
     processing: string;
+    /** Which of the three steps this photograph is in (`OVE-458` AC4). */
+    phase: Record<"decoding" | "encoding" | "staging", string>;
+    /** Why it failed, per code, with `fallback` for one this list has not met. */
+    failureReason: Record<string, string>;
     failed: string;
     retry: string;
     replace: string;
@@ -81,7 +95,7 @@ export function JournalLexicalImageNodeView({
   const busy = Boolean(state && state.status !== "ready" && !failed);
 
   const action =
-    "flex h-8 items-center rounded border border-border bg-background/90 px-2 text-xs backdrop-blur-sm hover:bg-accent hover:text-accent-foreground disabled:opacity-40";
+    "flex h-8 items-center rounded border border-border bg-surface/90 px-2 text-caption backdrop-blur-sm hover:bg-action-subtle hover:text-action-subtle-text disabled:opacity-40";
 
   return (
     <div
@@ -101,7 +115,7 @@ export function JournalLexicalImageNodeView({
         />
       ) : (
         <div
-          className="h-40 animate-pulse rounded-md bg-muted"
+          className="h-40 animate-pulse rounded-md bg-surface-sunken"
           aria-hidden="true"
         />
       )}
@@ -136,18 +150,33 @@ export function JournalLexicalImageNodeView({
         />
       ) : null}
 
+      {/* Where this photograph is, not "processing". Three steps, so a
+          reader converting a 40 MB photograph can tell a slow encode from a
+          stalled upload (`OVE-458` AC4). */}
       {busy && context ? (
-        <p className="text-sm text-muted-foreground" role="status">
-          {context.labels.processing}
-        </p>
+        <div className="grid gap-1" role="status">
+          <p className="text-body-sm text-text-muted">
+            {state?.status === "decoding" ||
+            state?.status === "encoding" ||
+            state?.status === "staging"
+              ? context.labels.phase[state.status]
+              : context.labels.processing}
+          </p>
+          <ProgressBar
+            label={context.labels.processing}
+            value={MEDIA_PHASE_PROGRESS[state?.status ?? "selected"] ?? 0}
+          />
+        </div>
       ) : null}
       {failed && context ? (
         <p
           id={`${inputId}-error`}
-          className="text-sm text-destructive"
+          className="text-body-sm text-danger-text"
           role="alert"
         >
-          {context.labels.failed}
+          {context.labels.failed}{" "}
+          {context.labels.failureReason[state?.failureCode ?? ""] ??
+            context.labels.failureReason.fallback}
         </p>
       ) : null}
 

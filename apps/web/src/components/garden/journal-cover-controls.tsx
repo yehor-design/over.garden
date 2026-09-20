@@ -1,6 +1,13 @@
 /**
  * Progressive journal cover controls (OVE-207).
  * Optional Cover section — never required on the shortest create path.
+ *
+ * `OVE-458` AC7 rewrote how the section states itself. Before, the choice lived
+ * in a button's fill: the selected mode was the one rendered `primary`, which
+ * is colour alone (WCAG 1.4.1), announced to nobody, and two of the four
+ * buttons — "Автоматично" and "Повернути автоматичну" — dispatched the same
+ * `{ mode: "automatic" }`. Now the section says its value in words, every
+ * toggle carries `aria-pressed`, and the duplicate is gone.
  */
 
 "use client";
@@ -8,9 +15,7 @@
 import { useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  type JournalCoverMode,
-} from "@/lib/garden/journal-cover-contract";
+import { type JournalCoverMode } from "@/lib/garden/journal-cover-contract";
 import {
   COMPOSER_PHOTO_ACCEPT,
   createComposerPhotoIntent,
@@ -28,7 +33,6 @@ export interface JournalCoverControlsCopy {
   useAsCover: string;
   uploadSeparate: string;
   replaceSeparate: string;
-  removeCover: string;
   previewLabel: string;
   noCover: string;
   uploading: string;
@@ -40,6 +44,26 @@ export interface JournalCoverControlsCopy {
   preparing: string;
   failed: string;
   retry: string;
+  /** Prefixes the visible value, and badges the chosen photograph. */
+  currentLabel: string;
+  /** The value when a photograph from the story is the cover. */
+  valueInline: string;
+  /** The value when a photograph uploaded only for the cover is the cover. */
+  valueSeparate: string;
+  /**
+   * A photograph in the story, by its position: "Фото 2". The thumbnails read
+   * as names now rather than as instructions, so the label under one has to be
+   * a name — `useAsCover` is the action, and it stays on the control.
+   */
+  photoOrdinal: string;
+}
+
+/** `photoOrdinal` with its one placeholder filled. */
+export function journalCoverPhotoLabel(
+  copy: JournalCoverControlsCopy,
+  index: number,
+): string {
+  return copy.photoOrdinal.replaceAll("{index}", String(index + 1));
 }
 
 export type JournalCoverSelectionState =
@@ -115,6 +139,7 @@ export function JournalCoverControls({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const previewUrl = resolveCoverPreviewUrl(selection, eligibleInline);
+  const valueText = describeCoverSelection(selection, eligibleInline, copy);
 
   async function onPickSeparate(file: File | null) {
     if (!file || disabled) return;
@@ -146,21 +171,29 @@ export function JournalCoverControls({
     <section
       className={cn("grid gap-3 border-y border-border py-3", className)}
       data-journal-cover-controls="true"
+      data-journal-cover-mode={selection.mode}
       aria-labelledby={`${inputId}-label`}
     >
       <div className="grid gap-1">
-        <h2
-          id={`${inputId}-label`}
-          className="text-sm font-medium text-foreground"
-        >
+        <h2 id={`${inputId}-label`} className="text-h4 text-text-heading">
           {copy.sectionLabel}
         </h2>
-        <p className="text-xs text-muted-foreground">{copy.sectionHint}</p>
+        <p className="text-caption text-text-muted">{copy.sectionHint}</p>
+        {/* The value, in words. A fill is not a value: it says nothing to a
+            screen reader, nothing in high contrast and nothing to anyone who
+            cannot tell this green from that one (`OVE-458` AC7). */}
+        <p
+          data-journal-cover-value="true"
+          className="text-body-sm text-text"
+          aria-live="polite"
+        >
+          {copy.currentLabel}: {valueText}
+        </p>
       </div>
 
       {previewUrl ? (
         <figure className="grid gap-1">
-          <figcaption className="text-xs text-muted-foreground">
+          <figcaption className="text-caption text-text-muted">
             {copy.previewLabel}
           </figcaption>
           <SubjectAwareHtmlImage
@@ -171,31 +204,28 @@ export function JournalCoverControls({
             data-journal-cover-preview="true"
           />
         </figure>
-      ) : selection.mode === "none" ? (
-        <p className="text-xs text-muted-foreground">{copy.noCover}</p>
       ) : null}
 
       {selectedLocalMediaState &&
       selectedLocalMediaState.status !== "ready" &&
       selectedLocalMediaState.status !== "failed" ? (
-        <p className="text-xs text-muted-foreground" role="status">
+        <p className="text-caption text-text-muted" role="status">
           {copy.preparing}
         </p>
       ) : null}
       {selectedLocalMediaState?.status === "failed" ? (
         <div className="flex flex-wrap items-center gap-2" role="alert">
-          <p className="text-xs text-destructive">{copy.failed}</p>
+          <p className="text-caption text-danger-text">{copy.failed}</p>
           {onRetrySelectedLocal &&
-          (selection.mode === "explicit_inline" || selection.mode === "separate") &&
+          (selection.mode === "explicit_inline" ||
+            selection.mode === "separate") &&
           selection.mediaAssetId ? (
             <Button
               type="button"
               size="sm"
               variant="secondary"
               disabled={disabled}
-              onClick={() =>
-                onRetrySelectedLocal(selection.mediaAssetId!)
-              }
+              onClick={() => onRetrySelectedLocal(selection.mediaAssetId!)}
             >
               {copy.retry}
             </Button>
@@ -203,11 +233,16 @@ export function JournalCoverControls({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-labelledby={`${inputId}-label`}
+      >
         <Button
           type="button"
           variant={selection.mode === "automatic" ? "primary" : "secondary"}
           size="sm"
+          aria-pressed={selection.mode === "automatic"}
           disabled={disabled || uploading}
           onClick={() => onChange({ mode: "automatic" })}
         >
@@ -215,8 +250,9 @@ export function JournalCoverControls({
         </Button>
         <Button
           type="button"
-          variant="secondary"
+          variant={selection.mode === "separate" ? "primary" : "secondary"}
           size="sm"
+          aria-pressed={selection.mode === "separate"}
           disabled={disabled || uploading}
           onClick={() => fileInputRef.current?.click()}
         >
@@ -226,23 +262,11 @@ export function JournalCoverControls({
               ? copy.replaceSeparate
               : copy.uploadSeparate}
         </Button>
-        {(selection.mode === "explicit_inline" ||
-          selection.mode === "separate" ||
-          selection.mode === "none") && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            disabled={isJournalMediaWaitSafeControlDisabled(disabled)}
-            onClick={() => onChange({ mode: "automatic" })}
-          >
-            {copy.removeCover}
-          </Button>
-        )}
         <Button
           type="button"
-          variant={selection.mode === "none" ? "primary" : "ghost"}
+          variant={selection.mode === "none" ? "primary" : "secondary"}
           size="sm"
+          aria-pressed={selection.mode === "none"}
           disabled={isJournalMediaWaitSafeControlDisabled(disabled)}
           onClick={() => onChange({ mode: "none" })}
         >
@@ -274,9 +298,15 @@ export function JournalCoverControls({
                 <button
                   type="button"
                   disabled={disabled || uploading}
+                  aria-pressed={selected}
+                  aria-label={`${copy.useAsCover}: ${item.label}`}
                   className={cn(
-                    "flex w-full items-center gap-2 border border-border px-2 py-2 text-left text-sm",
-                    selected && "border-foreground",
+                    "flex w-full items-center gap-2 rounded-md border px-2 py-2 text-left text-body-sm",
+                    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+                    "disabled:cursor-not-allowed disabled:text-text-disabled",
+                    selected
+                      ? "border-action bg-action-subtle text-action-subtle-text"
+                      : "border-border-control text-text hover:bg-surface-hover",
                   )}
                   onClick={() =>
                     onChange({
@@ -294,30 +324,39 @@ export function JournalCoverControls({
                       className="size-10"
                     />
                   ) : (
-                    <span className="size-10 bg-muted" aria-hidden />
+                    <span
+                      className="size-10 rounded-sm bg-surface-sunken"
+                      aria-hidden
+                    />
                   )}
-                  <span className="min-w-0 flex-1 truncate">
-                    {selected ? copy.useAsCover : item.label}
-                  </span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  {selected ? (
+                    <span
+                      data-journal-cover-selected="true"
+                      className="shrink-0 text-caption font-medium"
+                    >
+                      {copy.currentLabel}
+                    </span>
+                  ) : null}
                 </button>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-text-muted">
           {copy.eligibleInlineEmpty}
         </p>
       )}
 
       {pendingInlineRemoval && onResolveInlineRemoval ? (
         <div
-          className="grid gap-2 border border-border p-3"
+          className="grid gap-2 rounded-md border border-border p-3"
           role="alertdialog"
           aria-labelledby={`${inputId}-remove-prompt`}
           data-journal-cover-remove-prompt="true"
         >
-          <p id={`${inputId}-remove-prompt`} className="text-sm">
+          <p id={`${inputId}-remove-prompt`} className="text-body-sm text-text">
             {copy.removeInlinePrompt}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -379,6 +418,27 @@ export function resolveCoverPreviewUrl(
   }
 }
 
+/**
+ * The cover's value as a reader would say it (`OVE-458` AC7).
+ *
+ * A chosen photograph is named by its own label where the composer knows one —
+ * "Обрано: Фото 2" is a value; "Обрано: Фото з історії" is a category, and only
+ * the fallback.
+ */
+export function describeCoverSelection(
+  selection: JournalCoverSelectionState,
+  eligibleInline: readonly JournalCoverEligibleInline[],
+  copy: JournalCoverControlsCopy,
+): string {
+  if (selection.mode === "explicit_inline") {
+    const chosen = eligibleInline.find(
+      (item) => item.mediaAssetId === selection.mediaAssetId,
+    );
+    return chosen?.label ?? copy.valueInline;
+  }
+  return inferCoverModeLabel(selection.mode, copy);
+}
+
 export function journalCoverSelectionToClaimInput(
   selection: JournalCoverSelectionState,
   options?: { separateMediaAssetId?: string | null },
@@ -422,9 +482,9 @@ export function inferCoverModeLabel(
     case "automatic":
       return copy.automatic;
     case "explicit_inline":
-      return copy.useAsCover;
+      return copy.valueInline;
     case "separate":
-      return copy.uploadSeparate;
+      return copy.valueSeparate;
     case "none":
       return copy.noCover;
     default: {

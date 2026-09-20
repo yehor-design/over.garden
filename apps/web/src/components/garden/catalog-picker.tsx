@@ -36,10 +36,13 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   ComboboxClear,
   ComboboxInput,
+  ComboboxList,
+  ComboboxOption,
   ComboboxRoot,
 } from "@/components/ui/combobox";
 
-export type CatalogPickerCopy = GardenWorkspaceCopy["composer"]["catalogPicker"];
+export type CatalogPickerCopy =
+  GardenWorkspaceCopy["composer"]["catalogPicker"];
 
 export interface CatalogSearchMiss {
   query: string;
@@ -106,12 +109,20 @@ export interface CatalogPickerProps {
   disabled?: boolean;
   /** Test seam: replaces the network read. */
   fetchRows?: (
-    input: { query: string; objectKind: PlantObjectKind; locale: InterfaceLocale },
+    input: {
+      query: string;
+      objectKind: PlantObjectKind;
+      locale: InterfaceLocale;
+    },
     signal: AbortSignal,
   ) => Promise<CatalogPickerFetchResult>;
   /** The secondary path over the whole checklist (ADR-0026 D7). */
   fetchFullCatalogue?: (
-    input: { query: string; objectKind: PlantObjectKind; locale: InterfaceLocale },
+    input: {
+      query: string;
+      objectKind: PlantObjectKind;
+      locale: InterfaceLocale;
+    },
     signal: AbortSignal,
   ) => Promise<CatalogFullCatalogueRow[]>;
   /** Turns a checklist row into a node. Without it the secondary path is off. */
@@ -127,6 +138,28 @@ type PickerOption =
   | { id: string; kind: "row"; row: CatalogPickerRow }
   | { id: string; kind: "full"; row: CatalogFullCatalogueRow }
   | { id: string; kind: "own_name"; name: string };
+
+/**
+ * Whether this option is the one already chosen.
+ *
+ * `aria-selected` says what has been chosen; the keyboard's position is
+ * `aria-activedescendant` and `data-active`. The picker spelled both as
+ * `aria-selected`, which tells a screen reader that arrowing through the list
+ * is choosing each row in turn (`OVE-458` AC6).
+ */
+function optionIsSelection(
+  option: PickerOption,
+  selection: CatalogPickerSelection | null,
+): boolean {
+  if (!selection) return false;
+  if (option.kind === "own_name") {
+    return selection.kind === "own_name" && selection.name === option.name;
+  }
+  if (option.kind === "row") {
+    return selection.kind === "item" && selection.row.id === option.row.id;
+  }
+  return false;
+}
 
 /** Below this many canonical rows the full checklist is worth offering. */
 export const CATALOG_FULL_CATALOGUE_THRESHOLD = 3;
@@ -167,7 +200,8 @@ export function CatalogPicker({
   const [uncontrolledQuery, setUncontrolledQuery] = useState(() =>
     selectionText(selection),
   );
-  const controlled = controlledQuery !== undefined && onQueryChange !== undefined;
+  const controlled =
+    controlledQuery !== undefined && onQueryChange !== undefined;
   const query = controlled ? controlledQuery : uncontrolledQuery;
   const setQuery = useCallback(
     (value: string) => {
@@ -182,7 +216,9 @@ export function CatalogPicker({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [syncedSelection, setSyncedSelection] = useState(selection);
-  const [fullRows, setFullRows] = useState<CatalogFullCatalogueRow[] | null>(null);
+  const [fullRows, setFullRows] = useState<CatalogFullCatalogueRow[] | null>(
+    null,
+  );
   const [fullSearching, setFullSearching] = useState(false);
   const reportedMissRef = useRef<string | null>(null);
   // When the gardener started typing, and whether this attempt has already
@@ -317,10 +353,7 @@ export function CatalogPicker({
   const clampedActiveIndex = activeIndex < options.length ? activeIndex : -1;
 
   const reportOutcome = useCallback(
-    (
-      outcome: CatalogPickOutcome["outcome"],
-      catalogItemId: string | null,
-    ) => {
+    (outcome: CatalogPickOutcome["outcome"], catalogItemId: string | null) => {
       if (!onPickOutcome) return;
       if (reportedOutcomeRef.current) return;
       const startedAt = firstKeystrokeRef.current;
@@ -526,13 +559,21 @@ export function CatalogPicker({
         ? copy.unavailable
         : effectiveAvailability === "empty"
           ? copy.empty
-          : "";
+          : // The list announces itself (`OVE-458` AC6). A combobox whose
+            // options arrive asynchronously has to say how many there are, or
+            // a screen-reader user is left holding an input that silently
+            // filled.
+            options.length > 0
+            ? formatGardenWorkspaceTemplate(copy.resultCount, {
+                count: options.length,
+              })
+            : "";
 
   return (
     <div className="flex min-w-0 flex-col gap-2" data-catalog-picker="true">
       <label
         htmlFor={inputId}
-        className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground"
+        className="flex min-w-0 flex-col gap-1 text-body-sm font-medium text-text"
       >
         {label}
       </label>
@@ -577,44 +618,44 @@ export function CatalogPicker({
         }
         className={
           effectiveAvailability === "unavailable" && !selection
-            ? "text-xs text-destructive"
-            : "text-xs text-muted-foreground"
+            ? "text-caption text-danger-text"
+            : "text-caption text-text-muted"
         }
       >
         {statusText}
       </p>
-      <ul
+      <ComboboxList
         id={listboxId}
-        role="listbox"
         aria-label={copy.listLabel}
         hidden={!listVisible}
-        className="grid gap-1"
       >
         {options.map((option, index) => {
           const active = index === clampedActiveIndex;
-          const optionClass = `flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-left text-sm ${
-            active
-              ? "border-ring bg-muted"
-              : "border-border hover:bg-muted"
-          }`;
+          // `aria-selected` is what has been *chosen*; the keyboard's position
+          // travels in `aria-activedescendant` and is `data-active` here. The
+          // picker used to spell both as `aria-selected`, which tells a screen
+          // reader that arrowing through the list is choosing each row.
+          const chosen = optionIsSelection(option, selection);
+          const optionClass =
+            "flex min-h-11 w-full items-center gap-3 text-left";
           if (option.kind === "own_name") {
             return (
-              <li
+              <ComboboxOption
                 key={option.id}
                 id={option.id}
-                role="option"
-                aria-selected={active}
+                active={active}
+                selected={chosen}
                 data-catalog-option="own_name"
                 className={optionClass}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(option)}
               >
-                <span className="min-w-0 font-medium text-foreground">
+                <span className="min-w-0 font-medium text-text">
                   {formatGardenWorkspaceTemplate(copy.ownName, {
                     query: option.name,
                   })}
                 </span>
-              </li>
+              </ComboboxOption>
             );
           }
           if (option.kind === "full") {
@@ -630,11 +671,11 @@ export function CatalogPicker({
               .filter(Boolean)
               .join(" · ");
             return (
-              <li
+              <ComboboxOption
                 key={option.id}
                 id={option.id}
-                role="option"
-                aria-selected={active}
+                active={active}
+                selected={chosen}
                 data-catalog-option="full_catalogue"
                 data-catalog-col-id={checklistRow.colId}
                 className={optionClass}
@@ -642,14 +683,14 @@ export function CatalogPicker({
                 onClick={() => choose(option)}
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-foreground">
+                  <span className="block truncate font-medium text-text">
                     {checklistRow.displayName}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block truncate text-caption text-text-muted">
                     {subtitle}
                   </span>
                 </span>
-              </li>
+              </ComboboxOption>
             );
           }
           const row = option.row;
@@ -670,11 +711,11 @@ export function CatalogPicker({
             .filter(Boolean)
             .join(" · ");
           return (
-            <li
+            <ComboboxOption
               key={option.id}
               id={option.id}
-              role="option"
-              aria-selected={active}
+              active={active}
+              selected={chosen}
               data-catalog-option={row.kind}
               data-catalog-item-id={row.id}
               className={optionClass}
@@ -682,17 +723,17 @@ export function CatalogPicker({
               onClick={() => choose(option)}
             >
               <span className="min-w-0">
-                <span className="block truncate font-medium text-foreground">
+                <span className="block truncate font-medium text-text">
                   {row.displayName}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block truncate text-caption text-text-muted">
                   {subtitle}
                 </span>
               </span>
-            </li>
+            </ComboboxOption>
           );
         })}
-      </ul>
+      </ComboboxList>
       {materializeFromCatalogue &&
       searchable &&
       fullRows === null &&
@@ -703,10 +744,10 @@ export function CatalogPicker({
           data-catalog-full-catalogue="offer"
           disabled={disabled || fullSearching}
           onClick={() => void searchFullCatalogue()}
-          className="justify-self-start text-left text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          className="justify-self-start text-left text-caption text-text-muted underline underline-offset-4 hover:text-text"
         >
           {copy.fullCatalogue}
-          <span className="block text-xs no-underline">
+          <span className="block text-caption no-underline">
             {copy.fullCatalogueHint}
           </span>
         </button>
@@ -714,7 +755,7 @@ export function CatalogPicker({
       {fullRows !== null && fullRows.length === 0 ? (
         <p
           data-catalog-full-catalogue="empty"
-          className="text-xs text-muted-foreground"
+          className="text-caption text-text-muted"
         >
           {copy.fullCatalogueEmpty}
         </p>
@@ -724,7 +765,11 @@ export function CatalogPicker({
 }
 
 export async function fetchCatalogRows(
-  input: { query: string; objectKind: PlantObjectKind; locale: InterfaceLocale },
+  input: {
+    query: string;
+    objectKind: PlantObjectKind;
+    locale: InterfaceLocale;
+  },
   signal: AbortSignal,
 ): Promise<CatalogPickerFetchResult> {
   const response = await fetch(buildCatalogTypeaheadUrl(input), { signal });
@@ -741,7 +786,11 @@ export async function fetchCatalogRows(
 }
 
 export async function fetchFullCatalogueRows(
-  input: { query: string; objectKind: PlantObjectKind; locale: InterfaceLocale },
+  input: {
+    query: string;
+    objectKind: PlantObjectKind;
+    locale: InterfaceLocale;
+  },
   signal: AbortSignal,
 ): Promise<CatalogFullCatalogueRow[]> {
   const response = await fetch(

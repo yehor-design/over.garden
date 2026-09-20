@@ -2,6 +2,8 @@ import type { PublicLocale } from "@/lib/public-localization";
 
 export interface AtomicJournalEditCopy {
   localOnly: string;
+  /** The staging lease could not be renewed (`OVE-372`, `OVE-458` AC4). */
+  leaseAtRisk: string;
   waitingMedia: string;
   publishing: string;
   published: string;
@@ -23,6 +25,8 @@ export interface AtomicJournalEditCopy {
 
 const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
   uk: {
+    leaseAtRisk:
+      "Не вдається продовжити зберігання завантажених фото. Збережіть зараз, щоб не втратити їх.",
     localOnly: "Зміни залишаються лише в цій вкладці, доки ви не збережете їх.",
     waitingMedia: "Готуємо змінені фото до збереження…",
     publishing: "Зберігаємо весь запис одним оновленням…",
@@ -45,6 +49,8 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     closeConflict: "Продовжити редагування",
   },
   bg: {
+    leaseAtRisk:
+      "Съхранението на качените снимки не може да бъде подновено. Запазете сега, за да не ги загубите.",
     localOnly: "Промените остават само в този раздел, докато не ги запазите.",
     waitingMedia: "Подготвяме променените снимки за запазване…",
     publishing: "Запазваме целия запис с една актуализация…",
@@ -68,6 +74,8 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     closeConflict: "Продължи редактирането",
   },
   ru: {
+    leaseAtRisk:
+      "Не удаётся продлить хранение загруженных фото. Сохраните сейчас, чтобы не потерять их.",
     localOnly:
       "Изменения остаются только в этой вкладке, пока вы их не сохраните.",
     waitingMedia: "Готовим изменённые фото к сохранению…",

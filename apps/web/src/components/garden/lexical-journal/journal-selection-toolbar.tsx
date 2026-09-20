@@ -265,7 +265,7 @@ export function JournalSelectionToolbar({
       data-journal-selection-toolbar="true"
       aria-label={labels.tools.toolbar}
       hidden={position === null}
-      className="pointer-events-auto absolute top-0 left-0 z-popover flex items-center gap-0.5 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+      className="pointer-events-auto absolute top-0 left-0 z-popover flex items-center gap-0.5 rounded-md border border-border bg-surface p-1 text-text shadow-popover"
     >
       {linkOpen ? (
         <div className="flex items-center gap-1">
@@ -292,7 +292,7 @@ export function JournalSelectionToolbar({
           <button
             type="button"
             disabled={disabled}
-            className="h-9 rounded px-2 text-sm hover:bg-accent hover:text-accent-foreground"
+            className="h-9 rounded px-2 text-body-sm hover:bg-action-subtle hover:text-action-subtle-text"
             onClick={applyLink}
           >
             {labels.tools.applyLink}
@@ -300,7 +300,7 @@ export function JournalSelectionToolbar({
           <button
             type="button"
             disabled={disabled}
-            className="h-9 rounded px-2 text-sm hover:bg-accent hover:text-accent-foreground"
+            className="h-9 rounded px-2 text-body-sm hover:bg-action-subtle hover:text-action-subtle-text"
             onClick={() => closeLinkEditor(true)}
           >
             {labels.tools.cancelLink}
@@ -317,8 +317,8 @@ export function JournalSelectionToolbar({
               aria-pressed={formats.has(format)}
               disabled={disabled}
               className={cn(
-                "flex size-9 items-center justify-center rounded hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
-                formats.has(format) && "bg-accent text-accent-foreground",
+                "flex size-9 items-center justify-center rounded hover:bg-action-subtle hover:text-action-subtle-text disabled:opacity-40",
+                formats.has(format) && "bg-action-subtle text-action-subtle-text",
               )}
               // The pointer must not move the caret: the selection is what the
               // command acts on.
@@ -337,8 +337,8 @@ export function JournalSelectionToolbar({
             aria-pressed={linkValue.length > 0}
             disabled={disabled}
             className={cn(
-              "flex size-9 items-center justify-center rounded hover:bg-accent hover:text-accent-foreground disabled:opacity-40",
-              linkValue.length > 0 && "bg-accent text-accent-foreground",
+              "flex size-9 items-center justify-center rounded hover:bg-action-subtle hover:text-action-subtle-text disabled:opacity-40",
+              linkValue.length > 0 && "bg-action-subtle text-action-subtle-text",
             )}
             onMouseDown={(event) => event.preventDefault()}
             onClick={openLinkEditor}

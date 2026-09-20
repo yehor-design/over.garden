@@ -35,7 +35,7 @@ export function JournalObjectKindSelector({
   const copy = getGardenWorkspaceCopy(locale).composer.objectKind;
   return (
     <fieldset className="grid min-w-0 gap-2">
-      <legend className="text-sm font-medium text-foreground">
+      <legend className="text-body-sm font-medium text-text">
         {copy.legend}
       </legend>
       <div className="grid min-w-0 grid-cols-2 gap-2" role="group">
@@ -51,20 +51,20 @@ export function JournalObjectKindSelector({
               data-object-kind={option.value}
               aria-pressed={selected}
               onClick={() => onChange(option.value)}
-              className={`flex min-h-20 min-w-0 flex-col items-start justify-between gap-2 rounded-md border px-3 py-2 text-left transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${
+              className={`flex min-h-20 min-w-0 flex-col items-start justify-between gap-2 rounded-md border px-3 py-2 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring ${
                 selected
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-background text-foreground hover:bg-muted"
+                  ? "border-action bg-action text-text-on-fill"
+                  : "border-border bg-surface text-text hover:bg-surface-sunken"
               }`}
             >
               <Icon className="size-4 shrink-0" />
               <span className="block w-full min-w-0">
-                <span className="block text-xs leading-4 font-semibold break-words sm:text-sm">
+                <span className="block text-caption leading-4 font-semibold break-words sm:text-body-sm">
                   {optionCopy.label}
                 </span>
                 <span
-                  className={`mt-1 hidden text-xs leading-4 sm:block ${
-                    selected ? "text-background/70" : "text-muted-foreground"
+                  className={`mt-1 hidden text-caption leading-4 sm:block ${
+                    selected ? "text-text-on-fill" : "text-text-muted"
                   }`}
                 >
                   {optionCopy.description}

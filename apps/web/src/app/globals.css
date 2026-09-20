@@ -478,7 +478,11 @@
 
   /* Notion's content column and gutter, in the numbers Notion uses: a 708 px
      column beside a 40 px gutter for the add button and the drag handle. */
-  .journal-composer-canvas {
+  /* 708 px — Notion's own number (ADR-0028 D3). The canvas and anything that
+     must line up under it share one declaration, so the column cannot drift
+     from the text it sits beneath. */
+  .journal-composer-canvas,
+  .journal-composer-column {
     max-width: 44.25rem;
   }
 
