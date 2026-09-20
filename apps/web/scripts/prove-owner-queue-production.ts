@@ -40,6 +40,13 @@ export interface OwnerQueueWalk {
   database: string;
   openItems: number;
   byType: Record<string, number>;
+  /**
+   * How many open items the apply function would accept. A `source_link`
+   * needs a subject, a `source_slug` and a `source_snapshot_id`; an item
+   * missing one of those raises rather than applying, and a queue of them is
+   * a queue nobody can work through.
+   */
+  appliable: Record<string, number>;
   walked: {
     queueItemId: string;
     itemType: string;
@@ -80,13 +87,27 @@ export async function walkOwnerQueue(options: {
     await client.query("set statement_timeout = '30s'");
     await client.query("set lock_timeout = '10s'");
 
-    const counts = await client.query<{ item_type: string; n: string }>(
-      `select item_type, count(*)::text as n
+    const counts = await client.query<{
+      item_type: string;
+      n: string;
+      appliable: string;
+    }>(
+      `select item_type,
+              count(*)::text as n,
+              count(*) filter (
+                where subject_catalog_item_id is not null
+                  and (item_type <> 'source_link'
+                       or (proposal ? 'source_slug'
+                           and proposal ? 'source_snapshot_id'))
+              )::text as appliable
        from catalog_curation_queue where state = 'open'
        group by item_type order by item_type`,
     );
     const byType = Object.fromEntries(
       counts.rows.map((row) => [row.item_type, Number(row.n)]),
+    );
+    const appliable = Object.fromEntries(
+      counts.rows.map((row) => [row.item_type, Number(row.appliable)]),
     );
     const openItems = Object.values(byType).reduce((sum, n) => sum + n, 0);
 
@@ -147,6 +168,7 @@ export async function walkOwnerQueue(options: {
       database: url.pathname.replace(/^\//u, ""),
       openItems,
       byType,
+      appliable,
       walked,
       generatedAt: new Date().toISOString(),
     };

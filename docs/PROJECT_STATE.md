@@ -1085,6 +1085,23 @@ run, printing the pair of rows `catalog_curation_actions` holds. Bounded by a
 `statement_timeout` and a `lock_timeout`, and it prints ids, counts and states
 only — a gardener's own words are on those rows.
 
+**The production walk could not be completed, and what it found instead.**
+Production's queue holds **13,456 open items, every one a `source_link`, and
+`appliable: 0`** — `catalog_apply_queue_item` refuses a `source_link` without a
+subject, a `source_slug` *and* a `source_snapshot_id`, and the open rows carry
+a slug but no snapshot id. So Accept raises on every one of them, and there is
+no decision on production for a walk to make. The walk's machinery is proven
+against a disposable database instead: applied, reverted, two rows in
+`catalog_curation_actions`, the object back at `free_text` with a null
+`catalog_item_id`.
+
+This is the producer's defect, not the queue page's — the reconciliation ladder
+writes those rows, and it is out of `OVE-459`'s scope by the task's own
+boundary. It is also the more urgent finding: the owner's queue looks workable
+and is not. What *was* proven on production is the guest half of criterion 7 —
+all three owner surfaces answer `private, no-store` with
+`noindex, nofollow` and carry none of the owner's data.
+
 Slice 28 is complete: `OVE-439`–`OVE-459`.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
