@@ -244,7 +244,14 @@ jobs:
         # both against this production build rather than a dev server. The
         # journals spec is here from the day it was written: a proof nobody
         # runs is not a proof, and five specs in this repository had rotted in
-        # exactly that way (`OVE-462`).
+        # exactly that way (`OVE-462`). The static-documents spec is ADR-0032's
+        # gate: a public page's heading and photograph are in the served bytes,
+        # outside every `<div hidden>`, and a reader without JavaScript reads
+        # it — asked over HTTP, because a DOM cannot tell a page that painted
+        # from its first byte from one that painted at TTI. The analytics spec
+        # holds what ADR-0032 D7 rewired: the nine measured paths ask for their
+        # tag once consent is given, no other path does, and the notice is
+        # drawn only where an answer is owed — with the tag hosts intercepted.
         env:
           BETTER_AUTH_URL: http://127.0.0.1:3179
           PUBLIC_SITE_URL: http://127.0.0.1:3179
@@ -256,7 +263,7 @@ jobs:
             sleep 1
           done
           PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/entry-addresses.spec.ts tests/latin-names.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts
+            pnpm exec playwright test tests/static-documents.spec.ts tests/analytics-consent.spec.ts tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/entry-addresses.spec.ts tests/latin-names.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts
 
   matching:
     name: Python matching tier

@@ -4,6 +4,11 @@ import path from "node:path";
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
 
+import {
+  cleanupPublishedEntryFixture,
+  seedPublishedEntryFixture,
+  type PublishedEntryFixture,
+} from "./helpers/entry-fixture";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 
 /**
@@ -70,37 +75,6 @@ async function axeViolations(page: Page) {
   }, AXE_TAGS);
 }
 
-/**
- * One published entry's own address, straight from the database.
- *
- * The address is `(handle, slug)` since migration `0073` — an entry's name
- * belongs to its author — so the join is the lookup, and an entry whose author
- * has no current handle has no address at all. A gate database accumulates
- * those: each run's teardown removes the gardener and leaves the rows.
- */
-async function publishedEntryPath(): Promise<string | null> {
-  const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
-  try {
-    const row = await pool.query<{ handle: string; number: number }>(
-      `select r.normalized_handle as handle, e.author_entry_number as number
-         from journal_entries e
-         join user_handle_registry r
-           on r.user_id = e.owner_user_id and r.lifecycle_state = 'current'
-        where e.author_entry_number is not null
-          and e.published_at is not null
-          and e.lifecycle_state = 'active'
-        order by e.created_at desc
-        limit 1`,
-    );
-    const found = row.rows[0];
-    // The entry's address is its author and its number (ADR-0029 D9). Its
-    // name would still open the page, through a 308 this gate has no use for.
-    return found ? `/@${found.handle}/post/${found.number}` : null;
-  } finally {
-    await pool.end();
-  }
-}
-
 async function openEntry(page: Page, entryPath: string) {
   const response = await page.goto(entryPath, { waitUntil: "load" });
   expect(
@@ -113,10 +87,23 @@ async function openEntry(page: Page, entryPath: string) {
 }
 
 test.describe("the public journal entry", () => {
-  let entryPath: string | null = null;
+  // Its own entry, made here. This spec used to *look* for one and skip when
+  // there was none — and on CI there never was: all five tests below reported
+  // `skipped` in every run from the day they were written (`6 skipped` in the
+  // log of 2026-09-19, five of them these). A gate that skips cannot fail.
+  let pool: Pool;
+  let fixture: PublishedEntryFixture;
+  let entryPath: string;
 
   test.beforeAll(async () => {
-    entryPath = await publishedEntryPath();
+    pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    fixture = await seedPublishedEntryFixture(pool, "ove449");
+    entryPath = fixture.entryPath;
+  });
+
+  test.afterAll(async () => {
+    await cleanupPublishedEntryFixture(pool, fixture);
+    await pool.end();
   });
 
   test("the prose measures 60–75 characters at every width", async ({
@@ -125,7 +112,6 @@ test.describe("the public journal entry", () => {
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    if (!entryPath) test.skip(true, "no published entry on this database");
     await selectLocale(context, baseURL);
 
     // A measure is a laid-out fact. The way to read it is to lay out a line of
@@ -133,7 +119,7 @@ test.describe("the public journal entry", () => {
     // class name says nothing about how many characters fit.
     for (const width of [375, 768, 1_440]) {
       await page.setViewportSize({ width, height: width < 768 ? 812 : 900 });
-      await openEntry(page, entryPath!);
+      await openEntry(page, entryPath);
 
       const measured = await page.evaluate(() => {
         // The reading column's own prose, not a caption or an eyebrow: an
@@ -202,9 +188,8 @@ test.describe("the public journal entry", () => {
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    if (!entryPath) test.skip(true, "no published entry on this database");
     await selectLocale(context, baseURL);
-    await openEntry(page, entryPath!);
+    await openEntry(page, entryPath);
 
     // A document's own level-1 heading renders as `h2` (ADR-0028), so this
     // stays the page's one `h1` however the gardener wrote.
@@ -223,9 +208,8 @@ test.describe("the public journal entry", () => {
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    if (!entryPath) test.skip(true, "no published entry on this database");
     await selectLocale(context, baseURL);
-    await openEntry(page, entryPath!);
+    await openEntry(page, entryPath);
 
     // The skip link is the first focusable element and is visible on focus.
     await page.keyboard.press("Tab");
@@ -268,9 +252,8 @@ test.describe("the public journal entry", () => {
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    if (!entryPath) test.skip(true, "no published entry on this database");
     await selectLocale(context, baseURL);
-    await openEntry(page, entryPath!);
+    await openEntry(page, entryPath);
 
     // DESIGN.md §5.6: the accessible name states the action *and* the count,
     // so a screen-reader user knows what they are about to change before they
@@ -297,12 +280,11 @@ test.describe("the public journal entry", () => {
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
-    if (!entryPath) test.skip(true, "no published entry on this database");
     await selectLocale(context, baseURL);
 
     for (const width of [375, 1_440]) {
       await page.setViewportSize({ width, height: width < 768 ? 812 : 900 });
-      await openEntry(page, entryPath!);
+      await openEntry(page, entryPath);
       await page.waitForTimeout(1_000);
       const violations = await axeViolations(page);
       expect(

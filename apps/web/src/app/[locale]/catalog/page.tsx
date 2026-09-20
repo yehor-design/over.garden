@@ -15,7 +15,6 @@ import {
 import { getPublicCatalogBrowseCopy } from "@/lib/public-catalog-browse-copy";
 import {
   isPublicLocale,
-  PREFIXED_PUBLIC_LOCALES,
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
@@ -62,7 +61,7 @@ interface PublicCatalogRouteProps {
  */
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 /**

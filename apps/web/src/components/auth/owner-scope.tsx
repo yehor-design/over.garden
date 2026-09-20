@@ -3,9 +3,9 @@
 import {
   createContext,
   useActionState,
-  useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -18,6 +18,11 @@ import {
 } from "@/lib/auth/owner-scope-contract";
 import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  createValueStore,
+  useValueStore,
+  type ValueStore,
+} from "@/lib/value-store";
 import { HiddenField } from "@/components/ui/hidden-field";
 
 export interface OwnerScopeContextValue {
@@ -31,7 +36,44 @@ export interface OwnerScopeContextValue {
   handleActionResult(result: unknown): boolean;
 }
 
-const OwnerScopeContext = createContext<OwnerScopeContextValue | null>(null);
+/**
+ * What the provider hands down, and it never changes (ADR-0032 D10).
+ *
+ * The owner arrives late in a static document — when the session the server
+ * started settles — and a refusal arrives whenever a mutation is refused. As
+ * context *values* either one would reach every boundary below this provider
+ * that React has not hydrated yet, and one whose content is still on its way is
+ * then rendered on the client instead of adopted. So both live in stores, and
+ * only what reads them renders again.
+ */
+interface OwnerScope {
+  owner: ValueStore<string | null>;
+  notice: ValueStore<MutationScopeCode | null>;
+  handleResponse(response: Response): Promise<boolean>;
+  handleActionResult(result: unknown): boolean;
+}
+
+const OwnerScopeContext = createContext<OwnerScope | null>(null);
+
+function createOwnerScope(ownerUserId: string | null): OwnerScope {
+  const notice = createValueStore<MutationScopeCode | null>(null);
+  const handleActionResult = (result: unknown) => {
+    const code = readMutationScopeCode(result);
+    if (!code) return false;
+    notice.set(code);
+    return true;
+  };
+
+  return {
+    owner: createValueStore(ownerUserId),
+    notice,
+    handleActionResult,
+    handleResponse: async (response) =>
+      response.ok
+        ? false
+        : handleActionResult(await readMutationScopeBody(response)),
+  };
+}
 
 const NOTICE_COPY: Record<
   InterfaceLocale,
@@ -61,62 +103,90 @@ export function OwnerScopeProvider({
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
+  /**
+   * The owner the document was rendered for. A static document passes `null`
+   * and names the owner later, through `useOwnerScopeControl`.
+   */
   ownerUserId: string | null;
 }) {
-  const [noticeCode, setNoticeCode] = useState<MutationScopeCode | null>(null);
+  const [scope] = useState(() => createOwnerScope(ownerUserId));
 
-  const handleActionResult = useCallback((result: unknown) => {
-    const code = readMutationScopeCode(result);
-    if (!code) return false;
-    setNoticeCode(code);
-    return true;
-  }, []);
-
-  const handleResponse = useCallback(
-    async (response: Response) => {
-      if (response.ok) return false;
-      return handleActionResult(await readMutationScopeBody(response));
-    },
-    [handleActionResult],
-  );
-
-  const value = useMemo<OwnerScopeContextValue>(
-    () => ({
-      ownerUserId,
-      noticeCode,
-      headers: () => ownerScopeHeaders(ownerUserId),
-      handleResponse,
-      handleActionResult,
-    }),
-    [handleActionResult, handleResponse, noticeCode, ownerUserId],
-  );
+  // Follows the prop when the prop *changes* — a request-time document that is
+  // refreshed for another reader — and never on mount, where the store already
+  // holds it and a static document's late answer must not be overwritten.
+  const renderedFor = useRef(ownerUserId);
+  useLayoutEffect(() => {
+    if (renderedFor.current === ownerUserId) return;
+    renderedFor.current = ownerUserId;
+    scope.owner.set(ownerUserId);
+  }, [ownerUserId, scope]);
 
   return (
-    <OwnerScopeContext.Provider value={value}>
+    <OwnerScopeContext.Provider value={scope}>
       {children}
-      {noticeCode ? (
-        <p
-          role="alert"
-          data-mutation-scope-notice={noticeCode}
-          className="fixed inset-x-3 bottom-3 z-toast rounded-md border border-destructive/40 bg-background px-4 py-3 text-sm text-foreground shadow-lg sm:right-4 sm:left-auto sm:max-w-sm"
-        >
-          {NOTICE_COPY[locale][noticeCode]}
-        </p>
-      ) : null}
+      <OwnerScopeNotice locale={locale} />
     </OwnerScopeContext.Provider>
   );
 }
 
+function OwnerScopeNotice({ locale }: { locale: InterfaceLocale }) {
+  const scope = useContext(OwnerScopeContext);
+  const noticeCode = useValueStore(scope?.notice ?? NO_NOTICE);
+
+  return noticeCode ? (
+    <p
+      role="alert"
+      data-mutation-scope-notice={noticeCode}
+      className="fixed inset-x-3 bottom-3 z-toast rounded-md border border-destructive/40 bg-background px-4 py-3 text-sm text-foreground shadow-lg sm:right-4 sm:left-auto sm:max-w-sm"
+    >
+      {NOTICE_COPY[locale][noticeCode]}
+    </p>
+  ) : null;
+}
+
+const NO_OWNER = createValueStore<string | null>(null);
+const NO_NOTICE = createValueStore<MutationScopeCode | null>(null);
+
+export function useOptionalOwnerScope(): OwnerScopeContextValue | null {
+  const scope = useContext(OwnerScopeContext);
+  const ownerUserId = useValueStore(scope?.owner ?? NO_OWNER);
+  const noticeCode = useValueStore(scope?.notice ?? NO_NOTICE);
+
+  return useMemo(
+    () =>
+      scope
+        ? {
+            ownerUserId,
+            noticeCode,
+            // Read when the request is made, not when this rendered.
+            headers: () => ownerScopeHeaders(scope.owner.get()),
+            handleResponse: scope.handleResponse,
+            handleActionResult: scope.handleActionResult,
+          }
+        : null,
+    [noticeCode, ownerUserId, scope],
+  );
+}
+
 export function useOwnerScope(): OwnerScopeContextValue {
-  const value = useContext(OwnerScopeContext);
+  const value = useOptionalOwnerScope();
   if (!value) {
     throw new Error("Owner scope requires the site shell.");
   }
   return value;
 }
 
-export function useOptionalOwnerScope() {
-  return useContext(OwnerScopeContext);
+/**
+ * Names the owner after the document has been served. A static document is
+ * rendered before anybody knows who is reading it; the shell calls this once
+ * the session settles. Nothing above the caller renders again.
+ */
+export function useOwnerScopeControl(): (ownerUserId: string | null) => void {
+  const scope = useContext(OwnerScopeContext);
+  return useMemo(
+    () => (ownerUserId: string | null) => scope?.owner.set(ownerUserId),
+    [scope],
+  );
 }
 
 /** Hidden field for native and Server Action forms rendered for an owner. */

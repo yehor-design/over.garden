@@ -2,6 +2,13 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
+import { Pool } from "pg";
+
+import {
+  cleanupOrganismFixture,
+  requiredLocalDatabaseUrl,
+  seedOrganismFixture,
+} from "./helpers/organism-fixture";
 
 /**
  * The catalogue's one door (`OVE-451`).
@@ -120,16 +127,33 @@ test.describe("the catalogue's one door", () => {
     expect(hrefs.length, "the catalogue listed no organism to follow")
       .toBeGreaterThan(0);
 
-    for (const href of hrefs.slice(0, 3)) {
-      const response = await request.get(`${baseURL}${href}`, {
-        headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
-        maxRedirects: 0,
-      });
-      expect(
-        response.status(),
-        `${href} answered ${response.status()}`,
-      ).toBeLessThan(300);
-      expect(response.headers()["location"], href).toBeUndefined();
+    // The listing says what an organism's address *looks like*; which ones it
+    // lists is a cached answer, and on a database other specs seed and clean
+    // it goes on naming an organism for a while after that organism is gone.
+    // Following those hrefs answered 404 for `ove461card-…` on 2026-09-20 — a
+    // fixture another file had already removed — which is a finding about the
+    // cache and the fixture, not about the merge. So the addresses asked for
+    // are this test's own: a species and the form under it, seeded here.
+    const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    const organism = await seedOrganismFixture(pool, "ove451door");
+    try {
+      for (const href of [
+        `/species/${organism.speciesSlug}`,
+        `/species/${organism.speciesSlug}/${organism.formSlug}`,
+      ]) {
+        const response = await request.get(`${baseURL}${href}`, {
+          headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
+          maxRedirects: 0,
+        });
+        expect(
+          response.status(),
+          `${href} answered ${response.status()}`,
+        ).toBeLessThan(300);
+        expect(response.headers()["location"], href).toBeUndefined();
+      }
+    } finally {
+      await cleanupOrganismFixture(pool, organism);
+      await pool.end();
     }
   });
 

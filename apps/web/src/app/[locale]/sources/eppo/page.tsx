@@ -7,7 +7,7 @@ import {
 } from "@/app/eppo-archive-pages";
 import {
   isPublicLocale,
-  PREFIXED_PUBLIC_LOCALES,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 
 interface EppoPageProps {
@@ -16,7 +16,7 @@ interface EppoPageProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({

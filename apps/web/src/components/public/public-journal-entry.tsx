@@ -1,3 +1,4 @@
+import { DirectoryReturnLink } from "@/components/public/directory-return-link";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -34,7 +35,25 @@ import type {
   PublicJournalEntryObject,
   PublicJournalEntryPage,
 } from "@/server/journal-repository";
-import type { OwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
+
+/** The owner's link to the editor, for the slot `PublicJournalEntryView` offers. */
+export function OwnerEntryControlLink({
+  managePath,
+  label,
+}: {
+  managePath: string;
+  label: string;
+}) {
+  return (
+    <Link
+      href={managePath}
+      className={buttonVariants({ variant: "secondary", size: "sm" })}
+    >
+      <Settings aria-hidden="true" />
+      {label}
+    </Link>
+  );
+}
 
 /**
  * The page the whole product exists to produce.
@@ -73,14 +92,20 @@ export function PublicJournalEntryView({
   copy,
   page,
   directoryReturnTo,
-  ownerControl,
+  ownerControl = null,
   children,
 }: {
   locale: PublicLocale;
   copy: PublicJournalEntryCopy;
   page: PublicJournalEntryPage;
   directoryReturnTo: string;
-  ownerControl: OwnerJournalEntryControl | null;
+  /**
+   * The owner's way into the editor. A slot, not data: whether the reader owns
+   * this entry is request data, and the entry is a static document
+   * (ADR-0032 D2), so the route fills this from a region that reads the
+   * session and the article itself never asks. See `OwnerEntryControlLink`.
+   */
+  ownerControl?: ReactNode;
   children?: ReactNode;
 }) {
   const contextModules = buildContextModules(page, copy);
@@ -105,22 +130,8 @@ export function PublicJournalEntryView({
         aria-label={copy.journal}
         className="flex flex-wrap items-center justify-between gap-2"
       >
-        <Link
-          href={directoryReturnTo}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-        >
-          <ArrowLeft aria-hidden="true" />
-          {copy.journals}
-        </Link>
-        {ownerControl ? (
-          <Link
-            href={ownerControl.managePath}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            <Settings aria-hidden="true" />
-            {copy.manageEntry}
-          </Link>
-        ) : null}
+        <DirectoryReturnLink href={directoryReturnTo} label={copy.journals} />
+        {ownerControl}
       </nav>
 
       <article className="grid min-w-0 gap-6">

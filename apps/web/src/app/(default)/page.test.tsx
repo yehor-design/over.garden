@@ -8,6 +8,7 @@ import {
 } from "@/lib/public-localization";
 import type { PublicFeedPage } from "@/server/public-feed-repository";
 import HomeRoute, { generateMetadata } from "@/app/[locale]/page";
+import FilteredHomeRoute from "@/app/[locale]/q/page";
 
 const mocks = vi.hoisted(() => ({
   getSiteShellSessionState: vi.fn(),
@@ -60,6 +61,16 @@ const feedPage: PublicFeedPage = {
   nextCursor: null,
 };
 
+// A database is configured. Without one a static page defers its render to
+// the request (ADR-0032 D4) and these tests would be reading the fallback;
+// `static-public-page.test.tsx` holds that branch.
+beforeEach(() => {
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/overgarden");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("/", () => {
   beforeEach(() => {
     mocks.getSiteShellSessionState.mockResolvedValue({
@@ -98,7 +109,6 @@ describe("/", () => {
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({}),
       }),
     );
     const metadata = await generateMetadata({
@@ -124,7 +134,7 @@ describe("/", () => {
 
   it("passes explicit filters to the repository and localizes Bulgarian paths", async () => {
     const html = renderToStaticMarkup(
-      await HomeRoute({
+      await FilteredHomeRoute({
         params: Promise.resolve({ locale: "bg" }),
         searchParams: Promise.resolve({
           cursor: "invalid-cursor",
@@ -153,20 +163,20 @@ describe("/", () => {
     expect(html).not.toContain('aria-label="Смяна на езика"');
   });
 
-  it("reveals the followed destination only for an authenticated session", async () => {
-    mocks.getSiteShellSessionState.mockResolvedValue({
-      isAuthenticated: true,
-    });
-
+  it("never asks who is reading: the followed destination is a region of its own", async () => {
+    // A signed-in gardener gets a chip to their followed feed. The page used to
+    // read the session to decide, which made the whole document request-time.
+    // It is `SignedInOnly` now (ADR-0032 D2): absent from the served bytes,
+    // drawn once the document's session settles.
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "ru" }),
-        searchParams: Promise.resolve({}),
       }),
     );
 
     expect(html).toContain(">Лента</h1>");
-    expect(html).toContain('href="/ru/feed"');
+    expect(html).not.toContain('href="/ru/feed"');
+    expect(mocks.getSiteShellSessionState).not.toHaveBeenCalled();
   });
 
   it("settles a failed feed read into a class the page renders", async () => {
@@ -175,7 +185,7 @@ describe("/", () => {
     );
 
     const html = renderToStaticMarkup(
-      await HomeRoute({
+      await FilteredHomeRoute({
         params: Promise.resolve({ locale: "uk" }),
         searchParams: Promise.resolve({ kind: "animal" }),
       }),

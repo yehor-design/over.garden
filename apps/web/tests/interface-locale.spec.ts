@@ -114,8 +114,6 @@ test.describe("one page, one interface language", () => {
           return {
             documentLanguage: document.documentElement.lang,
             controls: controls.length,
-            controlMarket:
-              controls[0]?.getAttribute("data-interface-market") ?? null,
             options: controls[0]?.querySelectorAll("[data-interface-locale]")
               .length,
             chrome:
@@ -130,7 +128,14 @@ test.describe("one page, one interface language", () => {
         );
         // Exactly one, in either market (docs/INTERFACE_LOCALE_CONTRACT.md).
         expect(reading.controls, `${address} controls`).toBe(1);
-        expect(reading.controlMarket, `${address} market`).toBe(vantage.market);
+        // A public page is a static document (ADR-0032): it is prerendered
+        // for every reader, so it carries no market, and the control on it
+        // offers all three languages to everyone. Where the market *is*
+        // decided is the proxy, which keeps it in the reader's cookie.
+        const market = (await context.cookies(baseURL)).find(
+          (cookie) => cookie.name === "overgarden_interface_market",
+        )?.value;
+        expect(market, `${address} market`).toBe(vantage.market);
         expect(reading.options, `${address} options`).toBe(3);
         expect(reading.chrome, `${address} chrome`).toContain(vantage.chrome);
       }
@@ -176,12 +181,11 @@ test.describe("one page, one interface language", () => {
       documentLanguage: document.documentElement.lang,
       controls: document.querySelectorAll("[data-interface-language-control]")
         .length,
-      market:
-        document
-          .querySelector("[data-interface-language-control]")
-          ?.getAttribute("data-interface-market") ?? null,
     }));
-    expect(reading).toEqual({
+    const market = (await context.cookies()).find(
+      (cookie) => cookie.name === "overgarden_interface_market",
+    )?.value;
+    expect({ ...reading, market }).toEqual({
       documentLanguage: "uk",
       controls: 1,
       market: "ukraine",

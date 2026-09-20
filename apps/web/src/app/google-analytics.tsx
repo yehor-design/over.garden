@@ -4,13 +4,19 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  ANALYTICS_CONSENT_ATTRIBUTE,
+  ANALYTICS_CONSENT_STORAGE_KEY,
+  ANALYTICS_ROUTE_ATTRIBUTE,
+  isAnalyticsRoute,
+} from "@/lib/analytics-routes";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 const GOOGLE_ANALYTICS_MEASUREMENT_ID = "G-71LP7XZ5NE";
 const GOOGLE_TAG_MANAGER_ID = "GTM-W979KSX3";
-const GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY = "overgarden:analytics-consent";
+const GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY = ANALYTICS_CONSENT_STORAGE_KEY;
 const GOOGLE_ANALYTICS_CONSENT_EVENT = "overgarden:analytics-consent-change";
 export const MICROSOFT_CLARITY_ENABLED_ENV =
   "NEXT_PUBLIC_MICROSOFT_CLARITY_ENABLED";
@@ -22,20 +28,6 @@ const MICROSOFT_CLARITY_PUBLIC_ENV = {
   [MICROSOFT_CLARITY_PROJECT_ID_ENV]:
     process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID,
 } satisfies Record<string, string | undefined>;
-const PUBLIC_LOCALE_PREFIX_PATTERN = /^\/(?:uk|bg|ru)(?=\/|$)/;
-const GOOGLE_ANALYTICS_ALLOWED_EXACT_PATHS = new Set([
-  "/",
-  "/blog",
-  "/privacy",
-  "/support",
-  "/first-publication-disclosure",
-]);
-const GOOGLE_ANALYTICS_ALLOWED_PREFIXES = [
-  "/answers/",
-  "/blog/",
-  "/guides/",
-  "/markets/",
-] as const;
 const MICROSOFT_CLARITY_GRANTED_CONSENT = {
   ad_Storage: "denied",
   analytics_Storage: "granted",
@@ -65,8 +57,17 @@ let initializingMicrosoftClarityProjectId: string | null = null;
 
 export function GoogleAnalytics({
   locale = "uk",
+  notice = "inline",
 }: {
   locale?: InterfaceLocale;
+  /**
+   * Where the consent notice is drawn. `"inline"` — by this component, which
+   * is right for a request-time document. `"document"` — by
+   * `AnalyticsConsentNotice`, which a static document renders outside this
+   * component's boundary (ADR-0032 D7); this component then loads the tags and
+   * keeps `<html>`'s two attributes true across client-side navigations.
+   */
+  notice?: "inline" | "document";
 }) {
   const pathname = usePathname();
   const storedConsent = useSyncExternalStore(
@@ -83,6 +84,16 @@ export function GoogleAnalytics({
     if (!isAllowedRoute || consent !== "accepted") {
       revokeMicrosoftClarityAnalyticsConsent();
     }
+  }, [isAllowedRoute, consent]);
+
+  // The inline script answered these once, for the address the document was
+  // loaded at. A client-side navigation changes the address without loading a
+  // document, so from hydration on the answers are kept here.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isAllowedRoute) root.setAttribute(ANALYTICS_ROUTE_ATTRIBUTE, "true");
+    else root.removeAttribute(ANALYTICS_ROUTE_ATTRIBUTE);
+    root.setAttribute(ANALYTICS_CONSENT_ATTRIBUTE, consent);
   }, [isAllowedRoute, consent]);
 
   const setStoredConsent = (nextConsent: GoogleAnalyticsConsent) => {
@@ -102,13 +113,38 @@ export function GoogleAnalytics({
       </>
     );
   }
-  if (consent === "declined") return null;
+  if (consent === "declined" || notice === "document") return null;
 
   return (
     <AnalyticsConsentBanner
       locale={locale}
       onAccept={() => setStoredConsent("accepted")}
       onDecline={() => setStoredConsent("declined")}
+    />
+  );
+}
+
+/**
+ * The consent notice of a static document (ADR-0032 D7).
+ *
+ * It is in the served bytes of every static document and reads neither the
+ * address nor the stored answer: both are on `<html>` before first paint
+ * (`analyticsDocumentBootScript`), and `globals.css` draws the notice only for
+ * a measured path with no answer yet. So it paints with the page when it is
+ * owed, never flashes for a reader who answered, and is never a late LCP
+ * candidate — on a text page it *is* the largest thing on a phone's screen.
+ */
+export function AnalyticsConsentNotice({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
+  return (
+    <AnalyticsConsentBanner
+      locale={locale}
+      documentNotice
+      onAccept={() => writeStoredGoogleAnalyticsConsent("accepted")}
+      onDecline={() => writeStoredGoogleAnalyticsConsent("declined")}
     />
   );
 }
@@ -249,27 +285,18 @@ export function AnalyticsPrivacyControls({
 }
 
 export function isGoogleAnalyticsRoute(pathname: string | null): boolean {
-  if (!pathname) return false;
-
-  const normalizedPath = stripPublicLocale(pathname);
-  if (GOOGLE_ANALYTICS_ALLOWED_EXACT_PATHS.has(normalizedPath)) return true;
-
-  return GOOGLE_ANALYTICS_ALLOWED_PREFIXES.some((prefix) =>
-    normalizedPath.startsWith(prefix),
-  );
-}
-
-function stripPublicLocale(pathname: string): string {
-  const stripped = pathname.replace(PUBLIC_LOCALE_PREFIX_PATTERN, "");
-  return stripped || "/";
+  return isAnalyticsRoute(pathname);
 }
 
 function AnalyticsConsentBanner({
   locale,
+  documentNotice = false,
   onAccept,
   onDecline,
 }: {
   locale: InterfaceLocale;
+  /** Drawn by CSS from `<html>`'s attributes rather than by React's state. */
+  documentNotice?: boolean;
   onAccept: () => void;
   onDecline: () => void;
 }) {
@@ -279,10 +306,14 @@ function AnalyticsConsentBanner({
     <div
       aria-label={copy.label}
       data-analytics-consent-banner="true"
-      className="analytics-consent-banner fixed inset-x-3 z-toast mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:flex sm:items-center sm:gap-4"
+      data-analytics-consent-notice={documentNotice ? "document" : undefined}
+      // The system's tokens, not the palette before it: since ADR-0032 D7 this
+      // element is in the bytes of every public document, and "nothing on the
+      // page reaches for the old palette" is asserted against those bytes.
+      className="analytics-consent-banner fixed inset-x-3 z-toast mx-auto max-w-3xl rounded-md border border-border bg-surface/95 p-4 text-text shadow-overlay backdrop-blur sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
-      <p className="text-sm leading-6 text-muted-foreground">{copy.message}</p>
+      <p className="text-body-sm text-text-secondary">{copy.message}</p>
       <div
         data-analytics-consent-actions="true"
         className="mt-3 grid min-w-0 gap-2 sm:mt-0 sm:flex sm:shrink-0 sm:flex-wrap"
@@ -339,6 +370,11 @@ export function writeStoredGoogleAnalyticsConsent(
   } else {
     revokeMicrosoftClarityAnalyticsConsent();
   }
+  // The notice of a static document is drawn by CSS from this (ADR-0032 D7).
+  window.document?.documentElement.setAttribute(
+    ANALYTICS_CONSENT_ATTRIBUTE,
+    consent,
+  );
   window.dispatchEvent(new Event(GOOGLE_ANALYTICS_CONSENT_EVENT));
 }
 

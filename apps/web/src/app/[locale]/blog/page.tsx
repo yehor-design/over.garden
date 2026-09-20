@@ -6,7 +6,7 @@ import {
   getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
+  PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
@@ -29,7 +29,7 @@ interface LocalizedBlogIndexRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({

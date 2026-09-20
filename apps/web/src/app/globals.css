@@ -585,6 +585,52 @@
   }
 }
 
+/* The current navigation item, before React is there to say so.
+
+   A static document does not read its address while it is prerendered
+   (ADR-0032 D3), so an item's `aria-current` and `data-active` arrive with
+   hydration — seconds after the page is on a phone's screen. An inline script
+   in the document's first bytes puts the section on `<html>` instead, and
+   these rules draw the same two states `data-[active]` draws: the rail item's
+   fill and text, and the tab's text. One selector per key because a selector
+   cannot compare two attributes; `site-shell-navigation.test.ts` fails if a
+   key the navigation can match is missing here. */
+html[data-shell-section="feed"] [data-site-shell-nav-item="feed"],
+html[data-shell-section="catalogue"] [data-site-shell-nav-item="catalogue"],
+html[data-shell-section="journals"] [data-site-shell-nav-item="journals"],
+html[data-shell-section="communities"] [data-site-shell-nav-item="communities"],
+html[data-shell-section="knowledge"] [data-site-shell-nav-item="knowledge"],
+html[data-shell-section="garden"] [data-site-shell-nav-item="garden"],
+html[data-shell-section="followed-feed"]
+  [data-site-shell-nav-item="followed-feed"],
+html[data-shell-section="notifications"]
+  [data-site-shell-nav-item="notifications"],
+html[data-shell-section="bookmarks"] [data-site-shell-nav-item="bookmarks"],
+html[data-shell-section="wishlist"] [data-site-shell-nav-item="wishlist"],
+html[data-shell-section="lineage-claims"]
+  [data-site-shell-nav-item="lineage-claims"] {
+  background-color: var(--color-action-subtle);
+  color: var(--color-action-subtle-text);
+}
+
+html[data-shell-section="feed"] [data-site-shell-tab="feed"],
+html[data-shell-section="catalogue"] [data-site-shell-tab="catalogue"],
+html[data-shell-section="journals"] [data-site-shell-tab="journals"] {
+  color: var(--color-action-subtle-text);
+}
+
+/* A static document carries the notice in its bytes for every reader, and
+   `<html>` says — from an inline script, before first paint — whether this
+   path is measured and whether this reader has answered (ADR-0032 D7). Drawn
+   only when an answer is owed; one rule, unlayered, so it outranks the
+   notice's own `sm:flex` without naming it. A reader without JavaScript never
+   sees it, and nothing measures them. */
+[data-analytics-consent-notice="document"]:not(
+    html[data-analytics-route="true"][data-analytics-consent="undecided"] *
+  ) {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    The focus ring is drawn. DESIGN.md §8, WCAG 2.4.7.
 

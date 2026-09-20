@@ -503,6 +503,84 @@ function item(
   };
 }
 
+/**
+ * The address a reader is on, as the shell reasons about it: no locale prefix,
+ * no trailing slash, `@` spelled as itself.
+ *
+ * A static document is prerendered at its *route's* path — `/bg/journals`, or
+ * `/uk/@handle/post/3` behind the author-scoped rewrite — and hydrated at the
+ * *browser's* path, `/journals` or `/@handle/post/3` (ADR-0032 D3). Every
+ * rewrite the proxy performs is "`/{locale}` + the canonical address", so this
+ * is the one spelling on which the prerender and the browser agree, and
+ * everything the shell writes into HTML from the pathname goes through it.
+ */
+export function canonicalSiteShellPath(pathname: string) {
+  return normalizeSiteShellPath(pathname);
+}
+
+/** `<html data-shell-section="journals">`: see `siteShellDocumentBootScript`. */
+export const SITE_SHELL_SECTION_ATTRIBUTE = "data-shell-section";
+
+/**
+ * Which navigation item an address lights up, as data: the same `match` and
+ * `matchPaths` the rendered items carry, read off one navigation so the two
+ * cannot drift. Language-independent — the paths are canonical.
+ */
+export function siteShellSectionMatchers() {
+  const navigation = getSiteShellNavigation("uk", true, true);
+  return [...navigation.publicItems, ...navigation.personalItems]
+    .filter((entry) => entry.match !== "never")
+    .map((entry) => ({
+      key: entry.key,
+      match: entry.match,
+      paths: [...entry.matchPaths],
+    }));
+}
+
+/** The key of the navigation item an address belongs to, if any. */
+export function resolveSiteShellSection(
+  pathname: string,
+): SiteShellNavigationKey | null {
+  const normalizedPath = normalizeSiteShellPath(pathname);
+  for (const entry of siteShellSectionMatchers()) {
+    const matched = entry.paths.some((matchPath) =>
+      entry.match === "exact"
+        ? normalizedPath === matchPath
+        : normalizedPath === matchPath ||
+          normalizedPath.startsWith(`${matchPath}/`),
+    );
+    if (matched) return entry.key;
+  }
+  return null;
+}
+
+/**
+ * Marks the current navigation item before the first paint (ADR-0032 D3).
+ *
+ * A static document does not read its address on the server, so the item's
+ * `aria-current` arrives with hydration. What a reader *sees* must not: on a
+ * phone on a slow connection that is seconds after the page is on screen. This
+ * runs inline in the document's first bytes, says on `<html>` which section
+ * the address belongs to, and `globals.css` draws the current item from that.
+ */
+export function siteShellDocumentBootScript(): string {
+  const matchers = JSON.stringify(
+    siteShellSectionMatchers().map((entry) => [
+      entry.key,
+      entry.match === "exact" ? 1 : 0,
+      entry.paths,
+    ]),
+  );
+
+  return (
+    `(function(){try{var p=location.pathname.replace(/^\\/(?:uk|bg|ru)(?=\\/|$)/,"")||"/";` +
+    `p=p.replace(/^\\/%40/i,"/@");if(p.length>1&&p.charAt(p.length-1)==="/")p=p.slice(0,-1);` +
+    `var m=${matchers};for(var i=0;i<m.length;i++){for(var j=0;j<m[i][2].length;j++){var q=m[i][2][j];` +
+    `if(p===q||(!m[i][1]&&p.indexOf(q+"/")===0)){document.documentElement.setAttribute("${SITE_SHELL_SECTION_ATTRIBUTE}",m[i][0]);return}}}` +
+    `}catch(e){}})()`
+  );
+}
+
 function normalizeSiteShellPath(pathname: string) {
   const pathOnly = pathname.split(/[?#]/, 1)[0] || "/";
   const { path } = stripLocalePrefix(pathOnly);

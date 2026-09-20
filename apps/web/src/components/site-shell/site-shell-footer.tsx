@@ -33,8 +33,8 @@ export function SiteShellFooter({
   sourcesDescription,
 }: {
   locale: InterfaceLocale;
-  market: InterfaceMarket;
-  pathname: string;
+  market?: InterfaceMarket;
+  pathname: string | null;
   links: readonly SiteShellFooterLink[];
   navigationLabel: string;
   tagline: string;

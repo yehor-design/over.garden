@@ -1211,10 +1211,19 @@ describe("app route cache guardrail", () => {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
 
-    // The default locale's pages are the unprefixed tree itself, so a reader
-    // in it — and a crawler, which carries no preference — is not rewritten.
-    expect(ukrainianReader.headers.get("x-middleware-rewrite")).toBeNull();
-    expect(crawler.headers.get("x-middleware-rewrite")).toBeNull();
+    // The default locale is rewritten too (ADR-0032 D1). It used not to be,
+    // and a Ukrainian reader — and a crawler, which carries no preference —
+    // rendered from the unprefixed tree, whose root layout also serves the
+    // workspace and so cannot know its language before the request: the
+    // largest market was the one that could not have a static document.
+    expect(ukrainianReader.headers.get("x-middleware-rewrite")).toContain(
+      "/uk/journals",
+    );
+    expect(ukrainianReader.status).toBe(200);
+    expect(ukrainianReader.headers.get("Location")).toBeNull();
+    expect(crawler.headers.get("x-middleware-rewrite")).toContain(
+      "/uk/journals",
+    );
     expect(crawler.headers.get("Content-Language")).toBe("uk");
 
     expect(bulgarianReader.headers.get("x-middleware-rewrite")).toContain(
@@ -1229,6 +1238,83 @@ describe("app route cache guardrail", () => {
     expect(workspace.headers.get("Content-Language")).toBe("bg");
     expect(permalink.headers.get("x-middleware-rewrite")).toBeNull();
     expect(alreadyPrefixed.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("renders a listing's query string from its twin, and only a query the route accepts", async () => {
+    const home = await responseFor("/");
+    const filtered = await responseFor("/?kind=plant");
+    const tracked = await responseFor("/?utm_source=newsletter&fbclid=abc");
+    const bulgarianFiltered = await responseFor("/?kind=animal", {
+      cookie: interfaceCookies("bulgaria", "bg"),
+    });
+    const prefixedFiltered = await responseFor("/ru?kind=plant", {
+      cookie: interfaceCookies("bulgaria", "ru"),
+    });
+
+    // ADR-0032 D5: the page at the canonical path never reads `searchParams`,
+    // so the request that carries one the policy accepts renders from `/q`.
+    expect(new URL(home.headers.get("x-middleware-rewrite")!).pathname).toBe(
+      "/uk",
+    );
+    expect(
+      new URL(filtered.headers.get("x-middleware-rewrite")!).pathname,
+    ).toBe("/uk/q");
+    expect(
+      new URL(filtered.headers.get("x-middleware-rewrite")!).search,
+    ).toContain("kind=plant");
+    // What the policy drops is not a reason to leave the static document.
+    expect(new URL(tracked.headers.get("x-middleware-rewrite")!).pathname).toBe(
+      "/uk",
+    );
+    expect(
+      new URL(bulgarianFiltered.headers.get("x-middleware-rewrite")!).pathname,
+    ).toBe("/bg/q");
+    // A prefixed spelling is left alone — unless it carries a query.
+    expect(
+      new URL(prefixedFiltered.headers.get("x-middleware-rewrite")!).pathname,
+    ).toBe("/ru/q");
+    for (const response of [home, filtered, tracked, bulgarianFiltered]) {
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Location")).toBeNull();
+    }
+  });
+
+  it("lands a Server Action in the tree that drew its form", async () => {
+    // Next resolves a progressive form's action out of the matched route's own
+    // manifest, and the page rendered from the locale tree (ADR-0032 D1). A
+    // `POST` left at the unprefixed twin would also rerender a request-time
+    // document into a reader who is in a static one.
+    const ukrainian = await responseFor("/communities/tomaty", undefined, {
+      method: "POST",
+    });
+    const bulgarian = await responseFor(
+      "/species/solanum-lycopersicum",
+      { cookie: interfaceCookies("bulgaria", "bg") },
+      { method: "POST" },
+    );
+    const workspace = await responseFor("/garden", undefined, {
+      method: "POST",
+    });
+    const other = await responseFor("/journals", undefined, {
+      method: "DELETE",
+    });
+
+    expect(
+      new URL(ukrainian.headers.get("x-middleware-rewrite")!).pathname,
+    ).toBe("/uk/communities/tomaty");
+    expect(
+      new URL(bulgarian.headers.get("x-middleware-rewrite")!).pathname,
+    ).toBe("/bg/species/solanum-lycopersicum");
+    expect(workspace.headers.get("x-middleware-rewrite")).toBeNull();
+    expect(other.headers.get("x-middleware-rewrite")).toBeNull();
+  });
+
+  it("answers 404 to a request that names the twin's reserved segment", async () => {
+    for (const address of ["/q", "/uk/q", "/bg/q", "/ru/q/journals", "/q/x"]) {
+      const response = await responseFor(address);
+      expect(response.status, address).toBe(404);
+      expect(response.headers.get("x-middleware-rewrite"), address).toBeNull();
+    }
   });
 
   it("canonicalizes a supported but non-canonical cookie value", async () => {

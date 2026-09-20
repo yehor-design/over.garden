@@ -84,8 +84,18 @@ async function axeViolations(page: Page) {
  * "how many can a reader see", which is also the question that catches a
  * control genuinely duplicated per breakpoint.
  */
-const visibleBar = '[data-filter-bar-form="true"]:visible';
-const visibleCount = '[data-journal-result-count="true"]:visible';
+/**
+ * **And settled, not merely visible.** The directory's loading shape is the
+ * directory itself with nothing in it — filter bar included, every select on
+ * its default. Since ADR-0032 that shape is in the static document's first
+ * bytes, so it *is* visible, before the real page has been revealed over it:
+ * a read of "the visible bar" straight after a reload could be a read of the
+ * skeleton's, where `kind` is "all" whatever the address says.
+ */
+const settledDirectory =
+  '[data-public-journal-directory="true"]:not([data-public-journal-directory-state="loading"])';
+const visibleBar = `${settledDirectory} [data-filter-bar-form="true"]:visible`;
+const visibleCount = `${settledDirectory} [data-journal-result-count="true"]:visible`;
 
 /** The directory, settled: the shell, then the page's own controls. */
 async function openDirectory(page: Page, query = "") {
@@ -154,11 +164,13 @@ test.describe("the journals directory applies its filters on change", () => {
     await expect(page.locator(visibleBar)).toBeVisible({ timeout: 20_000 });
     expect(
       await page
+        .locator(visibleBar)
         .locator('[data-filter-bar-facet="kind"]')
         .evaluate((node: HTMLSelectElement) => node.value),
     ).toBe("plant");
     expect(
       await page
+        .locator(visibleBar)
         .locator('[data-filter-bar-sort="true"]')
         .evaluate((node: HTMLSelectElement) => node.value),
     ).toBe("oldest");

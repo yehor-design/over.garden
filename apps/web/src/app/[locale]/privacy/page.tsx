@@ -8,7 +8,7 @@ import { Link } from "@/components/ui/link";
 import {
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   FIRST_PUBLICATION_DISCLOSURE_VERSION,
@@ -26,7 +26,7 @@ interface LocalizedPrivacyRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({

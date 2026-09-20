@@ -2,22 +2,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/root-document", () => ({
-  RootDocument: ({
-    lang,
-    localization,
+  StaticRootDocument: ({
+    locale,
     children,
   }: {
-    lang: string;
-    localization: { locale: string; market: string } | null;
+    locale: string;
     children: React.ReactNode;
   }) => (
-    <div
-      data-testid="root-document"
-      data-lang={lang}
-      data-localization={
-        localization ? JSON.stringify(localization) : "request"
-      }
-    >
+    <div data-testid="root-document" data-document="static" data-locale={locale}>
       {children}
     </div>
   ),
@@ -53,7 +45,7 @@ describe("locale root layout", () => {
     }
   });
 
-  it("sets the document language from the route and the shell from the reader", async () => {
+  it("renders a static document in the route's language", async () => {
     const html = renderToStaticMarkup(
       await LocaleRootLayout({
         children: <main>OverGarden</main>,
@@ -61,12 +53,23 @@ describe("locale root layout", () => {
       }),
     );
 
-    expect(html).toContain('data-lang="ru"');
-    // The shell resolves the reader instead of taking the route's word for it.
-    // This subtree is where an unprefixed address renders for a reader who
-    // chose this language, so the market behind the language control is a fact
-    // about them, not about the prefix they were rewritten into.
-    expect(html).toContain('data-localization="request"');
+    // ADR-0032 D1. The route's language *is* the reader's here: this subtree
+    // is where the proxy renders an unprefixed address for a reader who chose
+    // this language, and a prefix is itself a choice. So the chrome needs no
+    // request to know what to say, and the document is prerendered with it.
+    expect(html).toContain('data-document="static"');
+    expect(html).toContain('data-locale="ru"');
     expect(html).toContain("<main>OverGarden</main>");
+  });
+
+  it("falls back to the default language for a segment that is not a locale", async () => {
+    const html = renderToStaticMarkup(
+      await LocaleRootLayout({
+        children: <main>OverGarden</main>,
+        params: Promise.resolve({ locale: "garden" }),
+      }),
+    );
+
+    expect(html).toContain('data-locale="uk"');
   });
 });

@@ -147,6 +147,10 @@ export const LOCALE_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "markets",
   "notifications",
   "privacy",
+  // Where a listing's query string renders (ADR-0032 D5). It is a directory of
+  // this tree and never an address: the proxy answers 404 to a request that
+  // names it, before this list is consulted (`isPublicQueryTwinPath`).
+  "q",
   "sources",
   "species",
   "topics",
