@@ -122,6 +122,16 @@ stream because it executes scripts. What the rule buys is therefore narrower and
 still worth having: the control posts to a real endpoint the moment it is
 reachable, and never depends on hydration to *act* once rendered.
 
+**Amended 2026-09-20 (ADR-0032).** The architecture named above changed. A
+public page is a static document: its content and its controls are in the
+served bytes, outside every `<div hidden>`, with `<title>` in `<head>`. So for
+the families ADR-0032 has converted — the home feed, a journal entry, an
+organism card — "a real endpoint" *is* "reachable with JavaScript off", and
+`tests/static-documents.spec.ts` reads those pages with scripts disabled. What a
+static document carries for a like is the guest's control: the count, not
+pressed, posting to the same endpoint; the reader's own state replaces it from a
+request-time region. A family not yet converted still shows only its chrome.
+
 ### D4. Choosing a language is a navigation
 
 On a public page the locale is in the path, so the choice is a link, and the

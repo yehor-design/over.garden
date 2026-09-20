@@ -346,15 +346,82 @@ was true the whole time. `globals.css` carries one unlayered
 across a screen asserting the width, the style **and** the colour on every
 control it reaches.
 
-**The §9 LCP budget is not reachable, and it is not the pages** (`OVE-461`).
-Measured through the Lighthouse CLI, three runs, median: `/` is **4.28 s** with
-**CLS 0**, of which 2.90 s is render delay while the cover photograph has
-finished loading at 1.38 s. `origin/main` measured 4.06 s. `root-document.tsx`
-wraps the whole body in one `Suspense` because the shell awaits the session, so
-every public page's content arrives inside `<div hidden>` and is revealed by
-React's `$RC` script — LCP lands at TTI, and it is the same boundary that makes
-a scripts-off reader see nothing. The owner's call on 2026-09-17: record the
-measurement in each page-family PR and keep shipping; `OVE-461` owns the fix.
+**A public page is a static document** (`OVE-461`, ADR-0032, 2026-09-20). The
+§9 LCP budget was recorded here as unreachable: `/` measured 4.28 s locally and
+**5.16 s on production** (Lighthouse CLI, median of three, 2026-09-19), with
+zero visible characters in the served bytes. The cause was one `Suspense`
+around the whole document — but not only that, and the rest is what a future
+page has to know:
+
+- React 19.2 reveals a boundary that completes after first paint **no sooner
+  than 300 ms after the previous reveal**, so the page was hidden on a
+  connection where every byte had arrived, and the bundle always ran first —
+  which is why LCP sat at TTI. **An LCP element may not be inside any boundary.**
+- React puts any boundary's content over 12.8 kB into a hidden segment, fallback
+  first, even in a prerender. **A static page has no `loading.tsx` above it.**
+- A boundary that *completes* during Next's per-address prerender gets a segment
+  id the request-time resume allots again: `S:7`–`S:b` twice in `/journals`,
+  five segments never revealed, four hydration errors. **The only boundary a
+  static document may carry is one a prerender can only postpone** — which is
+  why the chrome does not call `usePathname()` on the server at all.
+- A context that changes above a page — or a shell that renders again — reaches
+  boundaries React has not hydrated yet. One that is complete is hydrated early;
+  one whose content is **streamed but not yet revealed** is given up and
+  rendered on the client, and the server's segment is dropped. The organism
+  card's `<main>` was replaced at 5.0 s, a second LCP, only under Lighthouse's
+  562 ms latency; `/communities/{slug}` held its `<main>` twice on a *fast*
+  machine and not under a 4× throttle. A transition cures the first case and not
+  the second. **Nothing above a page changes by itself: what the chrome learns
+  late — the address, the session, the owner, the rail — lives in a store**
+  (ADR-0032 D10, `src/lib/value-store.ts`), and the gate holds every reveal back
+  1.2 s so the dangerous order is the only order on any machine.
+- A degraded state that renders successfully is a shell Next caches for
+  everyone. **A failed read is never prerendered.** A static page has no
+  boundary to wait behind, so it is *attempted*: `renderStaticPublicPage` runs
+  it once as `"static"`, and on `StaticRenderDeferred` returns a boundary around
+  a request-time run of the same function. And **a build never needs a
+  database**: with none configured, or one that does not answer a cached probe,
+  nothing is read — a rejected `use cache` read aborts a prerender however it is
+  caught. A shell built that way served `/` as a static document 41 s after the
+  server got its database (ADR-0032 D4).
+
+Now: every public document renders from `/[locale]/…` — the proxy rewrites the
+default locale too — with the chrome, the page and its photograph in the served
+bytes. The session is started and never awaited; a gardener's regions are
+boundaries whose fallback is the guest's working control. A listing's query
+string renders from a twin under `/q`. Converted so far: the document and the
+shell (every page gets the static chrome), the home feed, the journal entry and
+the organism card. **Every other public family still renders its content at
+request time inside the static chrome** — correct, slower to paint, and
+converted by ADR-0032 D8's recipe one family at a time.
+
+| Page | LCP, applied throttling | FCP | TTI | CLS | LCP, simulated |
+| --- | --- | --- | --- | --- | --- |
+| `/` | 5.44 s → **1.90 s** | 1.88 s | 3.49 s | 0 | 5.16 s → 4.43 s |
+| a journal entry | **1.65 s** | 1.60 s | 2.31 s | 0 | 4.29 s → 3.31 s |
+| an organism card | **1.74 s** | 1.74 s | 3.12 s | 0 | 3.97 s |
+
+The budget is measured with throttling **applied**, and the simulated figure is
+recorded beside it (ADR-0032 D9): simulation charges LCP with every script that
+evaluated before the paint on the unthrottled trace, which on a loopback server
+is all of them. What the simulated figure *does* say is true and is the next
+debt: **337 kB of script reaches a guest on a public reading page**, against
+§9's own rule. The palette, the sheet and the sign-out dialog all ship with the
+shell.
+
+A reader without JavaScript now reads these pages (0 → 4 324 / 2 179 / 1 882
+visible characters), and the consent notice no longer flashes for a reader who
+has answered it: it is drawn by CSS from what an inline script puts on `<html>`
+before first paint. `tests/static-documents.spec.ts` holds all of it over HTTP
+and is in CI.
+
+That rewired how the measured paths mount their tags, so the contract is asked
+of a browser now rather than only of a unit test: `tests/analytics-consent.spec.ts`
+intercepts the tag hosts and confirms that, with consent, each instrumented path
+asks for its tag in every language and no other path does; that the notice is
+drawn only where an answer is owed; and that accepting or declining is kept.
+Seventeen cases, run against production (the old document) and against the
+static one on 2026-09-20: identical.
 
 **The journals directory stopped being a form** (`OVE-448`, 2026-09-18). Six
 `<select>`s stacked above the results behind an "Застосувати" button — on a
@@ -589,8 +656,10 @@ merged card's address still answering 308 to the survivor; and **axe clean at
 375, 1024 and 1440 px on four cards** — one the owner marked indexable, a form
 beneath a species, a source-only node, and one merged away. JSON-LD is
 **byte-identical to `main`** on a real indexable card, 1 658 bytes both sides.
-Lighthouse through the CLI on that card: LCP **0.8–1.1 s**, CLS **0**,
-performance 98–100.
+Lighthouse through the CLI on that card reported LCP **0.8–1.1 s** — **on the
+desktop preset** (`formFactor: desktop`, found in the saved report on
+2026-09-20), so it was never the §9 measurement and said nothing about slow 4G.
+Measured properly after `OVE-461`: **1.74 s**, CLS 0.
 
 **Everything the product publishes has one shape** (`OVE-453`, 2026-09-18).
 The blog, the guides, the answers, the market landings, the knowledge hub, the
@@ -615,7 +684,8 @@ so a redesign that moved one would take a month of missing data to notice.
 path is measured, in every locale, and the families this slice touched —
 `/catalog`, `/species/…`, `/@handle` — are not and did not become so.
 `tests/editorial-surfaces.spec.ts` loads every one of them and confirms it
-still answers.
+still answers, and since `OVE-461` `tests/analytics-consent.spec.ts` confirms
+each one still *asks for its tag* — "answers 200" never said that.
 
 Two things the browser found. The article's section body was wrapped in a
 `<div>`, which left the reading column with **no paragraph in it at all** — and
@@ -1182,10 +1252,12 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    no-JavaScript POST against a production build, and all three were then
    verified end to end on production in a real browser. That is not the same as
    working with JavaScript off, and the earlier wording here said it was: every
-   public page renders inside streamed Suspense boundaries, so with scripts
-   disabled it shows nothing at all and no control is reachable. See ADR-0024
-   D3 for the measurement and for why the crawler cases are nonetheless
-   covered. A _successful_ sign-in was never
+   public page rendered inside streamed Suspense boundaries, so with scripts
+   disabled it showed nothing at all and no control was reachable. **Closed for
+   the converted families by `OVE-461`**: the home feed, a journal entry and an
+   organism card are static documents, their controls are in the served bytes,
+   and `tests/static-documents.spec.ts` reads them with scripts off. The
+   families not yet converted (ADR-0032 D8) still show only their chrome. A _successful_ sign-in was never
    walked through in a browser — only the refusal path — so the `next`
    round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
    than observed. CI runs `tests/public-hydration.spec.ts` against a real

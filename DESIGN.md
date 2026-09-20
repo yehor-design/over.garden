@@ -902,21 +902,51 @@ controls, zero targets under 24 px, and **zero contrast failures at AA** on
 
 The public pages are the product's distribution. Budgets per public page:
 
-- LCP ≤ 2.0 s on a simulated slow 4G; CLS ≤ 0.02; INP ≤ 200 ms.
+- LCP ≤ 2.0 s on slow 4G with a 4× CPU slowdown, measured as below; CLS ≤ 0.02;
+  INP ≤ 200 ms.
 - No layout shift from an image, a font or a late banner — every box is
   reserved, the consent banner included.
 
-**The LCP figure is not currently reachable, and the reason is not the pages.**
-Measured through the Lighthouse CLI on a production build, three runs, median:
-`/` comes back at **4.28 s** with **CLS 0**, of which 2.90 s is render delay
-while the cover photograph has finished loading at 1.38 s. `origin/main` before
-the redesign measured 4.06 s, so this predates it. The cause is one boundary:
-`app/root-document.tsx` wraps the whole body in a single `Suspense` because the
-shell awaits the session, so every public page's content arrives inside
-`<div hidden>` and is revealed by React's `$RC` script — LCP lands at TTI, and
-a scripts-off reader sees nothing at all. `OVE-461` owns the fix; until it
-lands, a page-family task records its measured LCP and CLS and names this
-paragraph. CLS, INP and the reserved boxes are met and are gated.
+**A public page is a static document** (ADR-0032). Its heading, its words and
+its photograph are in the served bytes, outside every `<div hidden>`; only who
+is reading arrives at request time, into regions whose fallback is the guest's
+working control. That is what makes the LCP budget reachable, and it is a rule
+about every page that will ever be added here, not a tuning of three:
+
+- A page reads neither `searchParams` nor the session. A query string renders
+  from the listing's twin under `/q`; a gardener's view of a page is a
+  `SignedInOnly` or a request-time region *below* the content.
+- No `loading.tsx` and no `Suspense` above a page's content. React puts any
+  boundary's content larger than 12.8 kB into a hidden segment, fallback first,
+  and reveals a late one no sooner than 300 ms after first paint.
+- The LCP element is never inside a boundary, and never arrives with hydration:
+  the consent notice is in the bytes and drawn by CSS from what `<html>` says
+  before first paint.
+- A failed read is never prerendered.
+- **Nothing above a page changes by itself** (ADR-0032 D10). What the chrome
+  learns after the document is served — the address, who is reading, what a
+  page puts in the rail — lives in a store (`src/lib/value-store.ts`) and is
+  read by the region that needs it. As a context value, or as state in the
+  shell, it reaches every boundary React has not hydrated yet, and one whose
+  content is still on its way is thrown away and rendered on the client: a
+  second, later LCP, and the page's `<main>` in the document twice. A
+  transition does not prevent it.
+
+**How it is measured.** Lighthouse **CLI**, a production build, three runs,
+median, throttling **applied** (`--throttling-method=devtools`). The simulated
+figure is recorded beside it and is not the gate: simulation charges LCP with
+every script that evaluated before the paint *on the unthrottled trace*, which
+on a loopback server is all of them whatever the document does.
+
+| Page | LCP, applied | FCP | CLS | LCP, simulated | Before (`OVE-461`) |
+| --- | --- | --- | --- | --- | --- |
+| `/` | **1.90 s** | 1.88 s | 0 | 4.43 s | 5.44 s applied, 5.16 s simulated (production, 2026-09-19) |
+| a journal entry | **1.65 s** | 1.60 s | 0 | 3.31 s | 4.29 s simulated |
+| an organism card | **1.74 s** | 1.74 s | 0 | 3.97 s | measured on the desktop preset only |
+
+The simulated figure is what 337 kB of script on a public reading page costs,
+and it is the next thing to pay down — the rule below is not yet true of the
+shell, whose palette, sheet and sign-out dialog all ship to a guest.
 
 - No component ships a client bundle to a public reading page unless it must.
 - The composer is the one heavy surface and it is workspace-only.
@@ -939,13 +969,14 @@ that needs it.
 | Axe has zero violations on the nine key screens                                                           | `tests/accessibility.spec.ts`      | `pnpm gates:browser` |
 | Keyboard path through the primary flows                                                                   | `tests/accessibility.spec.ts`      | `pnpm gates:browser` |
 | Contrast of every semantic pair                                                                           | `src/app/globals.test.ts`          | `pnpm test`          |
+| A public page's heading and photograph are in the served bytes, and it reads with scripts off (ADR-0032) | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.
 
-`pnpm gates` runs all nine. Seven of them are fast and also run inside
+`pnpm gates` runs all ten. Seven of them are fast and also run inside
 `pnpm lint` and `pnpm test`, which is why they are there — a gate you only meet
-in CI is a gate you meet too late. The other two need a production build, a
+in CI is a gate you meet too late. The other three need a production build, a
 server and a database, so they live in `pnpm gates:browser` and in the CI proof
 step; putting them in `pnpm test` would take it from fifteen seconds to minutes
 and nobody would run it while editing.
