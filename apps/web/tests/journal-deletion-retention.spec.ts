@@ -47,7 +47,9 @@ test.describe("OVE-353 journal deletion retention", () => {
       await selectLocale(context, origin, "uk");
 
       const entry = await seedPublishedEntry(pool, owner.userId);
-      const publicPath = `/journal/${entry.publicSlug}`;
+      // The entry's one address (ADR-0029 D9). This proof asked for
+      // `/journal/{slug}`, which has been a redirect since entries got numbers.
+      const publicPath = entry.publicPath;
 
       // The entry is live before the delete: the public page resolves and the
       // owner can see it in their own journal.
@@ -55,7 +57,11 @@ test.describe("OVE-353 journal deletion retention", () => {
       expect(beforeDelete.status()).toBe(200);
 
       await page.goto(`/garden/objects/${entry.objectId}`);
-      await expect(page.getByText(entry.title)).toBeVisible();
+      // By role and exact name: the object's page names the entry twice — in
+      // its list and in the timeline beside it.
+      await expect(
+        page.getByRole("link", { name: entry.title, exact: true }),
+      ).toBeVisible();
 
       // There is no archive or restore affordance to find.
       await expect(
@@ -202,18 +208,34 @@ async function seedPublishedEntry(pool: Pool, ownerUserId: string) {
   );
   const objectId = object.rows[0]!.id;
 
-  const entry = await pool.query<{ id: string }>(
+  // No `public_noindex`: the column left the schema, and this insert went on
+  // naming it because nothing ran this file (`OVE-462`).
+  const entry = await pool.query<{ id: string; n: number }>(
     `insert into journal_entries
        (owner_user_id, space_id, plant_object_id, title, body, entry_scope,
-        entry_date, visibility, lifecycle_state, public_slug, public_noindex,
+        entry_date, visibility, lifecycle_state, public_slug,
         published_at, client_mutation_id)
      values ($1::uuid, $2::uuid, $3::uuid, $4, 'Proof body for OVE-353.',
-             'object', current_date, 'public', 'active', $5, false, now(), $6)
-     returning id::text as id`,
+             'object', current_date, 'public', 'active', $5, now(), $6)
+     returning id::text as id, author_entry_number as n`,
     [ownerUserId, spaceId, objectId, title, publicSlug, `ove353-${suffix}`],
   );
+  const claimed = await pool.query<{ handle: string }>(
+    `select normalized_handle as handle from user_handle_registry
+      where user_id = $1::uuid and lifecycle_state = 'current'`,
+    [ownerUserId],
+  );
+  const handle = claimed.rows[0]?.handle;
+  if (!handle) throw new Error("The proof's gardener holds no handle.");
 
-  return { id: entry.rows[0]!.id, objectId, spaceId, title, publicSlug };
+  return {
+    id: entry.rows[0]!.id,
+    objectId,
+    spaceId,
+    title,
+    publicSlug,
+    publicPath: `/@${handle}/post/${entry.rows[0]!.n}`,
+  };
 }
 
 async function readLifecycle(pool: Pool, entryId: string) {

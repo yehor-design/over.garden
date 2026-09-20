@@ -15,6 +15,7 @@ import {
   seedOrganismFixture,
   type OrganismFixture,
 } from "./helpers/organism-fixture";
+import { waitForHydration } from "./helpers/hydration";
 
 /**
  * The shell below `lg` (DESIGN.md §3.2, §4.3, §2.6; ADR-0031 D4, D9).
@@ -40,6 +41,17 @@ const TEST_PASSWORD = "OVE444-local-password-1!";
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const LOCALES = ["uk", "bg", "ru"] as const;
 const WIDTHS = [320, 375, 768] as const;
+
+/**
+ * A phone's pixels, not a desktop's. At a device pixel ratio of 1 a Linux
+ * engine places every glyph on a whole pixel, which adds up to four pixels to
+ * an eight-letter word — and four pixels is exactly the margin "Дневници" has
+ * in a 64 px slot at 320 px. The first time this file ran in CI (a Linux
+ * runner, ratio 1) the label broke in two with the right face loaded; on a
+ * laptop it never had. No phone this narrow has a ratio below 2, so that is
+ * what the narrow screens are measured at.
+ */
+test.use({ deviceScaleFactor: 2 });
 
 /** The four WCAG 1.4.12 overrides, applied exactly as the criterion states. */
 const TEXT_SPACING = `* { line-height: 1.5 !important;
@@ -129,7 +141,18 @@ async function targetSizes(page: Page, selector: string) {
  * every region as 0 × 0 — which reads exactly like a region that is not drawn.
  */
 async function settleShell(page: Page) {
-  await expect(page.locator('[data-site-shell-region="header"]')).toBeVisible();
+  const header = page.locator('[data-site-shell-region="header"]');
+  await expect(header).toBeVisible();
+  // A static document's chrome is in the first bytes (ADR-0032), so "visible"
+  // is true before the bundle has run. What the chrome learns from hydration —
+  // the address, the rail a page fills, a gardener's own destinations — has
+  // settled only after it.
+  await waitForHydration(header);
+  // And a width is a width in the face the page is set in. `font-display:
+  // swap` draws the fallback first, the fallback is wider, and at 320 px
+  // "Дневници" is one line in Google Sans and two in Liberation Sans — which
+  // is what a Linux runner measured the first time this file ran in CI.
+  await page.evaluate(() => document.fonts.ready);
 }
 
 test.describe("the mobile shell", () => {

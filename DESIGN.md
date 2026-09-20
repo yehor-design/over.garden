@@ -408,7 +408,12 @@ lg → xl       [ rail 240 ]   [ content max 704 ]
   lines and spilled past the bar in all three languages. The other four are one
   line each at 320 px — measured, in `uk`, `bg` and `ru` — which is why the slot
   carries no horizontal padding: four pixels of it is the difference between
-  "Дневници" on one line and on two.
+  "Дневници" on one line and on two. And it is why the five slots are not
+  equal: the action is a 40 px circle and takes 48 px, the four labelled slots
+  share the rest (68 px each at 320 px). At an even 64 px "Дневници" had 1.6 px
+  to spare where glyphs sit on fractions of a pixel and none where they do not,
+  and broke in two on a Linux engine — which nothing had measured until the
+  mobile spec ran in CI.
 
 The context rail opens from the header on mobile or not at all.
 
@@ -970,16 +975,29 @@ that needs it.
 | Keyboard path through the primary flows                                                                   | `tests/accessibility.spec.ts`      | `pnpm gates:browser` |
 | Contrast of every semantic pair                                                                           | `src/app/globals.test.ts`          | `pnpm test`          |
 | A public page's heading and photograph are in the served bytes, and it reads with scripts off (ADR-0032) | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
+| Every browser spec is run by something                                                                    | `scripts/check-browser-specs.ts`   | `pnpm test`          |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.
 
-`pnpm gates` runs all ten. Seven of them are fast and also run inside
+`pnpm gates` runs all eleven. Eight of them are fast and also run inside
 `pnpm lint` and `pnpm test`, which is why they are there — a gate you only meet
 in CI is a gate you meet too late. The other three need a production build, a
-server and a database, so they live in `pnpm gates:browser` and in the CI proof
-step; putting them in `pnpm test` would take it from fifteen seconds to minutes
-and nobody would run it while editing.
+server and a database, so they live in the browser gate; putting them in
+`pnpm test` would take it from fifteen seconds to minutes and nobody would run
+it while editing.
+
+**The browser gate is one list, run one way.** `scripts/browser-gate-specs.ts`
+holds it; `scripts/run-browser-gate.ts` seals the owner account, starts `next
+start` and runs the list against it; `pnpm gates:browser` and CI's Browser
+proof job both call that runner and spell no list of their own. There used to
+be two lists, in a YAML string and a `package.json` string, and seven specs
+were in neither — the proofs of five finished redesign tasks among them. Run
+for the first time on 2026-09-20 they found `/journals` scrolling sideways at
+320 px in Bulgarian and Russian, a catalogue that was not complete without its
+context rail, and three assertions a later merge had made false. **A proof
+nobody runs is not a proof**, and `pnpm check:browser-specs` fails on a spec in
+`tests/` that is in neither the gate nor `DEDICATED_BROWSER_SPECS`.
 
 ### 10.1 Adding a gate
 

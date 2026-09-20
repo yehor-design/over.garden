@@ -2,6 +2,8 @@ import path from "node:path";
 
 import { expect, test, type Page } from "playwright/test";
 
+import { waitForHydration } from "./helpers/hydration";
+
 /**
  * The shell of DESIGN.md §3.2–§3.3, in a real engine at the widths it is drawn
  * for. Three questions a unit test cannot answer: what the tab order actually
@@ -42,7 +44,18 @@ async function selectLocale(page: Page, baseURL: string) {
  * every region as 0 × 0 — which reads exactly like a region that is not drawn.
  */
 async function settleShell(page: Page) {
-  await expect(page.locator('[data-site-shell-region="header"]')).toBeVisible();
+  const header = page.locator('[data-site-shell-region="header"]');
+  await expect(header).toBeVisible();
+  // A static document's chrome is in the first bytes (ADR-0032), so "visible"
+  // is true before the bundle has run. What the chrome learns from hydration —
+  // the address, the rail a page fills, a gardener's own destinations — has
+  // settled only after it.
+  await waitForHydration(header);
+  // And a width is a width in the face the page is set in. `font-display:
+  // swap` draws the fallback first, the fallback is wider, and at 320 px
+  // "Дневници" is one line in Google Sans and two in Liberation Sans — which
+  // is what a Linux runner measured the first time this file ran in CI.
+  await page.evaluate(() => document.fonts.ready);
 }
 
 test.describe("the three-column shell", () => {
@@ -152,6 +165,12 @@ test.describe("the three-column shell", () => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(address, { waitUntil: "load" });
       await settleShell(page);
+      // The rail is filled from an effect — by the page, or by the chrome once
+      // it knows the address. Read before that and it holds no link at all,
+      // and "loses nothing" would be true of an empty list.
+      await expect(
+        page.locator('[data-site-shell-region="context"] a[href]').first(),
+      ).toBeVisible();
       const withRail = await page.evaluate(() =>
         [...document.querySelectorAll("a[href]")].map((link) =>
           link.getAttribute("href"),
@@ -258,11 +277,15 @@ test.describe("the three-column shell", () => {
     await settleShell(page);
 
     const footer = page.locator('[data-site-shell-region="footer"]');
+    // The catalogue, not `/objects`: five entrances became one door, `/objects`
+    // answers 308 to it, and the footer has linked the door ever since. This
+    // file went on asking for the old address because it ran in no CI list —
+    // found on 2026-09-20, the day it joined one.
     for (const address of [
       "/privacy",
       "/support",
       "/first-publication-disclosure",
-      "/objects",
+      "/catalog",
     ]) {
       await expect(footer.locator(`a[href="${address}"]`)).toHaveCount(1);
       const response = await page.request.get(address, { maxRedirects: 0 });

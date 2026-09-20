@@ -140,6 +140,14 @@
   --grid-template-columns-shell: var(--container-rail) minmax(0, 1fr);
   --grid-template-columns-shell-wide: var(--container-rail) minmax(0, 1fr)
     var(--container-context);
+  /* The tab bar's five slots. The action in the middle is a 40 px circle with
+     no label, so it takes 48 px and the four labelled slots share the rest:
+     68 px each at 320 px instead of 64. "Дневници" is 62.4 px wide where
+     glyphs sit on fractions of a pixel and over 64 where they do not — it
+     broke in two on a Linux engine the first time anything but a Mac measured
+     it (`OVE-462`). */
+  --grid-template-columns-tab-bar: minmax(0, 1fr) minmax(0, 1fr) 3rem
+    minmax(0, 1fr) minmax(0, 1fr);
 
   /* photography — DESIGN.md §2.10. The three ratios a photograph is served
      at, as tokens, so `aspect-cover` and `aspect-card` are utilities rather

@@ -195,8 +195,29 @@ test.describe("the command palette", () => {
     ).toBeVisible();
 
     // `/` from a page with nothing focused: the second of three entry points.
-    await page.locator("body").click();
-    await page.keyboard.press("/");
+    // Through the helper, because the header above is in the served bytes and
+    // visible before the listener exists (ADR-0032).
+    //
+    // The heading, not `body`: a click on `body` lands on its centre, which on
+    // this page has been the filter bar's season `<select>` ever since the
+    // directory got one — and `/` in a select is a reader's type-ahead, which
+    // the palette rightly leaves alone. Measured on production on 2026-09-20;
+    // this file ran in no CI list, so nothing said so.
+    await page.locator("h1").first().click();
+    // Focus goes to the content region (`tabindex="-1"`), which is nothing a
+    // reader types into.
+    expect(
+      await page.evaluate(() => {
+        const active = document.activeElement;
+        return (
+          active instanceof HTMLElement &&
+          !active.isContentEditable &&
+          !["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName)
+        );
+      }),
+      "the click left focus in a field",
+    ).toBe(true);
+    await openCommandPalette(page, "/");
     await expect(page.locator('[data-command-palette="true"]')).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(

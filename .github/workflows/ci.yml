@@ -17,8 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  web:
-    name: Web app
+  checks:
+    name: Web app checks
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # GitHub-hosted Ubuntu uses Actions service containers and Docker for ad
@@ -71,73 +71,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: 9.14.1
+      - name: Set up the web app and its services
+        uses: ./.github/actions/web-setup
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: apps/web/pnpm-lock.yaml
-
-      - name: Generate isolated versioned Better Auth CI fixture
-        run: |
-          # This value exists only for this run and is never printed, uploaded,
-          # or used outside localhost CI.
-          # shellcheck disable=SC2016
-          node -e 'const { randomBytes } = require("node:crypto"); console.log(`BETTER_AUTH_SECRETS=2:${randomBytes(32).toString("base64url")}`); console.log("BETTER_AUTH_CURRENT_SECRET_VERSION=2")' >> "$GITHUB_ENV"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # `minio/minio` on Docker Hub stopped serving anonymous pulls on
-      # 2026-09-12 — every run, on every branch and on main, failed with
-      # "pull access denied ... may require 'docker login'". Quay is MinIO's
-      # own registry and serves the same images anonymously. Pinned to a
-      # release rather than `latest`, so a registry's tag moving under us is
-      # never again a red build on a branch that changed nothing.
-      - name: Start MinIO
-        run: |
-          docker run --detach --rm \
-            --name overgarden-ci-minio \
-            -p 9000:9000 \
-            -p 9001:9001 \
-            -e MINIO_ROOT_USER=overgarden-ci \
-            -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data --console-address ":9001"
-
-          for _ in {1..30}; do
-            if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
-              echo "MinIO is ready."
-              exit 0
-            fi
-            sleep 2
-          done
-
-          echo "MinIO did not become ready in time."
-          docker logs overgarden-ci-minio || true
-          exit 1
-
-      - name: Verify Meilisearch service
-        run: |
-          for _ in {1..30}; do
-            if curl -fsS http://localhost:7700/health >/dev/null 2>&1; then
-              echo "Meilisearch is ready."
-              exit 0
-            fi
-            sleep 2
-          done
-
-          echo "Meilisearch did not become ready in time."
-          exit 1
-
-      - name: Bootstrap schema and object storage
-        env:
-          PUBLIC_SITE_URL: http://localhost:3000
-        run: pnpm local:bootstrap
 
       - name: Verify fresh-bootstrap public identity recovery contract
         run: pnpm smoke:public-identity
@@ -205,65 +141,124 @@ jobs:
       # DESIGN.md §10, gates 3 and 6. The other four mechanical gates are
       # ESLint rules and ran in the Lint step above; gate 9 is the contrast
       # contract inside `globals.test.ts` and runs with the suite; gates 7 and
-      # 8 need a browser and run in the proof step at the end of this job.
+      # 8 need a browser and run in the Browser proof job beside this one.
       - name: Design system gates
         run: pnpm check:design-tokens && pnpm check:component-tests
 
       - name: Test
         run: pnpm test
 
+  browser:
+    name: Browser proof (${{ matrix.shard }}/2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    # GitHub-hosted Ubuntu uses Actions service containers and Docker for ad
+    # hoc services. This is a platform-bound exception, not a local Docker
+    # Desktop prerequisite; see docs/CONTAINER_RUNTIME_POLICY.md.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: overgarden
+          POSTGRES_USER: overgarden
+          POSTGRES_PASSWORD: overgarden
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U overgarden -d overgarden"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      meilisearch:
+        image: getmeili/meilisearch:v1.48.1
+        env:
+          MEILI_MASTER_KEY: overgarden-ci-meili-key
+          MEILI_NO_ANALYTICS: "true"
+        ports:
+          - 7700:7700
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      BETTER_AUTH_URL: http://localhost:3000
+      DATABASE_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
+      DIRECT_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
+      DATABASE_POOL_MAX: "1"
+      DATABASE_SSL: "false"
+      # Transactional outbox leasing runs against this PostgreSQL service; the
+      # test stays opt-in for non-CI local unit runs.
+      OVE219_POSTGRES_INTEGRATION: "true"
+      R2_ENDPOINT: http://localhost:9000
+      R2_ACCESS_KEY_ID: overgarden-ci
+      R2_SECRET_ACCESS_KEY: overgarden-ci-secret
+      R2_FORCE_PATH_STYLE: "true"
+      R2_PUBLIC_BUCKET: overgarden-public
+      R2_PUBLIC_BASE_URL: http://localhost:9000/overgarden-public
+      MEILISEARCH_HOST: http://localhost:7700
+      MEILISEARCH_API_KEY: overgarden-ci-meili-key
+      MATCHING_SERVICE_URL: http://localhost:8000
+      MATCHING_SERVICE_TOKEN: overgarden-ci-matching-token
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up the web app and its services
+        uses: ./.github/actions/web-setup
+
       - name: Build
         run: pnpm build
 
-      # A public control that needs hydration to act is invisible to every test
-      # above: unit renders cannot tell a real form endpoint from React's
-      # placeholder, and `next dev` does not exercise the postpone/resume path.
-      # This runs a real Chromium against the build produced one step earlier.
+      # A public control that needs hydration to act is invisible to every unit
+      # test: a render cannot tell a real form endpoint from React's
+      # placeholder, and `next dev` does not take the prerender, postpone and
+      # resume path. This runs a real Chromium against the build one step up.
       - name: Install Chromium for the browser proof
         run: pnpm exec playwright install --with-deps chromium
 
-      # The owner surfaces are gated on a user id the server reads at start, so
-      # the account exists before the server does.
-      - name: Seal the browser proof's owner account
-        run: pnpm owner:seed-browser-fixture
+      # One list, in `scripts/browser-gate-specs.ts`, run one way, by
+      # `scripts/run-browser-gate.ts`: it seals the owner account, starts
+      # `next start` on the origin Better Auth is told about, hands both sides a
+      # cron secret made for this run, and runs this shard of the list. The
+      # list used to be spelled here and again in `package.json`, and seven
+      # specs were in neither (`OVE-462`). `pnpm check:browser-specs`, in the
+      # checks job's Test step, fails on a spec that nothing runs.
+      - name: The browser gate
+        run: pnpm exec tsx scripts/run-browser-gate.ts --shard=${{ matrix.shard }}/2
 
-      - name: Public hydration, catalog picker, address, curation and accessibility proofs
-        # The picker spec signs a synthetic gardener in over the API, and Better
-        # Auth checks the request origin against BETTER_AUTH_URL: it must be the
-        # origin the server answers on, not the build-time value. The two
-        # address specs assert real HTTP statuses (200, 308, 404, 410) over
-        # HTTP alone, without following a redirect: an entry's older addresses
-        # must each reach its number in one response, and a client that
-        # follows would hide the second hop. The
-        # curation spec needs the sealed owner id the step above wrote. The
-        # full-catalogue spec skips itself here: a Catalogue of Life release is
-        # a gigabyte, so CI holds no snapshot and the Python database tests
-        # cover the ingest and the materialization instead. The three
-        # accessibility specs are gates 7 and 8 of DESIGN.md §10: axe over the
-        # nine key screens and a keyboard-only path through the primary flows,
-        # both against this production build rather than a dev server. The
-        # journals spec is here from the day it was written: a proof nobody
-        # runs is not a proof, and five specs in this repository had rotted in
-        # exactly that way (`OVE-462`). The static-documents spec is ADR-0032's
-        # gate: a public page's heading and photograph are in the served bytes,
-        # outside every `<div hidden>`, and a reader without JavaScript reads
-        # it — asked over HTTP, because a DOM cannot tell a page that painted
-        # from its first byte from one that painted at TTI. The analytics spec
-        # holds what ADR-0032 D7 rewired: the nine measured paths ask for their
-        # tag once consent is given, no other path does, and the notice is
-        # drawn only where an answer is owed — with the tag hosts intercepted.
-        env:
-          BETTER_AUTH_URL: http://127.0.0.1:3179
-          PUBLIC_SITE_URL: http://127.0.0.1:3179
-          OVERGARDEN_ADMIN_OWNER_USER_ID: 0ce39100-1ce3-4ce3-8ce3-0ce391000391
+      # A test that fails once and passes on its retry is reported "flaky" and
+      # the run is green, so its one useful artefact — the trace of the attempt
+      # that failed — used to go with the runner. Kept for a week.
+      - name: Keep the traces of what failed or flaked
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-proof-traces-${{ matrix.shard }}
+          path: apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # The required check. Branch protection names "Web app", so this is the job
+  # that carries the name: it runs whatever happened to the two above and
+  # passes only if both did. `if: always()` matters — a job skipped because a
+  # job it needs failed reports "skipped", and a skipped required check counts
+  # as passed.
+  web:
+    name: Web app
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [checks, browser]
+    if: always()
+    steps:
+      - name: Every part of the gate passed
         run: |
-          pnpm next start -p 3179 &
-          for _ in $(seq 1 60); do
-            curl -sf -o /dev/null http://127.0.0.1:3179/journals && break
-            sleep 1
-          done
-          PLAYWRIGHT_BASE_URL=http://127.0.0.1:3179 \
-            pnpm exec playwright test tests/static-documents.spec.ts tests/analytics-consent.spec.ts tests/public-hydration.spec.ts tests/catalog-picker.spec.ts tests/catalog-addresses.spec.ts tests/entry-addresses.spec.ts tests/latin-names.spec.ts tests/owner-catalog-curation.spec.ts tests/catalog-full-catalogue.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts
+          echo "checks: ${{ needs.checks.result }}"
+          echo "browser: ${{ needs.browser.result }}"
+          test "${{ needs.checks.result }}" = "success"
+          test "${{ needs.browser.result }}" = "success"
 
   matching:
     name: Python matching tier

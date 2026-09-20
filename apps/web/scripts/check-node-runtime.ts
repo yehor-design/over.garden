@@ -47,8 +47,11 @@ export function readNodeRuntimeConfiguration(
   const nvmrcMajor = parseNodeMajor(
     readFileSync(path.join(repositoryRoot, ".nvmrc"), "utf8"),
   );
+  // Where CI sets up Node: the composite action both Web app jobs share
+  // (`OVE-462` moved it out of the workflow, and this check went on reading
+  // the workflow — and said so, which is what it is for).
   const ci = readFileSync(
-    path.join(repositoryRoot, ".github", "workflows", "ci.yml"),
+    path.join(repositoryRoot, ".github", "actions", "web-setup", "action.yml"),
     "utf8",
   );
   const ciMatch = ci.match(/^\s*node-version:\s*["']?(\d+)["']?\s*$/m);

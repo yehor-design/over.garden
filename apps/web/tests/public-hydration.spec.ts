@@ -173,7 +173,12 @@ test.describe("public pages hydrate below the shell", () => {
     // full CI run on 2026-09-18 — while `journal-entry.spec.ts` asserted the
     // same control on the same commit and passed, which is what says the wait
     // was short rather than the control missing.
-    const panel = page.locator("#comments");
+    // `:visible`, because for a moment there are two. The document carries the
+    // guest's panel in its bytes and the reader's own arrives in a hidden
+    // segment that React swaps in (ADR-0032 D2); between the arrival and the
+    // swap both are in the DOM, and a bare `#comments` is a strict-mode
+    // violation exactly then — once in CI, never on a laptop.
+    const panel = page.locator("#comments:visible");
     await panel.waitFor({ state: "visible", timeout: 20_000 });
     const like = panel.locator("button[aria-pressed]").first();
     await like.waitFor({ state: "visible", timeout: 20_000 });

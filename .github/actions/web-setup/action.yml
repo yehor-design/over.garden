@@ -1,0 +1,86 @@
+name: Web app setup
+description: >-
+  pnpm, Node, the per-run Better Auth fixture, dependencies, MinIO, Meilisearch
+  and a bootstrapped schema. Shared by the two jobs of the Web app gate, which
+  each declare the Postgres and Meilisearch services this expects.
+
+runs:
+  using: composite
+  steps:
+    - name: Set up pnpm
+      uses: pnpm/action-setup@v6
+      with:
+        version: 9.14.1
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: apps/web/pnpm-lock.yaml
+
+    - name: Generate isolated versioned Better Auth CI fixture
+      shell: bash
+      working-directory: apps/web
+      run: |
+        # This value exists only for this run and is never printed, uploaded,
+        # or used outside localhost CI.
+        # shellcheck disable=SC2016
+        node -e 'const { randomBytes } = require("node:crypto"); console.log(`BETTER_AUTH_SECRETS=2:${randomBytes(32).toString("base64url")}`); console.log("BETTER_AUTH_CURRENT_SECRET_VERSION=2")' >> "$GITHUB_ENV"
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: apps/web
+      run: pnpm install --frozen-lockfile
+
+    # `minio/minio` on Docker Hub stopped serving anonymous pulls on
+    # 2026-09-12 — every run, on every branch and on main, failed with
+    # "pull access denied ... may require 'docker login'". Quay is MinIO's
+    # own registry and serves the same images anonymously. Pinned to a
+    # release rather than `latest`, so a registry's tag moving under us is
+    # never again a red build on a branch that changed nothing.
+    - name: Start MinIO
+      shell: bash
+      working-directory: apps/web
+      run: |
+        docker run --detach --rm \
+          --name overgarden-ci-minio \
+          -p 9000:9000 \
+          -p 9001:9001 \
+          -e MINIO_ROOT_USER=overgarden-ci \
+          -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
+          quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data --console-address ":9001"
+
+        for _ in {1..30}; do
+          if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
+            echo "MinIO is ready."
+            exit 0
+          fi
+          sleep 2
+        done
+
+        echo "MinIO did not become ready in time."
+        docker logs overgarden-ci-minio || true
+        exit 1
+
+    - name: Verify Meilisearch service
+      shell: bash
+      working-directory: apps/web
+      run: |
+        for _ in {1..30}; do
+          if curl -fsS http://localhost:7700/health >/dev/null 2>&1; then
+            echo "Meilisearch is ready."
+            exit 0
+          fi
+          sleep 2
+        done
+
+        echo "Meilisearch did not become ready in time."
+        exit 1
+
+    - name: Bootstrap schema and object storage
+      env:
+        PUBLIC_SITE_URL: http://localhost:3000
+      shell: bash
+      working-directory: apps/web
+      run: pnpm local:bootstrap

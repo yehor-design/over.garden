@@ -82,10 +82,17 @@ these rules in CI and in `pnpm test`.
   issue per branch; implement end to end (SQL → repository → route → UI →
   tests → docs); Conventional Commits; open a PR; merge only on green CI;
   then move the Linear issue to Done and sync `main`.
-- CI is `.github/workflows/ci.yml`: install, services, bootstrap, generated
-  DB types check, generated job-queue contract check and its executed database
-  proof, lint, typecheck, banned-dependency gate, tests, build, plus the Python
-  matching job. Keep it under ten minutes.
+- CI is `.github/workflows/ci.yml`: **Web app checks** (install, services,
+  bootstrap, generated DB types check, generated job-queue contract check and
+  its executed database proof, lint, typecheck, banned-dependency gate, tests)
+  beside **Browser proof** (build, then the browser gate in two shards), with
+  **Web app** — the required check — needing both, plus the Python matching
+  job. Keep it under ten minutes.
+- The browser gate is one list: `apps/web/scripts/browser-gate-specs.ts`, run
+  by `scripts/run-browser-gate.ts` against `next start`, locally
+  (`pnpm gates:browser`) and in CI alike. A new spec goes into that list the day
+  it is written; `pnpm check:browser-specs` (in `pnpm test`) fails on one that
+  nothing runs. A proof nobody runs is not a proof: seven had rotted that way.
 - The job queue contract is generated. `apps/web/src/server/job-queue-manifest.ts`
   is the only place that declares a kind; `pnpm queue:contract:build` writes
   `contracts/job-queue/job-queue.contract.v1.json` and
