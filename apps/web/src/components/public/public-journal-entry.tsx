@@ -24,7 +24,9 @@ import { Section } from "@/components/ui/section";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import {
   legacyBodyToJournalDocumentV1,
+  listJournalDocumentImageMediaIds,
   normalizeJournalDocument,
+  type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import type { PublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
@@ -111,7 +113,21 @@ export function PublicJournalEntryView({
   const contextModules = buildContextModules(page, copy);
   const location = getSafeLocation(page, copy);
   const mentionedProfiles = page.mentionedProfiles ?? [];
-  const [cover, ...rest] = page.media;
+
+  // A photograph the story already shows is never shown again (`OVE-471`).
+  // Since the composer became Notion-shaped a photograph *is* a block of the
+  // document, and the cover is usually the first of them — so the page drew it
+  // above the story and the story drew it again directly underneath, and the
+  // gallery at the foot repeated the rest. A cover uploaded on its own is in
+  // no block, so it still has this page as its only way onto the screen.
+  const entryDocument = resolveEntryDocument(page);
+  const inDocument = photographsTheDocumentShows(entryDocument, page.media);
+  const [cover, ...rest] = page.media.filter(
+    (item) => !inDocument.includes(item.id),
+  );
+  // Removing the cover must not cost the page its LCP element: whatever is
+  // drawn first is asked for first (DESIGN.md §9).
+  const leadPhotographId = cover ? null : (inDocument[0] ?? null);
 
   return (
     <main
@@ -204,7 +220,13 @@ export function PublicJournalEntryView({
           data-journal-prose="true"
           className="grid gap-5 text-body-lg text-text"
         >
-          <PublicJournalEntryBody locale={locale} page={page} copy={copy} />
+          <PublicJournalEntryBody
+            locale={locale}
+            page={page}
+            copy={copy}
+            entryDocument={entryDocument}
+            leadPhotographId={leadPhotographId}
+          />
         </div>
 
         {rest.length > 0 ? (
@@ -636,14 +658,61 @@ function getSafeLocation(
   return label ? `${copy.safeRegion}: ${label}` : copy.locationHidden;
 }
 
+/**
+ * The entry's story, as one of three things: the document the gardener wrote,
+ * the notice that it cannot be read, or the plain paragraphs of an entry from
+ * before there were documents.
+ *
+ * Resolved once, above the page, because the page has to know **which
+ * photographs the story shows** before it decides what to draw around it.
+ */
+type EntryDocument =
+  | { kind: "document"; document: JournalDocumentV1 }
+  | { kind: "unavailable" }
+  | { kind: "paragraphs" };
+
+function resolveEntryDocument(page: PublicJournalEntryPage): EntryDocument {
+  if (page.entry.contentDocument != null) {
+    const normalized = normalizeJournalDocument(page.entry.contentDocument);
+    return normalized.ok
+      ? { kind: "document", document: normalized.document }
+      : { kind: "unavailable" };
+  }
+  const legacy = legacyBodyToJournalDocumentV1(page.entry.body);
+  return legacy.blocks.length > 0
+    ? { kind: "document", document: legacy }
+    : { kind: "paragraphs" };
+}
+
+/**
+ * The entry's photographs that the story itself shows, in the order it shows
+ * them. A block naming a photograph this reader may not see — revoked, or of
+ * another entry — renders nothing, so it is not one of them and the page keeps
+ * its own copy.
+ */
+function photographsTheDocumentShows(
+  entryDocument: EntryDocument,
+  media: PublicJournalEntryPage["media"],
+): string[] {
+  if (entryDocument.kind !== "document") return [];
+  const visible = new Set(media.map((item) => item.id));
+  return listJournalDocumentImageMediaIds(entryDocument.document).filter((id) =>
+    visible.has(id),
+  );
+}
+
 function PublicJournalEntryBody({
   locale,
   page,
   copy,
+  entryDocument,
+  leadPhotographId,
 }: {
   locale: PublicLocale;
   page: PublicJournalEntryPage;
   copy: PublicJournalEntryCopy;
+  entryDocument: EntryDocument;
+  leadPhotographId: string | null;
 }) {
   const imagesByMediaId = new Map(
     page.media.map((item) => [
@@ -651,30 +720,30 @@ function PublicJournalEntryBody({
       {
         mediaAssetId: item.id,
         src: item.publicUrl,
+        // A photograph in the story is served from the same ladder as one the
+        // page draws: the reading column is 704 px and the primary rendition
+        // is up to 2560 px wide (ADR-0022 D2). Photographs with no variants —
+        // every one uploaded before the ladder existed — get `null` and the
+        // one file there is.
+        srcSet: buildPublicMediaSourceSet(item).srcSet,
         alt: publicMediaAltText(item, page.entry.title),
         caption: item.caption,
+        placeholderDataUri: item.placeholderDataUri,
+        // Its own ratio, so the box is the photograph's rather than the 4:3
+        // the renderer falls back to (DESIGN.md §2.10).
+        width: item.intrinsicWidth ?? undefined,
+        height: item.intrinsicHeight ?? undefined,
+        focalX: item.focalX,
+        focalY: item.focalY,
       },
     ]),
   );
 
-  if (page.entry.contentDocument != null) {
-    const normalized = normalizeJournalDocument(page.entry.contentDocument);
-    if (!normalized.ok) {
-      return (
-        <JournalDocumentRenderer
-          document={null}
-          unavailable
-          copy={{
-            unavailableTitle: copy.journal,
-            unavailableBody: page.entry.body,
-          }}
-        />
-      );
-    }
+  if (entryDocument.kind === "unavailable") {
     return (
       <JournalDocumentRenderer
-        document={normalized.document}
-        imagesByMediaId={imagesByMediaId}
+        document={null}
+        unavailable
         copy={{
           unavailableTitle: copy.journal,
           unavailableBody: page.entry.body,
@@ -683,12 +752,12 @@ function PublicJournalEntryBody({
     );
   }
 
-  const legacy = legacyBodyToJournalDocumentV1(page.entry.body);
-  if (legacy.blocks.length > 0) {
+  if (entryDocument.kind === "document") {
     return (
       <JournalDocumentRenderer
-        document={legacy}
+        document={entryDocument.document}
         imagesByMediaId={imagesByMediaId}
+        leadImageMediaId={leadPhotographId}
         copy={{
           unavailableTitle: copy.journal,
           unavailableBody: page.entry.body,

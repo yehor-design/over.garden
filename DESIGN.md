@@ -360,6 +360,18 @@ smaller than the banner, and principle 1 stops being true of the page a reader
 actually measures. A **cover** at 16:9 is the entry page's hero, not a card's
 picture.
 
+**A page shows a photograph once, where its author put it.** A cover is a crop
+for the places that need a uniform box — a card, a feed, `og:image` — and since
+the composer became Notion-shaped a photograph *is* a block of the entry's
+document, usually the first. So an entry whose story opens with its cover drew
+that photograph twice, one directly under the other, and the gallery at the
+foot repeated the rest (found on production 2026-09-20, `OVE-471`). The rule:
+**a photograph the story already shows is never shown again by the page around
+it**, and a cover uploaded on its own — in no block — is the one a page still
+draws as its hero. Uncropped in the story is the right way round: a portrait
+photograph is never letterboxed on its own page to make a box tidy, which is
+also what Medium and Substack do with a lead image.
+
 ### 2.11 Layering
 
 `--z-base` 0 · `--z-sticky` 10 · `--z-rail` 20 · `--z-header` 30 ·
@@ -938,7 +950,10 @@ about every page that will ever be added here, not a tuning of three:
   only. Every other photograph is lazy and names no priority: the browser
   already asks for a lazy image outside the viewport at its lowest, and raises
   one it finds inside — a blanket `fetchpriority="low"` changes nothing for the
-  first and takes that rescue from the second.
+  first and takes that rescue from the second. **Whatever draws the first
+  photograph carries this**, including the entry's story when it opens with one
+  and the page therefore draws no cover of its own (§2.10): removing a hero is
+  not allowed to cost the page its LCP element.
 - **Nothing above a page changes by itself** (ADR-0032 D10). What the chrome
   learns after the document is served — the address, who is reading, what a
   page puts in the rail — lives in a store (`src/lib/value-store.ts`) and is
@@ -1010,14 +1025,15 @@ that needs it.
 | Contrast of every semantic pair                                                                           | `src/app/globals.test.ts`          | `pnpm test`          |
 | A public page's heading and photograph are in the served bytes, and it reads with scripts off (ADR-0032) | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
 | The largest photograph on the first screen is never `loading="lazy"`, at a phone's width and a desk's    | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
+| An entry whose story opens with its cover shows that photograph once, and asks for it at once            | `tests/journal-entry.spec.ts`      | `pnpm gates:browser` |
 | Every browser spec is run by something                                                                    | `scripts/check-browser-specs.ts`   | `pnpm test`          |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.
 
-`pnpm gates` runs all twelve. Eight of them are fast and also run inside
+`pnpm gates` runs all thirteen. Eight of them are fast and also run inside
 `pnpm lint` and `pnpm test`, which is why they are there — a gate you only meet
-in CI is a gate you meet too late. The other four need a production build, a
+in CI is a gate you meet too late. The other five need a production build, a
 server and a database, so they live in the browser gate; putting them in
 `pnpm test` would take it from fifteen seconds to minutes and nobody would run
 it while editing.

@@ -169,6 +169,131 @@ const objectPage: PublicJournalEntryPage = {
   ],
 };
 
+/**
+ * The same entry, written in the composer: its photographs are blocks of the
+ * document rather than a list beside it (ADR-0028). `media-1` is the cover.
+ */
+const COVER_ID = "11111111-1111-4111-8111-111111111111";
+const SECOND_ID = "22222222-2222-4222-8222-222222222222";
+
+const composerPage: PublicJournalEntryPage = {
+  ...objectPage,
+  entry: {
+    ...objectPage.entry,
+    contentSchemaVersion: 1,
+    contentDocument: {
+      schemaVersion: 1,
+      blocks: [
+        {
+          id: "b1",
+          type: "image",
+          mediaAssetId: COVER_ID,
+          caption: "Перша китиця",
+        },
+        { id: "b2", type: "paragraph", spans: [{ text: "Полив увечері." }] },
+        { id: "b3", type: "image", mediaAssetId: SECOND_ID },
+      ],
+    },
+  },
+  media: [
+    { ...objectPage.media[0]!, id: COVER_ID },
+    { ...objectPage.media[1]!, id: SECOND_ID },
+  ],
+};
+
+/** Every `<img>` whose `src` is this file, however it was rendered. */
+function timesShown(html: string, file: string) {
+  return [...html.matchAll(/<img\b[^>]*>/giu)].filter((match) =>
+    match[0].includes(file),
+  ).length;
+}
+
+describe("an entry whose photographs are in its document (OVE-471)", () => {
+  it("shows each photograph once, where the gardener put it", () => {
+    const html = renderToStaticMarkup(
+      <PublicJournalEntryView
+        locale="uk"
+        copy={getPublicJournalEntryCopy("uk")}
+        page={composerPage}
+        directoryReturnTo="/journals"
+      />,
+    );
+
+    // The defect this test exists for: the page drew `media[0]` as a cover and
+    // the renderer drew the same block under it, so a reader met the entry's
+    // lead photograph twice, one directly below the other — seen on production
+    // on 2026-09-20. The gallery at the foot repeated the rest.
+    // The document itself renders, rather than falling back to the plain body:
+    // without this the counts below would be 1 for the wrong reason.
+    expect(html).toContain('data-journal-document="v1"');
+    expect(html).toContain("Полив увечері.");
+
+    expect(timesShown(html, "landscape.webp")).toBe(1);
+    expect(timesShown(html, "portrait.webp")).toBe(1);
+    expect(html).not.toContain('data-journal-cover="true"');
+    expect(html).not.toContain("data-journal-media-count");
+    // It is the document that shows them, at the photograph's own ratio.
+    expect(html.match(/data-block-type="image"/gu)).toHaveLength(2);
+    expect(html).not.toContain("aspect-cover");
+  });
+
+  it("asks for the lead photograph at once, and leaves the rest to the browser", () => {
+    const html = renderToStaticMarkup(
+      <PublicJournalEntryView
+        locale="uk"
+        copy={getPublicJournalEntryCopy("uk")}
+        page={composerPage}
+        directoryReturnTo="/journals"
+      />,
+    );
+
+    // Whatever draws the page's first photograph carries the priority the
+    // cover used to (DESIGN.md §9) — otherwise removing the cover would cost
+    // the page its LCP element.
+    const images = [...html.matchAll(/<img\b[^>]*>/giu)].map((m) => m[0]);
+    const lead = images.find((tag) => tag.includes("landscape.webp"));
+    const second = images.find((tag) => tag.includes("portrait.webp"));
+    expect(lead).toMatch(/loading="eager"/u);
+    expect(lead).toMatch(/fetchPriority="high"/iu);
+    expect(second).toMatch(/loading="lazy"/u);
+    expect(second).not.toMatch(/fetchPriority=/iu);
+    // React hoists the preload for an eager, high-priority image, so the
+    // photograph is asked for from `<head>` rather than when the parser
+    // reaches it.
+    expect(html).toMatch(
+      /<link rel="preload" as="image"[^>]*landscape\.webp/u,
+    );
+  });
+
+  it("keeps a separate cover, which no block of the document shows", () => {
+    // A cover uploaded on its own (`cover_only`) is not in the story, so the
+    // page is the only thing that can show it — and it keeps the 16:9 hero.
+    const html = renderToStaticMarkup(
+      <PublicJournalEntryView
+        locale="uk"
+        copy={getPublicJournalEntryCopy("uk")}
+        page={{
+          ...composerPage,
+          entry: {
+            ...composerPage.entry,
+            contentDocument: {
+              schemaVersion: 1,
+              blocks: [
+                { id: "b3", type: "image", mediaAssetId: "media-2" },
+              ],
+            },
+          },
+        }}
+        directoryReturnTo="/journals"
+      />,
+    );
+
+    expect(html).toContain('data-journal-cover="true"');
+    expect(timesShown(html, "landscape.webp")).toBe(1);
+    expect(timesShown(html, "portrait.webp")).toBe(1);
+  });
+});
+
 describe("public journal entry V2", () => {
   it("renders an object-first chapter with gallery, chronology and owner-only control", () => {
     const html = renderToStaticMarkup(
