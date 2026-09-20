@@ -30,6 +30,14 @@ const PROGRESSIVE_SURFACES = [
   "app/[locale]/lineage/objects/[objectId]/page.tsx",
   // `OVE-454`: join, leave, contribute, report and block on a community.
   "components/public/public-community.tsx",
+  // `OVE-456`: the reader's own pages and the erasure family. Removing a
+  // bookmark or a wishlist item, asking for erasure, and every control on the
+  // two moderation surfaces.
+  "app/[locale]/bookmarks/page.tsx",
+  "app/[locale]/wishlist/page.tsx",
+  "app/(default)/erasure/page.tsx",
+  "app/(default)/account/communities/[slug]/page.tsx",
+  "app/(default)/garden/privacy/erasure-requests/page.tsx",
 ] as const;
 
 const PROGRESSIVE_ACTIONS = [
@@ -39,6 +47,11 @@ const PROGRESSIVE_ACTIONS = [
   "app/[locale]/[profileHandle]/actions.ts",
   "app/[locale]/lineage/objects/[objectId]/actions.ts",
   "app/[locale]/communities/[slug]/actions.ts",
+  "app/(default)/bookmarks/actions.ts",
+  "app/(default)/wishlist/actions.ts",
+  "app/(default)/erasure/actions.ts",
+  "app/(default)/account/communities/[slug]/actions.ts",
+  "app/(default)/garden/privacy/erasure-requests/actions.ts",
 ] as const;
 
 describe("owner forms that decide before hydration", () => {

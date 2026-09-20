@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-19.
+Last reviewed: 2026-09-20.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -886,7 +886,60 @@ form in the DOM until the reveal — so a full gate run, where the server is
 busier, failed in strict mode on two matching selects. It is scoped to the
 visible bar now.
 
-The remaining page families (`OVE-454`–`OVE-459`) are still in Backlog.
+**The reader's own pages became one family** (`OVE-456`, 2026-09-20). The feed,
+notifications, bookmarks and the wishlist were four tabs and three unrelated
+pages; the account menu was one link and a sign-out; and erasure was eight
+sentences in a row.
+
+- **One strip, and the bar under it is gone.** The four addresses share
+  `TabLinks` — the same box, the same focus ring and the same selected-tab rule
+  as `Tabs`, rendered as links because pressing one navigates and a `tablist`
+  whose tabs navigate is a lie a screen reader cannot recover from. The
+  selection is the address. Under it, each page drew its filters in a bordered
+  `role="group"` that stopped where its content did: a bar spanning half the
+  page and separating nothing. They are `ToggleChip`s over a `GET` form now, so
+  the state is `aria-pressed` on a real button, the press works with no bundle,
+  and the filter lands in the URL (DESIGN.md §5.1).
+- **Every page has its own first-run state and its own no-results state**, each
+  with one action that leads somewhere real. A notification says what happened,
+  to what and when, links to the thing, and carries **the word** "unread" beside
+  the mark — colour was the only signal before.
+- **Bookmarks and the wishlist share one row and one removal**, and a removal
+  offers Undo in a `Toast`. The Undo is a real form, so it works before the
+  bundle: the removed target rides back in the address, re-checked against its
+  own shape on the way in, because the hidden field is gone with the row.
+- **The account menu has four groups**: the reader's own pages, settings, the
+  owner's five links under the sealed role, and the way out. Below `lg` there is
+  no rail, so the menu had been the only route to those pages and had none of
+  them.
+- **Erasure has three headings** — what is deleted, what survives, and how long
+  the address keeps answering `410` — over the same eight promises, unedited and
+  in order, with a test that fails if the set or the order changes. The one
+  destructive control in the product, the owner's approved execution, is a
+  `ConfirmSubmit`: a real submit button inside the form that opens an
+  `AlertDialog` naming the request once the page is hydrated. Hydration adds the
+  confirmation; it never takes away the action.
+- **Four addresses were not `no-store`.** `/notifications`, `/bookmarks`,
+  `/wishlist` and `/feed` render one person's data and were absent from the
+  proxy's list, so each was leaving its cache header to whatever Next chose.
+
+**Two proofs had rotted, and running them is what found it.**
+`pnpm smoke:erasure-workflow` had been failing on its own fixture since
+migration `0061` removed `plant_objects.variety_state = 'user_added'`, and then
+on an assertion `OVE-353` made false: the erasure tombstone is
+`deleted_retention` with a seven-day `purge_after`, not `archived`. Both are
+fixed, and the smoke now asserts the retention horizon the lifecycle is named
+after.
+
+Proven in `tests/personal-surfaces.spec.ts`, in the browser gate and the CI
+list: **axe clean at 375 px and 1440 px, empty and populated**, on the four
+personal pages and `/erasure`; one strip with one `aria-current="page"` on each;
+no `role="group"` and no `aria-pressed` link left in the family; a chip press
+landing in the URL; a removal offering Undo and the Undo putting the row back;
+and a no-JavaScript POST on the wishlist removal, the erasure request, the
+community moderation controls and the owner's erasure queue.
+
+The remaining page families (`OVE-457`–`OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

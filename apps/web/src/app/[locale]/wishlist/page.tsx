@@ -1,21 +1,24 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  ExternalLink,
-  Sprout,
-  Trash2,
-} from "lucide-react";
+import { ExternalLink, Sprout } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { MySocialLayout } from "@/components/social/my-social-layout";
 import {
-  MySocialLayout,
-  SocialEmptyState,
-} from "@/components/social/my-social-layout";
-import { buttonVariants } from "@/components/ui/button";
+  ShelfNotice,
+  ShelfRemoveButton,
+  ShelfRow,
+} from "@/components/social/shelf";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ToggleChip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { iconButtonVariants } from "@/components/ui/icon-button";
+import { Pagination } from "@/components/ui/pagination";
 import type { CatalogKind } from "@/db/schema";
+import { resolveIllustration } from "@/lib/illustrations";
+import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import {
   buildLanguageAlternates,
   isPublicLocale,
@@ -30,9 +33,10 @@ import {
   type WishlistShelfItem,
 } from "@/server/wishlist-repository";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { removeCatalogPublicSlugFromWishlistAction } from "@/app/(default)/wishlist/actions";
-import { iconButtonVariants } from "@/components/ui/icon-button";
-import { HiddenField } from "@/components/ui/hidden-field";
+import {
+  addCatalogPublicSlugToWishlistAction,
+  removeCatalogPublicSlugFromWishlistAction,
+} from "@/app/(default)/wishlist/actions";
 
 const PAGE_SIZE = 12;
 
@@ -82,16 +86,17 @@ export default async function LocalizedWishlistRoute({
         description={copy.wishlist.description}
       >
         <SignInPrompt
-  locale={localeParam}
-  next={localizedPath(localeParam, "/wishlist")}
-  description={copy.wishlist.signIn}
-/>
+          locale={localeParam}
+          next={localizedPath(localeParam, "/wishlist")}
+          description={copy.wishlist.signIn}
+        />
       </MySocialLayout>
     );
   }
 
   const filter = parseFilter(firstParam(query.kind));
   const page = parsePage(firstParam(query.page));
+  const undoSlug = parseUndoSlug(firstParam(query.undoSlug));
   const allItems = await listWishlistShelfItems(
     scopedToUser(userId, getSessionId(session)),
   );
@@ -113,39 +118,85 @@ export default async function LocalizedWishlistRoute({
       description={copy.wishlist.description}
       count={filtered.length}
       controls={<WishlistFilters locale={localeParam} active={filter} />}
+      notice={
+        undoSlug ? (
+          <ShelfNotice
+            regionLabel={copy.common.noticeRegion}
+            title={copy.wishlist.removedNotice}
+            dismissLabel={copy.common.dismissNotice}
+            undo={
+              <OwnerScopedProgressiveForm
+                action={addCatalogPublicSlugToWishlistAction}
+              >
+                <HiddenField name="catalogPublicSlug" value={undoSlug} />
+                <HiddenField name="locale" value={localeParam} />
+                <HiddenField
+                  name="returnTo"
+                  value={localizedPath(localeParam, "/wishlist")}
+                />
+                <Button type="submit" variant="secondary" size="sm">
+                  {copy.common.undo}
+                </Button>
+              </OwnerScopedProgressiveForm>
+            }
+          />
+        ) : null
+      }
     >
       {items.length === 0 ? (
-        <SocialEmptyState>{copy.wishlist.empty}</SocialEmptyState>
+        filter === "all" ? (
+          <EmptyState
+            illustration={resolveIllustration("empty-wishlist")}
+            title={copy.wishlist.emptyTitle}
+            description={copy.wishlist.empty}
+            action={
+              <Link
+                href={localizedPath(localeParam, CATALOG_BROWSE_PATH)}
+                className={buttonVariants()}
+              >
+                {copy.wishlist.emptyAction}
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            variant="no-results"
+            title={copy.common.noResultsTitle}
+            description={copy.common.noResultsDescription}
+            action={
+              <Link
+                href={localizedPath(localeParam, "/wishlist")}
+                className={buttonVariants({ variant: "secondary" })}
+              >
+                {copy.common.clearFilters}
+              </Link>
+            }
+          />
+        )
       ) : (
-        <ol className="divide-y divide-border border-y border-border">
+        <ul className="grid">
           {items.map((item) => (
             <WishlistRow key={item.key} item={item} locale={localeParam} />
           ))}
-        </ol>
+        </ul>
       )}
       {pageCount > 1 ? (
-        <div className="flex items-center justify-between gap-3">
-          {currentPage > 1 ? (
-            <Link
-              href={wishlistHref(localeParam, filter, currentPage - 1)}
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              <ArrowLeft className="size-4" />
-              {copy.common.previous}
-            </Link>
-          ) : (
-            <span />
-          )}
-          {currentPage < pageCount ? (
-            <Link
-              href={wishlistHref(localeParam, filter, currentPage + 1)}
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              {copy.common.next}
-              <ArrowRight className="size-4" />
-            </Link>
-          ) : null}
-        </div>
+        <Pagination
+          label={copy.wishlist.title}
+          previousLabel={copy.common.previous}
+          previousHref={
+            currentPage > 1
+              ? wishlistHref(localeParam, filter, currentPage - 1)
+              : null
+          }
+          nextLabel={copy.common.next}
+          nextHref={
+            currentPage < pageCount
+              ? wishlistHref(localeParam, filter, currentPage + 1)
+              : null
+          }
+          status={copy.common.pagePlace(currentPage, pageCount)}
+        />
       ) : null}
     </MySocialLayout>
   );
@@ -161,29 +212,32 @@ function WishlistFilters({
   active: WishlistFilter;
 }) {
   const copy = getSocialSurfaceCopy(locale);
-  const filters: Array<[WishlistFilter, string]> = [
-    ["all", copy.wishlist.all],
+  const filters: Array<[Exclude<WishlistFilter, "all">, string]> = [
     ["plant_variety", copy.wishlist.plants],
     ["species", copy.wishlist.species],
     ["breed", copy.wishlist.breeds],
   ];
   return (
-    <div
-      className="flex overflow-x-auto border border-border"
-      role="group"
+    <form
+      method="get"
+      action={localizedPath(locale, "/wishlist")}
+      data-wishlist-filters="true"
       aria-label={copy.wishlist.filtersLabel}
+      className="flex max-w-full items-center gap-2 overflow-x-auto py-1"
     >
-      {filters.map(([value, label]) => (
-        <Link
-          key={value}
-          href={wishlistHref(locale, value, 1)}
-          aria-current={active === value ? "true" : undefined}
-          className={filterClass(active === value)}
-        >
-          {label}
-        </Link>
-      ))}
-    </div>
+      <ToggleChip label={copy.wishlist.all} pressed={active === "all"} />
+      {filters.map(([value, label]) => {
+        const pressed = active === value;
+        return (
+          <ToggleChip
+            key={value}
+            {...(pressed ? {} : { name: "kind", value })}
+            label={label}
+            pressed={pressed}
+          />
+        );
+      })}
+    </form>
   );
 }
 
@@ -196,60 +250,48 @@ function WishlistRow({
 }) {
   const copy = getSocialSurfaceCopy(locale);
   return (
-    <li className="grid gap-4 py-4 sm:flex sm:items-center sm:justify-between">
-      <div className="grid min-w-0 gap-1 sm:flex-1">
-        <p className="text-xs font-medium text-muted-foreground uppercase">
-          {copy.wishlist.tryLater}
-        </p>
-        <h2 className="font-semibold text-foreground">
-          {item.catalog.canonicalName}
-        </h2>
-        <time className="text-xs text-muted-foreground">
-          {copy.common.saved} {formatDate(item.addedAt, locale)}
-        </time>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {item.activationPath ? (
-          <Link
-            href={item.activationPath}
-            title={copy.wishlist.start}
-            className={iconButtonVariants({ variant: "primary" })}
-          >
-            <Sprout className="size-4" />
-            <span className="sr-only">{copy.wishlist.start}</span>
-          </Link>
-        ) : null}
-        {item.publicPath ? (
-          <Link
-            href={item.publicPath}
-            title={copy.common.open}
-            className={iconButtonVariants({ variant: "secondary" })}
-          >
-            <ExternalLink className="size-4" />
-            <span className="sr-only">{copy.common.open}</span>
-          </Link>
-        ) : null}
-        {item.catalog.publicSlug ? (
-          <OwnerScopedActionForm
-            action={removeCatalogPublicSlugFromWishlistAction}
-          >
-            <HiddenField
-              name="catalogPublicSlug"
-              value={item.catalog.publicSlug}
-            />
-            <HiddenField name="locale" value={locale} />
-            <button
-              type="submit"
-              title={copy.common.remove}
+    <ShelfRow
+      kindLabel={copy.wishlist.tryLater}
+      title={item.catalog.canonicalName}
+      href={item.publicPath ?? undefined}
+      meta={`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
+      actions={
+        <>
+          {item.activationPath ? (
+            <Link
+              href={item.activationPath}
+              aria-label={`${copy.wishlist.start}: ${item.catalog.canonicalName}`}
+              className={iconButtonVariants({ variant: "primary" })}
+            >
+              <Sprout aria-hidden="true" className="size-5" />
+            </Link>
+          ) : null}
+          {item.publicPath ? (
+            <Link
+              href={item.publicPath}
+              aria-label={`${copy.common.open}: ${item.catalog.canonicalName}`}
               className={iconButtonVariants({ variant: "secondary" })}
             >
-              <Trash2 className="size-4" />
-              <span className="sr-only">{copy.common.remove}</span>
-            </button>
-          </OwnerScopedActionForm>
-        ) : null}
-      </div>
-    </li>
+              <ExternalLink aria-hidden="true" className="size-5" />
+            </Link>
+          ) : null}
+          {item.catalog.publicSlug ? (
+            <OwnerScopedProgressiveForm
+              action={removeCatalogPublicSlugFromWishlistAction}
+            >
+              <HiddenField
+                name="catalogPublicSlug"
+                value={item.catalog.publicSlug}
+              />
+              <HiddenField name="locale" value={locale} />
+              <ShelfRemoveButton
+                label={`${copy.common.remove}: ${item.catalog.canonicalName}`}
+              />
+            </OwnerScopedProgressiveForm>
+          ) : null}
+        </>
+      }
+    />
   );
 }
 
@@ -265,18 +307,22 @@ function wishlistHref(
   return params.size ? `${path}?${params}` : path;
 }
 
-function filterClass(active: boolean) {
-  return `min-h-9 shrink-0 border-r border-border px-3 py-2 text-sm last:border-r-0 ${
-    active
-      ? "bg-foreground text-background"
-      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-  }`;
-}
-
 function parseFilter(value: string | undefined): WishlistFilter {
   return value === "plant_variety" || value === "species" || value === "breed"
     ? value
     : "all";
+}
+
+/**
+ * The slug a removal left behind. Re-checked against the catalogue's own slug
+ * shape, so an address a reader was handed cannot put anything else into the
+ * Undo form's hidden field.
+ */
+function parseUndoSlug(value: string | undefined) {
+  if (!value) return null;
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) && value.length <= 96
+    ? value
+    : null;
 }
 
 function parsePage(value: string | undefined) {

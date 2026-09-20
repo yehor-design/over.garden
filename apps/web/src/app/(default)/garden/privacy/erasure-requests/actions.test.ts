@@ -83,9 +83,9 @@ describe("erasure request operator actions", () => {
     const formData = new FormData();
     formData.set("requestId", "request-1");
 
-    await expect(markErasureRequestReviewingAction(formData)).rejects.toThrow(
-      "Admin access denied.",
-    );
+    await expect(
+      markErasureRequestReviewingAction(undefined, formData),
+    ).rejects.toThrow("Admin access denied.");
     expect(mocks.markErasureRequestReviewing).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
@@ -95,7 +95,7 @@ describe("erasure request operator actions", () => {
     const formData = new FormData();
     formData.set("requestId", "request-1");
 
-    await markErasureRequestReviewingAction(formData);
+    await markErasureRequestReviewingAction(undefined, formData);
 
     expect(mocks.markErasureRequestReviewing).toHaveBeenCalledOnce();
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
@@ -109,7 +109,9 @@ describe("erasure request operator actions", () => {
     formData.set("requestId", "00000000-0000-4000-8000-00000000abcd");
     formData.set("handledStatus", "completed");
 
-    await expect(markErasureRequestHandledAction(formData)).rejects.toThrow(
+    await expect(
+      markErasureRequestHandledAction(undefined, formData),
+    ).rejects.toThrow(
       "Completed erasure requests must use approved erasure execution.",
     );
     expect(mocks.markErasureRequestHandled).not.toHaveBeenCalled();
@@ -129,9 +131,9 @@ describe("erasure request operator actions", () => {
       "APPROVE request-0000abcd IRREVERSIBLE ERASURE",
     );
 
-    await expect(executeApprovedErasureRequestAction(formData)).rejects.toThrow(
-      "Admin access denied.",
-    );
+    await expect(
+      executeApprovedErasureRequestAction(undefined, formData),
+    ).rejects.toThrow("Admin access denied.");
     expect(mocks.executeApprovedErasureRequest).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
@@ -145,7 +147,7 @@ describe("erasure request operator actions", () => {
       "APPROVE request-0000abcd IRREVERSIBLE ERASURE",
     );
 
-    await executeApprovedErasureRequestAction(formData);
+    await executeApprovedErasureRequestAction(undefined, formData);
 
     expect(mocks.executeApprovedErasureRequest).toHaveBeenCalledWith(
       {

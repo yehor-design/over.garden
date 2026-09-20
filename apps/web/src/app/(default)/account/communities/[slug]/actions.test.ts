@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: mocks.revalidatePath ,
+  revalidatePath: mocks.revalidatePath,
   revalidateTag: vi.fn(),
   updateTag: vi.fn(),
 }));
@@ -76,11 +76,11 @@ describe("community moderator actions", () => {
     } = await import("./actions");
     const formData = moderatorFormData();
 
-    await moderateCommunityContributionAction(formData);
-    await moderateCommunityDiscussionAction(formData);
-    await moderateCommunityMembershipAction(formData);
-    await resolveCommunityReportAction(formData);
-    await setCommunityParticipationAction(formData);
+    await moderateCommunityContributionAction(undefined, formData);
+    await moderateCommunityDiscussionAction(undefined, formData);
+    await moderateCommunityMembershipAction(undefined, formData);
+    await resolveCommunityReportAction(undefined, formData);
+    await setCommunityParticipationAction(undefined, formData);
 
     expect(mocks.moderateCommunityContribution).toHaveBeenCalledWith(scope, {
       slug: "observation-and-care",
@@ -124,9 +124,9 @@ describe("community moderator actions", () => {
       throw new Error("NEXT_REDIRECT");
     });
 
-    await expect(moderateCommunityDiscussionAction(formData)).rejects.toThrow(
-      "NEXT_REDIRECT",
-    );
+    await expect(
+      moderateCommunityDiscussionAction(undefined, formData),
+    ).rejects.toThrow("NEXT_REDIRECT");
 
     expect(mocks.redirect).toHaveBeenCalledTimes(1);
     expect(mocks.redirect).toHaveBeenCalledWith(
@@ -140,7 +140,7 @@ describe("community moderator actions", () => {
       status: "timed_out",
     });
 
-    await moderateCommunityContributionAction(moderatorFormData());
+    await moderateCommunityContributionAction(undefined, moderatorFormData());
 
     expect(mocks.moderateCommunityContribution).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();

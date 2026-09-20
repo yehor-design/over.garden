@@ -98,9 +98,62 @@ describe("/{locale}/bookmarks", () => {
     expect(html).toContain("First ripe cluster");
     expect(html).toContain("/journal/first-ripe-cluster");
     expect(html).toContain('aria-pressed="true"');
+    // `OVE-456` AC4: bookmarks and the wishlist share one row and one removal
+    // affordance, and the affordance names what it removes.
+    expect(html).toContain('data-shelf-row="true"');
+    expect(html).toContain('data-shelf-remove="true"');
+    expect(html).toContain('aria-label="Прибрати: First ripe cluster"');
     expect(html).not.toMatch(
       /owner_user_id|author_user_id|quarantine|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
     );
+  });
+
+  it("offers Undo after a removal, as a form that needs no bundle", async () => {
+    const { default: LocalizedBookmarksRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedBookmarksRoute({
+        params: Promise.resolve({ locale: "uk" }),
+        searchParams: Promise.resolve({
+          undoKind: "journal_entry",
+          undoRef: "first-ripe-cluster",
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-shelf-notice="true"');
+    expect(html).toContain("Прибрано із закладок");
+    expect(html).toContain("Повернути");
+    expect(html).toContain('value="first-ripe-cluster"');
+  });
+
+  it("ignores an undo target that is not one of the four kinds", async () => {
+    const { default: LocalizedBookmarksRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedBookmarksRoute({
+        params: Promise.resolve({ locale: "uk" }),
+        searchParams: Promise.resolve({
+          undoKind: "user",
+          undoRef: "../../etc",
+        }),
+      }),
+    );
+
+    expect(html).not.toContain('data-shelf-notice="true"');
+    expect(html).not.toContain("../../etc");
+  });
+
+  it("names the empty shelf and leads somewhere real", async () => {
+    mocks.listEngagementBookmarks.mockResolvedValueOnce([]);
+    const { default: LocalizedBookmarksRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedBookmarksRoute({
+        params: Promise.resolve({ locale: "uk" }),
+      }),
+    );
+
+    expect(html).toContain('data-screen-state="empty-first-run"');
+    expect(html).toContain("Закладок поки немає");
+    expect(html).toContain('href="/journals"');
   });
 
   it("shows auth instead of a shelf when signed out", async () => {

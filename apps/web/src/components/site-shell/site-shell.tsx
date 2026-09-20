@@ -54,6 +54,7 @@ import {
   isSiteShellComposerRoute,
   type SiteShellNavigation,
   type SiteShellNavigationItem,
+  type SiteShellNavigationKey,
 } from "@/lib/site-shell-navigation";
 import type { SiteShellSessionInput } from "@/lib/site-shell-session-state";
 import {
@@ -649,6 +650,16 @@ function PrimaryAction({ item }: { item: SiteShellNavigationItem }) {
   );
 }
 
+/**
+ * The reader's own pages, in the account menu. The rail lists them too; the
+ * menu is the only place they exist below `lg`, where there is no rail.
+ */
+const ACCOUNT_MENU_PERSONAL_KEYS = new Set<SiteShellNavigationKey>([
+  "notifications",
+  "bookmarks",
+  "wishlist",
+]);
+
 /** The foot of the rail: who you are, and the way out. */
 function AccountRegion({
   locale,
@@ -663,6 +674,9 @@ function AccountRegion({
 }) {
   const copy = getInterfaceCopy(locale);
   const operatorCopy = getOperatorMenuCopy(locale);
+  const privacyHref =
+    navigation.footerLinks.find((link) => link.key === "privacy")?.href ??
+    "/privacy";
 
   if (!isAuthenticated) {
     return (
@@ -691,16 +705,38 @@ function AccountRegion({
           </Button>
         }
       />
+      {/* Four groups, in the order a reader looks for them (`OVE-456`): their
+          own pages, the settings that govern their account, the owner's tools
+          under the sealed role, and the way out. It used to be one link and a
+          sign-out, with the personal pages reachable only from the rail — so a
+          reader on a phone, where there is no rail, had no way to them at all. */}
       <MenuContent
         data-site-shell-account-menu="true"
         align="start"
         side="top"
         className="min-w-56"
       >
-        <MenuGroup>
-          <MenuGroupLabel>{navigation.labels.accountRegion}</MenuGroupLabel>
+        <MenuGroup data-site-shell-account-pages="true">
+          <MenuGroupLabel>{copy.shell.accountPagesSection}</MenuGroupLabel>
           <AccountMenuLink href="/garden/profile">
             {copy.navigation.profile}
+          </AccountMenuLink>
+          {navigation.personalItems
+            .filter((item) => ACCOUNT_MENU_PERSONAL_KEYS.has(item.key))
+            .map((item) => (
+              <AccountMenuLink key={item.key} href={item.href}>
+                {item.label}
+              </AccountMenuLink>
+            ))}
+        </MenuGroup>
+        <MenuSeparator />
+        <MenuGroup data-site-shell-account-settings="true">
+          <MenuGroupLabel>{copy.shell.accountSettingsSection}</MenuGroupLabel>
+          <AccountMenuLink href={privacyHref}>
+            {copy.shell.privacy}
+          </AccountMenuLink>
+          <AccountMenuLink href="/erasure">
+            {copy.shell.erasureRequest}
           </AccountMenuLink>
         </MenuGroup>
         {hasOperatorAccess ? (

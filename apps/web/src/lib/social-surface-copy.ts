@@ -37,6 +37,10 @@ export interface SocialSurfaceCopy {
     description: string;
     signIn: string;
     empty: string;
+    emptyTitle: string;
+    emptyAction: string;
+    unreadBadge: string;
+    readBadge: string;
     all: string;
     unread: string;
     comments: string;
@@ -60,18 +64,24 @@ export interface SocialSurfaceCopy {
     description: string;
     signIn: string;
     empty: string;
+    emptyTitle: string;
+    emptyAction: string;
     all: string;
     journals: string;
     objects: string;
     varieties: string;
     topics: string;
     filtersLabel: string;
+    removedNotice: string;
+    restoredNotice: string;
   };
   wishlist: {
     title: string;
     description: string;
     signIn: string;
     empty: string;
+    emptyTitle: string;
+    emptyAction: string;
     all: string;
     plants: string;
     species: string;
@@ -79,6 +89,8 @@ export interface SocialSurfaceCopy {
     tryLater: string;
     start: string;
     filtersLabel: string;
+    removedNotice: string;
+    restoredNotice: string;
   };
   common: {
     saved: string;
@@ -88,8 +100,15 @@ export interface SocialSurfaceCopy {
     next: string;
     itemCount: (count: number) => string;
     unreadCount: (count: number) => string;
+    pagePlace: (page: number, pageCount: number) => string;
     loadError: (surface: string) => string;
     retry: string;
+    noResultsTitle: string;
+    noResultsDescription: string;
+    clearFilters: string;
+    undo: string;
+    dismissNotice: string;
+    noticeRegion: string;
   };
 }
 
@@ -129,6 +148,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       kindFiltersLabel: "Тип живого об'єкта",
     },
     notifications: {
+      emptyTitle: "Сповіщень поки немає",
+      emptyAction: "Знайти журнали",
+      unreadBadge: "Непрочитане",
+      readBadge: "Прочитане",
       title: "Сповіщення",
       description:
         "Відповіді, підписки, згадки та дії з походженням в одному місці.",
@@ -163,6 +186,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       },
     },
     bookmarks: {
+      removedNotice: "Прибрано із закладок",
+      restoredNotice: "Повернуто до закладок",
+      emptyTitle: "Закладок поки немає",
+      emptyAction: "Знайти журнали",
       title: "Закладки",
       description: "Збережені публічні матеріали для повернення пізніше.",
       signIn: "Увійдіть, щоб відкрити закладки.",
@@ -175,6 +202,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип закладок",
     },
     wishlist: {
+      removedNotice: "Прибрано зі списку",
+      restoredNotice: "Повернуто до списку",
+      emptyTitle: "Список поки порожній",
+      emptyAction: "Відкрити каталог",
       title: "Хочу спробувати",
       description: "Види, сорти й породи, які ви хочете додати згодом.",
       signIn: "Увійдіть, щоб відкрити список бажань.",
@@ -189,6 +220,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип списку бажань",
     },
     common: {
+      pagePlace: (page, pageCount) => `Сторінка ${page} з ${pageCount}`,
+      noResultsTitle: "Нічого не збіглося",
+      noResultsDescription: "Спробуйте зняти фільтр.",
+      clearFilters: "Зняти фільтри",
+      undo: "Повернути",
+      dismissNotice: "Закрити повідомлення",
+      noticeRegion: "Результат дії",
       saved: "Збережено",
       remove: "Прибрати",
       open: "Відкрити",
@@ -235,6 +273,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       kindFiltersLabel: "Тип жив обект",
     },
     notifications: {
+      emptyTitle: "Още няма известия",
+      emptyAction: "Разгледай дневниците",
+      unreadBadge: "Непрочетено",
+      readBadge: "Прочетено",
       title: "Известия",
       description:
         "Отговори, следвания, споменавания и произход на едно място.",
@@ -269,6 +311,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       },
     },
     bookmarks: {
+      removedNotice: "Премахнато от отметките",
+      restoredNotice: "Върнато в отметките",
+      emptyTitle: "Още няма отметки",
+      emptyAction: "Разгледай дневниците",
       title: "Отметки",
       description: "Запазени публични материали, към които да се върнете.",
       signIn: "Влезте, за да отворите отметките.",
@@ -281,6 +327,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип отметки",
     },
     wishlist: {
+      removedNotice: "Премахнато от списъка",
+      restoredNotice: "Върнато в списъка",
+      emptyTitle: "Списъкът още е празен",
+      emptyAction: "Отвори каталога",
       title: "Искам да опитам",
       description:
         "Видове, сортове и породи, които искате да добавите по-късно.",
@@ -296,6 +346,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип списък с желания",
     },
     common: {
+      pagePlace: (page, pageCount) => `Страница ${page} от ${pageCount}`,
+      noResultsTitle: "Нищо не съвпадна",
+      noResultsDescription: "Опитайте да махнете филтъра.",
+      clearFilters: "Махни филтрите",
+      undo: "Върни",
+      dismissNotice: "Затвори съобщението",
+      noticeRegion: "Резултат от действието",
       saved: "Запазено",
       remove: "Премахни",
       open: "Отвори",
@@ -342,6 +399,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       kindFiltersLabel: "Тип живого объекта",
     },
     notifications: {
+      emptyTitle: "Уведомлений пока нет",
+      emptyAction: "Найти журналы",
+      unreadBadge: "Непрочитанное",
+      readBadge: "Прочитанное",
       title: "Уведомления",
       description:
         "Ответы, подписки, упоминания и действия с происхождением в одном месте.",
@@ -376,6 +437,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       },
     },
     bookmarks: {
+      removedNotice: "Убрано из закладок",
+      restoredNotice: "Возвращено в закладки",
+      emptyTitle: "Закладок пока нет",
+      emptyAction: "Найти журналы",
       title: "Закладки",
       description:
         "Сохранённые публичные материалы, к которым можно вернуться.",
@@ -389,6 +454,10 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип закладок",
     },
     wishlist: {
+      removedNotice: "Убрано из списка",
+      restoredNotice: "Возвращено в список",
+      emptyTitle: "Список пока пуст",
+      emptyAction: "Открыть каталог",
       title: "Хочу попробовать",
       description: "Виды, сорта и породы, которые вы хотите добавить позже.",
       signIn: "Войдите, чтобы открыть список желаний.",
@@ -402,6 +471,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип списка желаний",
     },
     common: {
+      pagePlace: (page, pageCount) => `Страница ${page} из ${pageCount}`,
+      noResultsTitle: "Ничего не совпало",
+      noResultsDescription: "Попробуйте снять фильтр.",
+      clearFilters: "Снять фильтры",
+      undo: "Вернуть",
+      dismissNotice: "Закрыть сообщение",
+      noticeRegion: "Результат действия",
       saved: "Сохранено",
       remove: "Убрать",
       open: "Открыть",

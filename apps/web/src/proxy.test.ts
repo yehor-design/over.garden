@@ -438,6 +438,14 @@ describe("app route cache guardrail", () => {
     "/erasure",
     "/api/garden/entries",
     "/api/health",
+    // The reader's own pages (`OVE-456` AC8). Each varies by session and none
+    // is indexable, and none of them was on this list before.
+    "/notifications",
+    "/bookmarks",
+    "/wishlist",
+    "/feed",
+    "/bg/bookmarks",
+    "/ru/notifications",
   ])("sends explicit no-store cache control for %s", async (path) => {
     expect((await responseFor(path)).headers.get("Cache-Control")).toBe(
       APP_ROUTE_CACHE_CONTROL,

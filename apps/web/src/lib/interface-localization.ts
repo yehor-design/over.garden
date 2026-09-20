@@ -80,6 +80,10 @@ export interface InterfaceCopy {
     retry: string;
     languageControlLabel: string;
     languageControlTrigger: string;
+    /** The account menu's two groups, above the owner's (ADR-0022 D7). */
+    accountPagesSection: string;
+    accountSettingsSection: string;
+    erasureRequest: string;
     /** The one primary action of the shell, in the rail and on the tab bar. */
     primaryAction: string;
     /** Accessible names for the landmarks a screen reader would otherwise read
@@ -165,6 +169,9 @@ const INTERFACE_COPY = {
       signIn: "Увійти",
     },
     shell: {
+      accountPagesSection: "Мої сторінки",
+      accountSettingsSection: "Налаштування",
+      erasureRequest: "Видалення даних",
       exploreSection: "Огляд",
       mySection: "Моє",
       menuTitle: "Навігація OverGarden",
@@ -273,6 +280,9 @@ const INTERFACE_COPY = {
       signIn: "Вход",
     },
     shell: {
+      accountPagesSection: "Моите страници",
+      accountSettingsSection: "Настройки",
+      erasureRequest: "Изтриване на данни",
       exploreSection: "Разглеждане",
       mySection: "Моето",
       menuTitle: "Навигация в OverGarden",
@@ -381,6 +391,9 @@ const INTERFACE_COPY = {
       signIn: "Войти",
     },
     shell: {
+      accountPagesSection: "Мои страницы",
+      accountSettingsSection: "Настройки",
+      erasureRequest: "Удаление данных",
       exploreSection: "Обзор",
       mySection: "Моё",
       menuTitle: "Навигация OverGarden",
