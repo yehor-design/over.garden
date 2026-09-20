@@ -14,6 +14,21 @@ import type {
 
 vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
   SiteShellContextRailRegistration: () => null,
+  SiteShellContextRailModules: ({
+    modules,
+  }: {
+    modules: Array<{ key: string; items: Array<{ href: string }> }>;
+  }) => (
+    <ul data-rail-modules={modules.map((module) => module.key).join(" ")}>
+      {modules.flatMap((module) =>
+        module.items.map((item) => (
+          <li key={item.href}>
+            <a href={item.href}>{item.href}</a>
+          </li>
+        )),
+      )}
+    </ul>
+  ),
 }));
 
 // `FilterBar` is a client component that navigates through the router once
@@ -188,6 +203,27 @@ describe("the catalogue's one door", () => {
     expect(html).toContain((21_844).toLocaleString("uk"));
     expect(html).toContain((65_832).toLocaleString("uk"));
     expect(html).not.toContain("(21844)");
+  });
+
+  it("is complete without the context rail, from a filtered view too", () => {
+    // DESIGN.md §3.2: the rail is never the only home of an action. The
+    // filter bar narrows the view a reader is *in* — from "grown here" its
+    // plants link is `?grown=1&kingdom=plantae` — so the whole kingdom, which
+    // the rail offers, was reachable at `xl` and nowhere else.
+    const html = render(normalizePublicCatalogBrowseRequest({ grown: "1" }), {
+      cards: [card()],
+      total: 22,
+      pageCount: 1,
+    });
+
+    expect(html).toMatch(
+      /xl:hidden[^>]*>\s*<ul data-rail-modules="catalog-kingdoms">/u,
+    );
+    expect(html).toContain('<a href="/catalog?kingdom=plantae">');
+    expect(html).toContain('<a href="/catalog?kingdom=animalia">');
+    // The registers already have a section of their own at every width.
+    expect(html).not.toContain('data-rail-modules="catalog-registers"');
+    expect(html.match(/id="catalog-registers"/gu)).toHaveLength(1);
   });
 
   it("keeps the count in one live region that survives a filter change", () => {

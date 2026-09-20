@@ -1,6 +1,7 @@
 import { Search, Sprout } from "lucide-react";
 
 import {
+  SiteShellContextRailModules,
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
@@ -94,6 +95,12 @@ export function PublicCatalogBrowse({
   const chips = buildActiveFilterChips(locale, copy, request);
   const countLabel =
     state === "ready" || state === "empty" ? copy.resultCount(page.total) : "";
+  const contextModules = buildPublicCatalogContextModules(
+    locale,
+    copy,
+    kingdomTotals,
+    registerHubs,
+  );
 
   return (
     <main
@@ -113,14 +120,7 @@ export function PublicCatalogBrowse({
           dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
-      <SiteShellContextRailRegistration
-        modules={buildPublicCatalogContextModules(
-          locale,
-          copy,
-          kingdomTotals,
-          registerHubs,
-        )}
-      />
+      <SiteShellContextRailRegistration modules={contextModules} />
 
       <PageHeader
         eyebrow={copy.eyebrow}
@@ -297,6 +297,21 @@ export function PublicCatalogBrowse({
           </ul>
         </Section>
       ) : null}
+
+      {/* Every screen is complete without the rail (DESIGN.md §3.2). The
+          kingdoms are the one thing the rail offers that nothing above does:
+          the filter bar narrows the view a reader is *in*, so from "grown
+          here" its plants link keeps that filter, and the whole kingdom was
+          reachable only at `xl`. The registers are already a section of their
+          own, so they are not repeated. Found on 2026-09-20 by
+          `tests/site-shell.spec.ts`, which had been in no CI list. */}
+      <div className="border-t border-border pt-6 xl:hidden">
+        <SiteShellContextRailModules
+          modules={contextModules.filter(
+            (module) => module.key === "catalog-kingdoms",
+          )}
+        />
+      </div>
     </main>
   );
 }
