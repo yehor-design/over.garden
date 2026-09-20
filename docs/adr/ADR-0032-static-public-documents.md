@@ -233,7 +233,12 @@ proof, and it is also where D10 is held.
 
 `LCP ≤ 2.0 s` is measured through the Lighthouse **CLI** with throttling
 **applied** (`--throttling-method=devtools`), median of three, against a
-production build; the simulated figure is recorded beside it. Simulation charges
+production build **and then on production**; the simulated figure is recorded
+beside it, and a "before" is taken in the same environment, with the same data
+and the same method, as its "after". A light fixture measures the architecture
+and flatters everything else: on 2026-09-20 it said 1.90 s where production
+said 5.74 s. Read the phases — time to first byte, load delay, load time, render
+delay — not only the total: they say *which* defect is on the page. Simulation charges
 LCP with every script that *evaluated before the paint on the unthrottled
 trace* — on a loopback server that is all of them, whatever the page does, so
 it measures the bundle and not the document. Applied throttling observes the
@@ -294,14 +299,77 @@ memoizing the page subtree — context propagation does not go through props.
 
 ## Consequences
 
-Measured on a production build, slow 4G and 4× CPU really applied, median of
-three (2026-09-20). "Before" is production on 2026-09-19.
+Lighthouse CLI, median of three, slow 4G and 4× CPU, 2026-09-20. **Two
+environments, and they are not interchangeable.** This table first put
+production's "before" beside a local "after" — 5.44 s → 1.90 s — which flattered
+the change, and was corrected the day the release was measured on production.
+
+**A local production build, fixture data** — a 56 kB cover with variants and
+light cards around it. It measures the architecture and nothing else. Before
+the change the same build measured 4.06–4.28 s simulated, of which 2.90 s was
+render delay.
 
 | Page | LCP, applied | FCP | TTI | CLS | LCP, simulated | Visible characters without a runtime |
 | --- | --- | --- | --- | --- | --- | --- |
-| `/` | 5.44 s → **1.90 s** | 1.88 s | 3.49 s | 0 | 5.16 s → 4.43 s | 0 → 4 324 |
-| a journal entry | **1.65 s** | 1.60 s | 2.31 s | 0 | 4.29 s → 3.31 s | 0 → 2 179 |
+| `/` | **1.90 s** | 1.88 s | 3.49 s | 0 | 4.43 s | 0 → 4 324 |
+| a journal entry | **1.65 s** | 1.60 s | 2.31 s | 0 | 3.31 s | 0 → 2 179 |
 | an organism card | **1.74 s** | 1.74 s | 3.12 s | 0 | 3.97 s | 0 → 1 882 |
+
+**Production, real data**, before (2026-09-19) → after the release.
+
+| Page | LCP, applied | FCP, applied | LCP, simulated | The LCP element's render delay | Visible characters without a runtime |
+| --- | --- | --- | --- | --- | --- |
+| `/` | 5.47 s → 5.74 s | 3.31 s → 3.09 s | 5.16 s → 6.36 s | 15 ms → 10 ms | 0 → 4 152 |
+| `/@yehor/post/11` | 4.40 s | 3.09 s | 4.27 s | 36 ms | 0 → 1 931 |
+| `/species/solanum-lycopersicum` | 7.05 s | 3.08 s | 5.87 s | 7 ms | 0 → 26 227 |
+
+**On production the budget is not met, and this decision is not why.** The LCP
+element there is a photograph whose *load* takes 3.7–5.0 s: a 92 kB cover shares
+1.6 Mbps with 330 kB of script, 106 kB of fonts, the stylesheets and then
+890 kB of below-the-fold photographs, and on the organism card the first
+gardener photograph is `loading="lazy"` as well. It was bound the same way
+before the release — load time 4.7 s, render delay 15 ms — which is what had
+masked the render-delay defect on production while a local build showed it
+plainly. What the release changed there is what the last two columns say, and
+that React's start-up is no longer between a reader and the page. The budget on
+production data is `OVE-469`; the script's share of it is `OVE-468`.
+
+Three things production's waterfall says that the local one could not
+(2026-09-20):
+
+- **No photograph on production has a `srcset`.** Every one predates the
+  variants (`last-modified` 2026-07-29 and 2026-09-01; the variants went live on
+  2026-09-03), so a phone is sent the one file there is: 1080–1600 px,
+  92–442 kB. And the ladder would not have helped this cover if it had one: at
+  412 px and a pixel ratio of 1.75 the browser needs 721 px and takes the first
+  rung that is not smaller — 1280, or for a 1080 px source the source itself.
+  Between 480 and 1280 there is no rung for a phone.
+- **The local figure was flattered twice**, by its data and by its protocol.
+  `next start` speaks HTTP/1.1: six connections, so eight requests started in
+  the first second and the stylesheet was there at 1.81 s. Production speaks
+  HTTP/2: thirty started at once, `devtools` throttling shares the link between
+  *requests* whatever their priority, and the same stylesheet arrived at 2.99 s
+  — FCP 3.09 s against 1.88 s. A real server sends by priority, so production's
+  applied figure is pessimistic by an amount only a packet-level shaper can
+  name; it is still the agreed method, and it is the one recorded.
+- **Under that method 2.0 s is out of reach for a 92 kB photograph whatever else
+  the page does.** Asked for at 0.69 s, 562 ms of emulated latency, 92 kB at
+  184 kB/s: 1.9 s alone on the link, before a stylesheet to paint it with. The
+  budget needs the LCP photograph near 40 kB *and* little beside it — a rung for
+  phones, the legacy photographs re-encoded onto the ladder, and fewer bytes in
+  flight (`OVE-468`, and four preloaded font files, 106 kB, two of them italic).
+
+What its first slice, `OVE-470`, changed is the one defect the waterfall showed that
+was a mistake rather than a weight: **the largest photograph on the first screen
+is never lazy.** A lazy image is not requested until layout has found it near
+the viewport, which is after the stylesheet — 2.9 s on the organism card, whose
+first gardener photograph was its LCP element. The photograph a listing asks for
+first is its *first photograph* (`src/lib/media/first-photograph.ts`), not its
+first card, which may be words only. A blanket `fetchpriority="low"` on every
+other photograph was tried and withdrawn: Chrome already asks for a lazy image
+outside the viewport at `Low` — it is in the waterfall — so the attribute changes
+nothing there, and inside the viewport it takes away the browser's own rescue of
+a page whose LCP nobody marked.
 
 The card first measured **5.10 s** after the conversion, with the text on
 screen at 1.74 s. The second, later LCP candidate was the same paragraph as a

@@ -928,6 +928,17 @@ about every page that will ever be added here, not a tuning of three:
   the consent notice is in the bytes and drawn by CSS from what `<html>` says
   before first paint.
 - A failed read is never prerendered.
+- **The largest photograph on the first screen is never lazy.** A lazy image is
+  not requested until layout has found it near the viewport, which is after the
+  stylesheet: 2.9 s on production's organism card, whose first gardener
+  photograph was its LCP element (`OVE-470`). A page's first photograph is
+  `priority` — eager, a high fetch priority, a preload in `<head>` — and in a
+  listing that is its **first photograph** within the first two cards
+  (`src/lib/media/first-photograph.ts`), not its first card, which may be words
+  only. Every other photograph is lazy and names no priority: the browser
+  already asks for a lazy image outside the viewport at its lowest, and raises
+  one it finds inside — a blanket `fetchpriority="low"` changes nothing for the
+  first and takes that rescue from the second.
 - **Nothing above a page changes by itself** (ADR-0032 D10). What the chrome
   learns after the document is served — the address, who is reading, what a
   page puts in the rail — lives in a store (`src/lib/value-store.ts`) and is
@@ -943,11 +954,34 @@ figure is recorded beside it and is not the gate: simulation charges LCP with
 every script that evaluated before the paint *on the unthrottled trace*, which
 on a loopback server is all of them whatever the document does.
 
-| Page | LCP, applied | FCP | CLS | LCP, simulated | Before (`OVE-461`) |
-| --- | --- | --- | --- | --- | --- |
-| `/` | **1.90 s** | 1.88 s | 0 | 4.43 s | 5.44 s applied, 5.16 s simulated (production, 2026-09-19) |
-| a journal entry | **1.65 s** | 1.60 s | 0 | 3.31 s | 4.29 s simulated |
-| an organism card | **1.74 s** | 1.74 s | 0 | 3.97 s | measured on the desktop preset only |
+A "before" and an "after" share their environment, their data and their
+method, and the number that counts is production's. A local build with a light
+fixture measures the architecture and nothing else.
+
+| Page | Local build, fixture data: LCP applied / simulated | **Production**: LCP applied / simulated (2026-09-20) | Production before (2026-09-19) |
+| --- | --- | --- | --- |
+| `/` | 1.90 s / 4.43 s | **5.74 s** / 6.36 s | 5.47 s / 5.16 s |
+| a journal entry | 1.65 s / 3.31 s | **4.40 s** / 4.27 s | — |
+| an organism card | 1.74 s / 3.97 s | **7.05 s** / 5.87 s | — |
+
+**The budget is not met on production** (`OVE-469`). The static document took
+React's start-up out of the path — the LCP element's render delay there is
+7–36 ms, CLS 0 — and what remains is the photograph's *load*: 3.7–5.0 s for a
+92 kB cover that shares the link with 330 kB of script, 106 kB of fonts and then
+890 kB of below-the-fold photographs.
+
+Read both columns knowing which way each leans. The local build is HTTP/1.1 —
+six connections, which order the requests the way a priority would — and its
+fixture is light; production is HTTP/2, thirty requests at once, and `devtools`
+throttling shares the link between *requests* whatever their priority, so the
+stylesheet arrives at 2.99 s where a server that sends by priority would have
+sent it first. And under this method a 92 kB photograph cannot make 2.0 s even
+alone on the link (asked for at 0.69 s + 562 ms of emulated latency + 92 kB at
+184 kB/s ≈ 1.9 s, before there is a stylesheet to paint it with): the budget
+needs the LCP photograph near 40 kB. No photograph on production has a `srcset`
+yet — all of them predate the variants — and between the ladder's 480 and 1280
+there is no rung for a phone, which at 412 px and a pixel ratio of 1.75 asks for
+721 px and is handed 1280.
 
 The simulated figure is what 337 kB of script on a public reading page costs,
 and it is the next thing to pay down — the rule below is not yet true of the
@@ -975,14 +1009,15 @@ that needs it.
 | Keyboard path through the primary flows                                                                   | `tests/accessibility.spec.ts`      | `pnpm gates:browser` |
 | Contrast of every semantic pair                                                                           | `src/app/globals.test.ts`          | `pnpm test`          |
 | A public page's heading and photograph are in the served bytes, and it reads with scripts off (ADR-0032) | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
+| The largest photograph on the first screen is never `loading="lazy"`, at a phone's width and a desk's    | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
 | Every browser spec is run by something                                                                    | `scripts/check-browser-specs.ts`   | `pnpm test`          |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.
 
-`pnpm gates` runs all eleven. Eight of them are fast and also run inside
+`pnpm gates` runs all twelve. Eight of them are fast and also run inside
 `pnpm lint` and `pnpm test`, which is why they are there — a gate you only meet
-in CI is a gate you meet too late. The other three need a production build, a
+in CI is a gate you meet too late. The other four need a production build, a
 server and a database, so they live in the browser gate; putting them in
 `pnpm test` would take it from fifteen seconds to minutes and nobody would run
 it while editing.

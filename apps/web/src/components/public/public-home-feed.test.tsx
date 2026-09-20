@@ -227,6 +227,44 @@ describe("the public home feed", () => {
     expect(html).toContain('data-entry-card-media="fallback"');
   });
 
+  it("asks first for the first photograph, not for the first card", () => {
+    // `OVE-470`. A feed that opens with a words-only entry has its first
+    // photograph in the second card, on the first screen of a phone — and
+    // `priority={index === 0}` left it lazy, so nothing asked for the largest
+    // thing on the screen until layout had found it.
+    const [withPhotograph, wordsOnly] = page.entries;
+    const images = (html: string) =>
+      [...html.matchAll(/<img\b[^>]*>/gu)].map((match) => match[0]);
+
+    const [cover] = images(render());
+    expect(cover).toMatch(/loading="eager"/u);
+    expect(cover).toMatch(/fetchPriority="high"/iu);
+
+    const reordered = images(
+      render({ feed: { ...page, entries: [wordsOnly!, withPhotograph!] } }),
+    );
+    expect(reordered).toHaveLength(1);
+    expect(reordered[0]).toMatch(/loading="eager"/u);
+    expect(reordered[0]).toMatch(/fetchPriority="high"/iu);
+
+    // Below the second card a photograph is below the first screen, and asking
+    // for it early would take the link from what the reader is looking at.
+    const [buried] = images(
+      render({
+        feed: {
+          ...page,
+          entries: [
+            wordsOnly!,
+            { ...wordsOnly!, id: "entry-3" },
+            withPhotograph!,
+          ],
+        },
+      }),
+    );
+    expect(buried).toMatch(/loading="lazy"/u);
+    expect(buried).not.toMatch(/fetchPriority=/iu);
+  });
+
   it("filters with chips that state whether they are on, and put the state in the URL", () => {
     const html = render({
       request: { cursor: null, kind: "plant", topic: "winter-care" },

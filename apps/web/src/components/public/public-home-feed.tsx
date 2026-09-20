@@ -18,6 +18,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { resolveIllustration } from "@/lib/illustrations";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { publicMediaAltText } from "@/lib/public-media-alt";
 import {
   contentLanguageAttribute,
@@ -116,6 +117,10 @@ export function PublicHomeFeed({
     topics,
   );
   const filtered = request.kind !== "all" || request.topic !== null;
+  const firstPhotograph = firstPhotographIndex(
+    feed.entries,
+    (entry) => entry.media.length > 0,
+  );
 
   return (
     <main
@@ -170,7 +175,7 @@ export function PublicHomeFeed({
                   locale={locale}
                   copy={copy}
                   entry={entry}
-                  priority={index === 0}
+                  priority={index === firstPhotograph}
                 />
               </li>
             ))}

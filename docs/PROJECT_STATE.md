@@ -395,11 +395,58 @@ the organism card. **Every other public family still renders its content at
 request time inside the static chrome** — correct, slower to paint, and
 converted by ADR-0032 D8's recipe one family at a time.
 
-| Page | LCP, applied throttling | FCP | TTI | CLS | LCP, simulated |
-| --- | --- | --- | --- | --- | --- |
-| `/` | 5.44 s → **1.90 s** | 1.88 s | 3.49 s | 0 | 5.16 s → 4.43 s |
-| a journal entry | **1.65 s** | 1.60 s | 2.31 s | 0 | 4.29 s → 3.31 s |
-| an organism card | **1.74 s** | 1.74 s | 3.12 s | 0 | 3.97 s |
+**On production the LCP budget is still not met** (`OVE-469`), and the first
+record here said otherwise: it put production's "before" (5.44 s) beside a
+*local* "after" (1.90 s).
+
+| Page | Local build, fixture data: LCP applied / simulated | **Production**: LCP applied / simulated (2026-09-20) | Production before |
+| --- | --- | --- | --- |
+| `/` | 1.90 s / 4.43 s | **5.74 s** / 6.36 s | 5.47 s / 5.16 s |
+| a journal entry | 1.65 s / 3.31 s | **4.40 s** / 4.27 s | — |
+| an organism card | 1.74 s / 3.97 s | **7.05 s** / 5.87 s | — |
+
+What the release changed on production is measured and real: the page is in the
+served bytes (0 → 4 152 / 1 931 / 26 227 visible characters without a runtime),
+the LCP element's render delay is 7–36 ms, FCP on `/` went 3.31 s → 3.09 s, and
+React adopts every streamed segment. What it could not change is the
+photograph's *load*, which was already production's LCP before it — 4.7 s, with
+15 ms of render delay, which is what had hidden the render-delay defect there
+while a local build showed it plainly. A 92 kB cover shares 1.6 Mbps with
+330 kB of script, 106 kB of fonts, the stylesheets and then 890 kB of
+below-the-fold photographs; on the organism card the first gardener photograph
+is also `loading="lazy"`.
+
+**Its first slice, `OVE-470`, fixed the one defect in that waterfall that was a
+mistake rather than a weight** (2026-09-20): the largest photograph on the
+first screen is never lazy. A lazy image is not requested until layout has found
+it near the viewport — after the stylesheet, 2.9 s on the organism card. A
+listing asks first for its *first photograph* within the first two cards
+(`src/lib/media/first-photograph.ts`), not for its first card, which may be words
+only; `tests/static-documents.spec.ts` asks it of the laid-out page at a phone's
+width and a desk's, and was seen red on the card. A blanket
+`fetchpriority="low"` on every other photograph was tried and withdrawn —
+Chrome already asks for a lazy image outside the viewport at `Low`, which is in
+production's waterfall.
+
+What is left is weight, and the waterfall is specific about it:
+
+- **No photograph on production has a `srcset`** — all of them predate the
+  variants (2026-07-29, 2026-09-01; the variants went live 2026-09-03) — so a
+  phone is sent 1080–1600 px and 92–442 kB. They need re-encoding onto the
+  ladder, and the ladder needs **a rung for phones**: at 412 px and a pixel
+  ratio of 1.75 the browser asks for 721 px and is handed 1280, or the source.
+- **Under the agreed method a 92 kB photograph cannot make 2.0 s even alone on
+  the link** (asked for at 0.69 s + 562 ms emulated latency + 92 kB at 184 kB/s
+  ≈ 1.9 s, with no stylesheet to paint it). The budget needs the LCP photograph
+  near 40 kB and little in flight beside it: 330 kB of script (`OVE-468`) and
+  four preloaded font files, 106 kB, two of them italic.
+- **Both lab figures lean, in opposite directions.** The local build is
+  HTTP/1.1, whose six connections order requests the way a priority would;
+  production is HTTP/2, thirty requests at once, and `devtools` throttling
+  shares the link between requests whatever their priority — the stylesheet
+  arrives at 2.99 s there and at 1.81 s locally. A server that sends by
+  priority does better than production's applied figure by an amount only a
+  packet-level shaper, or the field, can name.
 
 The budget is measured with throttling **applied**, and the simulated figure is
 recorded beside it (ADR-0032 D9): simulation charges LCP with every script that
