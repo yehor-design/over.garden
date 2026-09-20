@@ -462,7 +462,49 @@ budget, candidate cap 256 held, and the same proof on `origin/main` reads
 10.8 ms — the search reads are byte-identical to `main`, which is what
 criterion 9 actually needed. And `tests/journals-directory.spec.ts` went into
 `pnpm gates:browser` **and** the CI list on the day it was written; five older
-specs did not, and `OVE-462` owns them.
+specs did not, and `OVE-462` owned them.
+
+**Every browser spec is run by something** (`OVE-462`, 2026-09-20). It was
+seven, not five: `site-shell`, `mobile-shell`, `command-palette`, `auth-screen`
+and `interface-locale` — the proofs of five finished redesign tasks — and
+`auth-provider-retirement` and `journal-deletion-retention` beside them, in no
+CI list and no script. Run for the first time, against production as well as a
+local build, they found:
+
+- **`/journals` scrolled sideways at 320 px in Bulgarian and Russian**, on
+  production (330 px and 341 px of content). `Pagination` was one row that
+  could not wrap; below `sm` the reader's place takes a row of its own now, and
+  the order in the document is unchanged.
+- **The catalogue was not complete without its context rail** (DESIGN.md §3.2).
+  The filter bar narrows the view a reader is *in*, so from "grown here" its
+  plants link keeps that filter and the whole kingdom was reachable only at
+  `xl`. The kingdoms are on the page below `xl` now, as every other family's
+  rail modules already were.
+- The deletion proof seeded `journal_entries.public_noindex`, a column
+  migration `0046` dropped, and asked for `/journal/{slug}`, which has been a
+  redirect since entries got numbers. It passes again: deleted → `410` with
+  `noindex, nofollow` → purged through the cron ingress → `404`.
+- Three assertions a later merge had made false: the footer links the catalogue
+  rather than `/objects`; `/` after a click on `body` lands in the filter bar's
+  season `<select>`, where it is a reader's type-ahead; and "the header is
+  visible" stopped meaning "hydrated" when the chrome moved into the first
+  bytes.
+
+And the structure that let it happen is gone. **The browser gate is one list,
+run one way**: `scripts/browser-gate-specs.ts`, run by
+`scripts/run-browser-gate.ts` against `next start` — by `pnpm gates:browser`,
+which used to run its own list against `next dev`, and by CI.
+`pnpm check:browser-specs`, inside `pnpm test`, fails on a spec that is in
+neither that list nor `DEDICATED_BROWSER_SPECS`; it has been seen red. Three
+specs carried their own copy of the sign-up flow without the retry Better
+Auth's rate limit needs, and go through `tests/helpers/synthetic-gardener.ts`.
+
+CI's Web app job had reached 12.1 minutes against a ten-minute rule, so it is
+three jobs: **Web app checks** and **Browser proof** (two shards) side by side,
+and **Web app** — the name branch protection requires — which needs both and
+fails unless both succeeded (`if: always()`: a job skipped because a job it
+needs failed counts as *passed*). The shared setup is a composite action,
+`.github/actions/web-setup`.
 
 **The page the whole product exists to produce is rebuilt** (`OVE-449`,
 2026-09-18). `/{handle}/{slug}` is a reading page: an eyebrow, the entry's

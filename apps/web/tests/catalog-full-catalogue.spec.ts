@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
+import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { Pool } from "pg";
 
-import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 
 /**
  * The picker's secondary path end to end (OVE-392, ADR-0026 D7), against a
@@ -49,7 +49,6 @@ test.describe("OVE-392 the full catalogue", () => {
     if (!baseURL) throw new Error("Playwright baseURL is required.");
 
     const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
-    const email = `ove392-browser-${randomUUID()}@example.test`;
     let userId: string | null = null;
 
     try {
@@ -63,7 +62,6 @@ test.describe("OVE-392 the full catalogue", () => {
       userId = await createVerifiedCredentialSession({
         baseURL,
         context,
-        email,
         pool,
       });
       await selectLocale(context, baseURL, "uk");
@@ -334,46 +332,25 @@ async function publishEntry(
   return row.rows[0];
 }
 
+/**
+ * Through the one helper that knows how: sign-up answers 500 on a machine with
+ * no mail provider and 429 to the fourth caller in a window, and the copy of
+ * the flow that stood here knew the first and not the second — so this spec
+ * failed whenever enough others signed somebody in beside it (`OVE-462`).
+ */
 async function createVerifiedCredentialSession(input: {
   baseURL: string;
   context: BrowserContext;
-  email: string;
   pool: Pool;
 }) {
-  const signUp = await input.context.request.post(
-    `${input.baseURL}/api/auth/sign-up/email`,
-    {
-      headers: { origin: input.baseURL },
-      data: {
-        email: input.email,
-        password: TEST_PASSWORD,
-        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-      },
-    },
-  );
-  const user = await input.pool.query<{ id: string }>(
-    'select id::text as id from public."user" where email = $1::text',
-    [input.email],
-  );
-  const userId = user.rows[0]?.id;
-  if (!userId) {
-    throw new Error(
-      `Synthetic auth user was not persisted (sign-up answered ${signUp.status()}).`,
-    );
-  }
-  await input.pool.query(
-    'update public."user" set "emailVerified" = true where id = $1::uuid',
-    [userId],
-  );
-  const signIn = await input.context.request.post(
-    `${input.baseURL}/api/auth/sign-in/email`,
-    {
-      headers: { origin: input.baseURL },
-      data: { email: input.email, password: TEST_PASSWORD },
-    },
-  );
-  expect(signIn.ok()).toBe(true);
-  return userId;
+  const gardener = await signInSyntheticGardener({
+    baseURL: input.baseURL,
+    context: input.context,
+    pool: input.pool,
+    prefix: "ove392-browser",
+    password: TEST_PASSWORD,
+  });
+  return gardener.id;
 }
 
 async function selectLocale(

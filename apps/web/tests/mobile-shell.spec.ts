@@ -15,6 +15,7 @@ import {
   seedOrganismFixture,
   type OrganismFixture,
 } from "./helpers/organism-fixture";
+import { waitForHydration } from "./helpers/hydration";
 
 /**
  * The shell below `lg` (DESIGN.md §3.2, §4.3, §2.6; ADR-0031 D4, D9).
@@ -129,7 +130,13 @@ async function targetSizes(page: Page, selector: string) {
  * every region as 0 × 0 — which reads exactly like a region that is not drawn.
  */
 async function settleShell(page: Page) {
-  await expect(page.locator('[data-site-shell-region="header"]')).toBeVisible();
+  const header = page.locator('[data-site-shell-region="header"]');
+  await expect(header).toBeVisible();
+  // A static document's chrome is in the first bytes (ADR-0032), so "visible"
+  // is true before the bundle has run. What the chrome learns from hydration —
+  // the address, the rail a page fills, a gardener's own destinations — has
+  // settled only after it.
+  await waitForHydration(header);
 }
 
 test.describe("the mobile shell", () => {
