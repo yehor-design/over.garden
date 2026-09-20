@@ -258,7 +258,9 @@ test.describe("the public journal entry", () => {
     // DESIGN.md §5.6: the accessible name states the action *and* the count,
     // so a screen-reader user knows what they are about to change before they
     // change it.
-    const like = page.locator("#comments button[aria-pressed]").first();
+    const like = page
+      .locator("#comments:visible button[aria-pressed]")
+      .first();
     await expect(like).toBeVisible();
     const name = await like.evaluate(
       (node) => node.getAttribute("aria-label") ?? node.textContent ?? "",
