@@ -15,6 +15,7 @@ import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
 import { getPublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -324,6 +325,9 @@ async function renderCatalogEvidenceCard(
     organismRole,
   });
   const hasExperience = page.entries.length > 0 || page.card.regions.length > 0;
+  const firstPhotograph = firstPhotographIndex(page.entries, (entry) =>
+    Boolean(entry.media),
+  );
   const relationGroups = [
     { key: "forms", heading: cardCopy.sections.forms, items: page.card.forms },
     { key: "pests", heading: cardCopy.sections.pests, items: page.card.pests },
@@ -535,7 +539,7 @@ async function renderCatalogEvidenceCard(
 
           {page.entries.length > 0 ? (
             <ol className="grid list-none gap-4">
-              {page.entries.map((entry) => (
+              {page.entries.map((entry, entryIndex) => (
                 <li key={entry.id} className="min-w-0">
                   <Card
                     as="article"
@@ -595,6 +599,12 @@ async function renderCatalogEvidenceCard(
                         sizes="(min-width: 640px) 14rem, 100vw"
                         intrinsicWidth={entry.media.intrinsicWidth}
                         intrinsicHeight={entry.media.intrinsicHeight}
+                        // The first gardener photograph is the largest thing
+                        // on a phone's first screen of a card that has one —
+                        // and it was `loading="lazy"`. Measured on production
+                        // on 2026-09-20: it was the LCP element, and it was not
+                        // even requested for 2.9 s (`OVE-470`).
+                        priority={entryIndex === firstPhotograph}
                       />
                     ) : null}
                   </Card>

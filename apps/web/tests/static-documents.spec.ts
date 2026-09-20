@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { expect, test, type APIRequestContext } from "playwright/test";
 import { Pool } from "pg";
 
@@ -201,13 +203,78 @@ async function seedStaticFixture(pool: Pool): Promise<StaticFixture> {
   const entry = await seedPublishedEntryFixture(pool, ENTRY_PREFIX, {
     title: "Статичний документ: перший запис",
   });
+  const organism = await seedOrganismFixture(pool, ORGANISM_PREFIX);
+  await photographTheSpeciesEntry(pool, organism);
   return {
     entry,
     ownerUserId: entry.ownerUserId,
     handle: entry.handle,
     entryPath: entry.entryPath,
-    organism: await seedOrganismFixture(pool, ORGANISM_PREFIX),
+    organism,
   };
+}
+
+/**
+ * A gardener's photograph on the organism card. The shared organism fixture is
+ * words only, and a card without a photograph cannot show the defect this file
+ * guards: on production the first gardener photograph was the card's LCP
+ * element and `loading="lazy"` (`OVE-470`). As with the entry fixture, the row
+ * is what puts the `<img>` in the document; no file answers behind it, and the
+ * box is reserved either way (DESIGN.md §2.10).
+ */
+async function photographTheSpeciesEntry(pool: Pool, organism: OrganismFixture) {
+  const photographed = await pool.query(
+    `insert into media_assets (id, owner_user_id, journal_entry_id, derivative_key, alt_text, caption,
+       document_position, usage_role, intrinsic_width, intrinsic_height, focal_x, focal_y,
+       upload_generation, declared_size_bytes, variant_long_edges)
+     select $1, entry.owner_user_id, entry.id, $2, 'Помідор на балконі, перше суцвіття',
+            'Помідор на балконі, перше суцвіття', 0, 'inline', 2560, 1440, 0.5, 0.45, 1, 56744,
+            '{1280,480}'
+       from journal_entries as entry
+       join plant_objects as object on object.id = entry.plant_object_id
+      where entry.owner_user_id = $3::uuid and object.catalog_item_id = $4::uuid`,
+    [
+      randomUUID(),
+      `derivatives/${randomUUID()}/1.webp`,
+      organism.ownerUserId,
+      organism.speciesId,
+    ],
+  );
+  if (photographed.rowCount !== 1) {
+    throw new Error(
+      `${ORGANISM_PREFIX}: expected one species entry to photograph, found ${photographed.rowCount}`,
+    );
+  }
+}
+
+/**
+ * The largest photograph on the first screen, as the browser laid it out —
+ * before any scroll, which is when the LCP is decided.
+ *
+ * Asked of geometry rather than of a `largest-contentful-paint` entry: the
+ * fixture's photographs have a row and no file, and an image that never paints
+ * is never an LCP candidate. Its box is reserved all the same, so where it sits
+ * and how it is asked for are both in the document.
+ */
+function largestPhotographOnTheFirstScreen() {
+  const candidates = [...document.querySelectorAll("img")].flatMap((image) => {
+    const box = image.getBoundingClientRect();
+    const width = Math.min(box.right, window.innerWidth) - Math.max(box.left, 0);
+    const height =
+      Math.min(box.bottom, window.innerHeight) - Math.max(box.top, 0);
+    // An avatar is not what a page's LCP waits for.
+    if (box.width < 96 || box.height < 96 || width <= 0 || height <= 0) return [];
+    return [
+      {
+        visibleArea: Math.round(width * height),
+        loading: image.loading,
+        fetchPriority: image.getAttribute("fetchpriority"),
+        src: image.getAttribute("src") ?? "",
+      },
+    ];
+  });
+  candidates.sort((a, b) => b.visibleArea - a.visibleArea);
+  return candidates[0] ?? null;
 }
 
 test.describe("a public page is a static document", () => {
@@ -285,6 +352,43 @@ test.describe("a public page is a static document", () => {
       expect(served.skeleton, `request ${attempt}: no skeleton`).toBe(false);
       expect(served.heading?.hidden, `request ${attempt}: <h1>`).toBe(false);
       expect(served.visibleText.length).toBeGreaterThan(900);
+    }
+  });
+
+  test("the largest photograph on the first screen is asked for at once", async ({
+    page,
+  }) => {
+    // A lazy image is not requested until layout has found it near the
+    // viewport, so a lazy LCP element spends the stylesheet's whole download
+    // unasked-for: 2.9 s on production's organism card on 2026-09-20, where the
+    // first gardener photograph was exactly that (`OVE-470`). A phone and a
+    // desk, because what is on the first screen differs between them.
+    const card = `/species/${fixture.organism.speciesSlug}`;
+    for (const viewport of [
+      { width: 412, height: 823 },
+      { width: 1_440, height: 900 },
+    ]) {
+      await page.setViewportSize(viewport);
+      for (const address of [
+        "/",
+        "/journals",
+        fixture.entryPath,
+        `/@${fixture.handle}`,
+        card,
+      ]) {
+        await page.goto(address, { waitUntil: "load" });
+        const largest = await page.evaluate(largestPhotographOnTheFirstScreen);
+        const where = `${address} at ${viewport.width} px`;
+        // The entry and the card are this file's own rows, so their photograph
+        // is known to be there; a listing shows whatever the database holds.
+        if (address === fixture.entryPath || address === card) {
+          expect(largest, `${where}: a photograph on the first screen`).not.toBeNull();
+        }
+        expect(
+          largest?.loading ?? "eager",
+          `${where}: ${largest?.src} is the largest photograph on the first screen`,
+        ).toBe("eager");
+      }
     }
   });
 

@@ -166,6 +166,56 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(mocks.permanentRedirect).not.toHaveBeenCalled();
   });
 
+  it("asks for the first gardener photograph at once and leaves the rest lazy", async () => {
+    // On production on 2026-09-20 the first gardener photograph was the card's
+    // LCP element and `loading="lazy"`: 2.9 s passed before it was requested
+    // (`OVE-470`). "The first entry" is not the rule either — this one is
+    // words only, and the photograph under it is what a reader sees first.
+    const base = page("species", "solanum-lycopersicum");
+    const photograph = (id: string) => ({
+      id,
+      derivativeKey: `derivatives/${id}/1.webp`,
+      publicUrl: `https://media.over.garden/derivatives/${id}/1.webp`,
+      intrinsicWidth: 2560,
+      intrinsicHeight: 1440,
+      placeholderDataUri: null,
+      variantLongEdges: [1280, 480],
+    });
+    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () => ({
+      ...base,
+      entryCount: 3,
+      entries: [
+        base.entries[0],
+        {
+          ...base.entries[0],
+          id: "entry-2",
+          title: "Second public note",
+          media: photograph("photo-2"),
+        },
+        {
+          ...base.entries[0],
+          id: "entry-3",
+          title: "Third public note",
+          media: photograph("photo-3"),
+        },
+      ],
+    }));
+    const { default: SpeciesRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await SpeciesRoute({
+        params: Promise.resolve({ slug: "solanum-lycopersicum" }),
+      }),
+    );
+
+    const images = [...html.matchAll(/<img\b[^>]*>/gu)].map((match) => match[0]);
+    const second = images.find((tag) => tag.includes("photo-2"));
+    const third = images.find((tag) => tag.includes("photo-3"));
+    expect(second).toMatch(/loading="eager"/u);
+    expect(second).toMatch(/fetchPriority="high"/iu);
+    expect(third).toMatch(/loading="lazy"/u);
+    expect(third).not.toMatch(/fetchPriority=/iu);
+  });
+
   it("shows presence for Ukraine and Bulgaria and the EPPO attribution with its date", async () => {
     const { default: SpeciesRoute } = await import("./page");
     const html = renderToStaticMarkup(

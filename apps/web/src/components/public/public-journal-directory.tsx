@@ -20,6 +20,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { resolveIllustration } from "@/lib/illustrations";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import type { PublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
 import {
@@ -90,6 +91,10 @@ export function PublicJournalDirectory({
   const activeFilters = buildActiveFilters(copy, page.request, facets, locale);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
   const listingPath = localizedPath(locale, "/journals");
+  const firstPhotograph = firstPhotographIndex(
+    page.cards,
+    (card) => card.media.length > 0,
+  );
   const countLabel =
     state === "ready" || state === "empty"
       ? copy.resultCount(page.totalCount)
@@ -235,7 +240,7 @@ export function PublicJournalDirectory({
                   copy={copy}
                   request={page.request}
                   card={card}
-                  priority={index === 0}
+                  priority={index === firstPhotograph}
                 />
               </li>
             ))}

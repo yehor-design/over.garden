@@ -124,6 +124,12 @@ export function SubjectAwareMediaImage({
       alt={alt}
       loading={loading ?? (priority ? "eager" : "lazy")}
       decoding={decoding ?? "async"}
+      // Only the page's first photograph names a priority. Every other one is
+      // left to the browser, which already asks for a lazy image outside the
+      // viewport at its lowest priority — read off production's waterfall on
+      // 2026-09-20 — and raises one it finds *inside* the viewport. A blanket
+      // `low` changes nothing for the first kind and takes that rescue away
+      // from the second, on exactly the page where nobody marked the LCP.
       fetchPriority={fetchPriority ?? (priority ? "high" : undefined)}
       onLoad={(event) => {
         setLoaded(true);
