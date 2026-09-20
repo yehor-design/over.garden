@@ -73,7 +73,18 @@ function finiteIsoDate(value: Date | string | null): string | null {
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
-export async function updatePublicProfileAction(formData: FormData) {
+/**
+ * `(previousState, formData)` — the shape `useActionState` calls, and the one
+ * that lets `OwnerScopedProgressiveForm` hand React a Server Action reference
+ * rather than a client closure. React answers a closure with
+ * `action="javascript:throw …"`, a placeholder it replaces on hydration and
+ * never before, so the control did nothing until the bundle ran (ADR-0024 D3,
+ * `OVE-457`). The first argument is the previous result and is unused here.
+ */
+export async function updatePublicProfileAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -106,7 +117,10 @@ export async function updatePublicProfileAction(formData: FormData) {
   );
 }
 
-export async function unblockProfileAction(formData: FormData) {
+export async function unblockProfileAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });

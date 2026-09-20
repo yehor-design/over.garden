@@ -38,7 +38,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: mocks.revalidatePath ,
+  revalidatePath: mocks.revalidatePath,
   revalidateTag: vi.fn(),
   updateTag: vi.fn(),
 }));
@@ -95,7 +95,8 @@ function committedReceipt(alreadyDeleted = false) {
 }
 
 async function loadAction() {
-  const actions = await import("@/app/(default)/garden/objects/[objectId]/actions");
+  const actions =
+    await import("@/app/(default)/garden/objects/[objectId]/actions");
   return actions.deleteJournalEntryAction;
 }
 
@@ -119,7 +120,7 @@ describe("OVE-353 canonical deletion contract", () => {
 
   it("returns a deletion receipt that carries no journal content", async () => {
     const action = await loadAction();
-    const receipt = await action(deleteFormData());
+    const receipt = await action(undefined, deleteFormData());
 
     expect(receipt).toEqual({
       status: "deleted",
@@ -148,7 +149,7 @@ describe("OVE-353 canonical deletion contract", () => {
 
   it("revalidates owner and public paths without awaiting a provider", async () => {
     const action = await loadAction();
-    await action(deleteFormData());
+    await action(undefined, deleteFormData());
 
     const paths = mocks.revalidatePath.mock.calls.map(([value]) => value);
     expect(paths).toContain("/garden");
@@ -160,7 +161,10 @@ describe("OVE-353 canonical deletion contract", () => {
 describe("OVE-353 owner safety and localized control", () => {
   it("treats a missing acknowledgement as a finite state, not an exception", async () => {
     const action = await loadAction();
-    const receipt = await action(deleteFormData({ deleteAccepted: "" }));
+    const receipt = await action(
+      undefined,
+      deleteFormData({ deleteAccepted: "" }),
+    );
 
     expect(receipt).toEqual({
       status: "acknowledgement_required",
@@ -178,7 +182,7 @@ describe("OVE-353 owner safety and localized control", () => {
       code: "session_required",
     });
     const action = await loadAction();
-    const receipt = await action(deleteFormData());
+    const receipt = await action(undefined, deleteFormData());
 
     expect(receipt).toEqual({
       mutationScope: "session_required",
@@ -204,8 +208,8 @@ describe("OVE-353 replay, crash, performance, and no-wedge proof", () => {
     mocks.deleteJournalEntry.mockResolvedValue(committedReceipt(true));
     const action = await loadAction();
 
-    const first = await action(deleteFormData());
-    const second = await action(deleteFormData());
+    const first = await action(undefined, deleteFormData());
+    const second = await action(undefined, deleteFormData());
 
     expect(first).toEqual(second);
     expect(first).toMatchObject({
@@ -233,7 +237,7 @@ describe("OVE-353 replay, crash, performance, and no-wedge proof", () => {
 
     const action = await loadAction();
     const startedAt = performance.now();
-    const receipt = await action(deleteFormData());
+    const receipt = await action(undefined, deleteFormData());
     const journalDeleteActionDuration = performance.now() - startedAt;
 
     clearTimeout(stallTimer);
@@ -257,7 +261,7 @@ describe("OVE-353 replay, crash, performance, and no-wedge proof", () => {
 
     const action = await loadAction();
     const startedAt = performance.now();
-    const receipt = await action(deleteFormData());
+    const receipt = await action(undefined, deleteFormData());
     const durationMs = performance.now() - startedAt;
 
     const waitReceipt = {
@@ -286,7 +290,9 @@ describe("OVE-353 replay, crash, performance, and no-wedge proof", () => {
     );
     const action = await loadAction();
 
-    await expect(action(deleteFormData())).rejects.toThrow(/not found/);
+    await expect(action(undefined, deleteFormData())).rejects.toThrow(
+      /not found/,
+    );
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

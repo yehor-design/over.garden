@@ -73,7 +73,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
-      confirmLineageInvitationClaimAction(new FormData()),
+      confirmLineageInvitationClaimAction(undefined, new FormData()),
     ).rejects.toThrow(
       "NEXT_REDIRECT:/garden/lineage/claims?invitation=confirmed",
     );
@@ -102,7 +102,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     const { declineLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
-      declineLineageInvitationClaimAction(new FormData()),
+      declineLineageInvitationClaimAction(undefined, new FormData()),
     ).rejects.toThrow(
       "NEXT_REDIRECT:/garden/lineage/claims?invitation=declined",
     );
@@ -122,7 +122,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
-      confirmLineageInvitationClaimAction(new FormData()),
+      confirmLineageInvitationClaimAction(undefined, new FormData()),
     ).rejects.toThrow("Запрошення щодо походження недоступне.");
 
     expect(mocks.resolveLineageInvitationClaim).not.toHaveBeenCalled();
@@ -138,7 +138,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
-      confirmLineageInvitationClaimAction(new FormData()),
+      confirmLineageInvitationClaimAction(undefined, new FormData()),
     ).rejects.toThrow("NEXT_REDIRECT:/auth/intent?intent=opaque-claim-intent");
 
     expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
@@ -158,7 +158,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
-      confirmLineageInvitationClaimAction(new FormData()),
+      confirmLineageInvitationClaimAction(undefined, new FormData()),
     ).rejects.toBe(failure);
 
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();

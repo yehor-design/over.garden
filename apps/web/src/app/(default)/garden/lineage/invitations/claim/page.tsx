@@ -10,7 +10,7 @@ import {
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import {
   buildAuthIntentAnchor,
@@ -194,39 +194,43 @@ function LineageInvitationClaimCard({
   return (
     <section className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 className="text-h4 text-text-heading">
           {copy.invitation.cardTitle}
         </h2>
-        <time className="text-xs text-muted-foreground">
+        <time className="text-caption text-text-muted">
           {formatOwnerLineageDate(locale, preview.createdAt)}
         </time>
       </div>
 
-      <dl className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+      <dl className="grid gap-3 text-body-sm text-text-muted sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase">{copy.common.invitedSource}</dt>
-          <dd className="text-foreground">
-            {preview.pendingIdentity.displayLabel}
-          </dd>
+          <dt className="text-caption uppercase">
+            {copy.common.invitedSource}
+          </dt>
+          <dd className="text-text">{preview.pendingIdentity.displayLabel}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.common.claimedObject}</dt>
-          <dd className="text-foreground">
+          <dt className="text-caption uppercase">
+            {copy.common.claimedObject}
+          </dt>
+          <dd className="text-text">
             {lineageObjectOptionLabel(preview.subjectObject, copy)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.common.state}</dt>
+          <dt className="text-caption uppercase">{copy.common.state}</dt>
           <dd>{copy.states.pending}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.common.proposedBy}</dt>
+          <dt className="text-caption uppercase">{copy.common.proposedBy}</dt>
           <dd>{copy.common.anotherGardener}</dd>
         </div>
       </dl>
 
       <div className="flex flex-wrap gap-3 border-t border-border pt-3">
-        <OwnerScopedActionForm action={confirmLineageInvitationClaimAction}>
+        <OwnerScopedProgressiveForm
+          action={confirmLineageInvitationClaimAction}
+        >
           <button
             id={resumed ? buildAuthIntentAnchor("claim") : undefined}
             data-auth-intent-control="claim"
@@ -236,8 +240,10 @@ function LineageInvitationClaimCard({
           >
             {copy.invitation.confirm}
           </button>
-        </OwnerScopedActionForm>
-        <OwnerScopedActionForm action={declineLineageInvitationClaimAction}>
+        </OwnerScopedProgressiveForm>
+        <OwnerScopedProgressiveForm
+          action={declineLineageInvitationClaimAction}
+        >
           <button
             type="submit"
             className={buttonVariants({
@@ -247,7 +253,7 @@ function LineageInvitationClaimCard({
           >
             {copy.invitation.decline}
           </button>
-        </OwnerScopedActionForm>
+        </OwnerScopedProgressiveForm>
       </div>
     </section>
   );
@@ -257,10 +263,10 @@ function GuestClaimPrompt({ copy }: { copy: OwnerLineageCopy }) {
   return (
     <section className="grid gap-4 rounded-lg border border-border p-4">
       <div className="grid gap-1">
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 className="text-h4 text-text-heading">
           {copy.invitation.guestTitle}
         </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="text-body-sm leading-6 text-text-muted">
           {copy.invitation.guestDescription}
         </p>
       </div>
@@ -277,7 +283,7 @@ function GuestClaimPrompt({ copy }: { copy: OwnerLineageCopy }) {
 
 function UnavailableInvite({ copy }: { copy: OwnerLineageCopy }) {
   return (
-    <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+    <p className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted">
       {copy.invitation.unavailable}
     </p>
   );

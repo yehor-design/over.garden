@@ -1,7 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Menu as MenuIcon, SquarePen, UserRound } from "lucide-react";
+import {
+  Menu as MenuIcon,
+  SquarePen,
+  TriangleAlert,
+  UserRound,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
@@ -56,7 +61,10 @@ import {
   type SiteShellNavigationItem,
   type SiteShellNavigationKey,
 } from "@/lib/site-shell-navigation";
-import type { SiteShellSessionInput } from "@/lib/site-shell-session-state";
+import type {
+  SiteShellSessionInput,
+  SiteShellSessionState,
+} from "@/lib/site-shell-session-state";
 import {
   SiteShellMobileNavigation,
   SiteShellMobileUtilities,
@@ -379,6 +387,9 @@ function FramedSiteShell({
                             hasOperatorAccess={
                               resolved?.hasOperatorAccess ?? false
                             }
+                            sessionStore={
+                              resolved?.sessionStore ?? "reachable"
+                            }
                           />
                         )}
                       />
@@ -666,17 +677,44 @@ function AccountRegion({
   navigation,
   isAuthenticated,
   hasOperatorAccess,
+  sessionStore,
 }: {
   locale: InterfaceLocale;
   navigation: SiteShellNavigation;
   isAuthenticated: boolean;
   hasOperatorAccess: boolean;
+  sessionStore: SiteShellSessionState["sessionStore"];
 }) {
   const copy = getInterfaceCopy(locale);
   const operatorCopy = getOperatorMenuCopy(locale);
   const privacyHref =
     navigation.footerLinks.find((link) => link.key === "privacy")?.href ??
     "/privacy";
+
+  // `OVE-457` criterion 8: the chrome stops disagreeing with the page. A null
+  // session during an outage is Better Auth swallowing a read failure, not a
+  // guest — and offering "Sign in" over a workspace page that has already said
+  // the store is unreachable is the product contradicting itself.
+  if (sessionStore === "unreachable") {
+    return (
+      <p
+        role="status"
+        data-site-shell-session="unreachable"
+        className="flex flex-col gap-1 rounded-md border border-warning-border bg-warning-surface px-3 py-2 text-body-sm text-warning-text"
+      >
+        <span className="flex items-center gap-2">
+          <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
+          {copy.shell.sessionUnavailable}
+        </span>
+        <a
+          href={navigation.signIn.href}
+          className="w-fit rounded-sm font-medium underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+        >
+          {copy.shell.sessionUnavailableRetry}
+        </a>
+      </p>
+    );
+  }
 
   if (!isAuthenticated) {
     return (

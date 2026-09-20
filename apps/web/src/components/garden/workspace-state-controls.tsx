@@ -103,7 +103,7 @@ export function WorkspaceLoadingWatchdogView({
       className="mt-3 flex flex-wrap items-center gap-3"
     >
       {stage === "none" ? null : (
-        <p className="text-sm text-muted-foreground">{stillLoadingLabel}</p>
+        <p className="text-body-sm text-text-muted">{stillLoadingLabel}</p>
       )}
       {stage === "reload" ? (
         <Button

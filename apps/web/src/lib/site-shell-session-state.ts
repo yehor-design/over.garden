@@ -10,12 +10,30 @@ export interface SiteShellSessionState {
   /** The signed-in owner the document is rendered for; null for a guest. */
   ownerUserId: string | null;
   hasOperatorAccess: boolean;
+  /**
+   * Whether "nobody is signed in" is a fact or a symptom (`OVE-457`).
+   *
+   * `unreachable` is not signed out. Better Auth swallows a failed session
+   * read and answers `null`, so the chrome used to offer "Sign in" over a
+   * workspace page that had already said the session store could not be
+   * reached — one reader, two answers, from one request. The shell asks the
+   * same question the workspace asks (`@/server/session-store-liveness`), and
+   * says so instead of guessing.
+   */
+  sessionStore: "reachable" | "unreachable";
 }
 
 export const GUEST_SITE_SHELL_SESSION_STATE: SiteShellSessionState = {
   isAuthenticated: false,
   ownerUserId: null,
   hasOperatorAccess: false,
+  sessionStore: "reachable",
+};
+
+/** What the shell knows when the session store could not answer at all. */
+export const UNREACHABLE_SITE_SHELL_SESSION_STATE: SiteShellSessionState = {
+  ...GUEST_SITE_SHELL_SESSION_STATE,
+  sessionStore: "unreachable",
 };
 
 /**

@@ -939,7 +939,56 @@ landing in the URL; a removal offering Undo and the Undo putting the row back;
 and a no-JavaScript POST on the wishlist removal, the erasure request, the
 community moderation controls and the owner's erasure queue.
 
-The remaining page families (`OVE-457`–`OVE-459`) are still in Backlog.
+**The workspace leads with state** (`OVE-457`, 2026-09-20). `/garden` opened
+with a next-action strip and then a band of four numbers on an inverted bar —
+objects, spaces, recent, due — which is a scoreboard, not an answer, and which
+printed three noughts to a gardener who had just arrived. Remote and Laravel
+Cloud are the model: a workspace home leads with what needs attention and what
+was written last, in that order, and only then lists the inventory and the
+spaces that hold it. A count of nought is omitted (DESIGN.md §5.10).
+
+- **Adding an object shows its path before its form.** Three numbered steps —
+  name it, describe one dated observation, publish — above the composer, with
+  the result at the end it already had.
+- **The lineage surfaces say what they are.** A gardener meeting the word
+  "claim" for the first time is told what one is before they are shown a
+  Confirm button; the same for a question and an invitation.
+- **Each `WorkspaceFailureClass` has its own sentence.** Every failure used to
+  read "other sections remain available", which is true of all six and useful
+  about none.
+- **Seven forms needed hydration to do anything**, and are
+  `OwnerScopedProgressiveForm` now: both lineage inboxes, the living object's
+  passport and its two controls, the profile and its editor.
+
+**Rule 11 is enforced** rather than remembered.
+`apps/web/scripts/check-workspace-settled-reads.ts` fails on a `@/server/*`
+read awaited outside `settleSection` on a `/garden/**` render path, and found
+one the day it was written: `getPublicAuthorHandle` had been bare on the living
+object's page since the addresses moved under authors, so one rejection there
+would have left a passport that had already loaded stuck on a skeleton for ever
+on a hard load.
+
+**The chrome stopped disagreeing with the page.** A workspace page has said
+"the session store is unreachable" since ADR-0023; the shell answered "guest"
+for the same failure and drew "Sign in", so one request produced two statements
+about one reader and only one was true. Both now ask one question
+(`src/server/session-store-liveness.ts`), and two things had to be right for it
+to work, each found in a browser: the probe reads the **session store**, not
+`select 1` — a broken `session` table and a healthy connection is exactly the
+case — and it reads the request's `cookie` **header**, because Better Auth
+clears a session cookie it cannot resolve and `cookies()` is mutable within the
+request, so by the time the probe asked, the evidence was gone.
+
+Proven in `tests/garden-workspace.spec.ts` and two receipts:
+`pnpm prove:workspace-resilience` (8 of 8 surfaces, `DATABASE_URL` on a closed
+port) and `pnpm prove:workspace-failure-classes` (5 of 5 injectable classes, a
+real SQLSTATE raised from a set-returning function standing in for
+`plant_objects`, each on a hard load). Plus axe at 375 px and 1440 px on every
+workspace page, the section order, the creation steps, the lineage sentences, a
+no-JavaScript POST on three surfaces, and the chrome and the page agreeing with
+a real session whose cookie cache has expired.
+
+The remaining page families (`OVE-458`, `OVE-459`) are still in Backlog.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

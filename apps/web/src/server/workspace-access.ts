@@ -1,14 +1,12 @@
 import "server-only";
 
-import { cookies } from "next/headers";
-
 import {
   AdminAccessDeniedError,
   type AdminAccess,
 } from "@/server/admin-access";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { pingDatabase } from "@/server/health-repository";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
+import { settleSessionStoreLiveness } from "@/server/session-store-liveness";
 import {
   describeWorkspaceFailure,
   settleSection,
@@ -35,21 +33,6 @@ export type WorkspaceViewer =
 /** The session read costs one round trip when the cookie cache is cold. */
 const SESSION_DEADLINE_MS = workspaceSectionDeadlineMs(1);
 
-/**
- * Better Auth's cookie names under `advanced.cookiePrefix: "overgarden"`. The
- * `__Secure-` form is what a browser sends over HTTPS, and both are checked so
- * the answer does not depend on which environment is serving.
- */
-const SESSION_COOKIE_NAMES = [
-  "overgarden.session_token",
-  "__Secure-overgarden.session_token",
-] as const;
-
-async function hasSessionCookie(): Promise<boolean> {
-  const store = await cookies();
-  return SESSION_COOKIE_NAMES.some((name) => Boolean(store.get(name)?.value));
-}
-
 export async function resolveWorkspaceViewer(): Promise<WorkspaceViewer> {
   const session = await settleSection(() => getCurrentSession(), {
     deadlineMs: SESSION_DEADLINE_MS,
@@ -69,24 +52,12 @@ export async function resolveWorkspaceViewer(): Promise<WorkspaceViewer> {
     };
   }
 
-  // A null session is not proof that nobody is signed in. Measured on
-  // 2026-09-03 against a local production build with `DATABASE_URL` on a closed
-  // port: Better Auth swallows the read failure and answers `null`, so a
-  // signed-in gardener would be shown a sign-in panel during a database outage
-  // — a false statement, and one that sends them to solve the wrong problem.
-  //
-  // Someone carrying a session cookie who resolved to nobody is exactly the
-  // case worth a second question, and it costs one trivial round trip that a
-  // genuine visitor, who carries no such cookie, never pays.
-  if (await hasSessionCookie()) {
-    const liveness = await settleSection(() => pingDatabase(), {
-      deadlineMs: SESSION_DEADLINE_MS,
-      surface: "workspace",
-      section: "session-store-liveness",
-    });
-    if (liveness.status === "error") {
-      return { status: "unavailable", failure: liveness };
-    }
+  // A null session is not proof that nobody is signed in — the question, and
+  // the reason for asking it, live in `session-store-liveness.ts`, which the
+  // chrome now asks too so the two cannot answer differently (`OVE-457`).
+  const liveness = await settleSessionStoreLiveness("workspace");
+  if (liveness.status === "error") {
+    return { status: "unavailable", failure: liveness };
   }
 
   return { status: "sign-in-required" };

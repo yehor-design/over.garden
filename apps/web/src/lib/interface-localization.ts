@@ -84,6 +84,9 @@ export interface InterfaceCopy {
     accountPagesSection: string;
     accountSettingsSection: string;
     erasureRequest: string;
+    /** The chrome's own answer when the session store could not be reached. */
+    sessionUnavailable: string;
+    sessionUnavailableRetry: string;
     /** The one primary action of the shell, in the rail and on the tab bar. */
     primaryAction: string;
     /** Accessible names for the landmarks a screen reader would otherwise read
@@ -169,6 +172,8 @@ const INTERFACE_COPY = {
       signIn: "Увійти",
     },
     shell: {
+      sessionUnavailable: "Не вдалося перевірити сесію",
+      sessionUnavailableRetry: "Спробувати ще раз",
       accountPagesSection: "Мої сторінки",
       accountSettingsSection: "Налаштування",
       erasureRequest: "Видалення даних",
@@ -280,6 +285,8 @@ const INTERFACE_COPY = {
       signIn: "Вход",
     },
     shell: {
+      sessionUnavailable: "Сесията не можа да бъде проверена",
+      sessionUnavailableRetry: "Опитай отново",
       accountPagesSection: "Моите страници",
       accountSettingsSection: "Настройки",
       erasureRequest: "Изтриване на данни",
@@ -391,6 +398,8 @@ const INTERFACE_COPY = {
       signIn: "Войти",
     },
     shell: {
+      sessionUnavailable: "Не удалось проверить сессию",
+      sessionUnavailableRetry: "Попробовать снова",
       accountPagesSection: "Мои страницы",
       accountSettingsSection: "Настройки",
       erasureRequest: "Удаление данных",

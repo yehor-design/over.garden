@@ -72,7 +72,7 @@ export function GardenHomeSectionsSkeleton({
       </div>
       <div className="grid grid-cols-2 border-b border-border bg-foreground p-4 md:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="mx-2 h-12 bg-background/20" />
+          <Skeleton key={index} className="mx-2 h-12 bg-surface/20" />
         ))}
       </div>
       <div className="flex flex-col gap-10 px-4 py-8 sm:px-6">

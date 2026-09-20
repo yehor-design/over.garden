@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import {
   CatalogPicker,
   type CatalogPickOutcome,
@@ -34,7 +34,7 @@ interface CatalogResolveControlProps {
   objectKind: PlantObjectKind;
   currentVarietyText: string | null;
   currentVarietyState: VarietyState;
-  action: (formData: FormData) => Promise<unknown>;
+  action: (previousState: unknown, formData: FormData) => Promise<unknown>;
 }
 
 /**
@@ -79,8 +79,8 @@ export function CatalogResolveControl({
   return (
     <section className="grid min-w-0 gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-h3 text-text-heading">{copy.title}</h2>
+        <p className="text-body-sm text-text-muted">
           {formatGardenWorkspaceTemplate(copy.current, {
             value: currentVarietyText ?? copy.noName,
             state: localizedVarietyStateLabel(
@@ -91,7 +91,10 @@ export function CatalogResolveControl({
         </p>
       </div>
 
-      <OwnerScopedActionForm action={action} className="grid min-w-0 gap-3">
+      <OwnerScopedProgressiveForm
+        action={action}
+        className="grid min-w-0 gap-3"
+      >
         <HiddenField name="objectId" value={objectId} />
         <HiddenField
           name="catalogItemId"
@@ -117,7 +120,7 @@ export function CatalogResolveControl({
         />
 
         {selection ? null : (
-          <p className="text-xs text-muted-foreground">{copy.noMatch}</p>
+          <p className="text-caption text-text-muted">{copy.noMatch}</p>
         )}
 
         <button
@@ -129,7 +132,7 @@ export function CatalogResolveControl({
         >
           {copy.save}
         </button>
-      </OwnerScopedActionForm>
+      </OwnerScopedProgressiveForm>
     </section>
   );
 }

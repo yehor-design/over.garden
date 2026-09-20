@@ -5,7 +5,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { AtSign, Eye, ImageOff, Save } from "lucide-react";
 
 import {
-  OwnerScopedActionForm,
+  OwnerScopedProgressiveForm,
   OwnerUserIdField,
   useOptionalOwnerScope,
 } from "@/components/auth/owner-scope";
@@ -279,12 +279,10 @@ export function OwnerProfileEditor({
         className="grid gap-5 border-b border-border pb-8"
       >
         <div className="flex items-center gap-2">
-          <AtSign className="size-5 text-muted-foreground" aria-hidden="true" />
-          <h2 className="text-xl font-semibold text-foreground">
-            {copy.handleTitle}
-          </h2>
+          <AtSign className="size-5 text-text-muted" aria-hidden="true" />
+          <h2 className="text-h2 text-text-heading">{copy.handleTitle}</h2>
         </div>
-        <p className="min-w-0 text-sm text-muted-foreground">
+        <p className="min-w-0 text-body-sm text-text-muted">
           {copy.currentHandle}:{" "}
           <strong className="break-all">@{committedHandle}</strong>
         </p>
@@ -297,12 +295,12 @@ export function OwnerProfileEditor({
           <OwnerUserIdField />
           <label
             htmlFor="public-handle-candidate"
-            className="text-sm font-medium text-foreground"
+            className="text-body-sm font-medium text-text"
           >
             {copy.handle}
           </label>
-          <span className="flex overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
-            <span className="border-r border-border px-3 py-2 text-muted-foreground">
+          <span className="flex overflow-hidden rounded-md border border-border-control bg-surface focus-within:ring-2 focus-within:ring-ring">
+            <span className="border-r border-border px-3 py-2 text-text-muted">
               @
             </span>
             <Input
@@ -328,7 +326,7 @@ export function OwnerProfileEditor({
               className="min-w-0 flex-1 rounded-none border-0 bg-transparent read-only:bg-transparent"
             />
           </span>
-          <p id="public-handle-help" className="text-xs text-muted-foreground">
+          <p id="public-handle-help" className="text-caption text-text-muted">
             {copy.handleHelp}
           </p>
           <HandleStatus
@@ -352,17 +350,13 @@ export function OwnerProfileEditor({
         id="public-profile-editor"
         className="grid gap-5 border-b border-border pb-8"
       >
-        <h2 className="text-xl font-semibold text-foreground">
-          {copy.editorTitle}
-        </h2>
-        <OwnerScopedActionForm
+        <h2 className="text-h2 text-text-heading">{copy.editorTitle}</h2>
+        <OwnerScopedProgressiveForm
           action={updatePublicProfileAction}
           className="grid gap-6"
         >
           <fieldset className="grid gap-3">
-            <legend className="text-sm font-semibold text-foreground">
-              {copy.avatar}
-            </legend>
+            <legend className="text-h4 text-text-heading">{copy.avatar}</legend>
             <div className="flex flex-wrap gap-3">
               <Radio
                 presentation="custom"
@@ -380,10 +374,12 @@ export function OwnerProfileEditor({
                   editor.avatarMediaAssetId === null,
                 )}
               >
-                <span className="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <span className="flex size-14 items-center justify-center rounded-full bg-surface-sunken text-text-muted">
                   <ImageOff className="size-5" aria-hidden="true" />
                 </span>
-                <span className="text-xs font-medium">{copy.noAvatar}</span>
+                <span className="text-caption font-medium">
+                  {copy.noAvatar}
+                </span>
               </Radio>
               {workspace.avatarOptions.map((option) => (
                 <Radio
@@ -452,7 +448,7 @@ export function OwnerProfileEditor({
           </Field>
 
           <fieldset className="grid gap-2">
-            <legend className="text-sm font-semibold text-foreground">
+            <legend className="text-h4 text-text-heading">
               {copy.languages}
             </legend>
             <div className="flex flex-wrap gap-x-4 gap-y-2">
@@ -476,7 +472,7 @@ export function OwnerProfileEditor({
           </fieldset>
 
           <fieldset className="grid gap-3">
-            <legend className="text-sm font-semibold text-foreground">
+            <legend className="text-h4 text-text-heading">
               {copy.location}
             </legend>
             <SegmentedChoice
@@ -519,7 +515,7 @@ export function OwnerProfileEditor({
 
           <div className="grid gap-5 sm:grid-cols-2">
             <fieldset className="grid gap-2">
-              <legend className="text-sm font-semibold text-foreground">
+              <legend className="text-h4 text-text-heading">
                 {copy.relationships}
               </legend>
               <SegmentedChoice
@@ -544,7 +540,7 @@ export function OwnerProfileEditor({
               id="public-profile-status"
               role={displayNameError ? "alert" : "status"}
               aria-live={displayNameError ? "assertive" : "polite"}
-              className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
+              className="rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text"
             >
               {statusMessage}
             </p>
@@ -557,7 +553,7 @@ export function OwnerProfileEditor({
             <Save aria-hidden="true" />
             {copy.save}
           </button>
-        </OwnerScopedActionForm>
+        </OwnerScopedProgressiveForm>
       </section>
 
       <section
@@ -567,10 +563,8 @@ export function OwnerProfileEditor({
         onSubmitCapture={(event) => event.preventDefault()}
       >
         <div className="flex items-center gap-2 border-b border-border pb-3">
-          <Eye className="size-5 text-muted-foreground" aria-hidden="true" />
-          <h2 className="text-xl font-semibold text-foreground">
-            {copy.previewTitle}
-          </h2>
+          <Eye className="size-5 text-text-muted" aria-hidden="true" />
+          <h2 className="text-h2 text-text-heading">{copy.previewTitle}</h2>
         </div>
         <PublicProfileView
           profile={preview}
@@ -596,7 +590,7 @@ function SegmentedChoice({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="inline-flex w-fit max-w-full overflow-hidden rounded-md border border-input bg-muted p-0.5">
+    <div className="inline-flex w-fit max-w-full overflow-hidden rounded-md border border-border-control bg-surface-sunken p-0.5">
       {options.map((option) => (
         <Radio
           key={option.value}
@@ -607,10 +601,10 @@ function SegmentedChoice({
           checked={value === option.value}
           onChange={() => onChange(option.value)}
           className={cn(
-            "rounded-sm px-3 py-1.5 text-sm font-medium break-words transition-colors",
+            "rounded-sm px-3 py-1.5 text-body-sm font-medium break-words transition-colors",
             value === option.value
-              ? "bg-background text-foreground"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-surface text-text"
+              : "text-text-muted hover:text-text",
           )}
         >
           {option.label}
@@ -624,7 +618,7 @@ function avatarOptionClass(active: boolean) {
   return cn(
     "flex min-w-20 cursor-pointer flex-col items-center gap-2 rounded-md border p-2 text-foreground transition-colors",
     active
-      ? "border-primary bg-primary/5"
+      ? "border-primary bg-action/5"
       : "border-border hover:border-primary/60",
   );
 }
@@ -681,7 +675,7 @@ function HandleStatus({
       aria-live={isError ? "assertive" : "polite"}
       className={cn(
         message
-          ? "rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
+          ? "rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text"
           : "sr-only",
       )}
     >

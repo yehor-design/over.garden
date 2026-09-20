@@ -40,7 +40,10 @@ describe("SaveProgressMoment", () => {
 
     expect(html).toContain("Эта запись становится полезнее");
     expect(html).toContain("2 датированные заметки");
-    expect(html).toContain("w-1/2");
+    // A real `progressbar` with its value, not a width class: a reader hears
+    // the figure instead of seeing a rectangle (`OVE-457`).
+    expect(html).toContain('role="progressbar"');
+    expect(html).toContain('aria-valuenow="50"');
     expect(html).toContain("Добавить ещё одну запись");
     expect(html).not.toMatch(/share|feed|public praise|leaderboard|streak/i);
   });

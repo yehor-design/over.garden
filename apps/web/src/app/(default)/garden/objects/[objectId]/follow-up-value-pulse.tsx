@@ -94,11 +94,11 @@ export function FollowUpValuePulse({
   return (
     <section
       aria-live="polite"
-      className="grid gap-4 rounded-lg border border-border bg-muted/30 p-4"
+      className="grid gap-4 rounded-lg border border-border bg-surface-sunken p-4"
     >
       <div className="grid gap-1">
-        <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-        <p className="text-sm leading-6 text-muted-foreground">
+        <h2 className="text-h3 text-text-heading">{copy.title}</h2>
+        <p className="text-body-sm leading-6 text-text-muted">
           {copy.description}
         </p>
       </div>
@@ -119,7 +119,7 @@ export function FollowUpValuePulse({
         </div>
       ) : (
         <div className="grid gap-3">
-          <p className="text-sm text-foreground">{copy.optionalPrompt}</p>
+          <p className="text-body-sm text-text">{copy.optionalPrompt}</p>
           <Field label={copy.reasonLabel} id="follow-up-usefulness-reason">
             <Select
               value={usefulnessReason ?? ""}
@@ -178,7 +178,7 @@ export function FollowUpValuePulse({
       </div>
 
       {error ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-body-sm text-danger-text" role="alert">
           {error}
         </p>
       ) : null}

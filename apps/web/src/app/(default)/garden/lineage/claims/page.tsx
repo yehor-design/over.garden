@@ -6,7 +6,7 @@ import {
   WorkspaceSectionSkeleton,
 } from "@/components/garden/workspace-state";
 
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -72,10 +72,7 @@ export default async function LineageClaimInboxPage({
   if (viewer.status === "sign-in-required") {
     return (
       <LineageClaimsShell locale={locale}>
-        <SignInPrompt
-  locale={locale}
-  next={"/garden/lineage/claims"}
-/>
+        <SignInPrompt locale={locale} next={"/garden/lineage/claims"} />
       </LineageClaimsShell>
     );
   }
@@ -85,7 +82,7 @@ export default async function LineageClaimInboxPage({
       {invitationStatus ? (
         <p
           role="status"
-          className="rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground"
+          className="rounded-md border border-border bg-surface-sunken p-3 text-body-sm text-text"
         >
           {invitationStatus === "confirmed"
             ? copy.claims.confirmedNotice
@@ -128,7 +125,7 @@ async function LineageClaimsSection({
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-caption text-text-muted">
         <span className="rounded-md border border-border px-2 py-1">
           {formatOwnerLineageTemplate(copy.claims.waiting, {
             count: claims.value.length,
@@ -139,7 +136,7 @@ async function LineageClaimsSection({
         </span>
       </div>
       {claims.value.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+        <p className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted">
           {copy.claims.empty}
         </p>
       ) : (
@@ -182,40 +179,44 @@ function LineageClaimCard({
   return (
     <li className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-base font-semibold text-foreground">
+        <h2 className="text-h4 text-text-heading">
           {lineageClaimTitle(claim, copy)}
         </h2>
-        <time className="text-xs text-muted-foreground">
+        <time className="text-caption text-text-muted">
           {formatOwnerLineageDate(locale, claim.createdAt)}
         </time>
       </div>
 
-      <dl className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
+      <dl className="grid gap-3 text-body-sm text-text-muted sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase">{copy.common.claimedObject}</dt>
-          <dd className="text-foreground">
+          <dt className="text-caption uppercase">
+            {copy.common.claimedObject}
+          </dt>
+          <dd className="text-text">
             {lineageObjectOptionLabel(claim.subjectObject, copy)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.claims.yourSourceObject}</dt>
-          <dd className="text-foreground">
+          <dt className="text-caption uppercase">
+            {copy.claims.yourSourceObject}
+          </dt>
+          <dd className="text-text">
             {lineageObjectOptionLabel(claim.sourceObject, copy)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.common.state}</dt>
+          <dt className="text-caption uppercase">{copy.common.state}</dt>
           <dd>{lineageClaimStateLabel(claim, copy)}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.common.proposedBy}</dt>
+          <dt className="text-caption uppercase">{copy.common.proposedBy}</dt>
           <dd>{copy.common.anotherGardener}</dd>
         </div>
       </dl>
 
       {writeEnabled ? (
         <div className="flex flex-wrap gap-3 border-t border-border pt-3">
-          <OwnerScopedActionForm action={confirmLineageClaimAction}>
+          <OwnerScopedProgressiveForm action={confirmLineageClaimAction}>
             <HiddenField name="edgeId" value={claim.id} />
             <button
               type="submit"
@@ -223,8 +224,8 @@ function LineageClaimCard({
             >
               {copy.claims.confirm}
             </button>
-          </OwnerScopedActionForm>
-          <OwnerScopedActionForm action={declineLineageClaimAction}>
+          </OwnerScopedProgressiveForm>
+          <OwnerScopedProgressiveForm action={declineLineageClaimAction}>
             <HiddenField name="edgeId" value={claim.id} />
             <button
               type="submit"
@@ -235,10 +236,10 @@ function LineageClaimCard({
             >
               {copy.claims.decline}
             </button>
-          </OwnerScopedActionForm>
+          </OwnerScopedProgressiveForm>
         </div>
       ) : (
-        <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
+        <p className="rounded-md border border-border p-3 text-caption text-text-muted">
           {copy.claims.writeGate}
         </p>
       )}

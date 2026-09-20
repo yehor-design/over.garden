@@ -23,20 +23,17 @@ fragment: only status, presence of a heading, bounded classes, and counts.
 
 ## Result
 
-Passed 11 of 11 surfaces.
+Passed 8 of 8 surfaces.
 
 | Surface | Status | Own heading | Classes rendered | Stranded skeleton | Boundaries completed |
 | -- | -- | -- | -- | -- | -- |
-| `garden-home` | 200 | yes | `connection_unavailable` | none | 3 |
-| `stable-registry` | 200 | yes | `connection_unavailable` | none | 3 |
-| `stable-registry-extensions` | 200 | yes | `connection_unavailable` | none | 2 |
-| `stable-registry-editions` | 200 | yes | `connection_unavailable` | none | 2 |
-| `object` | 200 | yes | `connection_unavailable` | none | 3 |
-| `entry-edit` | 200 | yes | `connection_unavailable` | none | 3 |
-| `profile` | 200 | yes | `connection_unavailable` | none | 3 |
-| `lineage-claims` | 200 | yes | `connection_unavailable` | none | 3 |
-| `lineage-questions` | 200 | yes | `connection_unavailable` | none | 3 |
-| `lineage-invitation-claim` | 200 | yes | `connection_unavailable` | none | 3 |
+| `garden-home` | 200 | yes | `connection_unavailable` | none | 2 |
+| `object` | 200 | yes | `connection_unavailable` | none | 2 |
+| `entry-edit` | 200 | yes | `connection_unavailable` | none | 2 |
+| `profile` | 200 | yes | `connection_unavailable` | none | 2 |
+| `lineage-claims` | 200 | yes | `connection_unavailable` | none | 2 |
+| `lineage-questions` | 200 | yes | `connection_unavailable` | none | 2 |
+| `lineage-invitation-claim` | 200 | yes | `connection_unavailable` | none | 2 |
 | `erasure-requests` | 200 | yes | `connection_unavailable` | none | 2 |
 
-Generated at 2026-09-03T17:22:47.977Z against `http://127.0.0.1:3016`.
+Generated at 2026-09-20T19:01:32.246Z against `http://127.0.0.1:3182`.

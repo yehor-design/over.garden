@@ -96,7 +96,7 @@ export function WorkspaceShell({
         {eyebrow ? (
           <p className="text-overline text-text-muted uppercase">{eyebrow}</p>
         ) : null}
-        <h1 className="text-h1 text-text-heading">{title}</h1>
+        <h1 className="text-text-heading-heading text-h1">{title}</h1>
         {description ? (
           <p className="max-w-prose text-body-sm text-text-muted">
             {description}
@@ -135,7 +135,7 @@ export function WorkspaceSectionSkeleton({
       aria-label={title ?? copy.loading.label}
     >
       {title ? (
-        <h2 className="text-h2 text-text-heading">{title}</h2>
+        <h2 className="text-text-heading-heading text-h2">{title}</h2>
       ) : (
         <Skeleton className="h-6 w-40" />
       )}
@@ -195,7 +195,11 @@ export function WorkspaceSectionError({
       failureClass={failure.failureClass}
       digest={failure.digest}
       title={title ?? copy.title}
-      description={copy.description}
+      // One sentence per class (`OVE-457`). Every failure used to read "other
+      // sections remain available", which is true of all six and useful about
+      // none: a reader whose section timed out and a reader whose account has
+      // no access got the same advice, and only one of them could act on it.
+      description={copy.reasons[failure.failureClass] ?? copy.description}
       technicalHint={technicalHint}
       reference={formatGardenWorkspaceTemplate(copy.reference, {
         digest: failure.digest,
@@ -233,7 +237,7 @@ export function WorkspaceMissingRecord({
       data-workspace-record="missing"
       className="border-y border-border py-6"
     >
-      <h2 className="text-h3 text-text-heading">{copy.title}</h2>
+      <h2 className="text-text-heading-heading text-h3">{copy.title}</h2>
       <p className="mt-1 max-w-prose text-body-sm text-text-muted">
         {copy.description}
       </p>
@@ -320,7 +324,7 @@ export function WorkspaceAccessPanel({
         {navigation ? (
           <div className="flex flex-wrap items-center gap-3">{navigation}</div>
         ) : null}
-        <h1 className="text-h1 text-text-heading">{title}</h1>
+        <h1 className="text-text-heading-heading text-h1">{title}</h1>
       </header>
       {failure ? (
         <WorkspaceSectionError

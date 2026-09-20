@@ -138,12 +138,18 @@ jobs:
       - name: Banned dependencies
         run: pnpm check:banned-dependencies
 
-      # DESIGN.md §10, gates 3 and 6. The other four mechanical gates are
+      # DESIGN.md §10, gates 3, 6 and 14. The other four mechanical gates are
       # ESLint rules and ran in the Lint step above; gate 9 is the contrast
       # contract inside `globals.test.ts` and runs with the suite; gates 7 and
       # 8 need a browser and run in the Browser proof job beside this one.
       - name: Design system gates
         run: pnpm check:design-tokens && pnpm check:component-tests
+
+      # AGENTS.md rule 11 / ADR-0023: a workspace render path settles every
+      # `@/server/*` read. An escape looks like any other `await` and only
+      # shows on a hard load with the dependency already broken.
+      - name: Workspace settled reads
+        run: pnpm check:workspace-settled-reads
 
       - name: Test
         run: pnpm test

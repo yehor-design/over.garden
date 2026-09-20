@@ -8,7 +8,7 @@ import {
   WorkspaceSectionSkeleton,
 } from "@/components/garden/workspace-state";
 import { SignOutControl } from "@/components/auth/sign-out-control";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -71,10 +71,7 @@ export default async function GardenPublicProfilePage({
   if (viewer.status === "sign-in-required") {
     return (
       <ProfileShell locale={locale} authShell="guest">
-        <SignInPrompt
-  locale={locale}
-  next={"/garden/profile"}
-/>
+        <SignInPrompt locale={locale} next={"/garden/profile"} />
       </ProfileShell>
     );
   }
@@ -167,10 +164,10 @@ async function ProfileSections({
         className="grid gap-4 border-t border-border pt-7"
       >
         <div className="grid gap-1.5">
-          <h2 className="text-xl font-semibold text-foreground">
+          <h2 className="text-h2 text-text-heading">
             {signOutCopy.accountSectionTitle}
           </h2>
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-2xl text-body-sm leading-6 text-text-muted">
             {signOutCopy.accountSectionDescription}
           </p>
         </div>
@@ -184,19 +181,14 @@ async function ProfileSections({
         className="grid gap-4 border-t border-border pt-7"
       >
         <div className="flex items-center gap-2">
-          <ShieldCheck
-            className="size-5 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <h2 className="text-xl font-semibold text-foreground">
-            {copy.blockedTitle}
-          </h2>
+          <ShieldCheck className="size-5 text-text-muted" aria-hidden="true" />
+          <h2 className="text-h2 text-text-heading">{copy.blockedTitle}</h2>
         </div>
         {relationshipStatus === "blocked" ||
         relationshipStatus === "unblocked" ? (
           <p
             role="status"
-            className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
+            className="rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text"
           >
             {relationshipStatus === "blocked" ? copy.blocked : copy.unblocked}
           </p>
@@ -209,14 +201,14 @@ async function ProfileSections({
                 className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-foreground">
+                  <p className="truncate text-h4 text-text-heading">
                     {profile.displayName ?? `@${profile.handle}`}
                   </p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="truncate text-caption text-text-muted">
                     @{profile.handle}
                   </p>
                 </div>
-                <OwnerScopedActionForm action={unblockProfileAction}>
+                <OwnerScopedProgressiveForm action={unblockProfileAction}>
                   <HiddenField name="blockId" value={profile.blockId} />
                   <button
                     type="submit"
@@ -227,12 +219,12 @@ async function ProfileSections({
                   >
                     {copy.unblock}
                   </button>
-                </OwnerScopedActionForm>
+                </OwnerScopedProgressiveForm>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">{copy.blockedEmpty}</p>
+          <p className="text-body-sm text-text-muted">{copy.blockedEmpty}</p>
         )}
       </section>
     </>

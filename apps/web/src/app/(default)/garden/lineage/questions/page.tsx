@@ -59,10 +59,7 @@ export default async function LineageUpdatesPage() {
   if (viewer.status === "sign-in-required") {
     return (
       <LineageUpdatesShell locale={locale}>
-        <SignInPrompt
-  locale={locale}
-  next={"/garden/lineage/questions"}
-/>
+        <SignInPrompt locale={locale} next={"/garden/lineage/questions"} />
       </LineageUpdatesShell>
     );
   }
@@ -106,7 +103,7 @@ async function LineageUpdatesSection({
   return (
     <>
       {questions.status === "ready" && follows.status === "ready" ? (
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-2 text-caption text-text-muted">
           <span className="rounded-md border border-border px-2 py-1">
             {formatOwnerLineageTemplate(copy.updates.questionCount, {
               count: questions.value.length,
@@ -122,10 +119,10 @@ async function LineageUpdatesSection({
 
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-h3 text-text-heading">
             {copy.updates.questionsTitle}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {copy.updates.questionsDescription}
           </p>
         </div>
@@ -138,7 +135,7 @@ async function LineageUpdatesSection({
             retryHref={LINEAGE_QUESTIONS_PATH}
           />
         ) : questions.value.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted">
             {copy.updates.questionsEmpty}
           </p>
         ) : (
@@ -157,10 +154,10 @@ async function LineageUpdatesSection({
 
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-h3 text-text-heading">
             {copy.updates.followedTitle}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {copy.updates.followedDescription}
           </p>
         </div>
@@ -173,7 +170,7 @@ async function LineageUpdatesSection({
             retryHref={LINEAGE_QUESTIONS_PATH}
           />
         ) : follows.value.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+          <p className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted">
             {copy.updates.followedEmpty}
           </p>
         ) : (
@@ -205,14 +202,14 @@ function LineageQuestionCard({
   return (
     <li className="grid gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-base font-semibold text-foreground">
+        <h3 className="text-h4 text-text-heading">
           {question.targetObject.displayName}
         </h3>
-        <time className="text-xs text-muted-foreground">
+        <time className="text-caption text-text-muted">
           {formatOwnerLineageDate(locale, question.createdAt)}
         </time>
       </div>
-      <p className="text-sm leading-6 text-foreground">
+      <p className="text-body-sm leading-6 text-text">
         {question.questionText}
       </p>
       <LineageObjectMeta
@@ -236,10 +233,10 @@ function LineageFollowCard({
   return (
     <li className="grid gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-base font-semibold text-foreground">
+        <h3 className="text-h4 text-text-heading">
           {follow.targetObject.displayName}
         </h3>
-        <time className="text-xs text-muted-foreground">
+        <time className="text-caption text-text-muted">
           {formatOwnerLineageDate(locale, follow.createdAt)}
         </time>
       </div>
@@ -267,7 +264,7 @@ function LineageObjectMeta({
   ].filter(Boolean);
 
   return (
-    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+    <div className="flex flex-wrap gap-2 text-caption text-text-muted">
       {meta.map((item) => (
         <span key={item} className="rounded-md border border-border px-2 py-1">
           {item}

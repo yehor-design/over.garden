@@ -487,7 +487,7 @@ export function FollowUpEntryComposer({
       />
 
       <fieldset disabled={persistenceFrozen} className="contents">
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="text-body-sm leading-6 text-text-muted">
           {formatOwnerObjectTemplate(ownerCopy.composer.updating, {
             objectName: objectDisplayName,
           })}
@@ -495,7 +495,7 @@ export function FollowUpEntryComposer({
 
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-body-sm font-medium text-text">
               {ownerCopy.composer.fields.whatChanged}
             </span>
           </div>
@@ -609,7 +609,7 @@ export function FollowUpEntryComposer({
         </div>
 
         <div className="flex flex-col gap-2 border-y border-border py-3">
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-body-sm font-medium text-text">
             {workspaceCopy.composer.fields.optionalPhoto}
           </span>
           <FileDrop
@@ -645,8 +645,8 @@ export function FollowUpEntryComposer({
           <p
             className={
               photoError
-                ? "text-xs leading-5 text-destructive"
-                : "text-xs leading-5 text-muted-foreground"
+                ? "text-caption leading-5 text-danger-text"
+                : "text-caption leading-5 text-text-muted"
             }
           >
             {photoHelp}
@@ -654,9 +654,9 @@ export function FollowUpEntryComposer({
         </div>
 
         <details className="group border-y border-border py-3">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
+          <summary className="marker:text-text-heading-muted flex min-h-11 cursor-pointer items-center text-h4 text-text sm:min-h-0">
             {workspaceCopy.composer.fields.moreDetails}
-            <span className="ml-2 font-normal text-muted-foreground">
+            <span className="ml-2 font-normal text-text-muted">
               {ownerCopy.composer.fields.detailsHint}
             </span>
           </summary>
@@ -713,14 +713,14 @@ export function FollowUpEntryComposer({
       <p
         className={
           submitState === "failed"
-            ? "text-sm text-destructive"
-            : "text-sm text-muted-foreground"
+            ? "text-body-sm text-danger-text"
+            : "text-body-sm text-text-muted"
         }
       >
         {message}
       </p>
 
-      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-background p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"
@@ -738,7 +738,7 @@ export function FollowUpEntryComposer({
           type="button"
           variant="ghost"
           onClick={handleCancel}
-          className="min-h-11 shrink-0 text-muted-foreground sm:min-h-8"
+          className="min-h-11 shrink-0 text-text-muted sm:min-h-8"
         >
           {workspaceCopy.composer.actions.cancel}
         </Button>

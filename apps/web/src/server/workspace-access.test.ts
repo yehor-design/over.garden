@@ -4,13 +4,16 @@ import { postgresRejection } from "@test/postgres-rejection";
 
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
-  cookieGet: vi.fn(),
-  pingDatabase: vi.fn(),
+  cookieHeader: vi.fn(),
+  readSessionStore: vi.fn(),
   assertAdminCapabilityForScope: vi.fn(),
 }));
 
+// The request's `cookie` header, not the mutable cookie store: Better Auth
+// clears a session cookie it cannot resolve, so by the time the probe asks,
+// `cookies()` no longer knows the reader had one (`OVE-457`).
 vi.mock("next/headers", () => ({
-  cookies: async () => ({ get: mocks.cookieGet }),
+  headers: async () => ({ get: mocks.cookieHeader }),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -18,9 +21,18 @@ vi.mock("@/server/auth-session", () => ({
   getSessionId: vi.fn(() => "session-1"),
 }));
 
-vi.mock("@/server/health-repository", () => ({
-  pingDatabase: mocks.pingDatabase,
-}));
+// The probe reads the session store, not `select 1`: measured in a browser,
+// `session` replaced by a view that raises and `select 1` answering fine is
+// exactly the case that showed a signed-in gardener a sign-in panel
+// (`OVE-457`).
+vi.mock("@/db", () => ({ db: {} }));
+vi.mock("kysely", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("kysely")>();
+  return {
+    ...actual,
+    sql: Object.assign(() => ({ execute: mocks.readSessionStore }), actual.sql),
+  };
+});
 
 import { AdminAccessDeniedError } from "@/server/admin-access";
 import {
@@ -31,8 +43,8 @@ import {
 describe("resolveWorkspaceViewer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.cookieGet.mockReturnValue(undefined);
-    mocks.pingDatabase.mockResolvedValue(true);
+    mocks.cookieHeader.mockReturnValue(null);
+    mocks.readSessionStore.mockResolvedValue(true);
   });
 
   it("scopes a signed-in reader to their own session", async () => {
@@ -48,7 +60,7 @@ describe("resolveWorkspaceViewer", () => {
         sessionId: "session-1",
       },
     });
-    expect(mocks.pingDatabase).not.toHaveBeenCalled();
+    expect(mocks.readSessionStore).not.toHaveBeenCalled();
   });
 
   it("asks a visitor with no session cookie to sign in, without a second read", async () => {
@@ -57,7 +69,7 @@ describe("resolveWorkspaceViewer", () => {
     await expect(resolveWorkspaceViewer()).resolves.toEqual({
       status: "sign-in-required",
     });
-    expect(mocks.pingDatabase).not.toHaveBeenCalled();
+    expect(mocks.readSessionStore).not.toHaveBeenCalled();
   });
 
   it("says the store is unreachable when a session cookie resolved to nobody", async () => {
@@ -65,12 +77,10 @@ describe("resolveWorkspaceViewer", () => {
     // than throwing when its own read fails, so a null session alone would tell
     // a signed-in gardener to sign in during a database outage.
     mocks.getCurrentSession.mockResolvedValue(null);
-    mocks.cookieGet.mockImplementation((name: string) =>
-      name === "overgarden.session_token"
-        ? { value: "signed.token" }
-        : undefined,
+    mocks.cookieHeader.mockReturnValue(
+      "overgarden_interface_locale=uk; overgarden.session_token=signed.token",
     );
-    mocks.pingDatabase.mockRejectedValue(postgresRejection("ECONNREFUSED"));
+    mocks.readSessionStore.mockRejectedValue(postgresRejection("ECONNREFUSED"));
 
     const viewer = await resolveWorkspaceViewer();
 
@@ -82,16 +92,16 @@ describe("resolveWorkspaceViewer", () => {
 
   it("still asks a stale cookie to sign in while the store answers", async () => {
     mocks.getCurrentSession.mockResolvedValue(null);
-    mocks.cookieGet.mockImplementation((name: string) =>
-      name === "__Secure-overgarden.session_token"
-        ? { value: "signed.token" }
-        : undefined,
+    // The `__Secure-` spelling is what a browser sends over HTTPS, and both
+    // are checked so the answer does not depend on which environment serves.
+    mocks.cookieHeader.mockReturnValue(
+      "__Secure-overgarden.session_token=signed.token",
     );
 
     await expect(resolveWorkspaceViewer()).resolves.toEqual({
       status: "sign-in-required",
     });
-    expect(mocks.pingDatabase).toHaveBeenCalledTimes(1);
+    expect(mocks.readSessionStore).toHaveBeenCalledTimes(1);
   });
 
   it("reports the class when the session read itself rejects", async () => {

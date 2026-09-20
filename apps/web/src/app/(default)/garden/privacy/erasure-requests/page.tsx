@@ -287,32 +287,44 @@ function ErasureRequestCard({
       <p className="text-body-sm text-text-muted">{statusCopy.description}</p>
       <dl className="grid gap-2 text-text-muted sm:grid-cols-2">
         <div>
-          <dt className="text-overline text-text-muted uppercase">{copy.requestReference}</dt>
+          <dt className="text-overline text-text-muted uppercase">
+            {copy.requestReference}
+          </dt>
           <dd className="font-mono text-mono">
             {formatErasureRequestReference(request.id)}
           </dd>
         </div>
         <div>
-          <dt className="text-overline text-text-muted uppercase">{copy.requesterUserId}</dt>
+          <dt className="text-overline text-text-muted uppercase">
+            {copy.requesterUserId}
+          </dt>
           <dd className="font-mono text-mono">{request.requesterUserId}</dd>
         </div>
         <div>
-          <dt className="text-overline text-text-muted uppercase">{copy.scope}</dt>
+          <dt className="text-overline text-text-muted uppercase">
+            {copy.scope}
+          </dt>
           <dd>{request.requestScope}</dd>
         </div>
         <div>
-          <dt className="text-overline text-text-muted uppercase">{copy.intakeVersion}</dt>
+          <dt className="text-overline text-text-muted uppercase">
+            {copy.intakeVersion}
+          </dt>
           <dd>{request.intakeDisclosureVersion}</dd>
         </div>
         {request.dryRunReviewedAt ? (
           <div>
-            <dt className="text-overline text-text-muted uppercase">{copy.dryRunReviewed}</dt>
+            <dt className="text-overline text-text-muted uppercase">
+              {copy.dryRunReviewed}
+            </dt>
             <dd>{formatOperatorDate(locale, request.dryRunReviewedAt)}</dd>
           </div>
         ) : null}
         {request.handledStatus ? (
           <div>
-            <dt className="text-overline text-text-muted uppercase">{copy.handledStatus}</dt>
+            <dt className="text-overline text-text-muted uppercase">
+              {copy.handledStatus}
+            </dt>
             <dd>{statusCopy.handled?.label ?? request.handledStatus}</dd>
           </div>
         ) : null}
@@ -373,9 +385,7 @@ function ApprovedErasureExecutionPanel({
   return (
     <section className="grid gap-3 border-t border-border pt-3">
       <div className="grid gap-1">
-        <h3 className="text-h4 text-text-heading">
-          {copy.executionTitle}
-        </h3>
+        <h3 className="text-h4 text-text-heading">{copy.executionTitle}</h3>
         <p className="max-w-prose text-body-sm leading-6 text-text-muted">
           {copy.executionDescription}
         </p>
@@ -386,11 +396,7 @@ function ApprovedErasureExecutionPanel({
         className="grid gap-2 sm:max-w-xl"
       >
         <HiddenField name="requestId" value={request.id} />
-        <Field
-          label={copy.approvalPhrase}
-          description={approvalText}
-          required
-        >
+        <Field label={copy.approvalPhrase} description={approvalText} required>
           <Input
             name="maintainerApprovalText"
             disabled={!dryRunReviewed}
@@ -475,9 +481,7 @@ function DryRunPreviewPanel({
   return (
     <section className="grid gap-4 rounded-lg border border-warning-border bg-warning-surface p-4">
       <div className="grid gap-1">
-        <h3 className="text-h4 text-text-heading">
-          {copy.previewTitle}
-        </h3>
+        <h3 className="text-h4 text-text-heading">{copy.previewTitle}</h3>
         <p className="text-body-sm leading-6 text-text-muted">
           {copy.previewDescription}
         </p>
@@ -528,7 +532,9 @@ function DryRunPreviewPanel({
 
       {canMutate &&
       (request.status === "submitted" || request.status === "reviewing") ? (
-        <OwnerScopedProgressiveForm action={markErasureRequestDryRunReviewedAction}>
+        <OwnerScopedProgressiveForm
+          action={markErasureRequestDryRunReviewedAction}
+        >
           <HiddenField name="requestId" value={request.id} />
           <Button type="submit" variant="secondary" className="self-start">
             {request.dryRunReviewedAt

@@ -40,16 +40,13 @@ export function ObjectProgressMoment({
   return (
     <section
       aria-labelledby="object-progress-heading"
-      className="grid gap-4 rounded-lg border border-border bg-muted/20 p-4"
+      className="grid gap-4 rounded-lg border border-border bg-surface-sunken p-4"
     >
       <div className="grid gap-1">
-        <h2
-          id="object-progress-heading"
-          className="text-lg font-semibold text-foreground"
-        >
+        <h2 id="object-progress-heading" className="text-h3 text-text-heading">
           {copy.title}
         </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="text-body-sm leading-6 text-text-muted">
           {spanLabel
             ? formatOwnerObjectTemplate(copy.privateReadbackWithSpan, {
                 span: spanLabel,
@@ -80,16 +77,14 @@ export function ObjectProgressMoment({
         {timeline.map((entry, index) => (
           <li
             key={entry.id}
-            className="flex flex-col gap-3 rounded-md border border-border/70 bg-background p-3 sm:flex-row sm:items-start"
+            className="flex flex-col gap-3 rounded-md border border-border/70 bg-surface p-3 sm:flex-row sm:items-start"
           >
-            <time className="shrink-0 text-xs font-medium text-muted-foreground sm:w-28">
+            <time className="shrink-0 text-caption font-medium text-text-muted sm:w-28">
               {formatGardenWorkspaceDate(locale, entry.entryDate)}
             </time>
             <div className="grid min-w-0 flex-1 gap-1">
-              <p className="text-sm font-semibold text-foreground">
-                {entry.title}
-              </p>
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-h4 text-text-heading">{entry.title}</p>
+              <p className="text-body-sm leading-6 text-text-muted">
                 {formatEntryBodyExcerpt(entry.body)}
               </p>
             </div>
@@ -137,7 +132,7 @@ function ProgressPhotoCard({
 
   return (
     <figure className="grid gap-2">
-      <figcaption className="text-xs font-medium text-muted-foreground">
+      <figcaption className="text-caption font-medium text-text-muted">
         {label} · {formatGardenWorkspaceDate(locale, entry.entryDate)}
       </figcaption>
       <SubjectAwareMediaImage
@@ -154,7 +149,7 @@ function ProgressPhotoCard({
         intrinsicHeight={entry.mediaIntrinsicHeight}
         className="aspect-video w-full rounded-md border border-border"
       />
-      <p className="text-sm text-foreground">{entry.title}</p>
+      <p className="text-body-sm text-text">{entry.title}</p>
     </figure>
   );
 }

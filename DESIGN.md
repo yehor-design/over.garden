@@ -1041,11 +1041,12 @@ that needs it.
 | The largest photograph on the first screen is never `loading="lazy"`, at a phone's width and a desk's    | `tests/static-documents.spec.ts`   | `pnpm gates:browser` |
 | An entry whose story opens with its cover shows that photograph once, and asks for it at once            | `tests/journal-entry.spec.ts`      | `pnpm gates:browser` |
 | Every browser spec is run by something                                                                    | `scripts/check-browser-specs.ts`   | `pnpm test`          |
+| A `/garden/**` render path settles every `@/server/*` read (ADR-0023)                                     | `scripts/check-workspace-settled-reads.ts` | `pnpm test`  |
 
 `apps/web/scripts/check-banned-dependencies.ts` is the model: mechanical, in CI,
 and in `pnpm test`.
 
-`pnpm gates` runs all thirteen. Eight of them are fast and also run inside
+`pnpm gates` runs all fourteen. Nine of them are fast and also run inside
 `pnpm lint` and `pnpm test`, which is why they are there — a gate you only meet
 in CI is a gate you meet too late. The other five need a production build, a
 server and a database, so they live in the browser gate; putting them in

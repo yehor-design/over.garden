@@ -1,7 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import {
-  ArrowLeft,
   ArrowRight,
   BookOpenText,
   Camera,
@@ -9,12 +7,18 @@ import {
   ImageOff,
   Leaf,
   PawPrint,
-  Sprout,
   SquarePen,
 } from "lucide-react";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ListRow } from "@/components/ui/list-row";
+import { Pagination } from "@/components/ui/pagination";
+import { Section } from "@/components/ui/section";
+import { resolveIllustration } from "@/lib/illustrations";
 import {
   formatGardenCount,
   formatGardenWorkspaceDate,
@@ -23,7 +27,6 @@ import {
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { cn } from "@/lib/utils";
 import type {
   GardenWorkspaceReadModel,
   GardenWorkspaceRecentEntry,
@@ -38,9 +41,27 @@ interface GardenWorkspaceViewProps {
   locale: InterfaceLocale;
   today: string;
   workspace: GardenWorkspaceReadModel;
-  children?: ReactNode;
+  children?: React.ReactNode;
 }
 
+/**
+ * The garden home, in the order a gardener asks (`OVE-457`, ADR-0031 D4).
+ *
+ * It used to open with a next-action strip and then a band of four numbers on
+ * an inverted bar — objects, spaces, recent, due — which is a menu of links and
+ * a scoreboard, not an answer. Remote and Laravel Cloud are the model: a
+ * workspace home leads with **state**.
+ *
+ * So: what needs attention, then what you wrote last, and only then the
+ * inventory and the spaces that hold them. Every count of nought is omitted
+ * rather than printed (DESIGN.md §5.10) — the empty state below already says
+ * that nothing is happening, in words.
+ *
+ * Every section is a value: `GardenWorkspaceReadModel` settles its four reads
+ * and each one renders either its rows or its own designed failure. Nothing
+ * here throws, because a Server Component that throws during a postponed
+ * resume leaves its boundary pending forever on a hard load (ADR-0023).
+ */
 export function GardenWorkspaceView({
   canWrite,
   locale,
@@ -48,7 +69,7 @@ export function GardenWorkspaceView({
   workspace,
   children,
 }: GardenWorkspaceViewProps) {
-  const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const copy = getGardenWorkspaceCopy(locale);
 
   // `allFailed` means every section carries a class; inventory is named here so
   // the panel can print one digest, and the narrowing is free.
@@ -56,20 +77,20 @@ export function GardenWorkspaceView({
     return (
       <div
         data-garden-workspace="error"
-        className="flex flex-col px-4 py-6 sm:px-6 sm:py-8"
+        className="flex flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8"
       >
         <WorkspaceSectionError
           locale={locale}
           failure={workspace.inventory}
-          title={workspaceCopy.workspace.error.title}
+          title={copy.workspace.error.title}
           retryHref="/garden"
-          retryLabel={workspaceCopy.workspace.error.retry}
+          retryLabel={copy.workspace.error.retry}
         />
         <GardenWorkspaceServiceState
           locale={locale}
           nextAction={{
             href: "/garden",
-            label: workspaceCopy.workspace.error.retryAction,
+            label: copy.workspace.error.retryAction,
           }}
           recent={[]}
           inbox={null}
@@ -82,51 +103,29 @@ export function GardenWorkspaceView({
     workspace.inventory.status === "ready" ? workspace.inventory.value : null;
   const recent =
     workspace.recent.status === "ready" ? workspace.recent.value : [];
+  const spaces =
+    workspace.spaces.status === "ready" ? workspace.spaces.value : null;
   const inbox =
     workspace.inbox.status === "ready" ? workspace.inbox.value : null;
   const nextAction = inventory
-    ? chooseNextAction(inventory.objects, today, workspaceCopy)
-    : unavailableInventoryNextAction(workspaceCopy);
+    ? chooseNextAction(inventory.objects, today, copy)
+    : unavailableInventoryNextAction(copy);
+  const dueObjects = inventory
+    ? inventory.objects.filter((object) => isUpdateDue(object, today))
+    : [];
 
   return (
-    <div data-garden-workspace="operational-home" className="flex flex-col">
-      <div className="px-4 sm:px-6">
-        <section className="flex flex-col gap-4 border-b border-border py-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-muted-foreground uppercase">
-              {workspaceCopy.workspace.nextAction.eyebrow}
-            </p>
-            <h2 className="mt-1 text-2xl font-semibold text-foreground">
-              {nextAction.title}
-            </h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-              {nextAction.description}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href={canWrite ? nextAction.href : "#write-access"}
-              className={buttonVariants()}
-            >
-              <SquarePen aria-hidden="true" />
-              {canWrite
-                ? nextAction.label
-                : workspaceCopy.workspace.nextAction.checkWriteAccess}
-            </Link>
-            <Link
-              href="#first-entry-composer"
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              <CirclePlus aria-hidden="true" />
-              {workspaceCopy.workspace.nextAction.addObject}
-            </Link>
-          </div>
-        </section>
-      </div>
-
-      <WorkspaceSummary
-        copy={workspaceCopy}
+    <div
+      data-garden-workspace="operational-home"
+      className="flex flex-col gap-10 px-4 py-6 sm:px-6 sm:py-8"
+    >
+      <AttentionSection
+        canWrite={canWrite}
+        copy={copy}
+        locale={locale}
         workspace={workspace}
+        dueObjects={dueObjects}
+        nextAction={nextAction}
         today={today}
       />
 
@@ -137,96 +136,382 @@ export function GardenWorkspaceView({
         inbox={inbox}
       />
 
-      <div className="flex flex-col gap-10 px-4 py-8 sm:px-6">
-        <InventorySection
-          canWrite={canWrite}
-          copy={workspaceCopy}
-          locale={locale}
-          workspace={workspace}
-          today={today}
-        />
-        <SpacesSection
-          copy={workspaceCopy}
-          locale={locale}
-          workspace={workspace}
-        />
-        <RecentSection
-          copy={workspaceCopy}
-          locale={locale}
-          workspace={workspace}
-        />
-        {children}
-      </div>
+      <RecentSection copy={copy} locale={locale} workspace={workspace} />
+      <InventorySection
+        canWrite={canWrite}
+        copy={copy}
+        locale={locale}
+        workspace={workspace}
+        today={today}
+      />
+      <SpacesSection copy={copy} locale={locale} workspace={workspace} />
+      <GardenFacts copy={copy} inventory={inventory} spaces={spaces} />
+      {children}
     </div>
   );
 }
 
-function WorkspaceSummary({
+/**
+ * What the gardener came to find out. The one primary action of the screen is
+ * here, beside the objects it is about — a button at the top of a page whose
+ * subject is three sections down is a button a reader has to trust.
+ */
+function AttentionSection({
+  canWrite,
   copy,
+  locale,
+  workspace,
+  dueObjects,
+  nextAction,
+  today,
+}: {
+  canWrite: boolean;
+  copy: GardenWorkspaceCopy;
+  locale: InterfaceLocale;
+  workspace: GardenWorkspaceReadModel;
+  dueObjects: PlantObjectSummary[];
+  nextAction: WorkspaceNextAction;
+  today: string;
+}) {
+  if (workspace.inventory.status === "error") {
+    return (
+      <WorkspaceSectionError
+        id="attention"
+        locale={locale}
+        title={copy.workspace.inventory.errorTitle}
+        failure={workspace.inventory}
+        retryHref="/garden#attention"
+      />
+    );
+  }
+
+  return (
+    <Section
+      id="attention"
+      title={copy.workspace.attention.title}
+      description={copy.workspace.attention.description}
+      className="scroll-mt-20"
+      actions={
+        dueObjects.length > 0 ? (
+          <Badge tone="warning">
+            {formatGardenWorkspaceTemplate(
+              copy.workspace.attention.countLabel,
+              {
+                count: dueObjects.length,
+              },
+            )}
+          </Badge>
+        ) : undefined
+      }
+    >
+      <Callout tone="info" data-garden-next-action="true">
+        <p className="text-h4 text-text-heading">{nextAction.title}</p>
+        <p className="mt-1">{nextAction.description}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link
+            href={canWrite ? nextAction.href : "#write-access"}
+            className={buttonVariants()}
+          >
+            <SquarePen aria-hidden="true" />
+            {canWrite
+              ? nextAction.label
+              : copy.workspace.nextAction.checkWriteAccess}
+          </Link>
+          <Link
+            href="#first-entry-composer"
+            className={buttonVariants({ variant: "secondary" })}
+          >
+            <CirclePlus aria-hidden="true" />
+            {copy.workspace.nextAction.addObject}
+          </Link>
+        </div>
+      </Callout>
+
+      {dueObjects.length > 0 ? (
+        <ul className="grid">
+          {dueObjects.slice(0, 5).map((object) => (
+            <ObjectRow
+              key={object.id}
+              canWrite={canWrite}
+              copy={copy}
+              locale={locale}
+              object={object}
+              today={today}
+              media={false}
+            />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          illustration={resolveIllustration("empty-garden")}
+          illustrationSize="card"
+          title={copy.workspace.attention.emptyTitle}
+          description={copy.workspace.attention.emptyDescription}
+        />
+      )}
+    </Section>
+  );
+}
+
+/**
+ * What the gardener wrote last. Second, because "did what I wrote land?" is
+ * the other question a workspace home exists to answer.
+ */
+function RecentSection({
+  copy,
+  locale,
+  workspace,
+}: {
+  copy: GardenWorkspaceCopy;
+  locale: InterfaceLocale;
+  workspace: GardenWorkspaceReadModel;
+}) {
+  if (workspace.recent.status === "error") {
+    return (
+      <WorkspaceSectionError
+        id="recent"
+        locale={locale}
+        title={copy.workspace.recent.errorTitle}
+        failure={workspace.recent}
+        retryHref="/garden#recent"
+      />
+    );
+  }
+
+  const entries = workspace.recent.value;
+  return (
+    <Section
+      id="recent"
+      title={copy.workspace.recent.title}
+      description={copy.workspace.recent.description}
+      className="scroll-mt-20"
+    >
+      {entries.length > 0 ? (
+        <ul className="grid">
+          {entries.map((entry) => (
+            <RecentRow
+              key={entry.id}
+              copy={copy}
+              entry={entry}
+              locale={locale}
+            />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          illustration={resolveIllustration("empty-journal")}
+          illustrationSize="card"
+          title={copy.workspace.recent.title}
+          description={copy.workspace.recent.empty}
+        />
+      )}
+    </Section>
+  );
+}
+
+function RecentRow({
+  copy,
+  entry,
+  locale,
+}: {
+  copy: GardenWorkspaceCopy;
+  entry: GardenWorkspaceRecentEntry;
+  locale: InterfaceLocale;
+}) {
+  const href = entry.objectId
+    ? `/garden/objects/${entry.objectId}`
+    : `/garden#space-${entry.spaceId}`;
+  const context = entry.objectDisplayName ?? entry.spaceDisplayName;
+  return (
+    <ListRow
+      title={entry.title}
+      href={href}
+      description={`${context} · ${
+        entry.entryScope === "object"
+          ? copy.workspace.recent.objectJournal
+          : copy.workspace.recent.spaceJournal
+      }`}
+      meta={formatGardenWorkspaceDate(locale, entry.entryDate)}
+    />
+  );
+}
+
+function InventorySection({
+  canWrite,
+  copy,
+  locale,
   workspace,
   today,
 }: {
+  canWrite: boolean;
   copy: GardenWorkspaceCopy;
+  locale: InterfaceLocale;
   workspace: GardenWorkspaceReadModel;
   today: string;
 }) {
-  const inventory =
-    workspace.inventory.status === "ready" ? workspace.inventory.value : null;
-  const spaces =
-    workspace.spaces.status === "ready" ? workspace.spaces.value : null;
-  const recent =
-    workspace.recent.status === "ready" ? workspace.recent.value : [];
+  if (workspace.inventory.status === "error") {
+    // The attention section above already carries this failure's class and
+    // digest; a second copy of the same panel says nothing new.
+    return null;
+  }
 
+  const inventory = workspace.inventory.value;
   return (
-    <div
-      role="list"
-      aria-label={copy.workspace.summary.ariaLabel}
-      className="grid grid-cols-2 border-b border-border bg-foreground text-background md:grid-cols-4"
+    <Section
+      id="inventory"
+      title={copy.workspace.inventory.title}
+      description={copy.workspace.inventory.description}
+      className="scroll-mt-20"
+      actions={
+        inventory.hasMore && inventory.page === 1 ? (
+          <Link
+            href="/garden?inventory=all#inventory"
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
+          >
+            {formatGardenWorkspaceTemplate(copy.workspace.inventory.viewAll, {
+              count: inventory.totalCount,
+            })}
+          </Link>
+        ) : undefined
+      }
     >
-      <SummaryFact
-        label={copy.workspace.summary.objects}
-        value={inventory?.totalCount ?? "—"}
-      />
-      <SummaryFact
-        label={copy.workspace.summary.spaces}
-        value={spaces?.totalCount ?? "—"}
-      />
-      <SummaryFact
-        label={copy.workspace.summary.recent}
-        value={recent.length}
-      />
-      <SummaryFact
-        label={copy.workspace.summary.dueInView}
-        value={
-          inventory
-            ? inventory.objects.filter((object) => isUpdateDue(object, today))
-                .length
-            : "—"
-        }
-      />
-    </div>
+      {inventory.objects.length > 0 ? (
+        <>
+          {/* A count of nought is the absence of a fact (DESIGN.md §5.10): a
+              garden with no animals says nothing about animals. */}
+          <div className="flex flex-wrap gap-2">
+            {inventory.plantCount > 0 ? (
+              <Badge>
+                <Leaf aria-hidden="true" />
+                {copy.workspace.inventory.plants} {inventory.plantCount}
+              </Badge>
+            ) : null}
+            {inventory.animalCount > 0 ? (
+              <Badge>
+                <PawPrint aria-hidden="true" />
+                {copy.workspace.inventory.animals} {inventory.animalCount}
+              </Badge>
+            ) : null}
+          </div>
+          <ul className="grid">
+            {inventory.objects.map((object) => (
+              <ObjectRow
+                key={object.id}
+                canWrite={canWrite}
+                copy={copy}
+                locale={locale}
+                object={object}
+                today={today}
+              />
+            ))}
+          </ul>
+        </>
+      ) : (
+        <EmptyState
+          illustration={resolveIllustration("empty-garden")}
+          title={copy.workspace.inventory.emptyTitle}
+          description={copy.workspace.inventory.emptyDescription}
+          action={
+            <Link href="#first-entry-composer" className={buttonVariants()}>
+              <CirclePlus aria-hidden="true" />
+              {copy.workspace.inventory.emptyAction}
+            </Link>
+          }
+        />
+      )}
+
+      {inventory.page > 1 || inventory.hasMore ? (
+        <WorkspacePagination
+          base="inventory"
+          copy={copy}
+          page={inventory.page}
+          hasMore={inventory.hasMore}
+        />
+      ) : null}
+    </Section>
   );
 }
 
-function SummaryFact({
-  label,
-  value,
+/** One living object, in the two places the home lists one. */
+function ObjectRow({
+  canWrite,
+  copy,
+  locale,
+  object,
+  today,
+  media = true,
 }: {
-  label: string;
-  value: number | string;
+  canWrite: boolean;
+  copy: GardenWorkspaceCopy;
+  locale: InterfaceLocale;
+  object: PlantObjectSummary;
+  today: string;
+  media?: boolean;
 }) {
+  const state = objectUpdateState(object, today, copy);
   return (
-    <div
-      role="listitem"
-      className="min-w-0 border-r border-background/20 px-4 py-4 last:border-r-0 sm:px-5"
-    >
-      <span className="text-xs font-medium text-background/70 uppercase">
-        {label}
-      </span>
-      <span className="mt-1 block text-2xl font-semibold tabular-nums">
-        {value}
-      </span>
-    </div>
+    <ListRow
+      title={object.displayName}
+      href={`/garden/objects/${object.id}`}
+      media={media ? <ObjectThumbnail object={object} /> : undefined}
+      description={
+        <>
+          <Badge tone={state.due ? "warning" : "neutral"}>{state.label}</Badge>{" "}
+          {localizedObjectKindLabel(object.objectKind, copy)} ·{" "}
+          {object.spaceDisplayName}
+        </>
+      }
+      meta={`${objectCatalogSummary(object, copy)} · ${formatGardenCount(
+        locale,
+        object.entryCount,
+        copy.workspace.inventory.entries,
+      )}`}
+      actions={
+        <Link
+          href={
+            canWrite
+              ? `/garden/objects/${object.id}#follow-up-composer`
+              : `/garden/objects/${object.id}`
+          }
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
+        >
+          {canWrite ? (
+            <Camera aria-hidden="true" />
+          ) : (
+            <ArrowRight aria-hidden="true" />
+          )}
+          {canWrite
+            ? copy.workspace.inventory.addUpdate
+            : copy.workspace.inventory.open}
+        </Link>
+      }
+    />
+  );
+}
+
+function ObjectThumbnail({ object }: { object: PlantObjectSummary }) {
+  if (!object.coverMedia) {
+    return (
+      <div className="flex aspect-4/3 w-24 items-center justify-center rounded-md border border-dashed border-border bg-surface-sunken text-text-muted">
+        <ImageOff className="size-5" aria-hidden="true" />
+      </div>
+    );
+  }
+  return (
+    <SubjectAwareMediaImage
+      src={object.coverMedia.publicUrl}
+      alt={object.coverMedia.altText}
+      width={192}
+      height={144}
+      sizes="6rem"
+      unoptimized
+      presentationMode="cover"
+      focalX={object.coverMedia.focalX}
+      focalY={object.coverMedia.focalY}
+      intrinsicWidth={object.coverMedia.intrinsicWidth}
+      intrinsicHeight={object.coverMedia.intrinsicHeight}
+      className="aspect-4/3 w-24 rounded-md border border-border"
+    />
   );
 }
 
@@ -246,34 +531,33 @@ function SpacesSection({
         locale={locale}
         title={copy.workspace.spaces.errorTitle}
         failure={workspace.spaces}
-        retryHref={`/garden#spaces`}
+        retryHref="/garden#spaces"
       />
     );
   }
 
   const spaces = workspace.spaces.value;
   return (
-    <section id="spaces" className="min-w-0 scroll-mt-20">
-      <SectionHeading
-        eyebrow={copy.workspace.spaces.eyebrow}
-        title={copy.workspace.spaces.title}
-        description={copy.workspace.spaces.description}
-        action={
-          spaces.hasMore && spaces.page === 1 ? (
-            <Link
-              href="/garden?spaces=all#spaces"
-              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {formatGardenWorkspaceTemplate(copy.workspace.spaces.viewAll, {
-                count: spaces.totalCount,
-              })}
-            </Link>
-          ) : null
-        }
-      />
-
+    <Section
+      id="spaces"
+      title={copy.workspace.spaces.title}
+      description={copy.workspace.spaces.description}
+      className="scroll-mt-20"
+      actions={
+        spaces.hasMore && spaces.page === 1 ? (
+          <Link
+            href="/garden?spaces=all#spaces"
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
+          >
+            {formatGardenWorkspaceTemplate(copy.workspace.spaces.viewAll, {
+              count: spaces.totalCount,
+            })}
+          </Link>
+        ) : undefined
+      }
+    >
       {spaces.spaces.length > 0 ? (
-        <ul className="mt-4 divide-y divide-border border-y border-border">
+        <ul className="grid">
           {spaces.spaces.map((space) => (
             <SpaceRow
               key={space.id}
@@ -284,22 +568,23 @@ function SpacesSection({
           ))}
         </ul>
       ) : (
-        <div className="mt-4 border-y border-dashed border-border py-6">
-          <p className="text-sm text-muted-foreground">
-            {copy.workspace.spaces.empty}
-          </p>
-        </div>
+        <EmptyState
+          illustration={resolveIllustration("empty-garden")}
+          illustrationSize="card"
+          title={copy.workspace.spaces.title}
+          description={copy.workspace.spaces.empty}
+        />
       )}
 
       {spaces.page > 1 || spaces.hasMore ? (
-        <Pagination
+        <WorkspacePagination
           base="spaces"
           copy={copy}
           page={spaces.page}
           hasMore={spaces.hasMore}
         />
       ) : null}
-    </section>
+    </Section>
   );
 }
 
@@ -313,382 +598,78 @@ function SpaceRow({
   space: GardenWorkspaceSpaceSummary;
 }) {
   return (
-    <li className="flex min-w-0 flex-wrap items-center justify-between gap-4 py-3">
-      <div className="min-w-0">
-        <h3 className="truncate text-sm font-semibold text-foreground">
-          {space.displayName}
-        </h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {formatGardenCount(
-            locale,
-            space.objectCount,
-            copy.workspace.spaces.counts.objects,
-          )}{" "}
-          ·{" "}
-          {formatGardenCount(
-            locale,
-            space.plantCount,
-            copy.workspace.spaces.counts.plants,
-          )}{" "}
-          ·{" "}
-          {formatGardenCount(
-            locale,
-            space.animalCount,
-            copy.workspace.spaces.counts.animals,
-          )}
-        </p>
-      </div>
-      <Link
-        href={`/garden?space=${encodeURIComponent(space.id)}#space-journal`}
-        className={buttonVariants({ variant: "secondary", size: "sm" })}
-      >
-        <BookOpenText aria-hidden="true" />
-        {copy.workspace.spaces.openJournal}
-      </Link>
-    </li>
-  );
-}
-
-function InventorySection({
-  canWrite,
-  copy,
-  locale,
-  workspace,
-  today,
-}: {
-  canWrite: boolean;
-  copy: GardenWorkspaceCopy;
-  locale: InterfaceLocale;
-  workspace: GardenWorkspaceReadModel;
-  today: string;
-}) {
-  if (workspace.inventory.status === "error") {
-    return (
-      <WorkspaceSectionError
-        id="inventory"
-        locale={locale}
-        title={copy.workspace.inventory.errorTitle}
-        failure={workspace.inventory}
-        retryHref={`/garden#inventory`}
-      />
-    );
-  }
-
-  const inventory = workspace.inventory.value;
-  return (
-    <section id="inventory" className="min-w-0 scroll-mt-20">
-      <SectionHeading
-        eyebrow={copy.workspace.inventory.eyebrow}
-        title={copy.workspace.inventory.title}
-        description={copy.workspace.inventory.description}
-        action={
-          inventory.hasMore && inventory.page === 1 ? (
-            <Link
-              href="/garden?inventory=all#inventory"
-              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {formatGardenWorkspaceTemplate(copy.workspace.inventory.viewAll, {
-                count: inventory.totalCount,
-              })}
-            </Link>
-          ) : null
-        }
-      />
-
-      <div
-        role="list"
-        aria-label={copy.workspace.inventory.ariaLabel}
-        className="mt-4 grid grid-cols-2 border-y border-border bg-muted/30"
-      >
-        <KindFact
-          icon={<Leaf aria-hidden="true" />}
-          label={copy.workspace.inventory.plants}
-          value={inventory.plantCount}
-        />
-        <KindFact
-          icon={<PawPrint aria-hidden="true" />}
-          label={copy.workspace.inventory.animals}
-          value={inventory.animalCount}
-        />
-      </div>
-
-      {inventory.objects.length > 0 ? (
-        <ol className="divide-y divide-border border-b border-border">
-          {inventory.objects.map((object) => (
-            <InventoryRow
-              key={object.id}
-              canWrite={canWrite}
-              copy={copy}
-              locale={locale}
-              object={object}
-              today={today}
-            />
-          ))}
-        </ol>
-      ) : (
-        <div className="border-b border-dashed border-border py-8">
-          <Sprout className="size-6 text-muted-foreground" aria-hidden="true" />
-          <h3 className="mt-3 text-lg font-semibold text-foreground">
-            {copy.workspace.inventory.emptyTitle}
-          </h3>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
-            {copy.workspace.inventory.emptyDescription}
-          </p>
-          <Link
-            href="#first-entry-composer"
-            className={buttonVariants({ className: "mt-4" })}
-          >
-            <CirclePlus aria-hidden="true" />
-            {copy.workspace.inventory.emptyAction}
-          </Link>
-        </div>
-      )}
-
-      {inventory.page > 1 || inventory.hasMore ? (
-        <Pagination
-          base="inventory"
-          copy={copy}
-          page={inventory.page}
-          hasMore={inventory.hasMore}
-        />
-      ) : null}
-    </section>
-  );
-}
-
-function KindFact({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div
-      role="listitem"
-      className="min-w-0 border-r border-border px-3 py-3 last:border-r-0"
-    >
-      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <span className="[&>svg]:size-3.5">{icon}</span>
-        <span className="truncate">{label}</span>
-      </span>
-      <span className="mt-1 block text-lg font-semibold text-foreground tabular-nums">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function InventoryRow({
-  canWrite,
-  copy,
-  locale,
-  object,
-  today,
-}: {
-  canWrite: boolean;
-  copy: GardenWorkspaceCopy;
-  locale: InterfaceLocale;
-  object: PlantObjectSummary;
-  today: string;
-}) {
-  const state = objectUpdateState(object, today, copy);
-  return (
-    <li className="grid min-w-0 gap-4 py-4 sm:grid-cols-4 sm:items-center">
-      {object.coverMedia ? (
-        <SubjectAwareMediaImage
-          src={object.coverMedia.publicUrl}
-          alt={object.coverMedia.altText}
-          width={192}
-          height={144}
-          sizes="6rem"
-          unoptimized
-          presentationMode="cover"
-          focalX={object.coverMedia.focalX}
-          focalY={object.coverMedia.focalY}
-          intrinsicWidth={object.coverMedia.intrinsicWidth}
-          intrinsicHeight={object.coverMedia.intrinsicHeight}
-          className="aspect-4/3 w-24 rounded-md border border-border"
-        />
-      ) : (
-        <div className="flex aspect-4/3 w-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/40 text-muted-foreground">
-          <ImageOff className="size-5" aria-hidden="true" />
-        </div>
-      )}
-
-      <div className="min-w-0 sm:col-span-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Link
-            href={`/garden/objects/${object.id}`}
-            className="min-w-0 truncate text-base font-semibold text-foreground underline-offset-4 hover:underline"
-          >
-            {object.displayName}
-          </Link>
-          <span
-            className={cn(
-              "rounded-md border px-2 py-0.5 text-xs font-medium",
-              state.due
-                ? "border-warning-border bg-warning-surface text-warning-text"
-                : "border-border text-muted-foreground",
-            )}
-          >
-            {state.label}
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {localizedObjectKindLabel(object.objectKind, copy)} ·{" "}
-          {object.spaceDisplayName}
-        </p>
-        <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-          {objectCatalogSummary(object, copy)} ·{" "}
-          {formatGardenCount(
-            locale,
-            object.entryCount,
-            copy.workspace.inventory.entries,
-          )}
-        </p>
-      </div>
-
-      <Link
-        href={
-          canWrite
-            ? `/garden/objects/${object.id}#follow-up-composer`
-            : `/garden/objects/${object.id}`
-        }
-        className={buttonVariants({
-          variant: "secondary",
-          size: "sm",
-          className: "w-fit sm:justify-self-end",
-        })}
-      >
-        {canWrite ? (
-          <Camera aria-hidden="true" />
-        ) : (
-          <ArrowRight aria-hidden="true" />
-        )}
-        {canWrite
-          ? copy.workspace.inventory.addUpdate
-          : copy.workspace.inventory.open}
-      </Link>
-    </li>
-  );
-}
-
-function RecentSection({
-  copy,
-  locale,
-  workspace,
-}: {
-  copy: GardenWorkspaceCopy;
-  locale: InterfaceLocale;
-  workspace: GardenWorkspaceReadModel;
-}) {
-  if (workspace.recent.status === "error") {
-    return (
-      <WorkspaceSectionError
-        id="recent"
-        locale={locale}
-        title={copy.workspace.recent.errorTitle}
-        failure={workspace.recent}
-        retryHref={`/garden#recent`}
-      />
-    );
-  }
-
-  const entries = workspace.recent.value;
-  return (
-    <section id="recent" className="min-w-0 scroll-mt-20">
-      <SectionHeading
-        eyebrow={copy.workspace.recent.eyebrow}
-        title={copy.workspace.recent.title}
-        description={copy.workspace.recent.description}
-      />
-      {entries.length > 0 ? (
-        <ol className="mt-4 divide-y divide-border border-y border-border">
-          {entries.map((entry) => (
-            <RecentRow
-              key={entry.id}
-              copy={copy}
-              entry={entry}
-              locale={locale}
-            />
-          ))}
-        </ol>
-      ) : (
-        <p className="mt-4 border-y border-dashed border-border py-6 text-sm text-muted-foreground">
-          {copy.workspace.recent.empty}
-        </p>
-      )}
-    </section>
-  );
-}
-
-function RecentRow({
-  copy,
-  entry,
-  locale,
-}: {
-  copy: GardenWorkspaceCopy;
-  entry: GardenWorkspaceRecentEntry;
-  locale: InterfaceLocale;
-}) {
-  const href = entry.objectId
-    ? `/garden/objects/${entry.objectId}`
-    : `/garden#space-${entry.spaceId}`;
-  const context = entry.objectDisplayName ?? entry.spaceDisplayName;
-  return (
-    <li className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
+    <ListRow
+      title={space.displayName}
+      meta={[
+        formatGardenCount(
+          locale,
+          space.objectCount,
+          copy.workspace.spaces.counts.objects,
+        ),
+        formatGardenCount(
+          locale,
+          space.plantCount,
+          copy.workspace.spaces.counts.plants,
+        ),
+        formatGardenCount(
+          locale,
+          space.animalCount,
+          copy.workspace.spaces.counts.animals,
+        ),
+      ].join(" · ")}
+      actions={
         <Link
-          href={href}
-          className="block truncate text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+          href={`/garden?space=${encodeURIComponent(space.id)}#space-journal`}
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
-          {entry.title}
+          <BookOpenText aria-hidden="true" />
+          {copy.workspace.spaces.openJournal}
         </Link>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {context} ·{" "}
-          {entry.entryScope === "object"
-            ? copy.workspace.recent.objectJournal
-            : copy.workspace.recent.spaceJournal}
-        </p>
-      </div>
-      <time className="text-xs text-muted-foreground">
-        {formatGardenWorkspaceDate(locale, entry.entryDate)}
-      </time>
-    </li>
+      }
+    />
   );
 }
 
-function SectionHeading({
-  eyebrow,
-  title,
-  description,
-  action,
+/**
+ * The shape of the garden, in one line, at the foot of the page.
+ *
+ * It used to be four numbers on an inverted bar above everything — the most
+ * valuable row on the screen spent on a scoreboard, and printing `0` three
+ * times for a gardener who had just arrived. A nought is omitted.
+ */
+function GardenFacts({
+  copy,
+  inventory,
+  spaces,
 }: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  action?: ReactNode;
+  copy: GardenWorkspaceCopy;
+  inventory: { totalCount: number } | null;
+  spaces: { totalCount: number } | null;
 }) {
+  const facts = [
+    inventory && inventory.totalCount > 0
+      ? `${copy.workspace.summary.objects}: ${inventory.totalCount}`
+      : null,
+    spaces && spaces.totalCount > 0
+      ? `${copy.workspace.summary.spaces}: ${spaces.totalCount}`
+      : null,
+  ].filter((fact): fact is string => fact !== null);
+  if (facts.length === 0) return null;
+
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-muted-foreground uppercase">
-          {eyebrow}
-        </p>
-        <h2 className="mt-1 text-xl font-semibold text-foreground">{title}</h2>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {description}
-        </p>
-      </div>
-      {action ? <div className="shrink-0">{action}</div> : null}
-    </div>
+    <p
+      data-garden-facts="true"
+      aria-label={copy.workspace.summary.ariaLabel}
+      className="flex flex-wrap gap-2 border-t border-border pt-4 text-caption text-text-muted tabular-nums"
+    >
+      {facts.map((fact) => (
+        <span key={fact}>{fact}</span>
+      ))}
+    </p>
   );
 }
 
-function Pagination({
+function WorkspacePagination({
   base,
   copy,
   page,
@@ -702,8 +683,8 @@ function Pagination({
   const pageParam = base === "inventory" ? "inventoryPage" : "spacesPage";
   const expandedParam = base === "inventory" ? "inventory" : "spaces";
   return (
-    <nav
-      aria-label={formatGardenWorkspaceTemplate(
+    <Pagination
+      label={formatGardenWorkspaceTemplate(
         copy.workspace.pagination.ariaLabel,
         {
           section:
@@ -712,29 +693,19 @@ function Pagination({
               : copy.workspace.spaces.title,
         },
       )}
-      className="mt-4 flex items-center justify-between gap-3"
-    >
-      {page > 1 ? (
-        <Link
-          href={`/garden?${expandedParam}=all&${pageParam}=${page - 1}#${base}`}
-          className={buttonVariants({ variant: "secondary", size: "sm" })}
-        >
-          <ArrowLeft aria-hidden="true" />
-          {copy.workspace.pagination.previous}
-        </Link>
-      ) : (
-        <span />
-      )}
-      {hasMore ? (
-        <Link
-          href={`/garden?${expandedParam}=all&${pageParam}=${page + 1}#${base}`}
-          className={buttonVariants({ variant: "secondary", size: "sm" })}
-        >
-          {copy.workspace.pagination.next}
-          <ArrowRight aria-hidden="true" />
-        </Link>
-      ) : null}
-    </nav>
+      previousLabel={copy.workspace.pagination.previous}
+      previousHref={
+        page > 1
+          ? `/garden?${expandedParam}=all&${pageParam}=${page - 1}#${base}`
+          : null
+      }
+      nextLabel={copy.workspace.pagination.next}
+      nextHref={
+        hasMore
+          ? `/garden?${expandedParam}=all&${pageParam}=${page + 1}#${base}`
+          : null
+      }
+    />
   );
 }
 

@@ -25,6 +25,7 @@ export function LineageClaimsShell({
       state={state}
       width="wide"
       title={copy.claims.title}
+      description={copy.claims.description}
       navigation={
         <>
           <Link

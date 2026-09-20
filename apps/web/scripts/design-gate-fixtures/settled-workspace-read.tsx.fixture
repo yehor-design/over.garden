@@ -1,0 +1,31 @@
+import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+
+/** Every call of this is settled, so its body is settled too. */
+async function resolvePreselection(slug: string) {
+  const item = await findSelectableCatalogItemByPublicSlug(slug);
+  return item?.canonicalName ?? null;
+}
+
+/** A local wrapper around `settleSection` is a wrapper. */
+async function settledOrNull<T>(load: () => Promise<T>): Promise<T | null> {
+  const settled = await settleSection(load, {
+    deadlineMs: workspaceSectionDeadlineMs(1),
+    record: false,
+  });
+  return settled.status === "ready" ? settled.value : null;
+}
+
+export default async function PreselectionFixturePage() {
+  const locale = await getRequestInterfaceLocale();
+  const name = await settledOrNull(() => resolvePreselection("tomato"));
+  return (
+    <p lang={locale} data-workspace-surface="garden-home">
+      {name}
+    </p>
+  );
+}
