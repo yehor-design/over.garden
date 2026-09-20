@@ -1036,7 +1036,56 @@ shell's 704 px content column the canvas renders at 656 — 70–75 Cyrillic
 characters, inside DESIGN.md §3's measure. The card's "40 px gutter" is a slip:
 ADR-0028 D3 says 56, and 56 is what ships.
 
-The last page family (`OVE-459`) is still in Backlog.
+**The owner's queue holds its place** (`OVE-459`, 2026-09-20). The last task of
+Slice 28. Three surfaces — `/garden/catalog/queue`, `/garden/catalog/sources`,
+`/account/moderation/comments` — and one defect that had been waiting there
+since the queue was built.
+
+- **A confirmation was spent on the wrong decision.** The queue's "confirm this
+  merge" link carried neither the filter nor the item, so confirming a merge on
+  the fifth card re-rendered the *first* one with the confirmation already
+  granted — and the Accept form then carried the first card's id. A merge
+  moving more than fifty gardeners' objects was applied to whatever happened to
+  be at the top. The grant now names its item, and a grant that does not name
+  the decision on screen is refused — including the fallback the page makes
+  when an item was decided in another tab.
+- **The hint named the rule; the page now names the count.** "Понад 50" was the
+  threshold. What the owner is deciding about is fifty-one objects, and the
+  notice says fifty-one.
+- **The keys are printed from the array that binds them.**
+  `queue/shortcut-keys.ts` is read by the handler and by the legend, so the
+  list on screen cannot drift from the list that works.
+- **Comment moderation became part of the product.** Its three controls
+  rendered as `review`, `dismiss`, `remove` — the enum, in English, on a page
+  the product otherwise keeps in three languages — and each row as
+  `journal_entry · spam · submitted`. All of it is localised now, the report
+  carries its date, and `remove` is `danger` behind a confirmation that names
+  what goes (DESIGN.md §4.4). The queue carries no comment text by decision,
+  so what it *can* say is said properly.
+- **`OwnerScopedActionForm` is deleted.** It was the thirty-third call site;
+  the shape that renders `action="javascript:throw …"` and silently needs
+  hydration is gone from the codebase rather than left standing with a warning.
+  `owner-scope.progressive.test.ts` now walks every `.tsx` under `src` and
+  asserts the count is zero, because the criterion says to check rather than
+  assume.
+- **A class that painted nothing.** `text-text-heading-heading` had been on
+  every workspace heading since `OVE-457` — a rename applied twice, which
+  Tailwind emits no rule for. Fixed, and it is why a bulk class pass needs a
+  grep for its own output.
+
+Proven in `tests/owner-catalog-curation.spec.ts`, extended with the key legend,
+a seeded merge carrying fifty-one objects, the grant refused for every item but
+its own, axe over all three owner pages, and a visitor fetch of each returning
+none of the owner's data. Plus the keyboard run, the no-JavaScript POST and the
+idempotent refresh the spec already held.
+
+`pnpm prove:owner-queue` walks a real database: it reads what is open, and
+with `--apply` decides the lowest-impact label link and reverts it in the same
+run, printing the pair of rows `catalog_curation_actions` holds. Bounded by a
+`statement_timeout` and a `lock_timeout`, and it prints ids, counts and states
+only — a gardener's own words are on those rows.
+
+Slice 28 is complete: `OVE-439`–`OVE-459`.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in
 `apps/web/public/illustrations/`, resolved through one manifest module

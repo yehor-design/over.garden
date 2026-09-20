@@ -851,6 +851,34 @@ and the consequences belong on the screen rather than in the reader's memory.
   Cyrillic characters and inside §3's measure. A proof that asserts a rendered
   708 asserts something that is true on no screen the product has.
 
+### 5.12 The owner's queue
+
+Three surfaces the owner sits at for an hour — the decision queue, the sources
+and comment moderation — and the rules that make an hour bearable.
+
+- **A shortcut the page does not print is a shortcut only its author has.**
+  The queue's keys were one sentence of prose; they are a `<kbd>` against each
+  action now, and both the legend and the binding read `shortcut-keys.ts`, so
+  the list on screen cannot gain or lose a key the handler does not.
+- **A confirmation belongs to one decision.** The queue's "confirm this merge"
+  link carried neither the filter nor the item, so confirming a merge on the
+  fifth card re-rendered the first with the confirmation already granted — and
+  a merge moving fifty-one gardeners' objects was applied to whatever happened
+  to be at the top. A grant now names its item, and a grant that does not name
+  the decision on screen is no grant.
+- **Name the count, not the rule.** "More than fifty" is the threshold; what
+  the owner is deciding about is *this* many objects.
+- **An owner surface is still the product.** Comment moderation rendered its
+  three controls as `review`, `dismiss`, `remove` — the enum, in English, on a
+  page the product otherwise keeps in three languages — and its rows as
+  `journal_entry · spam · submitted`. An operator page has fewer readers, not
+  lower standards.
+- **The closure form is gone, not deprecated.** `OwnerScopedActionForm`
+  wrapped a `(formData)` action in a client closure, which React answers with
+  `action="javascript:throw …"`; thirty-three owner controls across seventeen
+  files silently did nothing until the bundle ran. Slice 28 converted them all
+  and deleted the shape. A form that cannot be imported cannot be reached for.
+
 ---
 
 ## 6. Language and locale

@@ -1,7 +1,9 @@
 # Catalog Match Suggestion Queue
 
-Status: implemented by OVE-158 and OVE-159
-Owner surface: `/garden/catalog/curation`
+Status: implemented by OVE-158 and OVE-159; the owner surface it describes was
+replaced by ADR-0026's decision queue, and `OVE-459` redesigned that. This file
+is kept for the matching contract below, not for its address.
+Owner surface: `/garden/catalog/queue` (`/garden/catalog/curation` is retired)
 Worker job: `matching:catalog_match_suggestions_refresh`
 Evidence schema: `ove158.catalogMatchEvidence.v2`
 

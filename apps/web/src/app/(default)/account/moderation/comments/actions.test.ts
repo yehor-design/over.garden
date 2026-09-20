@@ -44,7 +44,7 @@ describe("account comment moderation action", () => {
 
   it("requires bounded operator mutation access before the repository effect", async () => {
     const { moderateCommentReportAction } = await import("./actions");
-    await moderateCommentReportAction(commentFormData());
+    await moderateCommentReportAction(undefined, commentFormData());
 
     expect(mocks.resolveAdminCapabilityAccessBounded).toHaveBeenCalledWith(
       scope,
@@ -65,7 +65,7 @@ describe("account comment moderation action", () => {
       mocks.resolveAdminCapabilityAccessBounded.mockResolvedValue({ status });
       const { moderateCommentReportAction } = await import("./actions");
 
-      await moderateCommentReportAction(commentFormData());
+      await moderateCommentReportAction(undefined, commentFormData());
 
       expect(mocks.moderateEngagementCommentReport).not.toHaveBeenCalled();
       expect(mocks.revalidatePath).not.toHaveBeenCalled();

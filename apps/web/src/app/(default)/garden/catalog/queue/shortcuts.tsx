@@ -2,22 +2,20 @@
 
 import { useEffect } from "react";
 
+import {
+  CATALOG_QUEUE_KEYS,
+  catalogQueueKeySelector,
+} from "./shortcut-keys";
+
 /**
- * Keyboard shortcuts are an enhancement (ADR-0026 D10): they submit the same
- * forms the buttons do, so the queue is complete before this runs and
- * complete with JavaScript off.
+ * Keyboard shortcuts are an enhancement (ADR-0026 D10): they press the same
+ * controls a pointer does — Y and N submit the decision forms, J and K follow
+ * the prev/next links, U presses the most recent undo — so the queue is
+ * complete before this runs and complete with JavaScript off.
+ *
+ * Every key comes from `shortcut-keys.ts`, which is also what the page prints
+ * beside the controls. Neither list can gain a key the other does not have.
  */
-const SHORTCUTS: Record<string, string> = {
-  y: "accept",
-  n: "reject",
-};
-
-/** J and K follow the prev/next links, which exist without JavaScript. */
-const NAVIGATION: Record<string, string> = {
-  j: "next",
-  k: "previous",
-};
-
 export function CatalogQueueShortcuts() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -28,35 +26,16 @@ export function CatalogQueueShortcuts() {
         return;
       }
       const key = event.key.toLowerCase();
-      if (key === "u") {
-        const undo = document.querySelector<HTMLButtonElement>(
-          "[data-catalog-automatic-undo]",
-        );
-        if (undo) {
-          event.preventDefault();
-          undo.click();
-        }
-        return;
-      }
-      const move = NAVIGATION[key];
-      if (move) {
-        const link = document.querySelector<HTMLAnchorElement>(
-          `[data-catalog-queue-nav="${move}"]`,
-        );
-        if (link) {
-          event.preventDefault();
-          link.click();
-        }
-        return;
-      }
-      const action = SHORTCUTS[key];
-      if (!action) return;
-      const button = document.querySelector<HTMLButtonElement>(
-        `[data-catalog-queue-action="${action}"]`,
+      const shortcut = CATALOG_QUEUE_KEYS.find(
+        (candidate) => candidate.key === key,
       );
-      if (!button) return;
+      if (!shortcut) return;
+      const control = document.querySelector<HTMLElement>(
+        catalogQueueKeySelector(shortcut.target),
+      );
+      if (!control) return;
       event.preventDefault();
-      button.click();
+      control.click();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

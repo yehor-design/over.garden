@@ -9,7 +9,7 @@ import {
   WorkspaceSectionSkeleton,
   workspaceSchemaMissingHint,
 } from "@/components/garden/workspace-state";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { catalogSourceRefreshCadence } from "@/lib/catalog/source-cadence";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getOperatorCatalogCopy } from "@/lib/operator-catalog-copy";
@@ -114,7 +114,7 @@ export default async function CatalogSourcesPage() {
   if (access.status === "denied") {
     return shell(
       "denied",
-      <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+      <p className="rounded-lg border border-border p-4 text-body-sm text-text-muted">
         {operatorCopy.common.accessDenied}
       </p>,
     );
@@ -193,11 +193,11 @@ async function CatalogHealthSection({
       <div className="grid gap-1">
         <h2
           id="catalog-health-heading"
-          className="text-xl font-semibold tracking-tight text-foreground"
+          className="text-h3 font-semibold tracking-tight text-text"
         >
           {copy.health.title}
         </h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body-sm text-text-muted">
           {copy.health.description}
         </p>
       </div>
@@ -205,7 +205,7 @@ async function CatalogHealthSection({
       {health.every((row) => row.attempts === 0) ? (
         <p
           data-catalog-health-empty="true"
-          className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground"
+          className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted"
         >
           {copy.health.empty}
         </p>
@@ -217,14 +217,14 @@ async function CatalogHealthSection({
               data-catalog-health-window={row.windowDays}
               className="grid gap-2 rounded-lg border border-border p-4"
             >
-              <p className="font-medium text-foreground">
+              <p className="font-medium text-text">
                 {copy.health.window[String(row.windowDays) as "7" | "30"]} ·{" "}
                 <span data-catalog-health-attempts={row.attempts}>
                   {row.attempts}
                 </span>{" "}
                 {copy.health.attempts}
               </p>
-              <dl className="grid gap-1 text-sm text-muted-foreground">
+              <dl className="grid gap-1 text-body-sm text-text-muted">
                 <div className="flex flex-wrap justify-between gap-2">
                   <dt>{copy.health.pickSuccess}</dt>
                   <dd data-catalog-health-picked={row.picked}>
@@ -260,14 +260,14 @@ async function CatalogHealthSection({
       )}
 
       <div className="grid gap-2">
-        <h3 className="font-medium text-foreground">{copy.health.misses}</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-medium text-text">{copy.health.misses}</h3>
+        <p className="text-body-sm text-text-muted">
           {copy.health.missesHint}
         </p>
         {misses.length === 0 ? (
           <p
             data-catalog-health-misses-empty="true"
-            className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground"
+            className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted"
           >
             {copy.health.missesEmpty}
           </p>
@@ -277,12 +277,12 @@ async function CatalogHealthSection({
               <li
                 key={`${miss.queryNormalized}:${miss.locale}:${miss.objectKind}`}
                 data-catalog-health-miss={miss.queryNormalized}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-body-sm"
               >
-                <span className="min-w-0 break-words text-foreground">
+                <span className="min-w-0 break-words text-text">
                   {miss.queryNormalized}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-caption text-text-muted">
                   {miss.occurrences} {copy.health.occurrences} ·{" "}
                   {formatOperatorDate(locale, miss.lastSeenAt)}
                 </span>
@@ -297,16 +297,14 @@ async function CatalogHealthSection({
                       name="objectKind"
                       value={miss.objectKind}
                     />
-                    <button
+                    <Button
                       type="submit"
+                      variant="secondary"
+                      size="sm"
                       data-catalog-health-miss-queue={miss.queryNormalized}
-                      className={buttonVariants({
-                        variant: "secondary",
-                        size: "sm",
-                      })}
                     >
                       {copy.health.makeQueueItem}
-                    </button>
+                    </Button>
                   </OwnerScopedProgressiveForm>
                 ) : null}
               </li>
@@ -316,23 +314,23 @@ async function CatalogHealthSection({
       </div>
 
       <div className="grid gap-2">
-        <h3 className="font-medium text-foreground">{copy.health.precision}</h3>
-        <p className="text-sm text-muted-foreground">
+        <h3 className="font-medium text-text">{copy.health.precision}</h3>
+        <p className="text-body-sm text-text-muted">
           {copy.health.precisionHint}
         </p>
         {precision.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {copy.health.precisionEmpty}
           </p>
         ) : (
-          <ul className="grid gap-1 text-sm" data-catalog-health-precision="true">
+          <ul className="grid gap-1 text-body-sm" data-catalog-health-precision="true">
             {precision.map((rule) => (
               <li
                 key={rule.ruleCode}
                 data-catalog-health-rule={rule.ruleCode}
-                className="flex flex-wrap justify-between gap-2 text-muted-foreground"
+                className="flex flex-wrap justify-between gap-2 text-text-muted"
               >
-                <span className="text-foreground">{rule.ruleCode}</span>
+                <span className="text-text">{rule.ruleCode}</span>
                 <span>
                   {rule.applied} {copy.health.applied} · {rule.reverted}{" "}
                   {copy.health.reverted} ·{" "}
@@ -342,7 +340,7 @@ async function CatalogHealthSection({
             ))}
           </ul>
         )}
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body-sm text-text-muted">
           {copy.health.queueAge}:{" "}
           <span data-catalog-health-queue-age={queueAgeDays ?? ""}>
             {queueAgeDays === null
@@ -386,7 +384,7 @@ async function CatalogSourcesSection({
     return (
       <p
         data-catalog-sources-empty="true"
-        className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground"
+        className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted"
       >
         {copy.sources.empty}
       </p>
@@ -412,12 +410,12 @@ async function CatalogSourcesSection({
             href={source.sourceUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+            className="inline-flex min-w-0 items-center gap-1 font-medium text-text underline-offset-4 hover:underline"
           >
             <span className="truncate">{source.sourceName}</span>
             <ExternalLink className="size-3 shrink-0" />
           </a>
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap gap-2 text-caption text-text-muted">
             <span className="rounded-md border border-border px-2 py-1">
               {copy.sources.version}: {source.sourceVersion}
             </span>
@@ -438,21 +436,21 @@ async function CatalogSourcesSection({
               </span>
             ) : null}
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {source.recordCount} {copy.sources.records} · {source.linkedCount}{" "}
             {copy.sources.linked} · {source.identifierCount}{" "}
             {copy.sources.identifiers} · {source.assertionCount}{" "}
             {copy.sources.assertions}
           </p>
           {source.attributionText ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-caption text-text-muted">
               {copy.sources.attribution}: {source.attributionText}
             </p>
           ) : null}
           {source.lastRefreshQueuedAt ? (
             <p
               data-catalog-source-refresh-status={source.lastRefreshStatus ?? ""}
-              className="text-xs text-muted-foreground"
+              className="text-caption text-text-muted"
             >
               {copy.sources.lastRefresh}:{" "}
               {formatOperatorDate(locale, source.lastRefreshQueuedAt)}
@@ -465,13 +463,14 @@ async function CatalogSourcesSection({
           {canMutate ? (
             <OwnerScopedProgressiveForm action={refreshCatalogSourceAction}>
               <HiddenField name="sourceSlug" value={source.sourceSlug} />
-              <button
+              <Button
                 type="submit"
+                variant="secondary"
+                size="sm"
                 data-catalog-source-refresh={source.sourceSlug}
-                className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.sources.refresh}
-              </button>
+              </Button>
             </OwnerScopedProgressiveForm>
           ) : null}
         </li>
