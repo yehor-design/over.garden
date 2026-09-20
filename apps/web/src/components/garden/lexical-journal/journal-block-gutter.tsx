@@ -588,7 +588,7 @@ export function JournalBlockGutter({
           aria-haspopup="menu"
           aria-expanded={insertOpen}
           disabled={disabled}
-          className="flex size-6 items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity group-hover/canvas:opacity-100 hover:bg-accent hover:text-accent-foreground focus-visible:opacity-100 data-expanded:opacity-100 motion-reduce:transition-none"
+          className="flex size-6 items-center justify-center rounded text-text-muted opacity-0 transition-opacity group-hover/canvas:opacity-100 hover:bg-action-subtle hover:text-action-subtle-text focus-visible:opacity-100 data-expanded:opacity-100 motion-reduce:transition-none"
           data-expanded={insertOpen || undefined}
           onClick={() => setInsertOpen(true)}
         >
@@ -604,7 +604,7 @@ export function JournalBlockGutter({
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           disabled={disabled}
-          className="flex size-6 touch-none items-center justify-center rounded text-muted-foreground opacity-0 transition-opacity group-hover/canvas:opacity-100 hover:bg-accent hover:text-accent-foreground focus-visible:opacity-100 data-expanded:opacity-100 motion-reduce:transition-none"
+          className="flex size-6 touch-none items-center justify-center rounded text-text-muted opacity-0 transition-opacity group-hover/canvas:opacity-100 hover:bg-action-subtle hover:text-action-subtle-text focus-visible:opacity-100 data-expanded:opacity-100 motion-reduce:transition-none"
           data-expanded={menuOpen || dragging || undefined}
           onPointerDown={onHandlePointerDown}
           onPointerMove={onHandlePointerMove}

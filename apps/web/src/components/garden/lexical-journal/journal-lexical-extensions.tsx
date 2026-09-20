@@ -82,8 +82,8 @@ export interface CreateJournalLexicalExtensionOptions {
  * sibling text blocks and a wide gap above a heading, a 24 px list indent.
  */
 const JOURNAL_THEME: EditorThemeClasses = {
-  callout: "journal-callout mt-1.5 flex gap-3 rounded-md bg-muted/50 p-4",
-  code: "mt-1.5 overflow-x-auto rounded-md bg-muted/50 p-4 font-mono text-sm leading-6 whitespace-pre-wrap",
+  callout: "journal-callout mt-1.5 flex gap-3 rounded-md bg-surface-sunken/50 p-4",
+  code: "mt-1.5 overflow-x-auto rounded-md bg-surface-sunken/50 p-4 font-mono text-body-sm leading-6 whitespace-pre-wrap",
   heading: {
     h1: "mt-8 mb-1 text-3xl leading-tight font-semibold first:mt-0",
     h2: "mt-6 mb-1 text-2xl leading-snug font-semibold first:mt-0",
@@ -102,11 +102,11 @@ const JOURNAL_THEME: EditorThemeClasses = {
   },
   paragraph: "mt-0.5 min-h-6 leading-normal",
   quote: "mt-1.5 border-l-2 border-border pl-3.5 italic",
-  quoteAttribution: "mt-2 block text-sm not-italic text-muted-foreground",
+  quoteAttribution: "mt-2 block text-body-sm not-italic text-text-muted",
   quoteBody: "leading-normal",
   text: {
     bold: "font-semibold",
-    code: "rounded bg-muted px-1 py-0.5 font-mono",
+    code: "rounded bg-surface-sunken px-1 py-0.5 font-mono",
     italic: "italic",
     strikethrough: "line-through",
     underline: "underline underline-offset-2",

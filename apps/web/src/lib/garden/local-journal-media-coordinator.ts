@@ -98,8 +98,25 @@ export interface LocalJournalMediaItemSnapshot {
   retryCount: number;
 }
 
+/**
+ * Whether the staging lease is still being renewed (`OVE-458`).
+ *
+ * The Worker holds a two-hour lease on everything staged in this session and
+ * the coordinator touches it every five minutes (`OVE-372`). A touch that
+ * fails used to be swallowed entirely, so a gardener whose renewals had all
+ * failed kept writing over photographs that were on their way out, and found
+ * out when Publish failed. `at_risk` after two consecutive failures — ten
+ * minutes of a two-hour lease, with the margin still enormous — is early
+ * enough to say so and act on.
+ */
+export type LocalJournalMediaLease = "held" | "at_risk";
+
+/** Two failures in a row, not one: a single lost request is not a symptom. */
+export const LOCAL_JOURNAL_LEASE_AT_RISK_AFTER = 2;
+
 export interface LocalJournalMediaSnapshot {
   items: LocalJournalMediaItemSnapshot[];
+  lease: LocalJournalMediaLease;
 }
 
 export interface LocalJournalMediaSelection {
@@ -160,7 +177,9 @@ interface InternalItem {
 export class LocalJournalMediaCoordinator {
   private readonly items = new Map<string, InternalItem>();
   private readonly listeners = new Set<() => void>();
-  private snapshot: LocalJournalMediaSnapshot = { items: [] };
+  /** Consecutive failed lease renewals; a success puts it back to zero. */
+  private touchFailures = 0;
+  private snapshot: LocalJournalMediaSnapshot = { items: [], lease: "held" };
   private destroyed = false;
   private publicationFrozen = false;
   private touchTimer: ReturnType<typeof setInterval> | null = null;
@@ -597,9 +616,19 @@ export class LocalJournalMediaCoordinator {
         this.stopTouching();
         return;
       }
-      this.options.stager
+      void this.options.stager
         .touch?.(this.options.stagingSessionId)
-        .catch(() => undefined);
+        .then(() => {
+          if (this.touchFailures === 0) return;
+          this.touchFailures = 0;
+          this.publish();
+        })
+        .catch(() => {
+          this.touchFailures += 1;
+          if (this.touchFailures === LOCAL_JOURNAL_LEASE_AT_RISK_AFTER) {
+            this.publish();
+          }
+        });
     }, this.options.touchIntervalMs ?? DEFAULT_TOUCH_INTERVAL_MS);
   }
 
@@ -661,6 +690,10 @@ export class LocalJournalMediaCoordinator {
   private publish() {
     this.snapshot = {
       items: [...this.items.values()].map(publicItem),
+      lease:
+        this.touchFailures >= LOCAL_JOURNAL_LEASE_AT_RISK_AFTER
+          ? "at_risk"
+          : "held",
     };
     for (const listener of this.listeners) listener();
   }

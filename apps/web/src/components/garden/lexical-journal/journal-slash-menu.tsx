@@ -315,10 +315,10 @@ export function JournalSlashMenu({
         aria-label={copy.add}
         data-journal-slash-menu="true"
         hidden={position === null}
-        className="pointer-events-auto absolute top-0 left-0 z-popover max-h-72 w-64 overflow-y-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+        className="pointer-events-auto absolute top-0 left-0 z-popover max-h-72 w-64 overflow-y-auto rounded-md border border-border bg-surface p-1 text-text shadow-popover"
       >
         {options.length === 0 ? (
-          <p className="px-2.5 py-2 text-sm text-muted-foreground">
+          <p className="px-2.5 py-2 text-body-sm text-text-muted">
             {copy.noResults}
           </p>
         ) : (
@@ -330,8 +330,8 @@ export function JournalSlashMenu({
               aria-selected={index === activeIndex}
               data-journal-slash-option={command.id}
               className={cn(
-                "flex min-h-10 cursor-default items-center rounded-sm px-2.5 py-2 text-sm",
-                index === activeIndex && "bg-accent text-accent-foreground",
+                "flex min-h-10 cursor-default items-center rounded-sm px-2.5 py-2 text-body-sm",
+                index === activeIndex && "bg-action-subtle text-action-subtle-text",
               )}
               onMouseEnter={() => setActiveIndex(index)}
               onMouseDown={(event) => {

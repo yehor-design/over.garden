@@ -31,7 +31,7 @@ export function JournalInsertionLine({
       data-lexical-reorder-indicator={
         purpose === "reorder" ? "true" : undefined
       }
-      className="pointer-events-none absolute inset-x-0 h-0.5 rounded-full bg-primary motion-reduce:transition-none forced-colors:border-t-2"
+      className="pointer-events-none absolute inset-x-0 h-0.5 rounded-full bg-action motion-reduce:transition-none forced-colors:border-t-2"
       hidden={top === null}
     />
   );

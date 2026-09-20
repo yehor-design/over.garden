@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
+  journalCoverPhotoLabel,
   JournalCoverControls,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
 import { LocalJournalComposerStatus } from "@/components/garden/local-journal-composer-status";
+import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { FocalPointControl } from "@/components/media/focal-point-control";
@@ -259,8 +261,20 @@ export function JournalEntryEditComposer({
     >
       <LocalJournalComposerStatus
         state={local.state}
+        lease={local.media.lease}
         copy={editCopy}
         onCancelPublishing={local.cancelPublishing}
+      />
+      {/* The same loss, in the edit composer's own words: here the work is
+          saved rather than published (`OVE-458` AC5). */}
+      <UnpublishedWorkGuard
+        active={dirty && local.state.status !== "published"}
+        copy={{
+          leaveTitle: editCopy.discardTitle,
+          leaveDescription: editCopy.discardBody,
+          leaveConfirm: editCopy.discardChanges,
+          leaveCancel: editCopy.keepEditing,
+        }}
       />
 
       <fieldset disabled={persistenceFrozen} className="contents">
@@ -324,7 +338,7 @@ export function JournalEntryEditComposer({
           eligibleInline={inlineIds.map((mediaAssetId, index) => ({
             mediaAssetId,
             previewUrl: imageStates.get(mediaAssetId)?.previewUrl ?? null,
-            label: `${coverCopy.useAsCover} ${index + 1}`,
+            label: journalCoverPhotoLabel(coverCopy, index),
           }))}
           disabled={persistenceFrozen}
           selectedLocalMediaState={
@@ -418,7 +432,7 @@ export function JournalEntryEditComposer({
         </Button>
       </div>
       {copied ? (
-        <p className="text-sm text-muted-foreground" role="status">
+        <p className="text-body-sm text-text-muted" role="status">
           {editCopy.localChangesCopied}
         </p>
       ) : null}
@@ -436,9 +450,13 @@ export function JournalEntryEditComposer({
             {editCopy.conflictBody}
           </AlertDialogDescription>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <AlertDialogClose className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-9">
-              {editCopy.closeConflict}
-            </AlertDialogClose>
+            <AlertDialogClose
+              render={
+                <Button type="button" variant="secondary">
+                  {editCopy.closeConflict}
+                </Button>
+              }
+            />
             <Button
               type="button"
               variant="secondary"
@@ -466,18 +484,24 @@ export function JournalEntryEditComposer({
             {editCopy.discardBody}
           </AlertDialogDescription>
           <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <AlertDialogClose className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none sm:min-h-9">
-              {editCopy.keepEditing}
-            </AlertDialogClose>
             <AlertDialogClose
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-danger-fill px-3 py-2 text-body-sm font-medium text-text-on-fill hover:bg-danger-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:min-h-9"
+              render={
+                <Button type="button" variant="secondary">
+                  {editCopy.keepEditing}
+                </Button>
+              }
+            />
+            <AlertDialogClose
               onClick={() => {
                 local.abandon();
                 router.push(safeReturnTo);
               }}
-            >
-              {editCopy.discardChanges}
-            </AlertDialogClose>
+              render={
+                <Button type="button" variant="danger">
+                  {editCopy.discardChanges}
+                </Button>
+              }
+            />
           </div>
         </AlertDialogContent>
       </AlertDialog>

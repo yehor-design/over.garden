@@ -491,6 +491,59 @@ describe("local-only journal media coordinator: session lease (OVE-372)", () => 
       vi.useRealTimers();
     }
   });
+
+  // `OVE-458` AC4: a lease that cannot be renewed says so before the work is
+  // lost. A failed touch used to be swallowed entirely, so a gardener kept
+  // writing over photographs on their way out and found out when Publish
+  // failed.
+  it("reports the lease at risk after two failed renewals, and held again after one that works", async () => {
+    vi.useFakeTimers();
+    try {
+      const encoded = encodedImage([2]);
+      const encoder: LocalJournalImageEncoder = {
+        encode: vi.fn(async () => encoded),
+      };
+      let touchFails = true;
+      const stager: LocalJournalMediaStager = {
+        prepare: vi.fn(async () => undefined),
+        touch: vi.fn(async () => {
+          if (touchFails) throw new Error("lease refused");
+        }),
+        stage: vi.fn(async () => ({
+          stagingReceipt: "receipt-0",
+          deleteCapability: "delete-0",
+        })),
+        delete: vi.fn(async () => undefined),
+      };
+      const coordinator = new LocalJournalMediaCoordinator({
+        stagingSessionId: SESSION_ID,
+        encoder,
+        stager,
+        createObjectURL: vi.fn(() => "blob:final"),
+        revokeObjectURL: vi.fn(),
+        createId: idSequence(MEDIA_1),
+        touchIntervalMs: 1_000,
+      });
+
+      await coordinator.add(photo([9]), { blockId: "b_first" }).ready;
+      expect(coordinator.getSnapshot().lease).toBe("held");
+
+      // One lost request is not a symptom.
+      await vi.advanceTimersByTimeAsync(1_200);
+      expect(coordinator.getSnapshot().lease).toBe("held");
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(coordinator.getSnapshot().lease).toBe("at_risk");
+
+      touchFails = false;
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(coordinator.getSnapshot().lease).toBe("held");
+
+      coordinator.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("local-only journal media coordinator: variants and preview (OVE-371)", () => {

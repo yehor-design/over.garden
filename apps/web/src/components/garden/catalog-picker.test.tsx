@@ -415,7 +415,9 @@ describe("CatalogPicker secondary path (ADR-0026 D7)", () => {
     });
 
     const checklist = renderer.root.findAll(
-      (node) => node.props["data-catalog-option"] === "full_catalogue",
+      (node) =>
+        node.type === "li" &&
+        node.props["data-catalog-option"] === "full_catalogue",
     );
     expect(checklist).toHaveLength(1);
     expect(checklist[0]!.props["data-catalog-col-id"]).toBe("6MK7J");
@@ -460,7 +462,9 @@ describe("CatalogPicker secondary path (ADR-0026 D7)", () => {
     ).toBe(copy.fullCatalogueEmpty);
     expect(
       renderer.root.findAll(
-        (node) => node.props["data-catalog-option"] === "own_name",
+        (node) =>
+          node.type === "li" &&
+          node.props["data-catalog-option"] === "own_name",
       ),
     ).toHaveLength(1);
   });

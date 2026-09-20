@@ -26,6 +26,7 @@ import { JournalPlaceholderPlugin } from "./journal-placeholder-plugin";
 import { JournalFileDropPlugin } from "./journal-file-drop-plugin";
 import { JournalSelectionToolbar } from "./journal-selection-toolbar";
 import { JournalSlashMenu } from "./journal-slash-menu";
+import { JournalShortcutSheet } from "./journal-shortcut-sheet";
 import {
   moveJournalBlockById,
   moveJournalBlockToIndex,
@@ -187,6 +188,8 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       },
       labels: {
         processing: props.labels.imageUploading,
+        phase: props.labels.imagePhase,
+        failureReason: props.labels.imageFailureReason,
         failed: props.labels.imageFailed,
         retry: props.labels.imageRetry,
         replace: props.labels.imageReplace,
@@ -215,6 +218,8 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       previewUrls,
       props.disabled,
       props.labels.imageFailed,
+      props.labels.imageFailureReason,
+      props.labels.imagePhase,
       props.labels.imageRemove,
       props.labels.imageReplace,
       props.labels.imageRetry,
@@ -643,13 +648,19 @@ function JournalLexicalClientBody({
           onChooseImage={chooseImage}
         />
       </div>
+      {/* Beside the canvas, not inside it: the sheet is about the editor and
+          must not be reachable only from within a `contenteditable`
+          (`OVE-458`). */}
+      <div className="journal-composer-column mx-auto flex w-full justify-end">
+        <JournalShortcutSheet labels={labels} />
+      </div>
       <JournalSafePastePlugin
         disabled={disabled}
         onChooseImage={chooseImage}
         onRejectedExternalContent={rejectExternalContent}
       />
       {mediaMessage ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-body-sm text-danger-text" role="alert">
           {mediaMessage}
         </p>
       ) : null}

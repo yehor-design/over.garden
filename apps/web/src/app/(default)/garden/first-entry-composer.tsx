@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
+  journalCoverPhotoLabel,
   JournalCoverControls,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
@@ -14,6 +15,7 @@ import {
   LocalJournalComposerStatus,
   LocalJournalPublicationDisclosure,
 } from "@/components/garden/local-journal-composer-status";
+import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import type { PlantObjectKind } from "@/db/schema";
@@ -170,17 +172,18 @@ export function FirstEntryComposer({
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
-  const local = useLocalJournalComposer({
-    enabled: localPersistenceEnabled,
-    fallbackReturnTo: "/garden",
-    dirty: Boolean(
-      draft.plantName ||
+  const dirty = Boolean(
+    draft.plantName ||
       draft.title ||
       draft.body ||
       draft.contentDocument?.blocks.length ||
       photoFile ||
       catalogSelection,
-    ),
+  );
+  const local = useLocalJournalComposer({
+    enabled: localPersistenceEnabled,
+    fallbackReturnTo: "/garden",
+    dirty,
   });
   const imageStates = useMemo(
     () =>
@@ -629,8 +632,13 @@ export function FirstEntryComposer({
     >
       <LocalJournalComposerStatus
         state={local.state}
+        lease={local.media.lease}
         copy={atomicCopy}
         onCancelPublishing={local.cancelPublishing}
+      />
+      <UnpublishedWorkGuard
+        active={dirty && local.state.status !== "published"}
+        copy={atomicCopy}
       />
 
       <fieldset disabled={persistenceFrozen} className="contents">
@@ -674,9 +682,9 @@ export function FirstEntryComposer({
               materializeFromCatalogue={materializeCatalogNodeAction}
               disabled={persistenceFrozen}
             />
-            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs">
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-caption">
               {catalogSelection ? null : (
-                <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-muted-foreground">
+                <span className="max-w-full rounded-md border border-border px-2 py-1 break-words text-text-muted">
                   {copy.composer.fields.noCatalogMatch}
                 </span>
               )}
@@ -684,7 +692,7 @@ export function FirstEntryComposer({
                 type="button"
                 onClick={chooseUnknownCatalog}
                 data-catalog-continue-unknown="true"
-                className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+                className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-text hover:bg-surface-sunken sm:min-h-0"
               >
                 {copy.composer.fields.keepWithoutMatch}
               </button>
@@ -730,7 +738,7 @@ export function FirstEntryComposer({
 
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm font-medium text-foreground">
+            <span className="text-body-sm font-medium text-text">
               {copy.composer.fields.firstUpdate}
             </span>
           </div>
@@ -786,7 +794,7 @@ export function FirstEntryComposer({
             ).map((mediaAssetId, index) => ({
               mediaAssetId,
               previewUrl: imageStates.get(mediaAssetId)?.previewUrl ?? null,
-              label: `${coverCopy.useAsCover} ${index + 1}`,
+              label: journalCoverPhotoLabel(coverCopy, index),
             }))}
             disabled={persistenceFrozen}
             selectedLocalMediaState={
@@ -842,7 +850,7 @@ export function FirstEntryComposer({
         </div>
 
         <div className="flex flex-col gap-2 border-y border-border py-3">
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-body-sm font-medium text-text">
             {copy.composer.fields.optionalPhoto}
           </span>
           <FileDrop
@@ -878,8 +886,8 @@ export function FirstEntryComposer({
           <p
             className={
               photoError
-                ? "text-xs leading-5 text-destructive"
-                : "text-xs leading-5 text-muted-foreground"
+                ? "text-caption leading-5 text-danger-text"
+                : "text-caption leading-5 text-text-muted"
             }
           >
             {photoHelp}
@@ -887,9 +895,9 @@ export function FirstEntryComposer({
         </div>
 
         <details className="group min-w-0 border-y border-border py-3">
-          <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
+          <summary className="flex min-h-11 cursor-pointer items-center text-body-sm font-semibold text-text marker:text-text-muted sm:min-h-0">
             {copy.composer.fields.moreDetails}
-            <span className="ml-2 font-normal text-muted-foreground">
+            <span className="ml-2 font-normal text-text-muted">
               {copy.composer.fields.detailsHint}
             </span>
           </summary>
@@ -898,7 +906,7 @@ export function FirstEntryComposer({
             className="mt-4 grid min-w-0 gap-4"
           >
             {draft.spaceId ? (
-              <p className="text-sm leading-6 text-muted-foreground">
+              <p className="text-body-sm leading-6 text-text-muted">
                 {copy.composer.fields.selectedSpacePrivacy}
               </p>
             ) : (
@@ -1010,16 +1018,28 @@ export function FirstEntryComposer({
       </fieldset>
 
       <p
+        role={submitState === "failed" ? "alert" : "status"}
         className={
           submitState === "failed"
-            ? "text-sm text-destructive"
-            : "text-sm text-muted-foreground"
+            ? "text-body-sm text-danger-text"
+            : "text-body-sm text-text-muted"
         }
       >
         {message}
       </p>
 
-      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-background p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      {/* What Publish does, beside the control that does it (`OVE-458` AC3).
+          The product has no drafts: an entry is public and indexable the
+          moment it lands, and that belonged next to the decision rather than
+          in a notice three sections away. */}
+      <p
+        data-publish-meaning="true"
+        className="max-w-prose text-body-sm text-text-muted"
+      >
+        {atomicCopy.publishMeaning}
+      </p>
+
+      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"
@@ -1037,7 +1057,7 @@ export function FirstEntryComposer({
           type="button"
           variant="ghost"
           onClick={handleCancel}
-          className="min-h-11 shrink-0 text-muted-foreground sm:min-h-8"
+          className="min-h-11 shrink-0 text-text-muted sm:min-h-8"
         >
           {copy.composer.actions.cancel}
         </Button>

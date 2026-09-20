@@ -107,6 +107,14 @@ test.describe("OVE-387 catalog picker", () => {
         "aria-controls",
         (await listbox.getAttribute("id")) ?? "",
       );
+      // The list announces itself (`OVE-458` AC6). A combobox whose options
+      // arrive asynchronously must say how many there are, or a screen-reader
+      // user is left holding an input that silently filled.
+      const announcement = page.locator("[data-catalog-availability]");
+      await expect(announcement).toHaveAttribute("aria-live", "polite");
+      await expect(announcement).toContainText(
+        new RegExp(`${await options.count()}`, "u"),
+      );
 
       await page.keyboard.press("ArrowDown");
       const firstOptionId = await options.first().getAttribute("id");

@@ -536,6 +536,7 @@ async function GardenSelectedSpaceTimeline({
           kind="space-entry"
           entryCount={timeline.entries.length}
           spaceName={timeline.space.display_name}
+          entryTitle={timeline.entries[0]?.title ?? null}
           primaryHref="#space-journal"
           primaryLabel={copy.page.postSave.returnToSpaceJournal}
           secondaryHref="#first-entry-composer"

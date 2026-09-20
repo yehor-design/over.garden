@@ -42,6 +42,7 @@ export function FocalPointControl({
   const focalResolution = resolveMediaFocalPoint(focal);
   const safe = focalResolution.focal;
   const surfaceRef = useRef<HTMLDivElement | null>(null);
+  const valueText = `x ${Math.round(safe.x * 100)}% · y ${Math.round(safe.y * 100)}%`;
 
   const setFromClientPoint = useCallback(
     (clientX: number, clientY: number) => {
@@ -63,10 +64,20 @@ export function FocalPointControl({
       data-media-serve-class={focalResolution.serveClass}
     >
       <div className="grid gap-0.5">
-        <p id={labelId} className="text-xs font-medium text-foreground">
+        <p id={labelId} className="text-caption font-medium text-text">
           {copy.label}
         </p>
-        <p className="text-xs text-muted-foreground">{copy.hint}</p>
+        <p className="text-caption text-text-muted">{copy.hint}</p>
+        {/* The value, visibly (`OVE-458` AC7). `aria-valuetext` says it to a
+            screen reader and to nobody else, so a keyboard user moving the
+            marker two per cent at a time had no way to see where it had got
+            to — and neither did anyone checking that it had moved at all. */}
+        <p
+          data-focal-point-value="true"
+          className="text-caption text-text-muted tabular-nums"
+        >
+          {valueText}
+        </p>
       </div>
 
       <div
@@ -77,9 +88,9 @@ export function FocalPointControl({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(safe.x * 100)}
-        aria-valuetext={`x ${Math.round(safe.x * 100)}%, y ${Math.round(safe.y * 100)}%`}
+        aria-valuetext={valueText}
         aria-disabled={disabled || undefined}
-        className="relative aspect-video w-full cursor-crosshair overflow-hidden rounded-md border border-border bg-muted focus-visible:ring-2 focus-visible:ring-ring aria-disabled:opacity-60"
+        className="relative aspect-video w-full cursor-crosshair overflow-hidden rounded-md border border-border bg-surface-sunken outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring aria-disabled:opacity-60"
         onClick={(event) => setFromClientPoint(event.clientX, event.clientY)}
         onKeyDown={(event) => {
           if (disabled) return;
@@ -112,17 +123,17 @@ export function FocalPointControl({
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-primary shadow"
+          className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-action shadow-popover"
           style={{ left: `${safe.x * 100}%`, top: `${safe.y * 100}%` }}
         />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         <figure className="grid gap-1">
-          <figcaption className="text-xs text-muted-foreground">
+          <figcaption className="text-caption text-text-muted">
             {copy.coverPreview}
           </figcaption>
-          <div className="relative aspect-video overflow-hidden rounded border border-border bg-muted">
+          <div className="relative aspect-video overflow-hidden rounded border border-border bg-surface-sunken">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}
@@ -133,10 +144,10 @@ export function FocalPointControl({
           </div>
         </figure>
         <figure className="grid gap-1">
-          <figcaption className="text-xs text-muted-foreground">
+          <figcaption className="text-caption text-text-muted">
             {copy.containPreview}
           </figcaption>
-          <div className="relative aspect-video overflow-hidden rounded border border-border bg-muted">
+          <div className="relative aspect-video overflow-hidden rounded border border-border bg-surface-sunken">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={imageUrl}

@@ -46,7 +46,10 @@ import { BrowserJournalImageEncoder } from "@/lib/media/browser-journal-image-en
 import { BrowserEphemeralMediaStager } from "@/lib/media/ephemeral-staging-client";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 
-const EMPTY_MEDIA_SNAPSHOT: LocalJournalMediaSnapshot = { items: [] };
+const EMPTY_MEDIA_SNAPSHOT: LocalJournalMediaSnapshot = {
+  items: [],
+  lease: "held",
+};
 const ATOMIC_PUBLICATION_DEADLINE_MS = 70_000;
 
 export type LocalJournalComposerStatus =

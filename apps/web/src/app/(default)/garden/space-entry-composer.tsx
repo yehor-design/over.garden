@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
+  journalCoverPhotoLabel,
   JournalCoverControls,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
@@ -12,6 +13,7 @@ import {
   LocalJournalComposerStatus,
   LocalJournalPublicationDisclosure,
 } from "@/components/garden/local-journal-composer-status";
+import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
@@ -91,15 +93,16 @@ export function SpaceEntryComposer({
   } | null>(null);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const local = useLocalJournalComposer({
-    fallbackReturnTo: "/garden",
-    enabled: enableServerPersistence,
-    dirty: Boolean(
-      draft.title ||
+  const dirty = Boolean(
+    draft.title ||
       draft.body ||
       draft.contentDocument?.blocks.length ||
       mentionedPlantObjectIds.length,
-    ),
+  );
+  const local = useLocalJournalComposer({
+    fallbackReturnTo: "/garden",
+    enabled: enableServerPersistence,
+    dirty,
   });
   const imageStates = useMemo(
     () =>
@@ -213,8 +216,13 @@ export function SpaceEntryComposer({
     >
       <LocalJournalComposerStatus
         state={local.state}
+        lease={local.media.lease}
         copy={atomicCopy}
         onCancelPublishing={local.cancelPublishing}
+      />
+      <UnpublishedWorkGuard
+        active={dirty && local.state.status !== "published"}
+        copy={atomicCopy}
       />
 
       <fieldset disabled={local.readOnly} className="contents">
@@ -248,8 +256,8 @@ export function SpaceEntryComposer({
           </Field>
         </div>
 
-        <div className="grid gap-1 text-sm">
-          <span className="font-medium text-foreground">
+        <div className="grid gap-1 text-body-sm">
+          <span className="font-medium text-text">
             {copy.page.spaceJournal.story}
           </span>
           <StructuredJournalComposer
@@ -302,7 +310,7 @@ export function SpaceEntryComposer({
             ).map((mediaAssetId, index) => ({
               mediaAssetId,
               previewUrl: imageStates.get(mediaAssetId)?.previewUrl ?? null,
-              label: `${coverCopy.useAsCover} ${index + 1}`,
+              label: journalCoverPhotoLabel(coverCopy, index),
             }))}
             disabled={local.readOnly}
             selectedLocalMediaState={
@@ -346,7 +354,7 @@ export function SpaceEntryComposer({
         </div>
 
         <fieldset className="grid gap-2">
-          <legend className="text-sm font-medium text-foreground">
+          <legend className="text-body-sm font-medium text-text">
             {copy.page.spaceJournal.mentionedObjects}
           </legend>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -374,10 +382,18 @@ export function SpaceEntryComposer({
       </fieldset>
 
       {message ? (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-body-sm text-danger-text" role="alert">
           {message}
         </p>
       ) : null}
+
+      {/* What Publish does, beside the control that does it (`OVE-458` AC3). */}
+      <p
+        data-publish-meaning="true"
+        className="max-w-prose text-body-sm text-text-muted"
+      >
+        {atomicCopy.publishMeaning}
+      </p>
 
       <Button
         type="submit"

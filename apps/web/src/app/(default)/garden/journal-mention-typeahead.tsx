@@ -138,12 +138,12 @@ export function JournalMentionTypeaheadPanel({
   return (
     <div className="grid gap-2">
       {status === "loading" ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-text-muted">
           {copy.composer.mentions.searching}
         </p>
       ) : null}
       {status === "failed" ? (
-        <p className="text-xs text-destructive">
+        <p className="text-caption text-danger-text">
           {copy.composer.mentions.unavailable}
         </p>
       ) : null}
@@ -154,17 +154,17 @@ export function JournalMentionTypeaheadPanel({
               <button
                 type="button"
                 onClick={() => onSelect(suggestion)}
-                className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-body-sm hover:bg-surface-sunken"
               >
                 <span className="min-w-0">
-                  <span className="block truncate font-medium text-foreground">
+                  <span className="block truncate font-medium text-text">
                     {suggestion.label}
                   </span>
-                  <span className="block truncate text-xs text-muted-foreground">
+                  <span className="block truncate text-caption text-text-muted">
                     {suggestion.detail} · {suggestion.disambiguationLabel}
                   </span>
                 </span>
-                <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                <span className="shrink-0 rounded-md border border-border px-2 py-1 text-caption text-text-muted">
                   {mentionKindLabel(suggestion.kind, copy)}
                 </span>
               </button>
@@ -173,20 +173,20 @@ export function JournalMentionTypeaheadPanel({
         </ul>
       ) : null}
       {selections.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-caption">
+          <span className="text-text-muted">
             {copy.composer.mentions.linked}
           </span>
           {selections.map((selection) => (
             <span
               key={mentionSelectionKey(selection)}
-              className="inline-flex max-w-full items-center gap-1 rounded-md border border-border px-2 py-1 text-foreground"
+              className="inline-flex max-w-full items-center gap-1 rounded-md border border-border px-2 py-1 text-text"
             >
               <span className="truncate">{selection.label}</span>
               <button
                 type="button"
                 onClick={() => onRemove(selection)}
-                className="inline-flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="inline-flex size-5 items-center justify-center rounded-sm text-text-muted hover:bg-surface-sunken hover:text-text"
                 aria-label={formatGardenWorkspaceTemplate(
                   copy.composer.mentions.remove,
                   { label: selection.label },

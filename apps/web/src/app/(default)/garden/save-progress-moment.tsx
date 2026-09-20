@@ -15,6 +15,8 @@ interface SaveProgressMomentProps {
   entryCount: number;
   objectName?: string | null;
   spaceName?: string | null;
+  /** The entry that was just published, named on its own receipt. */
+  entryTitle?: string | null;
   primaryHref: string;
   primaryLabel: string;
   secondaryHref?: string;
@@ -27,6 +29,7 @@ export function SaveProgressMoment({
   entryCount,
   objectName = null,
   spaceName = null,
+  entryTitle = null,
   primaryHref,
   primaryLabel,
   secondaryHref,
@@ -37,6 +40,7 @@ export function SaveProgressMoment({
       kind,
       objectName,
       spaceName,
+      entryTitle,
       entryCount,
     },
     locale,
@@ -61,6 +65,14 @@ export function SaveProgressMoment({
           <p className="max-w-prose text-body-sm leading-6 text-text-secondary">
             {copy.body}
           </p>
+          {copy.publishedEntry ? (
+            <p
+              data-save-progress-entry="true"
+              className="text-body-sm font-medium text-text-heading"
+            >
+              {copy.publishedEntry}
+            </p>
+          ) : null}
         </div>
         <div className="grid w-full gap-2 sm:w-48">
           <div className="flex items-baseline justify-between gap-3 text-caption text-text-muted">

@@ -306,6 +306,7 @@ async function PlantObjectSections({
           kind={saveProgressKind}
           entryCount={page.entries.length}
           objectName={page.plantObject.display_name}
+          entryTitle={page.entries[0]?.title ?? null}
           primaryHref="#follow-up-composer"
           primaryLabel={workspaceCopy.saveProgress.actions.addAnotherEntry}
           secondaryHref="/garden"

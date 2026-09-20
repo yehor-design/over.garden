@@ -1,10 +1,13 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import {
   expect,
   test,
   type BrowserContext,
   type Locator,
+  type Page,
 } from "playwright/test";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { Pool } from "pg";
@@ -222,6 +225,216 @@ test.describe("OVE-417 Notion-shaped composer", () => {
     }
   });
 });
+
+
+test.describe("OVE-458 the composer a keyboard can finish", () => {
+  test("holds its column, moves a block by key, states the cover and warns on the way out", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const origin = requiredBaseUrl(baseURL);
+    const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    let userId = "";
+
+    try {
+      userId = await createVerifiedCredentialSession({
+        baseURL: origin,
+        context,
+        pool,
+      });
+
+      await page.goto(`${origin}/garden`);
+      const composer = page.locator("#first-entry-composer");
+      const canvas = composer.locator("[data-lexical-journal-canvas]");
+      await expect(canvas).toBeVisible();
+      await expect(
+        composer.locator('[data-structured-journal-composer="true"]'),
+      ).toHaveAttribute("data-status", "ready");
+
+      // 1. AC1 — the column is Notion's 708 px and the gutter its 56 px, both
+      //    unchanged by the redesign. The 708 is a **cap**: inside the shell's
+      //    704 px content column (`--container-content`) minus the page's own
+      //    padding the canvas renders at 656, which is 70–75 Cyrillic
+      //    characters and inside DESIGN.md §3's measure. The Linear card says
+      //    a 40 px gutter; ADR-0028 D3 says 56, and the ADR is the decision of
+      //    record.
+      const column = await canvas.evaluate((node) => ({
+        maxWidth: getComputedStyle(node).maxWidth,
+        paddingLeft: Number.parseFloat(getComputedStyle(node).paddingLeft),
+        width: node.getBoundingClientRect().width,
+      }));
+      expect(column.maxWidth).toBe("708px");
+      expect(column.paddingLeft).toBe(56);
+      expect(column.width).toBeLessThanOrEqual(708);
+      expect(column.width).toBeGreaterThan(600);
+
+      const editor = canvas.locator('[contenteditable="true"]').first();
+      await editor.click();
+      await page.keyboard.type("Перший");
+      await page.keyboard.press("Enter");
+      await page.keyboard.type("Другий");
+      await page.keyboard.press("Enter");
+      await page.keyboard.type("Третій");
+
+      // 2. AC1 — the slash menu is one flat list. A submenu closes the parent
+      //    with reason `sibling-open`, so a nested menu here is a defect.
+      await page.keyboard.press("Enter");
+      await page.keyboard.type("/");
+      const menu = canvas.locator("[data-journal-slash-menu]");
+      await expect(menu).toBeVisible();
+      await expect(
+        menu.locator('[aria-haspopup="menu"], [role="menu"] [role="menu"]'),
+      ).toHaveCount(0);
+      const optionCount = await menu
+        .locator("[data-journal-slash-option]")
+        .count();
+      expect(optionCount).toBeGreaterThan(6);
+      await page.keyboard.press("Escape");
+      // The "/" and then the empty block it was typed into, so the document
+      // is back to the three paragraphs the reordering below counts.
+      await page.keyboard.press("Backspace");
+      await page.keyboard.press("Backspace");
+
+      // 3. AC2 — a block moves by key. The caret is in the last block, so the
+      //    gutter belongs to it without any pointer; Tab reaches the handle.
+      const blocks = canvas.locator('[contenteditable="true"] > *');
+      await expect(blocks.last()).toHaveText("Третій");
+      // The pointer leaves the canvas, because hover outranks the caret and
+      // the click that started the typing left it over the first block. This
+      // is the keyboard's run: nothing below touches the mouse.
+      await page.mouse.move(4, 4);
+      const handle = canvas.locator('[data-journal-gutter-action="handle"]');
+      await expect(handle).toBeAttached();
+      let reached = false;
+      for (let press = 0; press < 5 && !reached; press += 1) {
+        await page.keyboard.press("Tab");
+        reached = await handle.evaluate(
+          (node) => node === document.activeElement,
+        );
+      }
+      expect(reached, "the drag handle is reachable by Tab").toBe(true);
+      // The handle names the block it will move, and where that block is.
+      await expect(handle).toHaveAttribute("aria-label", /3 \/ 3/u);
+      await page.keyboard.press("ArrowUp");
+      await expect(blocks.nth(1)).toHaveText("Третій");
+      // The move is announced, not merely performed.
+      await expect(
+        composer.locator("[data-lexical-reorder-live-region]"),
+      ).toContainText(/2 з 3/u);
+
+      // 4. The shortcut sheet says what the rules are, from the same modules
+      //    that implement them.
+      const sheetTrigger = composer.locator(
+        '[data-journal-shortcut-sheet-trigger="true"]',
+      );
+      await sheetTrigger.click();
+      const sheet = page.locator('[data-journal-shortcut-sheet="true"]');
+      await expect(sheet).toBeVisible();
+      // Settled, not opening: axe computes contrast from what is painted, and
+      // a popup mid-transition is still partly transparent.
+      await expect(sheet).toHaveCSS("opacity", "1");
+      await expect(sheet).toContainText("## ");
+      await expect(sheet).toContainText("[x]");
+      await expect(sheet).toContainText("**…**");
+      // Axe over the page while the sheet is open: a popover portals out of
+      // the composer, so the picker spec's composer-scoped run never sees it.
+      expect(await axeViolations(page)).toEqual([]);
+      await page.keyboard.press("Escape");
+      await expect(sheet).toBeHidden();
+
+      // 5. AC7 — the cover says its value in words, and changes it by key.
+      const coverValue = composer.locator('[data-journal-cover-value="true"]');
+      await expect(coverValue).toContainText(/Обрано: Автоматично/u);
+      const noCover = composer.getByRole("button", {
+        name: "Без обкладинки",
+        exact: true,
+      });
+      await noCover.focus();
+      await page.keyboard.press("Enter");
+      await expect(coverValue).toContainText(/Обрано: Без обкладинки/u);
+      await expect(noCover).toHaveAttribute("aria-pressed", "true");
+
+      // 6. AC5 — leaving with unpublished work warns once, in the product's
+      //    own dialog, and the reader who stays keeps their work.
+      const catalogLink = page
+        .locator('a[href="/catalog"], a[href^="/catalog?"]')
+        .first();
+      await catalogLink.click();
+      const guard = page.locator('[data-unpublished-work-guard="true"]');
+      await expect(guard).toBeVisible();
+      await expect(guard).toContainText(/чернеток немає/u);
+      expect(new URL(page.url()).pathname).toBe("/garden");
+      await page.getByRole("button", { name: "Залишитися" }).click();
+      await expect(guard).toBeHidden();
+      await expect(blocks.first()).toHaveText("Перший");
+
+      // Confirming goes where the reader pressed.
+      await catalogLink.click();
+      await page.getByRole("button", { name: "Піти й відкинути" }).click();
+      await page.waitForURL(/\/catalog(\?|$)/u, { timeout: 30_000 });
+    } finally {
+      if (userId) {
+        await pool
+          .query('delete from public."user" where id = $1::uuid', [userId])
+          .catch(() => undefined);
+      }
+      await pool.end();
+    }
+  });
+});
+
+/**
+ * Axe over the whole document, at the WCAG 2.1 AA tags DESIGN.md §10 gates on.
+ * Through the protocol rather than a script element: the page's CSP blocks the
+ * element, and a blocked script tag never fires its load event.
+ */
+async function axeViolations(page: Page) {
+  const axeSource = readFileSync(
+    path.join(process.cwd(), "node_modules", "axe-core", "axe.min.js"),
+    "utf8",
+  );
+  await page.evaluate(`(() => { ${axeSource} })()`);
+  return page.evaluate(async () => {
+    const axe = (
+      window as unknown as {
+        axe: {
+          run: (
+            context: Document,
+            options: unknown,
+          ) => Promise<{
+            violations: Array<{
+              id: string;
+              impact: string | null;
+              nodes: Array<{ target: string[] }>;
+            }>;
+          }>;
+        };
+      }
+    ).axe;
+    const result = await axe.run(
+      {
+        include: [["body"]],
+        // `base-ui` traps focus with two zero-size `aria-hidden` sentinels
+        // that carry `tabindex="0"` — the standard focus-lock pattern, which
+        // axe reports as `aria-hidden-focus` wherever any overlay is open. It
+        // is the library's, not this composer's, and a screen reader never
+        // reaches one: focus landing there is redirected in the same tick.
+        exclude: [["[data-base-ui-focus-guard]"]],
+      } as unknown as Document,
+      {
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+      },
+    );
+    // The selector too: a violation without a path costs an afternoon.
+    return result.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      targets: violation.nodes.map((node) => node.target.join(" ")),
+    }));
+  });
+}
 
 /** The gutter is positioned imperatively one frame after the pointer moves. */
 async function expectGutterOn(gutter: Locator, block: Locator) {
