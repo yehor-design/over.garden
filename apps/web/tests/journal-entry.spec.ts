@@ -296,3 +296,64 @@ test.describe("the public journal entry", () => {
     }
   });
 });
+
+test.describe("an entry whose photograph is a block of its document", () => {
+  // The composer's shape since Slice 26, and the shape no fixture had: the
+  // photograph is in the story, and it is also the cover. The page drew it
+  // above the story and the story drew it again directly underneath — seen on
+  // production on 2026-09-20, two `<img>` of one file, 294 px and 703 px down
+  // the same column (`OVE-471`).
+  let pool: Pool;
+  let fixture: PublishedEntryFixture;
+
+  test.beforeAll(async () => {
+    pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    fixture = await seedPublishedEntryFixture(pool, "ove471", {
+      photographInDocument: true,
+    });
+  });
+
+  test.afterAll(async () => {
+    await cleanupPublishedEntryFixture(pool, fixture);
+    await pool.end();
+  });
+
+  test("shows it once, and asks for it at once", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    await selectLocale(context, baseURL);
+    await openEntry(page, fixture.entryPath);
+
+    const photographs = await page.evaluate(() => {
+      const images = [...document.querySelectorAll("main img")];
+      const byFile = new Map<string, number>();
+      for (const image of images) {
+        const file = (image.getAttribute("src") ?? "").split("?")[0]!;
+        byFile.set(file, (byFile.get(file) ?? 0) + 1);
+      }
+      const first = images[0];
+      return {
+        mostShown: Math.max(0, ...byFile.values()),
+        files: byFile.size,
+        loading: first?.getAttribute("loading") ?? null,
+        fetchPriority: first?.getAttribute("fetchpriority") ?? null,
+        preloaded: [
+          ...document.querySelectorAll('link[rel="preload"][as="image"]'),
+        ].map((link) => link.getAttribute("href")),
+      };
+    });
+
+    expect(photographs.files, "the entry's photographs").toBe(1);
+    expect(
+      photographs.mostShown,
+      "a reader meets the entry's photograph this many times",
+    ).toBe(1);
+    // Losing the cover must not lose the page its LCP element (DESIGN.md §9).
+    expect(photographs.loading).toBe("eager");
+    expect(photographs.fetchPriority).toBe("high");
+    expect(photographs.preloaded).toHaveLength(1);
+  });
+});

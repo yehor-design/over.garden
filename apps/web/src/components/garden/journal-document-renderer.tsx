@@ -17,8 +17,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 export interface JournalDocumentImageViewModel {
   mediaAssetId: string;
   src: string;
+  /** `<img srcset>` candidates from `buildPublicMediaSourceSet`, when the
+   *  photograph has variants. A caller that passes none is served the one file
+   *  there is, exactly as before — which is what keeps an entry published
+   *  before Slice 26 byte-identical (ADR-0028). */
+  srcSet?: string | null;
   alt: string;
   caption: string | null;
+  /** The 16 px WebP painted until the photograph arrives. */
+  placeholderDataUri?: string | null;
   width?: number;
   height?: number;
   focalX?: number | null;
@@ -33,12 +40,21 @@ export interface JournalDocumentRendererCopy {
 export function JournalDocumentRenderer({
   document,
   imagesByMediaId,
+  leadImageMediaId = null,
   unavailable = false,
   copy,
   className,
 }: {
   document: JournalDocumentV1 | null;
   imagesByMediaId?: ReadonlyMap<string, JournalDocumentImageViewModel>;
+  /**
+   * The photograph this page shows first, when the page shows no cover of its
+   * own (`OVE-471`). It is asked for at once — eager, a high fetch priority,
+   * the preload React hoists for both — because it is then the page's LCP
+   * element (DESIGN.md §9). Left unset, every photograph here is lazy, which
+   * is what a document below a cover has always been.
+   */
+  leadImageMediaId?: string | null;
   unavailable?: boolean;
   copy: JournalDocumentRendererCopy;
   className?: string;
@@ -78,6 +94,7 @@ export function JournalDocumentRenderer({
               ? countImagesBefore(document.blocks, index) + 1
               : undefined
           }
+          lead={block.type === "image" && block.mediaAssetId === leadImageMediaId}
         />
       ))}
     </div>
@@ -88,10 +105,12 @@ function JournalDocumentBlockView({
   block,
   image,
   imagePosition,
+  lead = false,
 }: {
   block: JournalDocumentBlock;
   image?: JournalDocumentImageViewModel;
   imagePosition?: number;
+  lead?: boolean;
 }) {
   switch (block.type) {
     case "paragraph":
@@ -259,6 +278,15 @@ function JournalDocumentBlockView({
         >
           <SubjectAwareMediaImage
             src={image.src}
+            srcSet={image.srcSet ?? undefined}
+            /* Only beside a `srcset`: alone it tells the browser nothing, and
+               an entry whose photographs have no variants must render the
+               bytes it always did (ADR-0028). The width is the reading
+               column's, which is what a document is laid out in. */
+            sizes={
+              image.srcSet ? "(max-width: 767px) 100vw, 704px" : undefined
+            }
+            placeholderDataUri={image.placeholderDataUri}
             alt={image.alt}
             width={image.width ?? 1200}
             height={image.height ?? 900}
@@ -267,6 +295,7 @@ function JournalDocumentBlockView({
             focalY={image.focalY}
             intrinsicWidth={image.width ?? null}
             intrinsicHeight={image.height ?? null}
+            priority={lead}
             className="h-auto w-full rounded-md"
           />
           {image.caption ? (

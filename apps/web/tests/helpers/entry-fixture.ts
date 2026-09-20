@@ -32,6 +32,13 @@ export async function seedPublishedEntryFixture(
     title?: string;
     body?: string;
     language?: "uk" | "bg" | "ru";
+    /**
+     * Write the entry the way the composer writes one: the photograph is a
+     * *block of the document*, and it is the cover (ADR-0028). Without this
+     * the fixture has a cover row and a plain-text body — which is why no
+     * spec could see the page drawing that photograph twice (`OVE-471`).
+     */
+    photographInDocument?: boolean;
   } = {},
 ): Promise<PublishedEntryFixture> {
   const suffix = randomUUID().slice(0, 8);
@@ -74,10 +81,32 @@ export async function seedPublishedEntryFixture(
      values ($1, $2, $3, 'Томат Чорний принц', 'plant', 'unknown')`,
     [objectId, ownerUserId, spaceId],
   );
+  // The composer's shape: the photograph is a block, and the paragraphs are the
+  // same words the plain body holds, so a spec can ask for either.
+  const contentDocument = options.photographInDocument
+    ? {
+        schemaVersion: 1,
+        blocks: [
+          {
+            id: "b_photograph",
+            type: "image",
+            mediaAssetId: assetId,
+            caption: "Грядка з томатами у вечірньому світлі",
+          },
+          ...body.split(/\n\s*\n/).map((paragraph, index) => ({
+            id: `b_paragraph_${index}`,
+            type: "paragraph",
+            spans: [{ text: paragraph.trim() }],
+          })),
+        ],
+      }
+    : null;
+
   const entry = await pool.query<{ n: number }>(
-    `insert into journal_entries (id, owner_user_id, space_id, plant_object_id, title, body, entry_scope,
+    `insert into journal_entries (id, owner_user_id, space_id, plant_object_id, title, body,
+       content_document, content_schema_version, entry_scope,
        visibility, lifecycle_state, published_at, public_slug, source_language, client_mutation_id)
-     values ($1, $2, $3, $4, $5, $6, 'object', 'public', 'active', now(), $7, $8, $7)
+     values ($1, $2, $3, $4, $5, $6, $9, $10, 'object', 'public', 'active', now(), $7, $8, $7)
      returning author_entry_number as n`,
     [
       entryId,
@@ -88,6 +117,8 @@ export async function seedPublishedEntryFixture(
       body,
       `${prefix}-entry-${suffix}`,
       options.language ?? "uk",
+      contentDocument ? JSON.stringify(contentDocument) : null,
+      contentDocument ? 1 : null,
     ],
   );
   const entryNumber = entry.rows[0]?.n;

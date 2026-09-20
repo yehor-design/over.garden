@@ -454,6 +454,23 @@ What is left is weight, and the waterfall is specific about it:
   priority does better than production's applied figure by an amount only a
   packet-level shaper, or the field, can name.
 
+**An entry drew its lead photograph twice** (`OVE-471`, fixed 2026-09-20).
+Since the composer became Notion-shaped a photograph *is* a block of the
+document, and the cover is usually the first of them — so the page drew the
+cover above the story and the story drew the same file directly underneath
+(measured on production: two `<img>` of one photograph, 294 px and 703 px down
+one column), while the gallery at the foot repeated the rest. **A photograph
+the story already shows is never shown again by the page around it**, and a
+cover uploaded on its own — in no block — is still drawn as the hero. The
+story's first photograph then carries the priority the cover had, so losing the
+hero does not lose the page its LCP element. Two things the same change put
+right: a photograph inside a story now uses the variant ladder
+(`srcset`/`sizes`, which nothing in a document ever had — it was lever 6(c) of
+`OVE-469`), and its box is reserved at the photograph's own ratio instead of a
+4:3 fallback. Nothing in the renderer's default path moved: the ADR-0028 golden
+file is untouched and green, because a photograph with no variants still
+renders the bytes it always did.
+
 The budget is measured with throttling **applied**, and the simulated figure is
 recorded beside it (ADR-0032 D9): simulation charges LCP with every script that
 evaluated before the paint on the unthrottled trace, which on a loopback server
