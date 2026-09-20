@@ -23,7 +23,9 @@
  * id the process reads at start, so the sealed account is written first
  * (`owner:seed-browser-fixture`); and the retention proof drives the purge
  * through the cron ingress, which takes a secret both sides have to hold — a
- * fresh one per run, never printed.
+ * fresh one per run, never printed. A Google client, placeholder or real, is
+ * what makes the sign-in screen draw the entry point the auth specs look for:
+ * CI has none, and the first run there failed on exactly that.
  */
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { randomBytes } from "node:crypto";
@@ -78,6 +80,14 @@ async function main() {
     PUBLIC_SITE_URL: origin,
     OVERGARDEN_ADMIN_OWNER_USER_ID: OWNER_BROWSER_FIXTURE.userId,
     CRON_SECRET: randomBytes(32).toString("base64url"),
+    // The placeholders Playwright's own dev-server config uses. They make the
+    // sign-in screen draw its Google entry point — which two specs assert —
+    // and reach no Google; a runner with a real client keeps its own.
+    GOOGLE_CLIENT_ID:
+      process.env.GOOGLE_CLIENT_ID ??
+      "local-browser-client.apps.googleusercontent.com",
+    GOOGLE_CLIENT_SECRET:
+      process.env.GOOGLE_CLIENT_SECRET ?? "local-browser-secret",
     NEXT_TELEMETRY_DISABLED: "1",
   };
 

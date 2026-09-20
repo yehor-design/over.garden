@@ -137,6 +137,11 @@ async function settleShell(page: Page) {
   // the address, the rail a page fills, a gardener's own destinations — has
   // settled only after it.
   await waitForHydration(header);
+  // And a width is a width in the face the page is set in. `font-display:
+  // swap` draws the fallback first, the fallback is wider, and at 320 px
+  // "Дневници" is one line in Google Sans and two in Liberation Sans — which
+  // is what a Linux runner measured the first time this file ran in CI.
+  await page.evaluate(() => document.fonts.ready);
 }
 
 test.describe("the mobile shell", () => {

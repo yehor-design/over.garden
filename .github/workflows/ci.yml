@@ -229,6 +229,18 @@ jobs:
       - name: The browser gate
         run: pnpm exec tsx scripts/run-browser-gate.ts --shard=${{ matrix.shard }}/2
 
+      # A test that fails once and passes on its retry is reported "flaky" and
+      # the run is green, so its one useful artefact — the trace of the attempt
+      # that failed — used to go with the runner. Kept for a week.
+      - name: Keep the traces of what failed or flaked
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-proof-traces-${{ matrix.shard }}
+          path: apps/web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
+
   # The required check. Branch protection names "Web app", so this is the job
   # that carries the name: it runs whatever happened to the two above and
   # passes only if both did. `if: always()` matters — a job skipped because a
