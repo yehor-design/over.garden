@@ -131,10 +131,39 @@ describe("owner curation queue (ADR-0026 D10)", () => {
     const asked = await render();
     expect(asked).toContain('data-catalog-queue-action="confirm"');
     expect(asked).not.toContain('data-catalog-queue-action="accept"');
+    // The count, not the rule's fifty (`OVE-459` AC3).
+    expect(asked).toContain('data-catalog-queue-confirm-objects="51"');
+    expect(asked).toContain("51");
+    // And the confirmation keeps its place, so the grant names one item.
+    expect(asked).toContain(`item=${ITEM_ID}&amp;confirm=merge`);
 
-    const confirmed = await render({ confirm: "merge" });
+    const confirmed = await render({ confirm: "merge", item: ITEM_ID });
     expect(confirmed).toContain('data-catalog-queue-action="accept"');
     expect(confirmed).toContain('name="confirmMerge"');
+  });
+
+  it("does not let one item's confirmation apply to another", async () => {
+    const other = "22222222-2222-4222-8222-222222222222";
+    mocks.listOpenCurationQueue.mockResolvedValue([
+      queueItem({ subject: node(NODE_A, "Lycopersicon esculentum", 51) }),
+    ]);
+
+    // The grant names an item that is no longer in the queue — decided in
+    // another tab. The page falls back to the highest-impact item, which must
+    // not inherit it: before `OVE-459` the confirm link carried no item at
+    // all, so confirming a merge on the fifth card applied it to the first.
+    const html = await render({ confirm: "merge", item: other });
+    expect(html).toContain('data-catalog-queue-action="confirm"');
+    expect(html).not.toContain('data-catalog-queue-action="accept"');
+    expect(html).not.toContain('name="confirmMerge"');
+  });
+
+  it("prints every key it binds, so no shortcut is documentation only", async () => {
+    const html = await render();
+    expect(html).toContain('data-catalog-queue-keys="true"');
+    for (const key of ["y", "n", "j", "k", "u"]) {
+      expect(html, key).toContain(`data-catalog-queue-key="${key}"`);
+    }
   });
 
   it("filters by type and says so in the link it renders", async () => {

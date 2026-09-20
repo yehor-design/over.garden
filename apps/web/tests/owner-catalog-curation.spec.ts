@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
@@ -53,8 +55,15 @@ interface Fixture {
   cultivarId: string;
   spaceId: string;
   objectIds: { keyboard: string; noScript: string; automatic: string };
-  queueIds: { keyboard: string; noScript: string; automatic: string };
+  queueIds: {
+    keyboard: string;
+    noScript: string;
+    automatic: string;
+    bigMerge: string;
+  };
   labels: { keyboard: string; noScript: string; automatic: string };
+  /** How many gardener objects the big merge would move. */
+  bigMergeObjects: number;
 }
 
 test.use({ trace: "off" });
@@ -94,8 +103,10 @@ test.describe("OVE-391 owner curation", () => {
       );
       await expect(item).toContainText(fixture.labels.keyboard);
       await expect(item).toContainText("Solanum lycopersicum");
+      // Three open: the two label links this run decides, and the big merge
+      // that `OVE-459` confirms below.
       await expect(page.locator("[data-catalog-queue-position]")).toContainText(
-        "1/2",
+        "1/3",
       );
 
       // J and K walk the stream. Neither records a decision: the item the
@@ -120,6 +131,16 @@ test.describe("OVE-391 owner curation", () => {
       expect(await readQueueState(pool, fixture.queueIds.noScript)).toBe(
         "open",
       );
+
+      // Every key it binds is printed beside the controls (`OVE-459` AC2).
+      // A shortcut that lives only in the source is a shortcut only its
+      // author has.
+      for (const key of ["y", "n", "j", "k", "u"]) {
+        await expect(
+          page.locator(`[data-catalog-queue-key="${key}"]`),
+          key,
+        ).toBeVisible();
+      }
 
       // 2. Y accepts. The proof is the gardener's object, not the page.
       await page.keyboard.press("y");
@@ -197,6 +218,53 @@ test.describe("OVE-391 owner curation", () => {
         await readOwnerActionCount(pool, fixture.speciesId),
       ).toBeGreaterThan(0);
 
+      // 4b. A merge over fifty objects asks first, names how many, and the
+      // grant it issues belongs to that item alone (`OVE-459` AC3).
+      await page.goto(`${QUEUE_PATH}?item=${fixture.queueIds.bigMerge}`, {
+        waitUntil: "load",
+      });
+      const merge = page.locator("[data-catalog-queue-item]");
+      await expect(merge).toHaveAttribute(
+        "data-catalog-queue-item",
+        fixture.queueIds.bigMerge,
+      );
+      const confirmNotice = page.locator("[data-catalog-queue-confirm-objects]");
+      await expect(confirmNotice).toHaveAttribute(
+        "data-catalog-queue-confirm-objects",
+        String(fixture.bigMergeObjects),
+      );
+      await expect(confirmNotice).toContainText(
+        String(fixture.bigMergeObjects),
+      );
+      // No way to accept until it has been confirmed.
+      await expect(
+        page.locator('[data-catalog-queue-action="accept"]'),
+      ).toHaveCount(0);
+      const confirm = page.locator('[data-catalog-queue-action="confirm"]');
+      await expect(confirm).toHaveAttribute(
+        "href",
+        new RegExp(`item=${fixture.queueIds.bigMerge}`, "u"),
+      );
+
+      // A grant that names another item — or no item at all — is no grant.
+      // The page falls back to the highest-impact decision, and that decision
+      // must ask for itself: before `OVE-459` the confirm link carried no
+      // item, so a confirmation earned on one card was spent on another.
+      for (const granted of [
+        `${QUEUE_PATH}?item=${fixture.queueIds.automatic}&confirm=merge`,
+        `${QUEUE_PATH}?confirm=merge`,
+      ]) {
+        await page.goto(granted, { waitUntil: "load" });
+        await expect(
+          page.locator("[data-catalog-queue-confirm-objects]"),
+          granted,
+        ).toBeVisible();
+        await expect(
+          page.locator('[data-catalog-queue-action="accept"]'),
+          granted,
+        ).toHaveCount(0);
+      }
+
       // 5. The sources page enqueues exactly one refresh per idempotency key.
       await page.goto("/garden/catalog/sources", { waitUntil: "load" });
       const refresh = page.locator('[data-catalog-source-refresh="eppo"]');
@@ -255,6 +323,30 @@ test.describe("OVE-391 owner curation", () => {
         })
         .toBe(renamed);
 
+      // 7. Axe on all three owner pages, and a visitor gets none of the
+      // owner's data from any of them (`OVE-459` AC7).
+      for (const path of [
+        QUEUE_PATH,
+        "/garden/catalog/sources",
+        "/account/moderation/comments",
+      ]) {
+        await page.goto(path, { waitUntil: "load" });
+        expect(await axeViolations(page), path).toEqual([]);
+      }
+      for (const [path, marker] of [
+        [QUEUE_PATH, "data-catalog-queue-item"],
+        ["/garden/catalog/sources", "data-catalog-source="],
+        ["/account/moderation/comments", "data-moderation-report"],
+      ] as const) {
+        const guest = await (
+          await fetch(`${baseURL}${path}`, {
+            headers: { accept: "text/html" },
+            redirect: "manual",
+          })
+        ).text();
+        expect(guest, path).not.toContain(marker);
+      }
+
       const auditedCard = await (
         await fetch(`${baseURL}${cardPath}`, {
           headers: { accept: "text/html", cookie },
@@ -287,6 +379,52 @@ test.describe("OVE-391 owner curation", () => {
  * stream settles, so the first press can land before the listener exists;
  * every key here is idempotent in its own direction.
  */
+/**
+ * Axe over the whole document, at the WCAG 2.1 AA tags DESIGN.md §10 gates on.
+ * Through the protocol rather than a script element: the page's CSP blocks the
+ * element, and a blocked script tag never fires its load event. `base-ui`'s
+ * focus guards are excluded — zero-size `aria-hidden` sentinels with
+ * `tabindex="0"`, the standard focus-lock pattern, which axe reports wherever
+ * any overlay is open and which belong to the library, not to this page.
+ */
+async function axeViolations(page: Page) {
+  const axeSource = readFileSync(
+    path.join(process.cwd(), "node_modules", "axe-core", "axe.min.js"),
+    "utf8",
+  );
+  await page.evaluate(`(() => { ${axeSource} })()`);
+  return page.evaluate(async () => {
+    const axe = (
+      window as unknown as {
+        axe: {
+          run: (
+            context: unknown,
+            options: unknown,
+          ) => Promise<{
+            violations: Array<{
+              id: string;
+              impact: string | null;
+              nodes: Array<{ target: string[] }>;
+            }>;
+          }>;
+        };
+      }
+    ).axe;
+    const result = await axe.run(
+      {
+        include: [["body"]],
+        exclude: [["[data-base-ui-focus-guard]"]],
+      },
+      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } },
+    );
+    return result.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      targets: violation.nodes.map((node) => node.target.join(" ")),
+    }));
+  });
+}
+
 async function pressUntil(
   page: Page,
   key: string,
@@ -322,7 +460,10 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     keyboard: randomUUID(),
     noScript: randomUUID(),
     automatic: randomUUID(),
+    bigMerge: randomUUID(),
   };
+  // One over the threshold, so the confirmation is the rule's own edge.
+  const bigMergeObjects = 51;
   const labels = {
     keyboard: `Помідор бабусі ${suffix}`,
     noScript: `Помідор сусіда ${suffix}`,
@@ -398,6 +539,31 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
       [id, speciesId, label, impact],
     );
   }
+  /**
+   * A merge big enough to need confirming (`OVE-459` AC3). Fifty-one gardener
+   * objects sit on the cultivar, and the queue row proposes folding it into
+   * the species — so the page must name fifty-one, and the grant it issues
+   * must name this item and no other.
+   */
+  await pool.query(
+    `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind,
+       catalog_item_id, variety_text, variety_state)
+     select gen_random_uuid(), $1::uuid, $2::uuid, 'OVE-459 ' || n, 'plant',
+            $3::uuid, 'OVE-459 ' || n, 'selected'
+     from generate_series(1, $4::int) as n`,
+    [OWNER_BROWSER_FIXTURE.userId, spaceId, cultivarId, bigMergeObjects],
+  );
+  // The target is in `proposal`, not a column of its own: the subject is the
+  // node the objects sit on, and the proposal names where they are going.
+  await pool.query(
+    `insert into catalog_curation_queue (id, item_type, subject_catalog_item_id,
+       proposal, confidence, reasons, impact_score, state)
+     values ($1, 'node_merge', $2::uuid,
+             jsonb_build_object('catalog_item_id', $3::text), 0.99,
+             array['canonical_same_kingdom_rank'], 10, 'open')`,
+    [queueIds.bigMerge, cultivarId, speciesId],
+  );
+
   // One decision already applied automatically, so the seven-day list has a
   // row to undo. It runs through the same function the worker calls.
   await pool.query("select catalog_apply_queue_item($1::uuid, null, true)", [
@@ -412,6 +578,7 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
     objectIds,
     queueIds,
     labels,
+    bigMergeObjects,
   };
 }
 
@@ -425,6 +592,12 @@ async function cleanupFixture(pool: Pool, fixture: Fixture) {
     .catch(() => undefined);
   await pool.query("delete from plant_objects where id = any($1::uuid[])", [
     ids,
+  ]);
+  // The fifty-one the big merge sits on were inserted in bulk, so they are
+  // cleared by their space rather than by id — and the space cannot go while
+  // any of them still points at it.
+  await pool.query("delete from plant_objects where space_id = $1::uuid", [
+    fixture.spaceId,
   ]);
   await pool.query("delete from spaces where id = $1::uuid", [fixture.spaceId]);
   await pool.query(

@@ -102,6 +102,38 @@ const UK_COPY = {
     description:
       "Захищена черга скарг без приватного вмісту саду та даних автентифікації.",
     empty: "Відкритих скарг на коментарі немає.",
+    reportedAt: "Скаргу подано",
+    openTarget: "Відкрити сторінку",
+    actions: {
+      review: "Взяти в роботу",
+      dismiss: "Відхилити скаргу",
+      remove: "Прибрати коментар",
+    },
+    reasons: {
+      spam: "Спам",
+      harassment: "Переслідування",
+      privacy: "Приватність",
+      misinformation: "Дезінформація",
+      other: "Інше",
+    },
+    states: {
+      submitted: "Нова",
+      reviewed: "У роботі",
+      dismissed: "Відхилена",
+      actioned: "Виконана",
+    },
+    targets: {
+      journal_entry: "Запис",
+      lineage_object: "Живий об'єкт",
+      variety: "Сорт",
+      topic: "Тема",
+      community_contribution: "Допис у спільноті",
+    },
+    removeTitle: "Прибрати цей коментар?",
+    removeBody:
+      "Коментар зникне з публічної сторінки. Дію записано, скаргу закрито.",
+    removeConfirm: "Прибрати",
+    removeCancel: "Скасувати",
   },
 } as const;
 
@@ -198,6 +230,38 @@ const BG_COPY = {
     description:
       "Защитена опашка със сигнали без лично съдържание от градината или данни за удостоверяване.",
     empty: "Няма отворени сигнали за коментари.",
+    reportedAt: "Сигналът е подаден",
+    openTarget: "Отвори страницата",
+    actions: {
+      review: "Поеми сигнала",
+      dismiss: "Отхвърли сигнала",
+      remove: "Премахни коментара",
+    },
+    reasons: {
+      spam: "Спам",
+      harassment: "Тормоз",
+      privacy: "Поверителност",
+      misinformation: "Дезинформация",
+      other: "Друго",
+    },
+    states: {
+      submitted: "Нов",
+      reviewed: "В работа",
+      dismissed: "Отхвърлен",
+      actioned: "Изпълнен",
+    },
+    targets: {
+      journal_entry: "Запис",
+      lineage_object: "Жив обект",
+      variety: "Сорт",
+      topic: "Тема",
+      community_contribution: "Публикация в общност",
+    },
+    removeTitle: "Да премахнем ли този коментар?",
+    removeBody:
+      "Коментарът изчезва от публичната страница. Действието е записано, сигналът е закрит.",
+    removeConfirm: "Премахни",
+    removeCancel: "Отказ",
   },
 } as const satisfies OperatorCopy;
 
@@ -292,6 +356,38 @@ const RU_COPY = {
     description:
       "Защищённая очередь жалоб без личного содержимого сада и данных аутентификации.",
     empty: "Открытых жалоб на комментарии нет.",
+    reportedAt: "Жалоба подана",
+    openTarget: "Открыть страницу",
+    actions: {
+      review: "Взять в работу",
+      dismiss: "Отклонить жалобу",
+      remove: "Убрать комментарий",
+    },
+    reasons: {
+      spam: "Спам",
+      harassment: "Преследование",
+      privacy: "Приватность",
+      misinformation: "Дезинформация",
+      other: "Другое",
+    },
+    states: {
+      submitted: "Новая",
+      reviewed: "В работе",
+      dismissed: "Отклонена",
+      actioned: "Выполнена",
+    },
+    targets: {
+      journal_entry: "Запись",
+      lineage_object: "Живой объект",
+      variety: "Сорт",
+      topic: "Тема",
+      community_contribution: "Пост в сообществе",
+    },
+    removeTitle: "Убрать этот комментарий?",
+    removeBody:
+      "Комментарий исчезнет с публичной страницы. Действие записано, жалоба закрыта.",
+    removeConfirm: "Убрать",
+    removeCancel: "Отмена",
   },
 } as const satisfies OperatorCopy;
 

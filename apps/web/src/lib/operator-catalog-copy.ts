@@ -34,8 +34,22 @@ export interface OperatorCatalogCopy {
     previousItem: string;
     nextItem: string;
     position: string;
+    /**
+     * The heading over the key list. The keys themselves are not prose
+     * (`OVE-459` AC2): a shortcut a reader has to parse out of a sentence is
+     * a shortcut they will not use.
+     */
     keyboardHint: string;
+    /** What each key does, beside the key itself. */
+    keys: {
+      accept: string;
+      reject: string;
+      next: string;
+      previous: string;
+      undo: string;
+    };
     confirmMerge: string;
+    /** Names `{count}` — this merge's own objects, not the rule's fifty. */
     confirmMergeHint: string;
     automatic: string;
     automaticEmpty: string;
@@ -145,11 +159,17 @@ const UK: OperatorCatalogCopy = {
     previousItem: "Попереднє",
     nextItem: "Наступне",
     position: "Рішення",
-    keyboardHint:
-      "Клавіші: Y — так, N — ні, J — наступне, K — попереднє, U — скасувати.",
+    keyboardHint: "З клавіатури",
+    keys: {
+      accept: "Прийняти",
+      reject: "Відхилити",
+      next: "Наступне рішення",
+      previous: "Попереднє рішення",
+      undo: "Скасувати останню автоматичну дію",
+    },
     confirmMerge: "Підтвердити об'єднання",
     confirmMergeHint:
-      "Ця картка несе понад 50 об'єктів садівників. Підтвердьте, щоб об'єднати.",
+      "Це об'єднання перенесе {count} об'єктів садівників. Підтвердьте, щоб продовжити.",
     automatic: "Застосовано автоматично за тиждень",
     automaticEmpty: "За тиждень нічого не застосовано автоматично.",
     automaticHint: "Кожне з них можна скасувати одним рухом.",
@@ -263,11 +283,17 @@ const BG: OperatorCatalogCopy = {
     previousItem: "Предишно",
     nextItem: "Следващо",
     position: "Решение",
-    keyboardHint:
-      "Клавиши: Y — да, N — не, J — следващо, K — предишно, U — отмени.",
+    keyboardHint: "От клавиатурата",
+    keys: {
+      accept: "Приеми",
+      reject: "Отхвърли",
+      next: "Следващо решение",
+      previous: "Предишно решение",
+      undo: "Отмени последното автоматично действие",
+    },
     confirmMerge: "Потвърдете сливането",
     confirmMergeHint:
-      "Тази карта носи над 50 обекта на градинари. Потвърдете, за да слеете.",
+      "Това сливане ще премести {count} обекта на градинари. Потвърдете, за да продължите.",
     automatic: "Приложено автоматично тази седмица",
     automaticEmpty: "Тази седмица нищо не е приложено автоматично.",
     automaticHint: "Всяко от тях се отменя с едно движение.",
@@ -381,11 +407,17 @@ const RU: OperatorCatalogCopy = {
     previousItem: "Предыдущее",
     nextItem: "Следующее",
     position: "Решение",
-    keyboardHint:
-      "Клавиши: Y — да, N — нет, J — следующее, K — предыдущее, U — отменить.",
+    keyboardHint: "С клавиатуры",
+    keys: {
+      accept: "Принять",
+      reject: "Отклонить",
+      next: "Следующее решение",
+      previous: "Предыдущее решение",
+      undo: "Отменить последнее автоматическое действие",
+    },
     confirmMerge: "Подтвердить объединение",
     confirmMergeHint:
-      "Эта карточка несёт более 50 объектов садоводов. Подтвердите, чтобы объединить.",
+      "Это объединение перенесёт {count} объектов садоводов. Подтвердите, чтобы продолжить.",
     automatic: "Применено автоматически за неделю",
     automaticEmpty: "За неделю ничего не применено автоматически.",
     automaticHint: "Каждое из них отменяется одним движением.",

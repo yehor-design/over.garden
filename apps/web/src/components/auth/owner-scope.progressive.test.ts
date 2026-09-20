@@ -1,5 +1,6 @@
+import { readdirSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -48,6 +49,9 @@ const PROGRESSIVE_SURFACES = [
   "app/(default)/garden/objects/[objectId]/location-privacy-control.tsx",
   "app/(default)/garden/profile/page.tsx",
   "app/(default)/garden/profile/owner-profile-editor.tsx",
+  // `OVE-459`: the last one. Comment moderation was the thirty-third call
+  // site, and the closure form is deleted with it.
+  "app/(default)/account/moderation/comments/page.tsx",
 ] as const;
 
 const PROGRESSIVE_ACTIONS = [
@@ -65,9 +69,45 @@ const PROGRESSIVE_ACTIONS = [
   "app/(default)/garden/lineage/claims/actions.ts",
   "app/(default)/garden/lineage/invitations/claim/actions.ts",
   "app/(default)/garden/objects/[objectId]/actions.ts",
+  "app/(default)/account/moderation/comments/actions.ts",
 ] as const;
 
+/** Every `.tsx` under `src`, so the count below is of the repository. */
+function everyComponentFile(directory: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(directory)) {
+    if (entry === "node_modules" || entry.startsWith(".")) continue;
+    const absolute = join(directory, entry);
+    if (statSync(absolute).isDirectory()) {
+      everyComponentFile(absolute, out);
+      continue;
+    }
+    if (entry.endsWith(".tsx")) out.push(absolute);
+  }
+  return out;
+}
+
 describe("owner forms that decide before hydration", () => {
+  it("has no closure form left anywhere, and no way to import one", async () => {
+    // `OVE-459` AC6, and the criterion says to check rather than assume. The
+    // sixteen other files belonged to five earlier tasks; a whole-repository
+    // count is the only assertion that does not take their word for it.
+    const offenders: string[] = [];
+    for (const absolute of everyComponentFile(ROOT)) {
+      const source = await readFile(absolute, "utf8");
+      if (/<OwnerScopedActionForm\b/u.test(source)) {
+        offenders.push(relative(ROOT, absolute));
+      }
+    }
+    expect(offenders, offenders.join(", ")).toEqual([]);
+
+    // And the shape itself is gone, so it cannot be reached for again.
+    const ownerScope = await readFile(
+      join(ROOT, "components", "auth", "owner-scope.tsx"),
+      "utf8",
+    );
+    expect(ownerScope).not.toContain("export function OwnerScopedActionForm");
+  });
+
   it("hands the action to useActionState unwrapped", async () => {
     const source = await readFile(
       join(ROOT, "components", "auth", "owner-scope.tsx"),

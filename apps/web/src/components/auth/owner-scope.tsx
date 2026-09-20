@@ -137,7 +137,7 @@ function OwnerScopeNotice({ locale }: { locale: InterfaceLocale }) {
     <p
       role="alert"
       data-mutation-scope-notice={noticeCode}
-      className="fixed inset-x-3 bottom-3 z-toast rounded-md border border-destructive/40 bg-background px-4 py-3 text-sm text-foreground shadow-lg sm:right-4 sm:left-auto sm:max-w-sm"
+      className="fixed inset-x-3 bottom-3 z-toast rounded-md border border-danger-border bg-surface px-4 py-3 text-body-sm text-text shadow-overlay sm:right-4 sm:left-auto sm:max-w-sm"
     >
       {NOTICE_COPY[locale][noticeCode]}
     </p>
@@ -199,45 +199,18 @@ export function OwnerUserIdField() {
 /**
  * A Server Action form that carries the rendered owner id and surfaces a
  * session refusal (`{ mutationScope: code }`) without discarding the form.
- */
-export function OwnerScopedActionForm({
-  action,
-  children,
-  ...props
-}: Omit<React.ComponentProps<"form">, "action"> & {
-  action: (formData: FormData) => Promise<unknown>;
-}) {
-  const ownerScope = useOptionalOwnerScope();
-  const handledStateRef = useRef<unknown>(undefined);
-  const [state, formAction] = useActionState<unknown, FormData>(
-    async (_previousState: unknown, formData: FormData) => action(formData),
-    undefined,
-  );
-
-  useEffect(() => {
-    if (state === undefined || handledStateRef.current === state) return;
-    handledStateRef.current = state;
-    ownerScope?.handleActionResult(state);
-  }, [ownerScope, state]);
-
-  return (
-    <form {...props} action={formAction}>
-      <OwnerUserIdField />
-      {children}
-    </form>
-  );
-}
-
-/**
- * The same form, for an action already shaped `(previousState, formData)`.
  *
- * React gives a `<form>` a real endpoint only from a Server Action reference
- * or the `formAction` `useActionState` derives from one. `OwnerScopedActionForm`
- * adapts a `(formData)` action inside a client closure, and React answers with
- * `action="javascript:throw new Error('React form unexpectedly submitted.')"` —
- * a placeholder it replaces on hydration and never before. This variant passes
- * the reference straight through, so the control decides before the bundle
- * runs (ADR-0024 D3, ADR-0026 D10). Prefer it for every new owner surface.
+ * There used to be two of these. `OwnerScopedActionForm` took a `(formData)`
+ * action and adapted it inside a client closure — and React gives a `<form>` a
+ * real endpoint only from a Server Action reference, or from the `formAction`
+ * `useActionState` derives from one. A closure got
+ * `action="javascript:throw new Error('React form unexpectedly submitted.')"`,
+ * a placeholder React replaces on hydration and never before, so thirty-three
+ * owner controls across seventeen files silently did nothing until the bundle
+ * ran. Slice 28 converted all of them, `OVE-459` the last, and **the closure
+ * form is deleted** rather than left standing with a warning on it: a shape
+ * that cannot be imported cannot be reached for again (ADR-0024 D3,
+ * ADR-0026 D10).
  */
 export function OwnerScopedProgressiveForm({
   action,
