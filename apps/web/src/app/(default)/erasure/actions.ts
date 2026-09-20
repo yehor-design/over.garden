@@ -10,7 +10,16 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 
-export async function submitErasureRequestAction(formData: FormData) {
+/**
+ * `(previousState, formData)` so `OwnerScopedProgressiveForm` can hand the
+ * reference straight to `useActionState`, which is the one shape that gives
+ * the form a real endpoint before hydration (ADR-0024 D3, `OVE-456`). The
+ * first argument is the previous result and is unused.
+ */
+export async function submitErasureRequestAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
     authoritative: true,

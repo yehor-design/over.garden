@@ -2,8 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
-import { buttonVariants } from "@/components/ui/button";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
+import { resolveIllustration } from "@/lib/illustrations";
 import type { OperatorCopy } from "@/lib/operator-copy";
 import {
   formatOperatorDate,
@@ -22,9 +28,7 @@ import {
   resolveCommunityReportAction,
   setCommunityParticipationAction,
 } from "./actions";
-import {
-  publicJournalEntryAddress,
-} from "@/lib/garden/public-paths";
+import { publicJournalEntryAddress } from "@/lib/garden/public-paths";
 import { HiddenField } from "@/components/ui/hidden-field";
 
 interface CommunityModerationPageProps {
@@ -48,13 +52,9 @@ export default async function CommunityModerationPage({
   const session = await getCurrentSession();
   if (!session?.user?.id) {
     return (
-      <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-        <ModerationHeader slug={slug} copy={copy} />
-        <SignInPrompt
-  locale={locale}
-  next={`/account/communities/${slug}`}
-/>
-      </main>
+      <ModerationShell slug={slug} copy={copy} locale={locale}>
+        <SignInPrompt locale={locale} next={`/account/communities/${slug}`} />
+      </ModerationShell>
     );
   }
 
@@ -65,15 +65,16 @@ export default async function CommunityModerationPage({
   );
   if (access.status !== "allowed") {
     return (
-      <main
-        data-operator-access-state="denied"
-        className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8"
+      <ModerationShell
+        slug={slug}
+        copy={copy}
+        locale={locale}
+        accessState="denied"
       >
-        <ModerationHeader slug={slug} copy={copy} />
-        <p className="rounded-md border border-border p-4 text-sm" role="alert">
-          {copy.common.accessDenied}
-        </p>
-      </main>
+        <Callout tone="warning" role="alert">
+          <p>{copy.common.accessDenied}</p>
+        </Callout>
+      </ModerationShell>
     );
   }
   const moderation = await listCommunityModerationQueue(scope, slug).catch(
@@ -81,12 +82,11 @@ export default async function CommunityModerationPage({
   );
   if (!moderation) {
     return (
-      <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-        <ModerationHeader slug={slug} copy={copy} />
-        <p className="rounded-md border border-border p-4 text-sm" role="alert">
-          {copy.community.unavailable}
-        </p>
-      </main>
+      <ModerationShell slug={slug} copy={copy} locale={locale}>
+        <Callout tone="warning" role="alert">
+          <p>{copy.community.unavailable}</p>
+        </Callout>
+      </ModerationShell>
     );
   }
 
@@ -94,79 +94,81 @@ export default async function CommunityModerationPage({
   const participationOpen = moderation.community.participationState === "open";
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-      <ModerationHeader slug={slug} copy={copy} />
+    <ModerationShell slug={slug} copy={copy} locale={locale}>
       {actionStatus ? (
-        <p
-          className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
-          role="status"
-        >
-          {copy.community.moderationResult}:{" "}
-          {operatorCommunityStateLabel(locale, actionStatus)}
-        </p>
+        <Callout tone="info" role="status">
+          <p>
+            {copy.community.moderationResult}:{" "}
+            {operatorCommunityStateLabel(locale, actionStatus)}
+          </p>
+        </Callout>
       ) : null}
 
-      <section className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">
-            {copy.community.participationGate}
-          </h2>
-          <p className="text-sm text-muted-foreground">
+      <Section
+        id="participation-gate"
+        title={copy.community.participationGate}
+        description={
+          <>
             {copy.community.currentState}:{" "}
             {operatorCommunityStateLabel(
               locale,
               moderation.community.participationState,
             )}
-          </p>
-        </div>
-        <OwnerScopedActionForm action={setCommunityParticipationAction}>
-          <ModeratorFields slug={slug} reason="rule_violation" />
-          <HiddenField
-            name="participationState"
-            value={participationOpen ? "closed" : "open"}
-          />
-          <button
-            className={buttonVariants({
-              variant: participationOpen ? "secondary" : "primary",
-            })}
-          >
-            {participationOpen
-              ? copy.community.closeParticipation
-              : copy.community.openParticipation}
-          </button>
-        </OwnerScopedActionForm>
-      </section>
+          </>
+        }
+        actions={
+          <OwnerScopedProgressiveForm action={setCommunityParticipationAction}>
+            <ModeratorFields slug={slug} reason="rule_violation" />
+            <HiddenField
+              name="participationState"
+              value={participationOpen ? "closed" : "open"}
+            />
+            <Button
+              type="submit"
+              variant={participationOpen ? "secondary" : "primary"}
+            >
+              {participationOpen
+                ? copy.community.closeParticipation
+                : copy.community.openParticipation}
+            </Button>
+          </OwnerScopedProgressiveForm>
+        }
+      />
 
-      <section
+      <Section
         id="moderation-queue"
         data-private-moderation-queue="true"
-        className="grid gap-3"
+        title={copy.community.openReports}
+        actions={
+          moderation.items.length > 0 ? (
+            <Badge tone="warning">{moderation.items.length}</Badge>
+          ) : undefined
+        }
       >
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">
-            {copy.community.openReports}
-          </h2>
-          <span className="text-sm text-muted-foreground tabular-nums">
-            {moderation.items.length}
-          </span>
-        </div>
         {moderation.items.length === 0 ? (
-          <p className="border-y border-border py-8 text-sm text-muted-foreground">
-            {copy.community.noReports}
-          </p>
+          <EmptyState
+            illustration={resolveIllustration("empty-community")}
+            illustrationSize="card"
+            title={copy.community.noReports}
+          />
         ) : (
-          <ul className="divide-y divide-border border-y border-border">
+          <ul className="grid">
             {moderation.items.map((item) => (
-              <li key={item.reportId} className="grid gap-4 py-5">
+              <li
+                key={item.reportId}
+                className="grid gap-4 border-b border-border py-5 last:border-b-0"
+              >
                 <div className="grid gap-1">
-                  <span className="text-xs font-semibold text-primary uppercase">
-                    {item.reportReason} ·{" "}
-                    {operatorCommunityStateLabel(locale, item.reportState)}
-                  </span>
-                  <h3 className="text-lg font-semibold">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge tone="warning">{item.reportReason}</Badge>
+                    <Badge>
+                      {operatorCommunityStateLabel(locale, item.reportState)}
+                    </Badge>
+                  </div>
+                  <h3 className="text-h4 text-text-heading">
                     {item.journalTitle ?? copy.community.journalUnavailable}
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-caption text-text-muted">
                     {copy.community.reported}{" "}
                     {formatOperatorDate(locale, item.reportedAt, {
                       dateStyle: "medium",
@@ -186,7 +188,7 @@ export default async function CommunityModerationPage({
                         entryNumber: item.entryNumber,
                         publicSlug: item.publicSlug,
                       })}
-                      className="w-fit text-sm font-medium text-primary hover:underline"
+                      className="text-link hover:text-link-hover w-fit rounded-sm text-body-sm font-medium underline underline-offset-4 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                     >
                       {copy.community.openJournal}
                     </Link>
@@ -250,36 +252,49 @@ export default async function CommunityModerationPage({
             ))}
           </ul>
         )}
-      </section>
-    </main>
+      </Section>
+    </ModerationShell>
   );
 }
 
-function ModerationHeader({
+function ModerationShell({
   slug,
   copy,
+  locale,
+  accessState,
+  children,
 }: {
   slug: string;
   copy: OperatorCopy;
+  locale: string;
+  accessState?: "denied";
+  children: React.ReactNode;
 }) {
-  const backPath = "/account/communities";
   return (
-    <header className="grid gap-4 border-b border-border pb-5">
-      <Link
-        href={backPath}
-        className={buttonVariants({
-          variant: "secondary",
-          size: "sm",
-          className: "w-fit",
-        })}
-      >
-        {copy.community.backToCommunities}
-      </Link>
-      <div className="grid gap-2">
-        <h1 className="text-3xl font-semibold">{copy.community.title}</h1>
-        <p className="text-sm text-muted-foreground">{slug}</p>
-      </div>
-    </header>
+    <main
+      lang={locale}
+      data-operator-access-state={accessState}
+      className="mx-auto grid w-full max-w-6xl gap-6 px-5 py-8"
+    >
+      <PageHeader
+        breadcrumb={
+          <Link
+            href="/account/communities"
+            className={buttonVariants({
+              variant: "secondary",
+              size: "sm",
+              className: "w-fit",
+            })}
+          >
+            {copy.community.backToCommunities}
+          </Link>
+        }
+        eyebrow={slug}
+        title={copy.community.title}
+        description={copy.community.description}
+      />
+      {children}
+    </main>
   );
 }
 
@@ -291,7 +306,7 @@ function ModerationForm({
   stateValue,
   label,
 }: {
-  action: (formData: FormData) => Promise<unknown>;
+  action: (previousState: unknown, formData: FormData) => Promise<unknown>;
   slug: string;
   item: {
     reportId: string;
@@ -304,16 +319,16 @@ function ModerationForm({
   label: string;
 }) {
   return (
-    <OwnerScopedActionForm action={action}>
+    <OwnerScopedProgressiveForm action={action}>
       <ModeratorFields slug={slug} reason={item.reportReason} />
       <HiddenField name="reportId" value={item.reportId} />
       <HiddenField name="contributionId" value={item.contributionId} />
       <HiddenField name="membershipId" value={item.membershipId} />
       <HiddenField name={stateName} value={stateValue} />
-      <button className={buttonVariants({ variant: "secondary", size: "sm" })}>
+      <Button type="submit" variant="secondary" size="sm">
         {label}
-      </button>
-    </OwnerScopedActionForm>
+      </Button>
+    </OwnerScopedProgressiveForm>
   );
 }
 

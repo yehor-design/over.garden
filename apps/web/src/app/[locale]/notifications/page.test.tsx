@@ -140,9 +140,18 @@ describe("/{locale}/notifications", () => {
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("/garden/lineage/claims");
     expect(html).toContain("/api/notifications/receipts");
+    // The filters are chips over a GET form now, not a bordered box of links:
+    // `aria-pressed` is valid on a button and an ARIA error on a link, which
+    // is why the box had to go (DESIGN.md §5.1).
     expect(html).toMatch(
-      /aria-current="true"[^>]*href="\/notifications\?view=individual"/,
+      /<button[^>]*type="submit"[^>]*aria-pressed="true"/u,
     );
+    expect(html).not.toMatch(/<a[^>]*aria-pressed=/u);
+    // AC3: the reader is told what happened, to what, when — and unread is a
+    // word as well as a mark (DESIGN.md §8: never colour alone).
+    expect(html).toContain('data-notification-read="false"');
+    expect(html).toContain("Непрочитане");
+    expect(html).toContain("<time");
     expect(html).not.toMatch(
       /00000000-0000|session-1|journal body|private journal|quarantine|derivative|media key|ip_address|user_agent|email|phone|coordinates|invite|token|source_reference_label|client_mutation/i,
     );

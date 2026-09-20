@@ -333,6 +333,14 @@ const NO_STORE_ROUTE_PREFIXES = [
   "/erasure",
   "/api",
   "/skeleton",
+  // The reader's own pages (`OVE-456`). Each is a view of one person's
+  // notifications, bookmarks, wishlist or followed feed; none is indexable,
+  // and none of them was on this list — a personal surface whose body varies
+  // by session had been leaving the cache header Next chose for it.
+  "/notifications",
+  "/bookmarks",
+  "/wishlist",
+  "/feed",
 ] as const;
 
 /**

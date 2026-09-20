@@ -2,7 +2,11 @@ import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
 import type { OperatorCopy } from "@/lib/operator-copy";
 import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -21,12 +25,12 @@ export default async function CommunityModerationDirectory() {
   const copy = getOperatorCopy(locale);
   if (!session?.user?.id) {
     return (
-      <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
+      <main
+        lang={locale}
+        className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8"
+      >
         <AdminCommunityHeader copy={copy} />
-        <SignInPrompt
-  locale={locale}
-  next={"/account/communities"}
-/>
+        <SignInPrompt locale={locale} next={"/account/communities"} />
       </main>
     );
   }
@@ -44,37 +48,50 @@ export default async function CommunityModerationDirectory() {
       : null;
 
   return (
-    <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
+    <main
+      lang={locale}
+      className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8"
+    >
       <AdminCommunityHeader copy={copy} />
       {moderation ? (
-        <Link
-          href={`/account/communities/${FIRST_COMMUNITY_SLUG}`}
-          data-private-moderation-queue="true"
-          className="grid min-h-36 max-w-xl content-between gap-5 rounded-md border border-border p-4 transition-colors hover:border-primary/45 hover:bg-muted/30"
+        <Card
+          as="article"
+          interactive
+          className="relative grid max-w-xl gap-3 p-4"
         >
-          <span className="grid gap-2">
-            <ShieldCheck className="size-5 text-primary" aria-hidden="true" />
-            <span className="text-lg font-semibold">
+          <ShieldCheck className="size-5 text-action" aria-hidden="true" />
+          <h2 className="text-h3 text-text-heading">
+            <Link
+              href={`/account/communities/${FIRST_COMMUNITY_SLUG}`}
+              data-private-moderation-queue="true"
+              className="rounded-sm outline-none before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+            >
               {copy.community.observationAndCare}
-            </span>
-            <span className="text-sm leading-6 text-muted-foreground">
-              {copy.community.cardDescription}
-            </span>
-          </span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {formatOperatorTemplate(copy.community.openReportsCount, {
-              count: moderation.items.length,
-            })}
-          </span>
-        </Link>
+            </Link>
+          </h2>
+          <p className="text-body-sm leading-6 text-text-muted">
+            {copy.community.cardDescription}
+          </p>
+          {/* A count of zero is the absence of a fact, not a fact
+              (DESIGN.md §5.10): an empty queue says so in words instead. */}
+          {moderation.items.length > 0 ? (
+            <Badge tone="warning">
+              {formatOperatorTemplate(copy.community.openReportsCount, {
+                count: moderation.items.length,
+              })}
+            </Badge>
+          ) : (
+            <Badge tone="success">{copy.community.noReports}</Badge>
+          )}
+        </Card>
       ) : (
-        <p
-          data-operator-access-state="unavailable"
-          className="rounded-md border border-border p-4 text-sm text-muted-foreground"
+        <Callout
+          tone="warning"
           role="alert"
+          data-operator-access-state="unavailable"
         >
-          {copy.community.unavailable}
-        </p>
+          <p>{copy.community.unavailable}</p>
+        </Callout>
       )}
     </main>
   );
@@ -82,23 +99,21 @@ export default async function CommunityModerationDirectory() {
 
 function AdminCommunityHeader({ copy }: { copy: OperatorCopy }) {
   return (
-    <header className="grid gap-4 border-b border-border pb-5">
-      <Link
-        href="/garden"
-        className={buttonVariants({
-          variant: "secondary",
-          size: "sm",
-          className: "w-fit",
-        })}
-      >
-        {copy.community.backToGarden}
-      </Link>
-      <div className="grid gap-2">
-        <h1 className="text-3xl font-semibold">{copy.community.title}</h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {copy.community.description}
-        </p>
-      </div>
-    </header>
+    <PageHeader
+      breadcrumb={
+        <Link
+          href="/garden"
+          className={buttonVariants({
+            variant: "secondary",
+            size: "sm",
+            className: "w-fit",
+          })}
+        >
+          {copy.community.backToGarden}
+        </Link>
+      }
+      title={copy.community.title}
+      description={copy.community.description}
+    />
   );
 }

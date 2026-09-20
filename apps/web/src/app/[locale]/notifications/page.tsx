@@ -1,6 +1,5 @@
 import {
   Bell,
-  Check,
   CheckCheck,
   ChevronDown,
   EyeOff,
@@ -11,11 +10,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import {
-  MySocialLayout,
-  SocialEmptyState,
-} from "@/components/social/my-social-layout";
-import { buttonVariants } from "@/components/ui/button";
+import { MySocialLayout } from "@/components/social/my-social-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ToggleChip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { resolveIllustration } from "@/lib/illustrations";
 import {
   buildLanguageAlternates,
   isPublicLocale,
@@ -35,7 +35,7 @@ import {
   type NotificationPreferences,
 } from "@/server/social-return-repository";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { iconButtonVariants } from "@/components/ui/icon-button";
+import { IconButton } from "@/components/ui/icon-button";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -86,10 +86,10 @@ export default async function LocalizedNotificationsRoute({
         description={copy.notifications.description}
       >
         <SignInPrompt
-  locale={localeParam}
-  next={localizedPath(localeParam, "/notifications")}
-  description={copy.notifications.signIn}
-/>
+          locale={localeParam}
+          next={localizedPath(localeParam, "/notifications")}
+          description={copy.notifications.signIn}
+        />
       </MySocialLayout>
     );
   }
@@ -115,6 +115,7 @@ export default async function LocalizedNotificationsRoute({
     grouped,
     cursor: firstParam(query.cursor),
   });
+  const filtered = filter !== "all" || unreadOnly;
 
   return (
     <MySocialLayout
@@ -135,9 +136,39 @@ export default async function LocalizedNotificationsRoute({
     >
       <NotificationSettings locale={localeParam} preferences={preferences} />
       {events.length === 0 ? (
-        <SocialEmptyState>{copy.notifications.empty}</SocialEmptyState>
+        filtered ? (
+          // Something exists and the filters excluded it: no illustration, the
+          // filters the reader set, and a way to clear them (DESIGN.md §5.4).
+          <EmptyState
+            variant="no-results"
+            title={copy.common.noResultsTitle}
+            description={copy.common.noResultsDescription}
+            action={
+              <Link
+                href={localizedPath(localeParam, "/notifications")}
+                className={buttonVariants({ variant: "secondary" })}
+              >
+                {copy.common.clearFilters}
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            illustration={resolveIllustration("empty-notifications")}
+            title={copy.notifications.emptyTitle}
+            description={copy.notifications.empty}
+            action={
+              <Link
+                href={localizedPath(localeParam, "/journals")}
+                className={buttonVariants()}
+              >
+                {copy.notifications.emptyAction}
+              </Link>
+            }
+          />
+        )
       ) : (
-        <ol className="divide-y divide-border border-y border-border">
+        <ul className="grid">
           {events.map((event) => (
             <NotificationRow
               key={event.key}
@@ -146,7 +177,7 @@ export default async function LocalizedNotificationsRoute({
               returnTo={returnTo}
             />
           ))}
-        </ol>
+        </ul>
       )}
       {page.nextCursor ? (
         <Link
@@ -156,16 +187,27 @@ export default async function LocalizedNotificationsRoute({
             grouped,
             cursor: page.nextCursor,
           })}
-          className="flex min-h-11 items-center justify-center gap-2 border border-border px-4 text-sm font-medium hover:bg-muted"
+          className={buttonVariants({
+            variant: "secondary",
+            className: "w-full",
+          })}
         >
           {copy.notifications.more}
-          <ChevronDown className="size-4" aria-hidden="true" />
+          <ChevronDown aria-hidden="true" />
         </Link>
       ) : null}
     </MySocialLayout>
   );
 }
 
+/**
+ * The filters, as chips over a `GET` form (DESIGN.md §5.1).
+ *
+ * They used to be a bordered box of links that stopped where its content did —
+ * the half-width bar under the tab strip — and a link cannot carry
+ * `aria-pressed`, so neither the state nor the box meant anything to a screen
+ * reader.
+ */
 function NotificationFilters({
   locale,
   filter,
@@ -178,61 +220,75 @@ function NotificationFilters({
   grouped: boolean;
 }) {
   const copy = getSocialSurfaceCopy(locale);
-  const filters: Array<[NotificationFilter, string]> = [
-    ["all", copy.notifications.all],
+  const action = localizedPath(locale, "/notifications");
+  const filters: Array<[Exclude<NotificationFilter, "all">, string]> = [
     ["comments", copy.notifications.comments],
     ["follows", copy.notifications.follows],
     ["mentions", copy.notifications.mentions],
     ["claims", copy.notifications.claims],
     ["system", copy.notifications.system],
   ];
+
   return (
-    <>
-      <div
-        className="flex overflow-x-auto border border-border"
-        role="group"
+    <div className="grid w-full gap-3">
+      <form
+        method="get"
+        action={action}
+        data-notification-filters="true"
         aria-label={copy.notifications.filtersLabel}
+        className="flex max-w-full items-center gap-2 overflow-x-auto py-1"
       >
-        {filters.map(([value, label]) => (
-          <Link
-            key={value}
-            href={notificationHref(locale, {
-              filter: value,
-              unreadOnly,
-              grouped,
-            })}
-            aria-current={filter === value ? "true" : undefined}
-            className={filterClass(filter === value)}
-          >
-            {label}
-          </Link>
-        ))}
+        {unreadOnly ? <HiddenField name="unread" value="1" /> : null}
+        {grouped ? null : <HiddenField name="view" value="individual" />}
+        <ToggleChip label={copy.notifications.all} pressed={filter === "all"} />
+        {filters.map(([value, label]) => {
+          const pressed = filter === value;
+          return (
+            <ToggleChip
+              key={value}
+              {...(pressed ? {} : { name: "filter", value })}
+              label={label}
+              pressed={pressed}
+            />
+          );
+        })}
+      </form>
+      {/* One form per toggle. Two toggles in one form cannot both be turned
+          off: the chip that is pressed submits no value, and a hidden field
+          preserving the other would put this one straight back. */}
+      <div className="flex max-w-full items-center gap-2 overflow-x-auto py-1">
+        <form
+          method="get"
+          action={action}
+          data-notification-unread-filter="true"
+        >
+          {filter === "all" ? null : (
+            <HiddenField name="filter" value={filter} />
+          )}
+          {grouped ? null : <HiddenField name="view" value="individual" />}
+          <ToggleChip
+            {...(unreadOnly ? {} : { name: "unread", value: "1" })}
+            icon={<MailOpen aria-hidden="true" className="size-4" />}
+            label={copy.notifications.unread}
+            pressed={unreadOnly}
+          />
+        </form>
+        <form method="get" action={action} data-notification-view-filter="true">
+          {filter === "all" ? null : (
+            <HiddenField name="filter" value={filter} />
+          )}
+          {unreadOnly ? <HiddenField name="unread" value="1" /> : null}
+          {/* Grouping is the default, so the chip turns it *off* by carrying
+              `view=individual`, and carries nothing once it is off. */}
+          <ToggleChip
+            {...(grouped ? { name: "view", value: "individual" } : {})}
+            icon={<Bell aria-hidden="true" className="size-4" />}
+            label={copy.notifications.grouped}
+            pressed={grouped}
+          />
+        </form>
       </div>
-      <Link
-        href={notificationHref(locale, {
-          filter,
-          unreadOnly: !unreadOnly,
-          grouped,
-        })}
-        aria-current={unreadOnly ? "true" : undefined}
-        className={filterClass(unreadOnly)}
-      >
-        <MailOpen className="size-4" aria-hidden="true" />
-        {copy.notifications.unread}
-      </Link>
-      <Link
-        href={notificationHref(locale, {
-          filter,
-          unreadOnly,
-          grouped: !grouped,
-        })}
-        aria-current={grouped ? "true" : undefined}
-        className={filterClass(grouped)}
-      >
-        <Bell className="size-4" aria-hidden="true" />
-        {copy.notifications.grouped}
-      </Link>
-    </>
+    </div>
   );
 }
 
@@ -253,8 +309,11 @@ function NotificationSettings({
     ["system", copy.notifications.system],
   ];
   return (
-    <details className="border-y border-border py-3">
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium">
+    <details
+      data-notification-settings="true"
+      className="rounded-lg border border-border px-4 py-3"
+    >
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-medium text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">
         <Settings2 className="size-4" aria-hidden="true" />
         {copy.notifications.settings}
       </summary>
@@ -273,18 +332,20 @@ function NotificationSettings({
             className="items-center"
           />
         ))}
-        <button
-          type="submit"
-          className={buttonVariants({ className: "w-fit sm:col-span-2" })}
-        >
-          <Check className="size-4" aria-hidden="true" />
+        <Button type="submit" className="w-fit sm:col-span-2">
           {copy.notifications.saveSettings}
-        </button>
+        </Button>
       </form>
     </details>
   );
 }
 
+/**
+ * One notification: what happened, to what, when, and a link to the thing.
+ *
+ * Unread is a **word** as well as a mark. The row used to say it with a blue
+ * dot and 70 % opacity, and colour is never the only signal (DESIGN.md §8).
+ */
 function NotificationRow({
   event,
   locale,
@@ -299,31 +360,43 @@ function NotificationRow({
   const count = "count" in event ? event.count : 1;
   const summary =
     copy.notifications.summaries[event.summaryKey] ?? event.summaryKey;
+  const subject = [event.actorMention, event.targetLabel]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <li className={`grid gap-3 py-4 ${event.read ? "opacity-70" : ""}`}>
-      <div className="flex gap-3">
-        <span
-          className={`mt-2 size-2 shrink-0 rounded-full ${event.read ? "bg-muted" : "bg-primary"}`}
-          aria-hidden="true"
-        />
-        <div className="min-w-0 flex-1">
-          <Link href={event.href} className="grid gap-1 hover:underline">
-            <p className="font-medium text-foreground">
-              {summary}
-              {count > 1 ? ` (${count})` : ""}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {[event.actorMention, event.targetLabel]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </Link>
-          <time className="text-xs text-muted-foreground">
+    <li
+      data-notification-read={event.read ? "true" : "false"}
+      className="relative flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-between"
+    >
+      <div className="grid min-w-0 flex-1 gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={event.read ? "neutral" : "action"}>
+            {event.read
+              ? copy.notifications.readBadge
+              : copy.notifications.unreadBadge}
+          </Badge>
+          <time
+            dateTime={new Date(event.createdAt).toISOString()}
+            className="text-caption text-text-muted"
+          >
             {formatDate(event.createdAt, locale)}
           </time>
         </div>
+        <p className="text-h4 text-text-heading">
+          <Link
+            href={event.href}
+            className="rounded-sm outline-none before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+          >
+            {summary}
+            {count > 1 ? ` (${count})` : ""}
+          </Link>
+        </p>
+        {subject ? (
+          <p className="text-body-sm text-text-muted">{subject}</p>
+        ) : null}
       </div>
-      <div className="flex flex-wrap gap-2 pl-5">
+      <div className="relative z-sticky flex shrink-0 flex-wrap gap-2">
         <ReceiptForm
           eventKeys={eventKeys}
           state={event.read ? "unread" : "read"}
@@ -367,14 +440,9 @@ function ReceiptForm({
       ))}
       <HiddenField name="receiptState" value={state} />
       <HiddenField name="returnTo" value={returnTo} />
-      <button
-        type="submit"
-        title={label}
-        className={iconButtonVariants({ variant: "ghost" })}
-      >
+      <IconButton type="submit" variant="ghost" label={label}>
         {icon}
-        <span className="sr-only">{label}</span>
-      </button>
+      </IconButton>
     </form>
   );
 }
@@ -395,14 +463,6 @@ function notificationHref(
   if (input.cursor) params.set("cursor", input.cursor);
   const path = localizedPath(locale, "/notifications");
   return params.size ? `${path}?${params}` : path;
-}
-
-function filterClass(active: boolean) {
-  return `flex min-h-9 shrink-0 items-center gap-2 border-r border-border px-3 py-2 text-sm last:border-r-0 ${
-    active
-      ? "bg-foreground text-background"
-      : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-  }`;
 }
 
 function parseFilter(value: string | undefined): NotificationFilter {

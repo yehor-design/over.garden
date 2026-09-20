@@ -1,28 +1,33 @@
-import {
-  ArrowLeft,
-  ArrowRight,
-  Bookmark,
-  ExternalLink,
-} from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { MySocialLayout } from "@/components/social/my-social-layout";
 import {
-  MySocialLayout,
-  SocialEmptyState,
-} from "@/components/social/my-social-layout";
-import { buttonVariants } from "@/components/ui/button";
+  ShelfNotice,
+  ShelfRemoveButton,
+  ShelfRow,
+} from "@/components/social/shelf";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ToggleChip } from "@/components/ui/chip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { iconButtonVariants } from "@/components/ui/icon-button";
+import { Pagination } from "@/components/ui/pagination";
+import { resolveIllustration } from "@/lib/illustrations";
 import {
   buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
-import { setBookmarkAction } from "@/app/engagement/engagement-actions";
-import { EngagementBookmarkControl } from "@/app/engagement/engagement-controls";
+import {
+  removeBookmarkFromShelfAction,
+  restoreBookmarkToShelfAction,
+} from "@/app/(default)/bookmarks/actions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   listEngagementBookmarks,
@@ -30,7 +35,6 @@ import {
 } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { iconButtonVariants } from "@/components/ui/icon-button";
 
 const PAGE_SIZE = 12;
 
@@ -80,16 +84,17 @@ export default async function LocalizedBookmarksRoute({
         description={copy.bookmarks.description}
       >
         <SignInPrompt
-  locale={localeParam}
-  next={localizedPath(localeParam, "/bookmarks")}
-  description={copy.bookmarks.signIn}
-/>
+          locale={localeParam}
+          next={localizedPath(localeParam, "/bookmarks")}
+          description={copy.bookmarks.signIn}
+        />
       </MySocialLayout>
     );
   }
 
   const filter = parseFilter(firstParam(query.kind));
   const page = parsePage(firstParam(query.page));
+  const undo = parseUndo(firstParam(query.undoKind), firstParam(query.undoRef));
   const allItems = await listEngagementBookmarks(
     scopedToUser(userId, getSessionId(session)),
   );
@@ -111,39 +116,80 @@ export default async function LocalizedBookmarksRoute({
       description={copy.bookmarks.description}
       count={filtered.length}
       controls={<BookmarkFilters locale={localeParam} active={filter} />}
+      notice={
+        undo ? (
+          <ShelfNotice
+            regionLabel={copy.common.noticeRegion}
+            title={copy.bookmarks.removedNotice}
+            dismissLabel={copy.common.dismissNotice}
+            undo={
+              <OwnerScopedProgressiveForm action={restoreBookmarkToShelfAction}>
+                <HiddenField name="targetKind" value={undo.kind} />
+                <HiddenField name="targetRef" value={undo.ref} />
+                <HiddenField name="locale" value={localeParam} />
+                <Button type="submit" variant="secondary" size="sm">
+                  {copy.common.undo}
+                </Button>
+              </OwnerScopedProgressiveForm>
+            }
+          />
+        ) : null
+      }
     >
       {items.length === 0 ? (
-        <SocialEmptyState>{copy.bookmarks.empty}</SocialEmptyState>
+        filter === "all" ? (
+          <EmptyState
+            illustration={resolveIllustration("empty-journal")}
+            title={copy.bookmarks.emptyTitle}
+            description={copy.bookmarks.empty}
+            action={
+              <Link
+                href={localizedPath(localeParam, "/journals")}
+                className={buttonVariants()}
+              >
+                {copy.bookmarks.emptyAction}
+              </Link>
+            }
+          />
+        ) : (
+          <EmptyState
+            variant="no-results"
+            title={copy.common.noResultsTitle}
+            description={copy.common.noResultsDescription}
+            action={
+              <Link
+                href={localizedPath(localeParam, "/bookmarks")}
+                className={buttonVariants({ variant: "secondary" })}
+              >
+                {copy.common.clearFilters}
+              </Link>
+            }
+          />
+        )
       ) : (
-        <ol className="divide-y divide-border border-y border-border">
+        <ul className="grid">
           {items.map((item) => (
             <BookmarkRow key={item.key} item={item} locale={localeParam} />
           ))}
-        </ol>
+        </ul>
       )}
       {pageCount > 1 ? (
-        <div className="flex items-center justify-between gap-3">
-          {currentPage > 1 ? (
-            <Link
-              href={bookmarkHref(localeParam, filter, currentPage - 1)}
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              <ArrowLeft className="size-4" />
-              {copy.common.previous}
-            </Link>
-          ) : (
-            <span />
-          )}
-          {currentPage < pageCount ? (
-            <Link
-              href={bookmarkHref(localeParam, filter, currentPage + 1)}
-              className={buttonVariants({ variant: "secondary" })}
-            >
-              {copy.common.next}
-              <ArrowRight className="size-4" />
-            </Link>
-          ) : null}
-        </div>
+        <Pagination
+          label={copy.bookmarks.title}
+          previousLabel={copy.common.previous}
+          previousHref={
+            currentPage > 1
+              ? bookmarkHref(localeParam, filter, currentPage - 1)
+              : null
+          }
+          nextLabel={copy.common.next}
+          nextHref={
+            currentPage < pageCount
+              ? bookmarkHref(localeParam, filter, currentPage + 1)
+              : null
+          }
+          status={copy.common.pagePlace(currentPage, pageCount)}
+        />
       ) : null}
     </MySocialLayout>
   );
@@ -159,30 +205,33 @@ function BookmarkFilters({
   active: BookmarkFilter;
 }) {
   const copy = getSocialSurfaceCopy(locale);
-  const filters: Array<[BookmarkFilter, string]> = [
-    ["all", copy.bookmarks.all],
+  const filters: Array<[Exclude<BookmarkFilter, "all">, string]> = [
     ["journal_entry", copy.bookmarks.journals],
     ["lineage_object", copy.bookmarks.objects],
     ["variety", copy.bookmarks.varieties],
     ["topic", copy.bookmarks.topics],
   ];
   return (
-    <div
-      className="flex overflow-x-auto border border-border"
-      role="group"
+    <form
+      method="get"
+      action={localizedPath(locale, "/bookmarks")}
+      data-bookmark-filters="true"
       aria-label={copy.bookmarks.filtersLabel}
+      className="flex max-w-full items-center gap-2 overflow-x-auto py-1"
     >
-      {filters.map(([value, label]) => (
-        <Link
-          key={value}
-          href={bookmarkHref(locale, value, 1)}
-          aria-current={active === value ? "true" : undefined}
-          className={filterClass(active === value)}
-        >
-          {label}
-        </Link>
-      ))}
-    </div>
+      <ToggleChip label={copy.bookmarks.all} pressed={active === "all"} />
+      {filters.map(([value, label]) => {
+        const pressed = active === value;
+        return (
+          <ToggleChip
+            key={value}
+            {...(pressed ? {} : { name: "kind", value })}
+            label={label}
+            pressed={pressed}
+          />
+        );
+      })}
+    </form>
   );
 }
 
@@ -194,48 +243,32 @@ function BookmarkRow({
   locale: PublicLocale;
 }) {
   const copy = getSocialSurfaceCopy(locale);
-  const engagementCopy = getPublicSurfaceCopy(locale).engagement;
   return (
-    <li className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="grid min-w-0 gap-1">
-        <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase">
-          <Bookmark className="size-4" aria-hidden="true" />
-          {targetLabel(item.target.kind, locale)}
-        </p>
-        <Link
-          href={item.target.href}
-          className="font-semibold text-foreground hover:underline"
-        >
-          {item.target.label}
-        </Link>
-        <time className="text-xs text-muted-foreground">
-          {copy.common.saved} {formatDate(item.addedAt, locale)}
-        </time>
-      </div>
-      <div className="flex gap-2">
-        <Link
-          href={item.target.href}
-          title={copy.common.open}
-          className={iconButtonVariants({ variant: "secondary" })}
-        >
-          <ExternalLink className="size-4" />
-          <span className="sr-only">{copy.common.open}</span>
-        </Link>
-        <EngagementBookmarkControl
-          targetKind={item.target.kind}
-          targetRef={item.target.ref}
-          initialActive
-          labels={{
-            inactive: copy.common.remove,
-            active: copy.common.remove,
-            unavailable: engagementCopy.interactionUnavailable,
-            rateLimited: engagementCopy.likeRateLimited,
-            signInRequired: engagementCopy.interactionUnavailable,
-          }}
-          submit={setBookmarkAction}
-        />
-      </div>
-    </li>
+    <ShelfRow
+      kindLabel={targetLabel(item.target.kind, locale)}
+      title={item.target.label}
+      href={item.target.href}
+      meta={`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
+      actions={
+        <>
+          <Link
+            href={item.target.href}
+            aria-label={`${copy.common.open}: ${item.target.label}`}
+            className={iconButtonVariants({ variant: "secondary" })}
+          >
+            <ExternalLink aria-hidden="true" className="size-5" />
+          </Link>
+          <OwnerScopedProgressiveForm action={removeBookmarkFromShelfAction}>
+            <HiddenField name="targetKind" value={item.target.kind} />
+            <HiddenField name="targetRef" value={item.target.ref} />
+            <HiddenField name="locale" value={locale} />
+            <ShelfRemoveButton
+              label={`${copy.common.remove}: ${item.target.label}`}
+            />
+          </OwnerScopedProgressiveForm>
+        </>
+      }
+    />
   );
 }
 
@@ -259,14 +292,6 @@ function targetLabel(kind: string, locale: PublicLocale) {
   return copy.topics;
 }
 
-function filterClass(active: boolean) {
-  return `min-h-9 shrink-0 border-r border-border px-3 py-2 text-sm last:border-r-0 ${
-    active
-      ? "bg-foreground text-background"
-      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-  }`;
-}
-
 function parseFilter(value: string | undefined): BookmarkFilter {
   return value === "journal_entry" ||
     value === "lineage_object" ||
@@ -274,6 +299,19 @@ function parseFilter(value: string | undefined): BookmarkFilter {
     value === "topic"
     ? value
     : "all";
+}
+
+/**
+ * The target a removal left behind, re-checked here rather than trusted: the
+ * kind must be one of the four the shelf holds and the reference must look
+ * like one, so an address a reader was handed cannot put arbitrary values into
+ * the Undo form's hidden fields.
+ */
+function parseUndo(kind: string | undefined, ref: string | undefined) {
+  const target = parseFilter(kind);
+  if (target === "all" || !ref) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(ref)) return null;
+  return { kind: target, ref };
 }
 
 function parsePage(value: string | undefined) {

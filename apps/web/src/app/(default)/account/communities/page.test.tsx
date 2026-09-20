@@ -75,23 +75,37 @@ describe("/account/communities", () => {
     expect(mocks.resolveAdminCapabilityAccessBounded).not.toHaveBeenCalled();
   });
 
+  // DESIGN.md §5.10: a count of zero is the absence of a fact, not a fact.
+  // The card used to spend its footer on "open reports: 0"; it says what the
+  // queue *is* instead, and prints a number only when there is one.
   it.each([
-    ["uk", "Модерація спільнот", "відкритих скарг: 0"],
-    ["bg", "Модерация на общности", "отворени сигнали: 0"],
-    ["ru", "Модерация сообществ", "открытых жалоб: 0"],
+    ["uk", "Модерація спільнот", "Поданих скарг немає."],
+    ["bg", "Модерация на общности", "Няма подадени сигнали."],
+    ["ru", "Модерация сообществ", "Поданных жалоб нет."],
   ] as const)(
-    "renders selected %s moderation copy",
-    async (locale, title, countLabel) => {
+    "renders selected %s moderation copy, and no row of zeros",
+    async (locale, title, emptyLabel) => {
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
       const { default: CommunityModerationDirectory } = await import("./page");
       const html = renderToStaticMarkup(await CommunityModerationDirectory());
 
       expect(html).toContain(title);
-      expect(html).toContain(countLabel);
+      expect(html).toContain(emptyLabel);
+      expect(html).not.toMatch(/: 0</u);
       expect(html).toContain("observation-and-care");
       expect(html).toContain('data-private-moderation-queue="true"');
     },
   );
+
+  it("prints the count only when there is one to print", async () => {
+    mocks.listCommunityModerationQueue.mockResolvedValue({
+      items: [{ reportId: "one" }, { reportId: "two" }],
+    });
+    const { default: CommunityModerationDirectory } = await import("./page");
+    const html = renderToStaticMarkup(await CommunityModerationDirectory());
+
+    expect(html).toContain("відкритих скарг: 2");
+  });
 
   it("marks a fail-closed moderation lookup without exposing the queue", async () => {
     mocks.listCommunityModerationQueue.mockRejectedValue(new Error("denied"));

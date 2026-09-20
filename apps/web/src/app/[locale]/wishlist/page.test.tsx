@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getSessionId: vi.fn(),
   listWishlistShelfItems: vi.fn(),
   removeCatalogPublicSlugFromWishlistAction: vi.fn(),
+  addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -44,6 +45,8 @@ vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
 vi.mock("@/app/(default)/wishlist/actions", () => ({
   removeCatalogPublicSlugFromWishlistAction:
     mocks.removeCatalogPublicSlugFromWishlistAction,
+  addCatalogPublicSlugToWishlistAction:
+    mocks.addCatalogPublicSlugToWishlistAction,
 }));
 
 describe("/{locale}/wishlist", () => {
@@ -130,8 +133,56 @@ describe("/{locale}/wishlist", () => {
     );
     expect(html).toContain("Почати вести журнал");
     expect(html).toContain("Прибрати");
+    // `OVE-456` AC4: the same row and the same removal affordance as the
+    // bookmark shelf, and the affordance names what it removes.
+    expect(html).toContain('data-shelf-row="true"');
+    expect(html).toContain('data-shelf-remove="true"');
+    expect(html).toContain('aria-label="Прибрати: Pomidor Cheri"');
     expect(html).not.toMatch(
       /00000000-0000|session-1|private journal|journal body|plant_objects|quarantine|derivative|media key|ip_address|user_agent|email|phone|coordinates|invite|token/i,
     );
+  });
+
+  it("offers Undo after a removal, as a form that needs no bundle", async () => {
+    const { default: LocalizedWishlistRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedWishlistRoute({
+        params: Promise.resolve({ locale: "uk" }),
+        searchParams: Promise.resolve({
+          undoSlug: "pomidor-cheri-0000000101",
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-shelf-notice="true"');
+    expect(html).toContain("Прибрано зі списку");
+    expect(html).toContain("Повернути");
+  });
+
+  it("ignores an undo slug that is not a catalogue slug", async () => {
+    const { default: LocalizedWishlistRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedWishlistRoute({
+        params: Promise.resolve({ locale: "uk" }),
+        searchParams: Promise.resolve({ undoSlug: "../../etc/passwd" }),
+      }),
+    );
+
+    expect(html).not.toContain('data-shelf-notice="true"');
+    expect(html).not.toContain("passwd");
+  });
+
+  it("names the empty shelf and leads to the catalogue", async () => {
+    mocks.listWishlistShelfItems.mockResolvedValueOnce([]);
+    const { default: LocalizedWishlistRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedWishlistRoute({
+        params: Promise.resolve({ locale: "uk" }),
+      }),
+    );
+
+    expect(html).toContain('data-screen-state="empty-first-run"');
+    expect(html).toContain("Список поки порожній");
+    expect(html).toContain('href="/catalog"');
   });
 });

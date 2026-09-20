@@ -147,7 +147,7 @@ describe("wishlist actions", () => {
     formData.set("catalogPublicSlug", "pomidor-cheri-0000000101");
     formData.set("locale", "uk");
 
-    await removeCatalogPublicSlugFromWishlistAction(formData);
+    await removeCatalogPublicSlugFromWishlistAction(undefined, formData);
 
     expect(mocks.removeCatalogPublicSlugFromWishlist).toHaveBeenCalledWith(
       {
@@ -156,6 +156,8 @@ describe("wishlist actions", () => {
       },
       "pomidor-cheri-0000000101",
     );
-    expect(mocks.redirect).toHaveBeenCalledWith("/wishlist?wishlist=removed");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/wishlist?undoSlug=pomidor-cheri-0000000101",
+    );
   });
 });

@@ -795,4 +795,105 @@ describe("the sealed owner's links", () => {
       within(menu).getByRole("button", { name: /Вийти|Вихід/ }),
     ).toBeTruthy();
   });
+
+  // `OVE-456` AC5. The menu groups: the reader's own pages, settings, the
+  // owner's pages under the sealed role, sign out — and the owner's five links
+  // stay exactly five unless the owner approves a sixth.
+  it("groups the menu, and the owner's group is exactly its five links", async () => {
+    mocks.pathname = "/garden";
+    const user = (await import("@testing-library/user-event")).default;
+    const { OPERATOR_MENU_LINKS } = await import("@/lib/operator-menu-copy");
+    render(
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: null,
+          hasOperatorAccess: true,
+        }}
+      >
+        <main>Сад власника</main>
+      </SiteShell>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Обліковий запис" }));
+    const menu = await openAccountMenu();
+
+    const personal = menu.querySelector<HTMLElement>(
+      '[data-site-shell-account-pages="true"]',
+    );
+    expect(personal).not.toBeNull();
+    expect(hrefsOf(personal!)).toEqual([
+      "/garden/profile",
+      "/notifications",
+      "/bookmarks",
+      "/wishlist",
+    ]);
+
+    const settings = menu.querySelector<HTMLElement>(
+      '[data-site-shell-account-settings="true"]',
+    );
+    expect(settings).not.toBeNull();
+    expect(hrefsOf(settings!)).toEqual(["/privacy", "/erasure"]);
+
+    const operator = menu.querySelector<HTMLElement>(
+      '[data-site-shell-operator-menu="true"]',
+    );
+    expect(operator).not.toBeNull();
+    expect(hrefsOf(operator!)).toEqual(
+      OPERATOR_MENU_LINKS.map((link) => link.href),
+    );
+    expect(OPERATOR_MENU_LINKS).toHaveLength(5);
+  });
+
+  it("renders nothing of the owner's group for a gardener who is not the owner", async () => {
+    mocks.pathname = "/garden";
+    const user = (await import("@testing-library/user-event")).default;
+    const { OPERATOR_MENU_LINKS } = await import("@/lib/operator-menu-copy");
+    render(
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: null,
+          hasOperatorAccess: false,
+        }}
+      >
+        <main>Сад</main>
+      </SiteShell>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Обліковий запис" }));
+    const menu = await openAccountMenu();
+
+    expect(
+      menu.querySelector('[data-site-shell-operator-menu="true"]'),
+    ).toBeNull();
+    const hrefs = hrefsOf(menu);
+    for (const link of OPERATOR_MENU_LINKS) {
+      expect(hrefs).not.toContain(link.href);
+    }
+    // Their own pages and their settings are still there: the menu is the only
+    // place they exist below `lg`, where there is no rail.
+    expect(hrefs).toContain("/bookmarks");
+    expect(hrefs).toContain("/erasure");
+  });
 });
+
+function hrefsOf(scope: HTMLElement) {
+  return [...scope.querySelectorAll("a[href]")].map((link) =>
+    link.getAttribute("href"),
+  );
+}
+
+async function openAccountMenu() {
+  return waitFor(() => {
+    const found = document.querySelector<HTMLElement>(
+      '[data-site-shell-account-menu="true"]',
+    );
+    if (!found) throw new Error("account menu did not open");
+    return found;
+  });
+}

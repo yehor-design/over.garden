@@ -7,8 +7,14 @@ import {
   workspaceSchemaMissingHint,
 } from "@/components/garden/workspace-state";
 
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
-import { buttonVariants } from "@/components/ui/button";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
+import { Card } from "@/components/ui/card";
+import { ConfirmSubmit } from "@/components/ui/confirm-submit";
+import { EmptyState } from "@/components/ui/empty-state";
+import { resolveIllustration } from "@/lib/illustrations";
 import {
   ERASURE_REQUEST_HANDLED_STATUS_OPTIONS,
   formatErasureRequestReference,
@@ -121,9 +127,9 @@ export default async function ErasureRequestsOperatorPage() {
   if (access.status === "denied") {
     return (
       <ErasureRequestsShell locale={locale} accessState="denied">
-        <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          {operatorCopy.common.accessDenied}
-        </p>
+        <Callout tone="warning" role="alert">
+          <p>{operatorCopy.common.accessDenied}</p>
+        </Callout>
       </ErasureRequestsShell>
     );
   }
@@ -211,22 +217,24 @@ async function ErasureRequestsSection({
 
   return (
     <section className="grid gap-3">
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span className="rounded-md border border-border px-2 py-1">
+      <div className="flex flex-wrap gap-2">
+        <Badge>
           {operatorCopy.common.requests}: {requests.length}
-        </span>
-        <span className="rounded-md border border-border px-2 py-1">
+        </Badge>
+        <Badge tone="info">
           {operatorCopy.common.gate}: {gateLabel}
-        </span>
-        <span className="rounded-md border border-border px-2 py-1">
+        </Badge>
+        <Badge tone="info">
           {operatorCopy.common.role}: {roleLabel}
-        </span>
+        </Badge>
       </div>
 
       {requests.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          {copy.empty}
-        </p>
+        <EmptyState
+          illustration={resolveIllustration("empty-garden")}
+          illustrationSize="card"
+          title={copy.empty}
+        />
       ) : (
         <ol className="grid gap-3">
           {requests.map((request) => (
@@ -269,42 +277,42 @@ function ErasureRequestCard({
     request.handledStatus,
   );
   return (
-    <li className="grid gap-4 rounded-lg border border-border p-4 text-sm">
+    <Card as="li" className="grid gap-4 p-4 text-body-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="font-semibold text-foreground">{statusCopy.label}</h2>
-        <time className="text-xs text-muted-foreground">
+        <h2 className="text-h4 text-text-heading">{statusCopy.label}</h2>
+        <time className="text-caption text-text-muted">
           {formatOperatorDate(locale, request.submittedAt)}
         </time>
       </div>
-      <p className="text-sm text-muted-foreground">{statusCopy.description}</p>
-      <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
+      <p className="text-body-sm text-text-muted">{statusCopy.description}</p>
+      <dl className="grid gap-2 text-text-muted sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase">{copy.requestReference}</dt>
-          <dd className="font-mono text-xs">
+          <dt className="text-overline text-text-muted uppercase">{copy.requestReference}</dt>
+          <dd className="font-mono text-mono">
             {formatErasureRequestReference(request.id)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.requesterUserId}</dt>
-          <dd className="font-mono text-xs">{request.requesterUserId}</dd>
+          <dt className="text-overline text-text-muted uppercase">{copy.requesterUserId}</dt>
+          <dd className="font-mono text-mono">{request.requesterUserId}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.scope}</dt>
+          <dt className="text-overline text-text-muted uppercase">{copy.scope}</dt>
           <dd>{request.requestScope}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">{copy.intakeVersion}</dt>
+          <dt className="text-overline text-text-muted uppercase">{copy.intakeVersion}</dt>
           <dd>{request.intakeDisclosureVersion}</dd>
         </div>
         {request.dryRunReviewedAt ? (
           <div>
-            <dt className="text-xs uppercase">{copy.dryRunReviewed}</dt>
+            <dt className="text-overline text-text-muted uppercase">{copy.dryRunReviewed}</dt>
             <dd>{formatOperatorDate(locale, request.dryRunReviewedAt)}</dd>
           </div>
         ) : null}
         {request.handledStatus ? (
           <div>
-            <dt className="text-xs uppercase">{copy.handledStatus}</dt>
+            <dt className="text-overline text-text-muted uppercase">{copy.handledStatus}</dt>
             <dd>{statusCopy.handled?.label ?? request.handledStatus}</dd>
           </div>
         ) : null}
@@ -321,18 +329,12 @@ function ErasureRequestCard({
       ) : null}
 
       {canMutate && request.status === "submitted" ? (
-        <OwnerScopedActionForm action={markErasureRequestReviewingAction}>
+        <OwnerScopedProgressiveForm action={markErasureRequestReviewingAction}>
           <HiddenField name="requestId" value={request.id} />
-          <button
-            type="submit"
-            className={buttonVariants({
-              variant: "secondary",
-              className: "self-start",
-            })}
-          >
+          <Button type="submit" variant="secondary" className="self-start">
             {copy.startReview}
-          </button>
-        </OwnerScopedActionForm>
+          </Button>
+        </OwnerScopedProgressiveForm>
       ) : null}
       {canMutate &&
       (request.status === "submitted" || request.status === "reviewing") ? (
@@ -340,9 +342,9 @@ function ErasureRequestCard({
           {canExecuteErasure ? (
             <ApprovedErasureExecutionPanel request={request} copy={copy} />
           ) : (
-            <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
-              {copy.executionRequiresOwner}
-            </p>
+            <Callout tone="info">
+              <p>{copy.executionRequiresOwner}</p>
+            </Callout>
           )}
           <NonDestructiveOutcomeForm
             request={request}
@@ -351,7 +353,7 @@ function ErasureRequestCard({
           />
         </>
       ) : null}
-    </li>
+    </Card>
   );
 }
 
@@ -364,23 +366,31 @@ function ApprovedErasureExecutionPanel({
 }) {
   const approvalText = expectedErasureMaintainerApprovalText(request.id);
   const dryRunReviewed = Boolean(request.dryRunReviewedAt);
+  const reference = formatErasureRequestReference(request.id);
+  // The dialog's confirm lives in a portal, so it submits by id.
+  const formId = `erasure-execute-${request.id}`;
 
   return (
     <section className="grid gap-3 border-t border-border pt-3">
       <div className="grid gap-1">
-        <h3 className="text-base font-semibold text-foreground">
+        <h3 className="text-h4 text-text-heading">
           {copy.executionTitle}
         </h3>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+        <p className="max-w-prose text-body-sm leading-6 text-text-muted">
           {copy.executionDescription}
         </p>
       </div>
-      <OwnerScopedActionForm
+      <OwnerScopedProgressiveForm
+        id={formId}
         action={executeApprovedErasureRequestAction}
         className="grid gap-2 sm:max-w-xl"
       >
         <HiddenField name="requestId" value={request.id} />
-        <Field label={copy.approvalPhrase} required>
+        <Field
+          label={copy.approvalPhrase}
+          description={approvalText}
+          required
+        >
           <Input
             name="maintainerApprovalText"
             disabled={!dryRunReviewed}
@@ -388,26 +398,26 @@ function ApprovedErasureExecutionPanel({
             className="font-mono"
           />
         </Field>
-        <p className="font-mono text-xs text-muted-foreground">
-          {approvalText}
-        </p>
-        <button
-          type="submit"
+        {/* The one destructive control in the product, and the one place
+            `danger` appears (DESIGN.md §4.4). It names the request it is about
+            to erase before it does it, and it is still a real submit button
+            before the bundle runs (`ConfirmSubmit`). */}
+        <ConfirmSubmit
+          className="self-start"
+          formId={formId}
           disabled={!dryRunReviewed}
-          className={buttonVariants({
-            variant: "danger",
-            className:
-              "self-start disabled:pointer-events-none disabled:opacity-60",
-          })}
-        >
-          {copy.execute}
-        </button>
+          label={copy.execute}
+          title={`${copy.confirmTitle} ${reference}`}
+          description={copy.confirmDescription}
+          confirmLabel={copy.confirmAction}
+          cancelLabel={copy.confirmCancel}
+        />
         {!dryRunReviewed ? (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-text-muted">
             {copy.reviewBeforeExecution}
           </p>
         ) : null}
-      </OwnerScopedActionForm>
+      </OwnerScopedProgressiveForm>
     </section>
   );
 }
@@ -427,7 +437,7 @@ function NonDestructiveOutcomeForm({
   );
 
   return (
-    <OwnerScopedActionForm
+    <OwnerScopedProgressiveForm
       action={markErasureRequestHandledAction}
       className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
     >
@@ -442,13 +452,10 @@ function NonDestructiveOutcomeForm({
           ))}
         </Select>
       </Field>
-      <button
-        type="submit"
-        className={buttonVariants({ className: "self-start" })}
-      >
+      <Button type="submit" className="self-start">
         {copy.markHandled}
-      </button>
-    </OwnerScopedActionForm>
+      </Button>
+    </OwnerScopedProgressiveForm>
   );
 }
 
@@ -468,13 +475,13 @@ function DryRunPreviewPanel({
   return (
     <section className="grid gap-4 rounded-lg border border-warning-border bg-warning-surface p-4">
       <div className="grid gap-1">
-        <h3 className="text-base font-semibold text-foreground">
+        <h3 className="text-h4 text-text-heading">
           {copy.previewTitle}
         </h3>
-        <p className="text-sm leading-6 text-muted-foreground">
+        <p className="text-body-sm leading-6 text-text-muted">
           {copy.previewDescription}
         </p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-text-muted">
           {getOperatorCopy(locale).common.generated}{" "}
           {formatOperatorDate(locale, preview.generatedAt)}
         </p>
@@ -484,13 +491,13 @@ function DryRunPreviewPanel({
         {preview.dataClasses.map((dataClass) => (
           <div
             key={dataClass.key}
-            className="grid gap-2 rounded-md border border-border bg-background p-3"
+            className="grid gap-2 rounded-md border border-border bg-surface p-3"
           >
             <div className="grid gap-1">
-              <h4 className="text-sm font-semibold text-foreground">
+              <h4 className="text-h4 text-text-heading">
                 {copy.dataClasses[dataClass.key].label}
               </h4>
-              <p className="text-xs leading-5 text-muted-foreground">
+              <p className="text-caption leading-5 text-text-muted">
                 {copy.dataClasses[dataClass.key].description}
               </p>
             </div>
@@ -500,10 +507,10 @@ function DryRunPreviewPanel({
                   key={key}
                   className="flex items-center justify-between rounded-md border border-border px-3 py-2"
                 >
-                  <dt className="text-xs text-muted-foreground uppercase">
+                  <dt className="text-overline text-text-muted uppercase">
                     {operatorErasureCountLabel(locale, key)}
                   </dt>
-                  <dd className="font-semibold text-foreground tabular-nums">
+                  <dd className="text-h4 text-text-heading tabular-nums">
                     {count}
                   </dd>
                 </div>
@@ -513,7 +520,7 @@ function DryRunPreviewPanel({
         ))}
       </div>
 
-      <ul className="grid gap-2 text-xs leading-5 text-muted-foreground">
+      <ul className="grid gap-2 text-caption leading-5 text-text-muted">
         {copy.caveats.map((caveat) => (
           <li key={caveat}>{caveat}</li>
         ))}
@@ -521,20 +528,14 @@ function DryRunPreviewPanel({
 
       {canMutate &&
       (request.status === "submitted" || request.status === "reviewing") ? (
-        <OwnerScopedActionForm action={markErasureRequestDryRunReviewedAction}>
+        <OwnerScopedProgressiveForm action={markErasureRequestDryRunReviewedAction}>
           <HiddenField name="requestId" value={request.id} />
-          <button
-            type="submit"
-            className={buttonVariants({
-              variant: "secondary",
-              className: "self-start",
-            })}
-          >
+          <Button type="submit" variant="secondary" className="self-start">
             {request.dryRunReviewedAt
               ? copy.recordReviewAgain
               : copy.markReviewed}
-          </button>
-        </OwnerScopedActionForm>
+          </Button>
+        </OwnerScopedProgressiveForm>
       ) : null}
     </section>
   );

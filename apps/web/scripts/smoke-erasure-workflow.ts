@@ -327,6 +327,9 @@ async function main() {
       "lifecycle_state as lifecycleState",
       "public_gone_at as publicGoneAt",
       "cover_media_asset_id as coverMediaAssetId",
+      "archived_at as archivedAt",
+      "deleted_at as deletedAt",
+      "purge_after as purgeAfter",
     ])
     .where("id", "=", PUBLIC_ENTRY_ID)
     .executeTakeFirstOrThrow();
@@ -339,10 +342,24 @@ async function main() {
     "journal body erased",
   );
   assertEqual(tombstone.visibility, "public", "journal visibility public");
-  assertEqual(tombstone.lifecycleState, "archived", "journal archived");
+  // `deleted_retention`, not `archived`: `OVE-353` replaced the archive with a
+  // seven-day retention-only lifecycle and the erasure executor writes that
+  // state. This assertion still said `archived`, so the smoke had been failing
+  // here ever since — found by running it for `OVE-456`.
+  assertEqual(
+    tombstone.lifecycleState,
+    "deleted_retention",
+    "journal in retention",
+  );
+  assertEqual(tombstone.archivedAt, null, "archive timestamp cleared");
   assertEqual(tombstone.coverMediaAssetId, null, "cover cleared");
   if (!tombstone.publicGoneAt) {
     throw new Error("public tombstone missing public_gone_at");
+  }
+  // The retention horizon the lifecycle is named after: erasure must set one,
+  // and the seven-day window is what the privacy policy promises.
+  if (!tombstone.deletedAt || !tombstone.purgeAfter) {
+    throw new Error("retention tombstone missing deleted_at/purge_after");
   }
 
   const projectionIntent = await db
@@ -512,6 +529,10 @@ async function seedSmokeRows() {
       source: "user_added",
       source_id: "ove-97-smoke-source",
       created_by_user_id: REQUESTER_USER_ID,
+      // What the dry run counts as a provisional card: one this gardener
+      // created before migration 0055 retired that path. The fixture left the
+      // column at its default and counted nothing.
+      identity_state: "retired",
       locale: "en",
       created_at: now,
       updated_at: now,
@@ -528,7 +549,11 @@ async function seedSmokeRows() {
       object_kind: "plant",
       catalog_item_id: CATALOG_ITEM_ID,
       variety_text: "OVE-97 private variety text",
-      variety_state: "user_added",
+      // `free_text`, not `user_added`: migration 0061 removed that fourth
+      // state — a gardener's own name is a label on a node now (`OVE-387`) —
+      // and this fixture kept writing it, so the smoke had been failing on its
+      // own seed since. Found by running it for `OVE-456`.
+      variety_state: "free_text",
       location_visibility: "region",
       coarse_region_code: "UA-30",
       created_at: now,

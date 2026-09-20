@@ -21,7 +21,16 @@ import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 const ERASURE_REQUESTS_PATH = "/garden/privacy/erasure-requests";
 
-export async function markErasureRequestReviewingAction(formData: FormData) {
+/**
+ * Every control on this surface is `(previousState, formData)` — the shape
+ * `useActionState` calls, so `OwnerScopedProgressiveForm` hands React a Server
+ * Action reference and the form has a real endpoint before the bundle runs
+ * (ADR-0024 D3, `OVE-456`). The first argument is unused.
+ */
+export async function markErasureRequestReviewingAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
     authoritative: true,
@@ -40,7 +49,10 @@ export async function markErasureRequestReviewingAction(formData: FormData) {
   revalidatePath("/erasure");
 }
 
-export async function markErasureRequestHandledAction(formData: FormData) {
+export async function markErasureRequestHandledAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
     authoritative: true,
@@ -67,7 +79,10 @@ export async function markErasureRequestHandledAction(formData: FormData) {
   revalidatePath("/erasure");
 }
 
-export async function executeApprovedErasureRequestAction(formData: FormData) {
+export async function executeApprovedErasureRequestAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
     authoritative: true,
@@ -90,6 +105,7 @@ export async function executeApprovedErasureRequestAction(formData: FormData) {
 }
 
 export async function markErasureRequestDryRunReviewedAction(
+  _previousState: unknown,
   formData: FormData,
 ) {
   const admission = await resolveMutationScope({

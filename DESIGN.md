@@ -490,8 +490,14 @@ nothing to style. `Spinner` is tier 3 by rank but `Button`'s loading state needs
 it, so it was built first.
 
 **Tier 2 — surface and structure.**
-`Card` · `Surface` · `Separator` (exists) · `Tabs` · `Accordion` · `Table` ·
-`ListRow` · `PageHeader` · `Section` · `Stack` utilities.
+`Card` · `Surface` · `Separator` (exists) · `Tabs` · `TabLinks` · `Accordion` ·
+`Table` · `ListRow` · `PageHeader` · `Section` · `Stack` utilities.
+
+`TabLinks` is the same strip when each tab is an **address** rather than a
+panel: it ships in `tabs.tsx`, shares `tabTriggerClass` so the two cannot drift
+apart, and renders a named `<nav>` of links with `aria-current="page"`. A
+`tablist` whose tabs navigate announces a tab and delivers a page, which is a
+lie a screen reader cannot recover from.
 
 **Tier 3 — status and feedback.**
 `Badge` · `Chip` / `FilterChip` · `Avatar` · `AvatarGroup` · `Tooltip` (exists) ·
@@ -499,8 +505,16 @@ it, so it was built first.
 `ProgressBar` · `ErrorState` (ADR-0023 classes) · `Pagination`.
 
 **Tier 4 — overlay.**
-`Dialog` · `AlertDialog` (exists) · `Sheet` (exists, rewrite) · `Menu` (exists) ·
-`Popover` · `CommandPalette`.
+`Dialog` · `AlertDialog` (exists) · `ConfirmSubmit` · `Sheet` (exists, rewrite) ·
+`Menu` (exists) · `Popover` · `CommandPalette`.
+
+`ConfirmSubmit` is how §4.4's rule and ADR-0024 D3 hold at once. A destructive
+action lives behind an `AlertDialog` that names the object; a control may not
+depend on hydration to do its job; and a dialog *is* hydration. So it renders a
+real `<button type="submit">` inside the form — which posts before the bundle
+runs — and, once hydrated, intercepts the press and opens the dialog instead.
+The dialog's confirm sits in a portal and submits by `form={id}`. **Hydration
+adds the confirmation; it never takes away the action.**
 
 **Tier 5 — product.**
 `EntryCard` · `OrganismCard` · `ProfileHeader` · `EngagementBar` (like, bookmark,

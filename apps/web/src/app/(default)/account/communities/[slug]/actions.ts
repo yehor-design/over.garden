@@ -29,7 +29,18 @@ const MODERATION_REASONS = new Set([
   "other",
 ]);
 
-export async function moderateCommunityContributionAction(formData: FormData) {
+/**
+ * Every moderation action is `(previousState, formData)` — the shape
+ * `useActionState` calls, and the one that lets `OwnerScopedProgressiveForm`
+ * hand React a Server Action reference rather than a client closure. A closure
+ * renders `action="javascript:throw …"` until the bundle arrives, so the
+ * control the owner pressed did nothing (ADR-0024 D3, `OVE-456`). The first
+ * argument is the previous result and is unused: these redirect.
+ */
+export async function moderateCommunityContributionAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -63,7 +74,10 @@ export async function moderateCommunityContributionAction(formData: FormData) {
   finish(formData, slug, status);
 }
 
-export async function moderateCommunityDiscussionAction(formData: FormData) {
+export async function moderateCommunityDiscussionAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -95,7 +109,10 @@ export async function moderateCommunityDiscussionAction(formData: FormData) {
   finish(formData, slug, status);
 }
 
-export async function moderateCommunityMembershipAction(formData: FormData) {
+export async function moderateCommunityMembershipAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -129,7 +146,10 @@ export async function moderateCommunityMembershipAction(formData: FormData) {
   finish(formData, slug, status);
 }
 
-export async function resolveCommunityReportAction(formData: FormData) {
+export async function resolveCommunityReportAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -163,7 +183,10 @@ export async function resolveCommunityReportAction(formData: FormData) {
   finish(formData, slug, status);
 }
 
-export async function setCommunityParticipationAction(formData: FormData) {
+export async function setCommunityParticipationAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });

@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { Tabs } from "./tabs";
+import { TabLinks, Tabs } from "./tabs";
 
 const TABS = [
   { id: "entries", label: "Записи", content: <p>Список записів</p> },
@@ -70,5 +70,60 @@ describe("Tabs", () => {
     expect(screen.getByRole("tab", { selected: true }).textContent).toBe(
       "Нотатки",
     );
+  });
+});
+
+/**
+ * `OVE-456`: the strip a family of *pages* uses. Four addresses, so pressing
+ * one navigates — which makes these links, and a `tablist` whose tabs navigate
+ * is a lie a screen reader cannot recover from.
+ */
+describe("TabLinks", () => {
+  const ITEMS = [
+    { key: "feed", label: "Стрічка", href: "/feed", current: false },
+    {
+      key: "notifications",
+      label: "Сповіщення",
+      href: "/notifications",
+      current: true,
+    },
+    { key: "bookmarks", label: "Закладки", href: "/bookmarks", current: false },
+  ];
+
+  it("is a named navigation landmark of links, never a tab list", () => {
+    render(<TabLinks label="Моє" items={ITEMS} />);
+    expect(screen.getByRole("navigation", { name: "Моє" })).not.toBeNull();
+    expect(screen.getAllByRole("link")).toHaveLength(3);
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(
+      screen.getByRole("link", { name: "Сповіщення" }).getAttribute("href"),
+    ).toBe("/notifications");
+  });
+
+  it("marks the page the reader is on with aria-current", () => {
+    render(<TabLinks label="Моє" items={ITEMS} />);
+    expect(
+      screen
+        .getByRole("link", { name: "Сповіщення" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      screen
+        .getByRole("link", { name: "Стрічка" })
+        .getAttribute("aria-current"),
+    ).toBeNull();
+  });
+
+  it("draws the selected tab the way Tabs draws its own", () => {
+    render(
+      <>
+        <Tabs label="Розділи журналу" tabs={TABS} />
+        <TabLinks label="Моє" items={ITEMS} />
+      </>,
+    );
+    const selectedTab = screen.getByRole("tab", { selected: true });
+    const currentLink = screen.getByRole("link", { name: "Сповіщення" });
+    expect(currentLink.className).toContain("border-action");
+    expect(selectedTab.className).toContain("border-action");
   });
 });

@@ -66,7 +66,16 @@ export async function addCatalogPublicSlugToWishlistAction(
   redirect(withStatusParam(returnTo, "saved"));
 }
 
+/**
+ * Taking one off the list, and what the shelf says next.
+ *
+ * `(previousState, formData)` for the same reason as the add above, and the
+ * redirect carries the slug rather than a status word: the row is gone, so the
+ * address is the only channel the next document has for an Undo it can offer
+ * without JavaScript (`OVE-456`).
+ */
 export async function removeCatalogPublicSlugFromWishlistAction(
+  _previousState: unknown,
   formData: FormData,
 ) {
   const publicSlug = normalizeCatalogPublicSlugField(
@@ -89,8 +98,7 @@ export async function removeCatalogPublicSlugFromWishlistAction(
   await removeCatalogPublicSlugFromWishlist(scope, publicSlug);
 
   revalidateWishlistPaths(locale, publicSlug);
-  const returnTo = localizedPath(locale, "/wishlist");
-  redirect(withStatusParam(returnTo, "removed"));
+  redirect(withUndoParam(localizedPath(locale, "/wishlist"), publicSlug));
 }
 
 function revalidateWishlistPaths(
@@ -130,8 +138,14 @@ function normalizeReturnToField(
   return normalizeInternalReturnPath(raw, fallback);
 }
 
-function withStatusParam(path: string, status: "saved" | "removed") {
+function withStatusParam(path: string, status: "saved") {
   const url = new URL(path, "https://over.garden");
   url.searchParams.set(WISHLIST_STATUS_PARAM, status);
+  return `${url.pathname}${url.search}`;
+}
+
+function withUndoParam(path: string, publicSlug: string) {
+  const url = new URL(path, "https://over.garden");
+  url.searchParams.set("undoSlug", publicSlug);
   return `${url.pathname}${url.search}`;
 }

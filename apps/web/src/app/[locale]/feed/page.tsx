@@ -3,10 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import {
-  MySocialLayout,
-  SocialEmptyState,
-} from "@/components/social/my-social-layout";
+import { MySocialLayout } from "@/components/social/my-social-layout";
 import { buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { ToggleChip } from "@/components/ui/chip";
@@ -235,7 +232,19 @@ async function renderSignedOutFollowedFeed({
         </Callout>
 
         {feed.entries.length === 0 ? (
-          <SocialEmptyState>{homeCopy.emptyTitle}</SocialEmptyState>
+          <EmptyState
+            illustration={resolveIllustration("empty-journal")}
+            title={homeCopy.emptyTitle}
+            description={copy.feed.empty}
+            action={
+              <Link
+                href={localizedPath(locale, "/journals")}
+                className={buttonVariants()}
+              >
+                {copy.feed.emptyAction}
+              </Link>
+            }
+          />
         ) : (
           <ol className="grid list-none gap-4">
             {feed.entries.map((entry, index) => (
@@ -351,15 +360,16 @@ function FeedFilters({
     ["animal", copy.feed.animals],
   ];
 
+  // No wrapping `role="group"`: each form names itself, and a group around two
+  // named forms adds a node a screen reader reads and a reader cannot act on —
+  // the same shape as the bordered filter box `OVE-456` removed from the other
+  // three pages of this family.
   return (
-    <div
-      role="group"
-      aria-label={copy.feed.sourceFiltersLabel}
-      className="grid w-full gap-3"
-    >
+    <div className="grid w-full gap-3">
       <form
         method="get"
         action={action}
+        aria-label={copy.feed.sourceFiltersLabel}
         data-followed-feed-source-filters="true"
         className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
       >
