@@ -42,6 +42,17 @@ const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const LOCALES = ["uk", "bg", "ru"] as const;
 const WIDTHS = [320, 375, 768] as const;
 
+/**
+ * A phone's pixels, not a desktop's. At a device pixel ratio of 1 a Linux
+ * engine places every glyph on a whole pixel, which adds up to four pixels to
+ * an eight-letter word — and four pixels is exactly the margin "Дневници" has
+ * in a 64 px slot at 320 px. The first time this file ran in CI (a Linux
+ * runner, ratio 1) the label broke in two with the right face loaded; on a
+ * laptop it never had. No phone this narrow has a ratio below 2, so that is
+ * what the narrow screens are measured at.
+ */
+test.use({ deviceScaleFactor: 2 });
+
 /** The four WCAG 1.4.12 overrides, applied exactly as the criterion states. */
 const TEXT_SPACING = `* { line-height: 1.5 !important;
   letter-spacing: 0.12em !important;
