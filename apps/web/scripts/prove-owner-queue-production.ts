@@ -21,6 +21,11 @@
  */
 import { Pool } from "pg";
 
+import {
+  resolveDatabaseSslConfig,
+  resolvePgConnectionString,
+} from "../src/db/connection";
+
 interface QueueRow {
   id: string;
   item_type: string;
@@ -56,7 +61,16 @@ export async function walkOwnerQueue(options: {
   actorUserId: string | null;
 }): Promise<OwnerQueueWalk> {
   const url = new URL(options.databaseUrl);
-  const pool = new Pool({ connectionString: options.databaseUrl, max: 1 });
+  // Connected the way the application connects: a managed cluster presents a
+  // chain the system store does not have, and `DATABASE_SSL_CA` is what makes
+  // `rejectUnauthorized` both true and possible.
+  const env = { ...process.env, DATABASE_URL: options.databaseUrl };
+  const pool = new Pool({
+    connectionString:
+      resolvePgConnectionString(env) ?? options.databaseUrl,
+    ssl: resolveDatabaseSslConfig(env),
+    max: 1,
+  });
   pool.on("error", () => undefined);
   const client = await pool.connect();
   let walked: OwnerQueueWalk["walked"] = null;
@@ -77,13 +91,18 @@ export async function walkOwnerQueue(options: {
     const openItems = Object.values(byType).reduce((sum, n) => sum + n, 0);
 
     if (options.apply && openItems > 0) {
-      // The lowest impact open item, so a walk never spends the decision the
-      // owner would most want to make by hand.
+      /**
+       * The lowest-impact open item, so a walk never spends the decision the
+       * owner would most want to make by hand — and never a `node_merge`,
+       * which moves gardeners' objects between cards. The revert is exact,
+       * but a proof should not be the thing that moves somebody's tomatoes
+       * and puts them back.
+       */
       const candidate = await client.query<QueueRow>(
         `select id::text as id, item_type, impact_score,
                 subject_catalog_item_id::text as subject_catalog_item_id
          from catalog_curation_queue
-         where state = 'open' and item_type = 'label_link'
+         where state = 'open' and item_type <> 'node_merge'
          order by impact_score asc, created_at asc
          limit 1`,
       );
