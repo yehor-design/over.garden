@@ -3,9 +3,13 @@
 Status: current implementation contract
 Owner: OVE-360, extended to every workspace surface by OVE-374 (ADR-0023)
 Instruments: `apps/web/scripts/prove-workspace-section-observability.ts`
-(the vocabulary, hermetic) and
+(the vocabulary, hermetic),
 `apps/web/scripts/prove-workspace-resilience.ts` (every surface, against a
-running server)
+running server with no database at all) and
+`apps/web/scripts/prove-workspace-failure-classes.ts` (one injected SQLSTATE per
+class, on a hard load, `OVE-457`)
+Gate: `apps/web/scripts/check-workspace-settled-reads.ts` — no `@/server/*`
+read is awaited outside `settleSection` on a `/garden/**` render path
 
 ## Why this exists
 
@@ -34,6 +38,21 @@ Since OVE-374 the closed set, the classifier, and the settle helper live in
 `apps/web/src/server/workspace-failure.ts` as `WORKSPACE_FAILURE_CLASSES`,
 `classifyWorkspaceFailure`, and `settleSection`, and **every** page under
 `/garden/**` uses them — not just the workspace home.
+
+Since `OVE-457` that last sentence is a gate rather than a convention.
+`check-workspace-settled-reads.ts` reads each render module under
+`src/app/(default)/garden/**` and `src/components/garden/**`, works out which
+spans are inside a settle wrapper — `settleSection`, a local function that
+calls one, and a private helper every call of which is settled — and fails on
+any `await` of a `@/server/*` binding outside them. It found one the day it was
+written: `getPublicAuthorHandle` had been bare on the living object's page
+since the addresses moved under authors. Server Actions are out of scope and
+skipped: a mutation is not a render, and a thrown action reaches its caller as
+a rejected promise rather than as a boundary that never resolves.
+
+Each class also has **its own sentence** on screen now, rather than one
+paragraph shared by all six; the class itself still travels only as
+`data-section-failure`.
 `garden-workspace-repository.ts` re-exports the original names, so this
 document's `GARDEN_WORKSPACE_*` spellings and the OVE-360 proof still hold.
 

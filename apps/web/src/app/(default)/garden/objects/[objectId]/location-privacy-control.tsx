@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility } from "@/db/schema";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
@@ -17,7 +17,7 @@ interface LocationPrivacyControlProps {
   objectId: string;
   currentLocationVisibility: LocationVisibility | string;
   currentCoarseRegionCode: string | null;
-  action: (formData: FormData) => Promise<unknown>;
+  action: (previousState: unknown, formData: FormData) => Promise<unknown>;
 }
 
 export function LocationPrivacyControl({
@@ -44,8 +44,8 @@ export function LocationPrivacyControl({
 
   return (
     <section className="grid min-w-0 gap-3 rounded-lg border border-border p-4">
-      <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-      <OwnerScopedActionForm
+      <h2 className="text-h3 text-text-heading">{copy.title}</h2>
+      <OwnerScopedProgressiveForm
         action={action}
         className="grid min-w-0 gap-3 sm:grid-cols-3"
       >
@@ -91,7 +91,7 @@ export function LocationPrivacyControl({
         >
           {copy.save}
         </button>
-      </OwnerScopedActionForm>
+      </OwnerScopedProgressiveForm>
     </section>
   );
 }

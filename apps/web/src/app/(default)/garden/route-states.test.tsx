@@ -128,7 +128,10 @@ describe("/garden route states", () => {
       withFileTypes: true,
     });
     expect(
-      catalog.filter((entry) => entry.isDirectory()).map((entry) => entry.name).sort(),
+      catalog
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .sort(),
     ).toEqual(["queue", "sources"]);
   });
 });

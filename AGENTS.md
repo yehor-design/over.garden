@@ -71,10 +71,13 @@ touching DNS, R2, env, or deployment. Local infra starts with
 11. A page under `/garden/**` never awaits a `@/server/*` read outside
     `settleSection`. Settle it into a bounded failure class and render that
     value; `error.tsx` does not catch a Server Component error on a hard load
-    (ADR-0023).
+    (ADR-0023). `apps/web/scripts/check-workspace-settled-reads.ts` enforces
+    this in CI and in `pnpm test`: an escape looks like every other `await` and
+    only shows on a hard load with the dependency already broken.
 
 `apps/web/scripts/check-banned-dependencies.ts` enforces the mechanical half of
-these rules in CI and in `pnpm test`.
+these rules in CI and in `pnpm test`, beside
+`apps/web/scripts/check-workspace-settled-reads.ts` for rule 11.
 
 ## How we work
 

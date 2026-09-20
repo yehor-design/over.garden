@@ -25,6 +25,7 @@ export function LineageUpdatesShell({
       state={state}
       width="wide"
       title={copy.updates.title}
+      description={copy.updates.description}
       navigation={
         <>
           <Link

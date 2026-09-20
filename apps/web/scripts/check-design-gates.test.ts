@@ -11,6 +11,11 @@ import {
   runDesignTokenGate,
   scanForPrimitives,
 } from "./check-design-tokens";
+import {
+  findUnsettledReads,
+  isWorkspaceRenderModule,
+  runWorkspaceSettledReadGate,
+} from "./check-workspace-settled-reads";
 
 /**
  * Every gate of `DESIGN.md` §10, observed red.
@@ -244,5 +249,47 @@ describe("gate 6 — every ui component has a role-and-name test", () => {
       { nameless: "a badge is its own text" },
     );
     expect(failures[0]?.reason).toBe("stale_nameless_entry");
+  });
+});
+
+describe("gate 14 — a workspace render path settles every @/server/* read", () => {
+  it("flags a bare await, and says what to write instead", () => {
+    const violations = findUnsettledReads(
+      "src/app/(default)/garden/objects/[objectId]/page.tsx",
+      fixture("unsettled-workspace-read.tsx"),
+    );
+    // Exactly one: the settled read beside it must not be counted, and neither
+    // must the two allow-listed reads the page opens with.
+    expect(violations).toHaveLength(1);
+    expect(violations[0]?.name).toBe("getPublicAuthorHandle");
+    expect(violations[0]?.line).toBeGreaterThan(0);
+  });
+
+  it("accepts a settled read, a local wrapper and a helper only ever settled", () => {
+    // The shape the garden home actually uses: `settledOrNull` wraps
+    // `settleSection`, and the helper it is handed is reached no other way.
+    expect(
+      findUnsettledReads(
+        "src/app/(default)/garden/(home)/page.tsx",
+        fixture("settled-workspace-read.tsx"),
+      ),
+    ).toEqual([]);
+  });
+
+  it("leaves Server Actions alone: a mutation is not a render", () => {
+    expect(
+      isWorkspaceRenderModule("src/app/(default)/garden/profile/actions.ts"),
+    ).toBe(false);
+    expect(
+      isWorkspaceRenderModule(
+        "src/app/(default)/garden/objects/[objectId]/page.tsx",
+      ),
+    ).toBe(true);
+  });
+
+  it("is silent on the repository as it stands", () => {
+    const { scanned, violations } = runWorkspaceSettledReadGate(ROOT);
+    expect(scanned).toBeGreaterThan(0);
+    expect(violations).toEqual([]);
   });
 });

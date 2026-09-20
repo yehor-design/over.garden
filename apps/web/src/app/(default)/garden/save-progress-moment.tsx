@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   buildSaveProgressMomentCopy,
@@ -45,36 +46,33 @@ export function SaveProgressMoment({
     <section
       aria-live="polite"
       aria-labelledby="save-progress-heading"
-      className="grid gap-4 rounded-lg border border-border bg-muted/20 p-4"
+      data-save-progress-moment={kind}
+      className="grid gap-4 rounded-lg border border-success-border bg-success-surface p-4"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="grid min-w-0 gap-1">
-          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <CheckCircle2 className="size-4" />
+          <p className="flex items-center gap-2 text-body-sm font-medium text-success-text">
+            <CheckCircle2 className="size-4" aria-hidden="true" />
             {copy.eyebrow}
           </p>
-          <h2
-            id="save-progress-heading"
-            className="text-lg font-semibold text-foreground"
-          >
+          <h2 id="save-progress-heading" className="text-h3 text-text-heading">
             {copy.title}
           </h2>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+          <p className="max-w-prose text-body-sm leading-6 text-text-secondary">
             {copy.body}
           </p>
         </div>
         <div className="grid w-full gap-2 sm:w-48">
-          <div className="flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+          <div className="flex items-baseline justify-between gap-3 text-caption text-text-muted">
             <span>{copy.progressLabel}</span>
             <span>{copy.progressValue}</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-background">
-            <div
-              className={`h-full rounded-full bg-primary ${progressWidthClass(
-                copy.progressPercent,
-              )}`}
-            />
-          </div>
+          {/* A real `progressbar` with its bounds and its value, so a
+              reader hears the figure rather than seeing a rectangle. */}
+          <ProgressBar
+            label={copy.progressLabel}
+            value={copy.progressPercent}
+          />
         </div>
       </div>
       <div className="flex flex-wrap gap-3 border-t border-border pt-3">
@@ -92,11 +90,4 @@ export function SaveProgressMoment({
       </div>
     </section>
   );
-}
-
-function progressWidthClass(percent: number) {
-  if (percent <= 25) return "w-1/4";
-  if (percent <= 50) return "w-1/2";
-  if (percent <= 75) return "w-3/4";
-  return "w-full";
 }

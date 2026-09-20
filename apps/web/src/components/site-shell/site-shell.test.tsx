@@ -82,6 +82,7 @@ describe("the shell's landmarks", () => {
           isAuthenticated: true,
           ownerUserId: "00000000-0000-4000-8000-000000000001",
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Сад</main>
@@ -196,6 +197,7 @@ describe("the one primary action", () => {
           isAuthenticated: true,
           ownerUserId: "00000000-0000-4000-8000-000000000001",
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Сад</main>
@@ -305,6 +307,7 @@ describe("the tab bar", () => {
           isAuthenticated: true,
           ownerUserId: "00000000-0000-4000-8000-000000000001",
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Редагування</main>
@@ -492,6 +495,7 @@ describe("the shell's server HTML", () => {
           isAuthenticated: true,
           ownerUserId: "00000000-0000-4000-8000-000000000001",
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Лично съдържание</main>
@@ -526,6 +530,7 @@ describe("the shell's server HTML", () => {
           isAuthenticated: true,
           ownerUserId: null,
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Account moderation</main>
@@ -567,6 +572,7 @@ describe("the shell's server HTML", () => {
           isAuthenticated: true,
           ownerUserId: "00000000-0000-4000-8000-000000000001",
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Native erasure request</main>
@@ -594,6 +600,7 @@ describe("the shell's server HTML", () => {
           isAuthenticated: true,
           ownerUserId: null,
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Erasure owner review</main>
@@ -734,6 +741,7 @@ describe("every guest sign-in control reaches the form itself", () => {
           isAuthenticated: true,
           ownerUserId: "owner-1",
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Route content</main>
@@ -759,6 +767,7 @@ describe("the sealed owner's links", () => {
           isAuthenticated: true,
           ownerUserId: null,
           hasOperatorAccess: true,
+          sessionStore: "reachable",
         }}
       >
         <main>Сад власника</main>
@@ -811,6 +820,7 @@ describe("the sealed owner's links", () => {
           isAuthenticated: true,
           ownerUserId: null,
           hasOperatorAccess: true,
+          sessionStore: "reachable",
         }}
       >
         <main>Сад власника</main>
@@ -859,6 +869,7 @@ describe("the sealed owner's links", () => {
           isAuthenticated: true,
           ownerUserId: null,
           hasOperatorAccess: false,
+          sessionStore: "reachable",
         }}
       >
         <main>Сад</main>

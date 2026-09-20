@@ -80,7 +80,8 @@ describe("CatalogResolveControl when the picker route is down", () => {
     const copy = getGardenWorkspaceCopy("uk").composer.catalogPicker;
     const status = renderer.root.find(
       (node) =>
-        node.type === "p" && node.props["data-catalog-availability"] !== undefined,
+        node.type === "p" &&
+        node.props["data-catalog-availability"] !== undefined,
     );
     expect(status.props["data-catalog-availability"]).toBe("unavailable");
     expect(status.props.children).toBe(copy.unavailable);

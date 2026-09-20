@@ -156,7 +156,7 @@ describe("public handle profile actions", () => {
     formData.set("coarseRegionCode", "UA-32");
     formData.set("relationshipVisibility", "counts");
 
-    await updatePublicProfileAction(formData);
+    await updatePublicProfileAction(undefined, formData);
 
     expect(mocks.updateOwnerPublicProfile).toHaveBeenCalledWith(
       {
@@ -186,7 +186,7 @@ describe("public handle profile actions", () => {
     const formData = new FormData();
     formData.set("blockId", "00000000-0000-4000-8000-000000000222");
 
-    await unblockProfileAction(formData);
+    await unblockProfileAction(undefined, formData);
 
     expect(mocks.unblockProfileByBlockId).toHaveBeenCalledWith(
       {

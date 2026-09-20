@@ -43,6 +43,7 @@ export const BROWSER_GATE_SPECS = [
   "journal-deletion-retention.spec.ts",
   "public-profile.spec.ts",
   "personal-surfaces.spec.ts",
+  "garden-workspace.spec.ts",
   "catalog.spec.ts",
   "organism-card.spec.ts",
   "editorial-surfaces.spec.ts",

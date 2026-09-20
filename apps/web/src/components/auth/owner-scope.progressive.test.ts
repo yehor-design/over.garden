@@ -38,6 +38,16 @@ const PROGRESSIVE_SURFACES = [
   "app/(default)/erasure/page.tsx",
   "app/(default)/account/communities/[slug]/page.tsx",
   "app/(default)/garden/privacy/erasure-requests/page.tsx",
+  // `OVE-457`: the workspace. The garden home's wishlist intent, both lineage
+  // inboxes, the living object's passport and its two controls, and the
+  // profile with its editor.
+  "app/(default)/garden/lineage/claims/page.tsx",
+  "app/(default)/garden/lineage/invitations/claim/page.tsx",
+  "app/(default)/garden/objects/[objectId]/page.tsx",
+  "app/(default)/garden/objects/[objectId]/catalog-resolve-control.tsx",
+  "app/(default)/garden/objects/[objectId]/location-privacy-control.tsx",
+  "app/(default)/garden/profile/page.tsx",
+  "app/(default)/garden/profile/owner-profile-editor.tsx",
 ] as const;
 
 const PROGRESSIVE_ACTIONS = [
@@ -52,6 +62,9 @@ const PROGRESSIVE_ACTIONS = [
   "app/(default)/erasure/actions.ts",
   "app/(default)/account/communities/[slug]/actions.ts",
   "app/(default)/garden/privacy/erasure-requests/actions.ts",
+  "app/(default)/garden/lineage/claims/actions.ts",
+  "app/(default)/garden/lineage/invitations/claim/actions.ts",
+  "app/(default)/garden/objects/[objectId]/actions.ts",
 ] as const;
 
 describe("owner forms that decide before hydration", () => {

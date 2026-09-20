@@ -70,7 +70,7 @@ import {
   resolvePlantObjectCatalogAction,
   updatePlantObjectLocationAction,
 } from "./actions";
-import { OwnerScopedActionForm } from "@/components/auth/owner-scope";
+import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { CatalogResolveControl } from "./catalog-resolve-control";
 import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
@@ -123,10 +123,7 @@ export default async function PlantObjectReadbackPage({
   if (viewer.status === "sign-in-required") {
     return (
       <ObjectShell locale={locale}>
-        <SignInPrompt
-  locale={locale}
-  next={`/garden/objects/${objectId}`}
-/>
+        <SignInPrompt locale={locale} next={`/garden/objects/${objectId}`} />
       </ObjectShell>
     );
   }
@@ -235,7 +232,22 @@ async function PlantObjectSections({
   // it (ADR-0029 D9). The legacy id path, which 308s, only for an object
   // that has no slug yet — and that one keeps the locale prefix, because it
   // renders in its own route family.
-  const authorHandle = await getPublicAuthorHandle(scope.userId);
+  //
+  // Settled, like every other read on a workspace render path. It was awaited
+  // bare from the day the addresses moved under authors: one rejection here
+  // and the whole passport — which has already loaded — became a boundary that
+  // never resolves on a hard load (ADR-0023). A handle that cannot be read is
+  // an absent handle, which is the case the fallback already covers.
+  const authorHandleSection = await settleSection(
+    () => getPublicAuthorHandle(scope.userId),
+    {
+      deadlineMs: workspaceSectionDeadlineMs(1),
+      surface: "object",
+      section: "author-handle",
+    },
+  );
+  const authorHandle =
+    authorHandleSection.status === "ready" ? authorHandleSection.value : null;
   const passportPath = ownPassportPath(page, objectId, authorHandle, locale);
   const lineageReadbackPath = getLineageReadbackPath(
     page,
@@ -332,10 +344,10 @@ async function PlantObjectSections({
         className="grid gap-4 border-t border-border pt-5"
       >
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-h3 text-text-heading">
             {ownerCopy.followUpSection.title}
           </h2>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body-sm text-text-muted">
             {ownerCopy.followUpSection.description}
           </p>
         </div>
@@ -365,7 +377,7 @@ async function PlantObjectSections({
               objectId={objectId}
               objectPassportReadbackPath={objectPassportReadbackPath}
               locale={locale}
-            authorHandle={authorHandle}
+              authorHandle={authorHandle}
             />
           ) : null;
         }}
@@ -376,10 +388,10 @@ async function PlantObjectSections({
         className="grid gap-5 border-t border-border pt-5"
       >
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase">
+          <p className="text-overline text-text-muted uppercase">
             {ownerCopy.management.eyebrow}
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-foreground">
+          <h2 className="mt-1 text-h2 text-text-heading">
             {ownerCopy.management.title}
           </h2>
         </div>
@@ -410,7 +422,7 @@ async function PlantObjectSections({
         ) : null}
 
         {page.plantObject.source_credit ? (
-          <div className="grid gap-1 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">
+          <div className="grid gap-1 border-t border-border pt-4 text-caption leading-5 text-text-muted">
             <p>
               {formatOwnerObjectTemplate(ownerCopy.source.summary, {
                 sourceName: page.plantObject.source_credit.sourceName,
@@ -419,7 +431,7 @@ async function PlantObjectSections({
             {sourceAttributionCaveat ? <p>{sourceAttributionCaveat}</p> : null}
             <Link
               href={page.plantObject.source_credit.sourceUrl}
-              className="w-fit font-medium text-primary underline-offset-4 hover:underline"
+              className="text-link hover:text-link-hover w-fit font-medium underline-offset-4 hover:underline"
             >
               {ownerCopy.source.open}
             </Link>
@@ -460,13 +472,13 @@ function OwnerEntryActions({
         data-owner-entry-controls="public"
         className="flex flex-wrap items-center gap-3"
       >
-        <span className="text-xs text-muted-foreground">
+        <span className="text-caption text-text-muted">
           {actionCopy.publicAvailable}
         </span>
         {objectPassportReadbackPath ? (
           <Link
             href={objectPassportReadbackPath}
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
           >
             {actionCopy.openPassport}
           </Link>
@@ -477,11 +489,11 @@ function OwnerEntryActions({
             entryNumber: entry.author_entry_number,
             publicSlug: entry.public_slug,
           })}
-          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
         >
           {actionCopy.openPage}
         </Link>
-        <OwnerScopedActionForm
+        <OwnerScopedProgressiveForm
           action={deleteJournalEntryAction}
           className="flex w-full flex-col gap-3 pt-1"
         >
@@ -502,7 +514,7 @@ function OwnerEntryActions({
           >
             {actionCopy.deleteButton}
           </button>
-        </OwnerScopedActionForm>
+        </OwnerScopedProgressiveForm>
       </div>
     );
   }
@@ -531,10 +543,8 @@ function ProvenanceSection({
       className="grid min-w-0 gap-4 border-t border-border pt-5"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">
-          {provenanceCopy.title}
-        </h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="text-h3 text-text-heading">{provenanceCopy.title}</h2>
+        <p className="text-body-sm text-text-muted">
           {provenanceCopy.description}
         </p>
       </div>
@@ -542,7 +552,7 @@ function ProvenanceSection({
       {writeEnabled ? (
         <div className="grid min-w-0 gap-4 xl:grid-cols-3">
           {provenancePanel.sourceObjectOptions.length > 0 ? (
-            <OwnerScopedActionForm
+            <OwnerScopedProgressiveForm
               action={createProvenanceEdgeAction}
               className="grid min-w-0 gap-3 rounded-md border border-border p-3"
             >
@@ -571,23 +581,20 @@ function ProvenanceSection({
               >
                 {provenanceCopy.recordObjectSource}
               </button>
-            </OwnerScopedActionForm>
+            </OwnerScopedProgressiveForm>
           ) : (
-            <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+            <p className="rounded-md border border-dashed border-border p-3 text-body-sm text-text-muted">
               {provenanceCopy.noSourceObject}
             </p>
           )}
 
-          <OwnerScopedActionForm
+          <OwnerScopedProgressiveForm
             action={createProvenanceEdgeAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
             <HiddenField name="objectId" value={objectId} />
             <HiddenField name="sourceKind" value="source_reference" />
-            <HiddenField
-              name="clientMutationId"
-              value={crypto.randomUUID()}
-            />
+            <HiddenField name="clientMutationId" value={crypto.randomUUID()} />
             <Field
               label={provenanceCopy.sourceType}
               required
@@ -622,7 +629,7 @@ function ProvenanceSection({
                 placeholder={provenanceCopy.privateSourcePlaceholder}
               />
             </Field>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <p className="text-caption leading-5 text-text-muted">
               {provenanceCopy.contactFree}
             </p>
             <button
@@ -631,17 +638,14 @@ function ProvenanceSection({
             >
               {provenanceCopy.recordPrivateSource}
             </button>
-          </OwnerScopedActionForm>
+          </OwnerScopedProgressiveForm>
 
-          <OwnerScopedActionForm
+          <OwnerScopedProgressiveForm
             action={createLineageInvitationAction}
             className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
             <HiddenField name="objectId" value={objectId} />
-            <HiddenField
-              name="clientMutationId"
-              value={crypto.randomUUID()}
-            />
+            <HiddenField name="clientMutationId" value={crypto.randomUUID()} />
             <Field
               label={provenanceCopy.invitedSourceLabel}
               required
@@ -653,7 +657,7 @@ function ProvenanceSection({
                 placeholder={provenanceCopy.invitedSourcePlaceholder}
               />
             </Field>
-            <p className="text-xs leading-5 text-muted-foreground">
+            <p className="text-caption leading-5 text-text-muted">
               {provenanceCopy.invitationHelp}
             </p>
             <button
@@ -662,12 +666,12 @@ function ProvenanceSection({
             >
               {provenanceCopy.createInvite}
             </button>
-          </OwnerScopedActionForm>
+          </OwnerScopedProgressiveForm>
         </div>
       ) : null}
 
       {provenancePanel.edges.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+        <p className="rounded-md border border-dashed border-border p-3 text-body-sm text-text-muted">
           {provenanceCopy.empty}
         </p>
       ) : (
@@ -675,20 +679,20 @@ function ProvenanceSection({
           {provenancePanel.edges.map((edge) => (
             <li key={edge.id} className="rounded-md border border-border p-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                <h3 className="text-sm font-semibold text-foreground">
+                <h3 className="text-h4 text-text-heading">
                   {lineageEdgeTitle(edge, provenanceCopy)}
                 </h3>
-                <time className="text-xs text-muted-foreground">
+                <time className="text-caption text-text-muted">
                   {formatGardenWorkspaceDate(locale, edge.createdAt)}
                 </time>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-caption text-text-muted">
                 {lineageConsentLabel(edge, provenanceCopy)} ·{" "}
                 {lineageVisibilityLabel(edge, provenanceCopy)}
               </p>
               {edge.pendingIdentity ? (
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3">
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-caption text-text-muted">
                     {formatOwnerObjectTemplate(provenanceCopy.inviteState, {
                       state: lineagePendingInviteStateLabel(
                         edge.pendingIdentity.inviteState,
@@ -699,7 +703,7 @@ function ProvenanceSection({
                   {edge.pendingIdentity.inviteState === "pending" ? (
                     <Link
                       href={edge.pendingIdentity.invitePath}
-                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
                     >
                       {provenanceCopy.openPrivateInvite}
                     </Link>
@@ -713,12 +717,12 @@ function ProvenanceSection({
 
       {lineageReadbackPath ? (
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
-          <span className="text-xs text-muted-foreground">
+          <span className="text-caption text-text-muted">
             {provenanceCopy.readbackAvailable}
           </span>
           <Link
             href={lineageReadbackPath}
-            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+            className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
           >
             {provenanceCopy.openReadback}
           </Link>

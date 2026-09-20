@@ -16,6 +16,9 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/headers", () => ({
   cookies: mocks.cookies,
+  // The signed-out path asks whether the reader arrived with a session cookie
+  // before deciding that "no session" means "signed out" (`OVE-457`).
+  headers: async () => ({ get: () => null }),
 }));
 
 vi.mock("next/navigation", async (importOriginal) => ({
@@ -143,9 +146,7 @@ describe("/garden/lineage/invitations/claim page", () => {
     expect(html).toContain("intent=claim");
     // The return path travels in the link now, not a hidden field: without a
     // target there is nothing to sign, so the trigger is a plain link (OVE-378).
-    expect(html).toContain(
-      "next=%2Fgarden%2Flineage%2Finvitations%2Fclaim",
-    );
+    expect(html).toContain("next=%2Fgarden%2Flineage%2Finvitations%2Fclaim");
     expect(html).not.toMatch(
       /private-payload|opaque\.sealed|name="token"|Maria saved seeds|Cherokee Purple/i,
     );

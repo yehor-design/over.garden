@@ -75,7 +75,7 @@ export function LineageClaimHandoff({ locale }: { locale: InterfaceLocale }) {
 
   if (state === "unavailable") {
     return (
-      <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+      <p className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted">
         {copy.unavailable}
       </p>
     );
@@ -85,10 +85,10 @@ export function LineageClaimHandoff({ locale }: { locale: InterfaceLocale }) {
     return (
       <section className="grid gap-3 rounded-lg border border-border p-4">
         <div className="grid gap-1">
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-h4 text-text-heading">
             {copy.handoff.errorTitle}
           </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
+          <p className="text-body-sm leading-6 text-text-muted">
             {copy.handoff.retryDescription}
           </p>
         </div>
@@ -112,7 +112,7 @@ export function LineageClaimHandoff({ locale }: { locale: InterfaceLocale }) {
     <p
       role="status"
       aria-live="polite"
-      className="rounded-lg border border-border p-4 text-sm text-muted-foreground"
+      className="rounded-lg border border-border p-4 text-body-sm text-text-muted"
     >
       {copy.handoff.preparing}
     </p>

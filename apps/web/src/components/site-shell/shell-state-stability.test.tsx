@@ -54,6 +54,7 @@ const GARDENER: SiteShellSessionState = {
   isAuthenticated: true,
   ownerUserId: "00000000-0000-4000-8000-000000000001",
   hasOperatorAccess: false,
+  sessionStore: "reachable",
 };
 const NEVER = new Promise<never>(() => undefined);
 const RAIL_MODULES = [{ key: "rules", title: "Правила", items: [] }];

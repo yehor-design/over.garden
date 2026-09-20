@@ -10,6 +10,13 @@ const mocks = vi.hoisted(() => ({
   getCurrentAccountMethodProjection: vi.fn(),
 }));
 
+// The signed-out path asks whether the reader arrived with a session cookie
+// before deciding that "no session" means "signed out" (`OVE-457`), and that
+// question reads the request's own `cookie` header.
+vi.mock("next/headers", () => ({
+  headers: async () => ({ get: () => null }),
+}));
+
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,

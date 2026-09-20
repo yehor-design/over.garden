@@ -4,13 +4,16 @@ import { unstable_rethrow } from "next/navigation";
 
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
+import { settleSessionStoreLiveness } from "@/server/session-store-liveness";
 import {
   GUEST_SITE_SHELL_SESSION_STATE,
+  UNREACHABLE_SITE_SHELL_SESSION_STATE,
   type SiteShellSessionState,
 } from "@/lib/site-shell-session-state";
 
 export {
   GUEST_SITE_SHELL_SESSION_STATE,
+  UNREACHABLE_SITE_SHELL_SESSION_STATE,
   type SiteShellSessionState,
 } from "@/lib/site-shell-session-state";
 
@@ -33,11 +36,20 @@ export async function getSiteShellSessionState(): Promise<SiteShellSessionState>
     session = await getCurrentSession();
   } catch (error) {
     unstable_rethrow(error);
-    return GUEST_SITE_SHELL_SESSION_STATE;
+    // The read itself failed. Answering "guest" here is what let the header
+    // offer "Sign in" over a page that had already said otherwise.
+    return UNREACHABLE_SITE_SHELL_SESSION_STATE;
   }
 
   const ownerUserId = session?.user?.id;
-  if (!ownerUserId) return GUEST_SITE_SHELL_SESSION_STATE;
+  if (!ownerUserId) {
+    // A null session is not proof of signed-out: the same question the
+    // workspace asks, asked once, so the two cannot disagree (`OVE-457`).
+    const liveness = await settleSessionStoreLiveness("site-shell");
+    return liveness.status === "ready"
+      ? GUEST_SITE_SHELL_SESSION_STATE
+      : UNREACHABLE_SITE_SHELL_SESSION_STATE;
+  }
 
   return {
     isAuthenticated: true,
@@ -46,6 +58,7 @@ export async function getSiteShellSessionState(): Promise<SiteShellSessionState>
       ownerUserId,
       getSessionId(session),
     ),
+    sessionStore: "reachable",
   };
 }
 

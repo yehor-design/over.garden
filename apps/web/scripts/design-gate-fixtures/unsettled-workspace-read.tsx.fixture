@@ -1,0 +1,38 @@
+import { WorkspaceSectionError } from "@/components/garden/workspace-state";
+import { getPlantObjectPage } from "@/server/journal-repository";
+import { getPublicAuthorHandle } from "@/server/author-handle-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+
+export default async function ObjectFixturePage() {
+  const locale = await getRequestInterfaceLocale();
+  const viewer = await resolveWorkspaceViewer();
+  if (viewer.status !== "signed-in") return null;
+
+  // Settled: the gate must not flag this one.
+  const settled = await settleSection(
+    () => getPlantObjectPage(viewer.scope, "object-id"),
+    {
+      deadlineMs: workspaceSectionDeadlineMs(1),
+      surface: "object",
+      section: "passport",
+    },
+  );
+  if (settled.status === "error") {
+    return (
+      <WorkspaceSectionError
+        locale={locale}
+        failure={settled}
+        retryHref="/garden"
+      />
+    );
+  }
+
+  // Not settled: one rejection here and the boundary never resolves.
+  const handle = await getPublicAuthorHandle(viewer.userId);
+  return <p>{handle}</p>;
+}

@@ -15,6 +15,7 @@ vi.mock("@/server/site-shell-session", () => ({
     isAuthenticated: false,
     ownerUserId: null,
     hasOperatorAccess: false,
+    sessionStore: "reachable",
   },
   getSiteShellSessionState: mocks.getSiteShellSessionState,
 }));
@@ -188,6 +189,7 @@ describe("the request-time document", () => {
       isAuthenticated: true,
       ownerUserId: "private-user-id",
       hasOperatorAccess: false,
+      sessionStore: "reachable",
     });
     mocks.hasReadyCommunityNavigation.mockResolvedValue(true);
 
@@ -214,6 +216,7 @@ describe("the request-time document", () => {
       isAuthenticated: false,
       ownerUserId: null,
       hasOperatorAccess: false,
+      sessionStore: "reachable",
     });
     mocks.hasReadyCommunityNavigation.mockRejectedValue(new Error("db down"));
 

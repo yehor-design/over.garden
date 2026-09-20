@@ -7,6 +7,7 @@ import { BookOpenText, CirclePlus, Compass, Sprout } from "lucide-react";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
+import { Section } from "@/components/ui/section";
 import { SpaceEntryComposer } from "@/app/(default)/garden/space-entry-composer";
 import {
   activationSurfaceKindForSource,
@@ -346,13 +347,11 @@ function GuestGardenEntry({
       className="mx-auto grid w-full max-w-4xl gap-8 px-4 py-6 sm:px-6 sm:py-8"
     >
       <header className="border-b border-border pb-5">
-        <p className="text-xs font-semibold text-muted-foreground uppercase">
+        <p className="text-overline text-text-muted uppercase">
           {copy.eyebrow}
         </p>
-        <h1 className="mt-1 text-3xl font-semibold text-foreground">
-          {copy.title}
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        <h1 className="mt-1 text-h1 text-text-heading">{copy.title}</h1>
+        <p className="mt-2 max-w-2xl text-body-sm leading-6 text-text-muted">
           {copy.description}
         </p>
       </header>
@@ -366,10 +365,10 @@ function GuestGardenEntry({
           />
         </div>
         <aside className="border-t border-border pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
-          <p className="text-xs font-semibold text-muted-foreground uppercase">
+          <p className="text-overline text-text-muted uppercase">
             {copy.exploreEyebrow}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-foreground">
+          <h2 className="mt-1 text-h3 text-text-heading">
             {copy.exploreTitle}
           </h2>
           <div className="mt-4 flex flex-col gap-2">
@@ -436,17 +435,37 @@ function GardenWriteTools({
   const copy = getGardenWorkspaceCopy(locale);
   return (
     <div className="flex flex-col gap-10 border-t border-border pt-8">
-      <section id="first-entry-composer" className="scroll-mt-20">
-        <p className="text-xs font-semibold text-muted-foreground uppercase">
-          {copy.page.creation.eyebrow}
-        </p>
-        <h2 className="mt-1 text-xl font-semibold text-foreground">
-          {copy.page.creation.title}
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {copy.page.creation.description}
-        </p>
-        <div className="mt-5" id="write-access">
+      <Section
+        id="first-entry-composer"
+        title={copy.page.creation.title}
+        description={copy.page.creation.description}
+        className="scroll-mt-20"
+      >
+        {/* The path, before the form (`OVE-457` criterion 5). Adding an object
+            was a bare form with three unlabelled jobs inside it; a gardener
+            could not tell where they were or how much was left. The result at
+            the end is `SaveProgressMoment`, which the save redirects to. */}
+        <ol
+          data-garden-creation-steps="true"
+          aria-label={copy.page.creation.stepsLabel}
+          className="grid gap-2 sm:grid-cols-3"
+        >
+          {copy.page.creation.steps.map((step, index) => (
+            <li
+              key={step}
+              className="flex min-w-0 items-start gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text-secondary"
+            >
+              <span
+                aria-hidden="true"
+                className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action-subtle text-caption font-medium text-action-subtle-text tabular-nums"
+              >
+                {index + 1}
+              </span>
+              <span className="min-w-0">{step}</span>
+            </li>
+          ))}
+        </ol>
+        <div id="write-access">
           <FirstEntryComposer
             ownerUserId={ownerUserId}
             locale={locale}
@@ -462,7 +481,7 @@ function GardenWriteTools({
             }
           />
         </div>
-      </section>
+      </Section>
 
       {children}
     </div>
@@ -556,19 +575,19 @@ function SpaceJournalTools({
   const copy = getGardenWorkspaceCopy(locale);
   return (
     <section id="space-journal" className="scroll-mt-20">
-      <p className="text-xs font-semibold text-muted-foreground uppercase">
+      <p className="text-overline text-text-muted uppercase">
         {copy.page.spaceJournal.eyebrow}
       </p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-foreground">
+          <h2 className="text-h2 text-text-heading">
             {timeline.space.display_name}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-body-sm text-text-muted">
             {copy.page.spaceJournal.description}
           </p>
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-caption text-text-muted">
           {formatGardenWorkspaceTemplate(copy.page.spaceJournal.showing, {
             count: timeline.entries.length,
           })}
@@ -603,21 +622,21 @@ function SpaceJournalTools({
               className="flex items-start justify-between gap-3 py-3"
             >
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-h4 text-text-heading">
                   {entry.title}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-caption text-text-muted">
                   {copy.page.spaceJournal.public}
                 </p>
               </div>
-              <time className="shrink-0 text-xs text-muted-foreground">
+              <time className="shrink-0 text-caption text-text-muted">
                 {formatGardenWorkspaceDate(locale, entry.entry_date)}
               </time>
             </li>
           ))}
         </ol>
       ) : (
-        <p className="border-b border-dashed border-border py-5 text-sm text-muted-foreground">
+        <p className="border-b border-dashed border-border py-5 text-body-sm text-text-muted">
           {copy.page.spaceJournal.empty}
         </p>
       )}
@@ -668,14 +687,16 @@ function PendingWishlistIntentPanel({
   const copy = getGardenWorkspaceCopy(locale).page.pendingWishlist;
   return (
     <section className="border-y border-border py-5">
-      <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <h2 className="text-h3 text-text-heading">{copy.title}</h2>
+      <p className="mt-1 text-body-sm text-text-muted">
         {formatGardenWorkspaceTemplate(copy.description, {
           name: item.canonicalName,
         })}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <OwnerScopedProgressiveForm action={addCatalogPublicSlugToWishlistAction}>
+        <OwnerScopedProgressiveForm
+          action={addCatalogPublicSlugToWishlistAction}
+        >
           <HiddenField name="catalogPublicSlug" value={item.publicSlug} />
           <HiddenField name="locale" value={locale} />
           <HiddenField

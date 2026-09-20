@@ -44,7 +44,7 @@ describe("/garden/lineage/claims actions", () => {
     const formData = new FormData();
     formData.set("edgeId", "00000000-0000-4000-8000-000000000201");
 
-    await confirmLineageClaimAction(formData);
+    await confirmLineageClaimAction(undefined, formData);
 
     expect(mocks.resolveMutationScope).toHaveBeenCalledOnce();
     expect(mocks.resolveLineageClaim).toHaveBeenCalledWith(
@@ -69,7 +69,7 @@ describe("/garden/lineage/claims actions", () => {
     const formData = new FormData();
     formData.set("edgeId", "00000000-0000-4000-8000-000000000202");
 
-    await declineLineageClaimAction(formData);
+    await declineLineageClaimAction(undefined, formData);
 
     expect(mocks.resolveLineageClaim).toHaveBeenCalledWith(
       {

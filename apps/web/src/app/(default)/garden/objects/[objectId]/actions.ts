@@ -20,7 +20,18 @@ import {
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
-export async function resolvePlantObjectCatalogAction(formData: FormData) {
+/**
+ * `(previousState, formData)` — the shape `useActionState` calls, and the one
+ * that lets `OwnerScopedProgressiveForm` hand React a Server Action reference
+ * rather than a client closure. React answers a closure with
+ * `action="javascript:throw …"`, a placeholder it replaces on hydration and
+ * never before, so the control did nothing until the bundle ran (ADR-0024 D3,
+ * `OVE-457`). The first argument is the previous result and is unused here.
+ */
+export async function resolvePlantObjectCatalogAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -39,7 +50,10 @@ export async function resolvePlantObjectCatalogAction(formData: FormData) {
   revalidatePublicEntries(result);
 }
 
-export async function updatePlantObjectLocationAction(formData: FormData) {
+export async function updatePlantObjectLocationAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -58,7 +72,10 @@ export async function updatePlantObjectLocationAction(formData: FormData) {
   revalidatePublicEntries(result);
 }
 
-export async function createProvenanceEdgeAction(formData: FormData) {
+export async function createProvenanceEdgeAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -82,7 +99,10 @@ export async function createProvenanceEdgeAction(formData: FormData) {
   }
 }
 
-export async function createLineageInvitationAction(formData: FormData) {
+export async function createLineageInvitationAction(
+  _previousState: unknown,
+  formData: FormData,
+) {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
@@ -113,6 +133,7 @@ export interface DeleteJournalEntryActionStateV1 {
 }
 
 export async function deleteJournalEntryAction(
+  _previousState: unknown,
   formData: FormData,
 ): Promise<
   MutationScopeActionState | DeleteJournalEntryActionStateV1 | undefined
