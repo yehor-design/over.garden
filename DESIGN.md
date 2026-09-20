@@ -962,7 +962,7 @@ fixture measures the architecture and nothing else.
 | --- | --- | --- | --- |
 | `/` | 1.90 s / 4.43 s | **5.74 s** / 6.36 s | 5.47 s / 5.16 s |
 | a journal entry | 1.65 s / 3.31 s | **4.40 s** / 4.27 s | — |
-| an organism card | 1.74 s / 3.97 s | **7.05 s** / 5.87 s | — |
+| an organism card | 1.74 s / 3.97 s | **6.17 s** / 6.28 s — it was 7.05 s / 5.87 s while its first photograph was lazy (`OVE-470`) | — |
 
 **The budget is not met on production** (`OVE-469`). The static document took
 React's start-up out of the path — the LCP element's render delay there is

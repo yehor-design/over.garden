@@ -426,7 +426,13 @@ only; `tests/static-documents.spec.ts` asks it of the laid-out page at a phone's
 width and a desk's, and was seen red on the card. A blanket
 `fetchpriority="low"` on every other photograph was tried and withdrawn —
 Chrome already asks for a lazy image outside the viewport at `Low`, which is in
-production's waterfall.
+production's waterfall. **Read back on production** (same day, same method, the
+feed and an entry as controls, unchanged to ±0.05 s): the card's photograph is
+asked for at 0.70 s instead of 3.09 s — load delay 2 943 ms → 543 ms — and LCP
+went **7.05 s → 6.17 s** applied; simulated 5.87 s → 6.28 s, the other way and
+outside its noise, for a reason not yet established. It did not gain the whole 2.4 s because the 92 kB it waited *behind* it
+now loads *beside*: the script, the fonts, and from 3.15 s five more lazy
+photographs of 101–204 kB each, 793 kB together, for a 14 rem slot.
 
 What is left is weight, and the waterfall is specific about it:
 

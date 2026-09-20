@@ -371,6 +371,27 @@ outside the viewport at `Low` — it is in the waterfall — so the attribute ch
 nothing there, and inside the viewport it takes away the browser's own rescue of
 a page whose LCP nobody marked.
 
+Read back on production the same day, same machine, same method, median of
+three, with the two pages the release does not touch as the control:
+
+| Page | LCP, applied | LCP, simulated | The LCP photograph's load delay | its load time |
+| --- | --- | --- | --- | --- |
+| `/species/solanum-lycopersicum` | 7.05 s → **6.17 s** | 5.87 s → 6.28 s | 2 943 ms → **543 ms** | 3.98 s → 5.47 s |
+| `/` (control) | 5.74 s → 5.75 s | 6.36 s → 6.36 s | — | — |
+| `/@yehor/post/11` (control) | 4.40 s → 4.40 s | 4.27 s → 4.26 s | — | — |
+
+The photograph is asked for at 0.70 s instead of 3.09 s, and the page paints it
+0.9 s sooner. It does not paint it 2.4 s sooner because what it was waiting
+behind is now beside it: asked for early, the same 92 kB shares the link with
+the script and the fonts from the start, and at 3.15 s five more lazy
+photographs — 101 to 204 kB each, 793 kB together, for a 14 rem slot — join
+them. That is the weight, and it is `OVE-469`'s. The simulated figure moved the other way, by
+0.4 s and outside its own noise (5.50–5.91 s before, 6.28–6.30 s after). Lantern
+builds its graph from the unthrottled trace; why it charges a request that
+starts earlier with a later finish has not been established, and is not
+explained away here. Both are recorded; the controls say the method holds to
+±0.05 s.
+
 The card first measured **5.10 s** after the conversion, with the text on
 screen at 1.74 s. The second, later LCP candidate was the same paragraph as a
 *new DOM node*: the shell set two pieces of state right after mount, the update
