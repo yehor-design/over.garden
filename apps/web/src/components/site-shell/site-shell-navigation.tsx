@@ -121,7 +121,7 @@ export function SiteShellMobileNavigation({
       aria-label={ariaLabel}
       className="site-shell-safe-bottom fixed inset-x-0 bottom-0 z-rail border-t border-border bg-surface lg:hidden"
     >
-      <ul className="mx-auto grid max-w-lg grid-cols-5 items-stretch">
+      <ul className="mx-auto grid max-w-lg grid-cols-tab-bar items-stretch">
         {items.map((item) => {
           const Icon = NAVIGATION_ICONS[item.key];
           const active = pathname !== null && isSiteShellItemActive(pathname, item);

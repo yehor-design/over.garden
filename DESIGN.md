@@ -408,7 +408,12 @@ lg → xl       [ rail 240 ]   [ content max 704 ]
   lines and spilled past the bar in all three languages. The other four are one
   line each at 320 px — measured, in `uk`, `bg` and `ru` — which is why the slot
   carries no horizontal padding: four pixels of it is the difference between
-  "Дневници" on one line and on two.
+  "Дневници" on one line and on two. And it is why the five slots are not
+  equal: the action is a 40 px circle and takes 48 px, the four labelled slots
+  share the rest (68 px each at 320 px). At an even 64 px "Дневници" had 1.6 px
+  to spare where glyphs sit on fractions of a pixel and none where they do not,
+  and broke in two on a Linux engine — which nothing had measured until the
+  mobile spec ran in CI.
 
 The context rail opens from the header on mobile or not at all.
 
