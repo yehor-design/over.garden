@@ -120,6 +120,7 @@
     "test:journal-delete-retention": "vitest run src/server/journal-deletion-retention.test.ts src/server/journal-repository.test.ts src/server/media/retention-executor.test.ts scripts/plan-journal-delete-retention-transition.test.ts src/lib/owner-object-copy.test.ts 'src/app/garden/objects/[objectId]/page.test.tsx'",
     "external-photo-identification:retirement:production": "tsx scripts/retire-external-photo-identification-production.ts",
     "test:external-photo-identification-retirement:integration": "../../infra/run-with-local-infra-env env RUN_OVE351_DATABASE_INTEGRATION=true pnpm exec vitest run scripts/retire-external-photo-identification-production.test.ts --maxWorkers=1",
+    "test:static-documents": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/static-documents.spec.ts",
     "test:public-hydration": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/public-hydration.spec.ts",
     "test:catalog-picker": "../../infra/run-with-local-infra-env pnpm exec playwright test tests/catalog-picker.spec.ts",
     "test:notion-composer": "../../infra/run-with-local-infra-env pnpm exec playwright test tests/journal-notion-composer.spec.ts",
@@ -146,7 +147,7 @@
     "owner:seed-browser-fixture": "tsx scripts/seed-browser-owner-fixture.ts",
     "screen-states:render": "tsx scripts/render-screen-states.tsx",
     "gates": "pnpm lint && pnpm check:design-tokens && pnpm check:component-tests && vitest run src/app/globals.test.ts scripts/check-design-gates.test.ts && pnpm gates:browser",
-    "gates:browser": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts",
+    "gates:browser": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec playwright test tests/static-documents.spec.ts tests/analytics-consent.spec.ts tests/accessibility.spec.ts tests/screen-states.spec.ts tests/keyboard-sign-in.spec.ts tests/journals-directory.spec.ts tests/journal-entry.spec.ts tests/public-profile.spec.ts tests/catalog.spec.ts tests/organism-card.spec.ts tests/editorial-surfaces.spec.ts tests/communities.spec.ts",
     "interface:locale:probe": "tsx scripts/probe-interface-locale-production.ts"
   },
   "dependencies": {

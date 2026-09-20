@@ -2,6 +2,12 @@ import { expect, test, type Page } from "playwright/test";
 import { Pool } from "pg";
 
 import {
+  cleanupPublishedEntryFixture,
+  seedPublishedEntryFixture,
+  type PublishedEntryFixture,
+} from "./helpers/entry-fixture";
+
+import {
   cleanupOrganismFixture,
   requiredLocalDatabaseUrl,
   seedOrganismFixture,
@@ -100,6 +106,24 @@ async function probeHydration(page: Page, path: string) {
 }
 
 test.describe("public pages hydrate below the shell", () => {
+  // The entry the two control tests act on. They used to read the first card
+  // off the home feed and skip when there was none — and the home feed is a
+  // static document now (ADR-0032): prerendered at build, on CI from an empty
+  // database, so it lists nothing a spec seeded afterwards. A test that needs
+  // an entry makes one.
+  let entryPool: Pool;
+  let entry: PublishedEntryFixture;
+
+  test.beforeAll(async () => {
+    entryPool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    entry = await seedPublishedEntryFixture(entryPool, "ove377");
+  });
+
+  test.afterAll(async () => {
+    await cleanupPublishedEntryFixture(entryPool, entry);
+    await entryPool.end();
+  });
+
   for (const path of PUBLIC_PATHS) {
     test(`${path} hydrates its main region`, async ({ page }) => {
       await probeHydration(page, path);
@@ -137,13 +161,7 @@ test.describe("public pages hydrate below the shell", () => {
   });
 
   test("a public control acts on a hard load", async ({ page }) => {
-    const entryHref = await firstPublicEntryHref(page);
-    if (!entryHref) {
-      test.skip(true, "no published journal entry on this database");
-      return;
-    }
-
-    await page.goto(entryHref, { waitUntil: "load" });
+    await page.goto(entry.entryPath, { waitUntil: "load" });
 
     // Scoped to the engagement panel. Since `OVE-447` a filter chip is also a
     // `button[aria-pressed]` — that is what makes a chip's state audible — so
@@ -182,22 +200,15 @@ test.describe("public pages hydrate below the shell", () => {
     // The stronger question, and the one `OVE-447` asks: not "does it work
     // after hydration" but "does it work when there is no hydration".
     //
-    // It is asked over HTTP rather than in a scripts-disabled browser on
-    // purpose. With scripts off these pages render no *visible* text — the
-    // shell arrives through the document's Suspense boundary and only the
-    // streaming runtime resolves it — so a scripts-off browser cannot see the
-    // control, and a click-based proof would fail for a reason that is not the
-    // endpoint. The endpoint is still there, and this sends it exactly what a
-    // browser's own form submission would: the action reference, the action
-    // key, and the target in `formData`.
-    const home = await request.get(new URL("/", baseURL!).toString());
-    expect(home.status()).toBe(200);
-    const entryHref = firstEntryCardHref(await home.text());
-    if (!entryHref) {
-      test.skip(true, "no published journal entry on this database");
-      return;
-    }
-    const entryUrl = new URL(entryHref, baseURL!).toString();
+    // It is asked over HTTP: the subject is the endpoint, and this sends it
+    // exactly what a browser's own form submission would — the action
+    // reference, the action key, and the target in `formData`. Until `OVE-461`
+    // there was no other way to ask: a scripts-off browser saw no visible text
+    // at all, because every page arrived through the document's one Suspense
+    // boundary. The entry is a static document now (ADR-0032) and the form is
+    // in its served bytes — which `static-documents.spec.ts` asserts, scripts
+    // off, in a browser.
+    const entryUrl = new URL(entry.entryPath, baseURL!).toString();
 
     const document = await request.get(entryUrl);
     expect(document.status()).toBe(200);
@@ -239,23 +250,6 @@ test.describe("public pages hydrate below the shell", () => {
     expect(after?.activeLikeCount).toBe(form!.activeLikeCount + 1);
   });
 });
-
-/**
- * The first published entry's own address, read off the home feed.
- *
- * `a[href*="/journal/"]` used to stand here, and it had silently matched
- * nothing since `OVE-436` moved an entry's address under its author
- * (`/@handle/slug`, migration 0073) — so the two tests below it skipped
- * themselves and reported a pass. A card's own `data-entry-card` is the
- * durable handle.
- */
-async function firstPublicEntryHref(page: Page): Promise<string | null> {
-  await page.goto("/", { waitUntil: "load" });
-  await page.waitForTimeout(1_500);
-  const title = page.locator("[data-entry-card] h2 a").first();
-  if ((await title.count()) === 0) return null;
-  return title.getAttribute("href");
-}
 
 test.describe("choosing a language is a choice, not a hover", () => {
   test("hovering an option requests nothing, clicking it switches and sticks", async ({
@@ -350,20 +344,6 @@ function decodeEntities(value: string) {
     .replaceAll("&quot;", '"')
     .replaceAll("&#x27;", "'")
     .replaceAll("&amp;", "&");
-}
-
-/**
- * The first entry card's own link, read out of the home feed's served HTML.
- *
- * Over HTTP rather than through the DOM, for the same reason the check above
- * is: the subject is what a reader gets before anything on the client runs.
- */
-function firstEntryCardHref(document: string): string | null {
-  const match =
-    /id="entry-card-[^"]*-title"[^>]*>\s*<a[^>]*\shref="([^"]+)"/u.exec(
-      document,
-    );
-  return match ? decodeEntities(match[1]!) : null;
 }
 
 /**

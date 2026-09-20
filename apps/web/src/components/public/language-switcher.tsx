@@ -49,19 +49,38 @@ import { HiddenField } from "@/components/ui/hidden-field";
  */
 export interface InterfaceLanguageControlProps {
   locale: InterfaceLocale;
-  market: InterfaceMarket;
-  pathname?: string;
+  market?: InterfaceMarket;
+  /**
+   * The address the options are built from. Omitted, the control reads it
+   * itself — right for a request-time surface such as the error page. `null`
+   * says "not known yet": the fallback shell of a route with a dynamic segment
+   * (ADR-0032 D3), where the options lead to each language's home until the
+   * address arrives a moment later.
+   */
+  pathname?: string | null;
   compact?: boolean;
 }
 
-export function InterfaceLanguageControl({
+export function InterfaceLanguageControl(props: InterfaceLanguageControlProps) {
+  return props.pathname === undefined ? (
+    <CurrentPathLanguageControl {...props} />
+  ) : (
+    <LanguageControlView {...props} pathname={props.pathname ?? "/"} />
+  );
+}
+
+function CurrentPathLanguageControl(
+  props: Omit<InterfaceLanguageControlProps, "pathname">,
+) {
+  return <LanguageControlView {...props} pathname={usePathname() || "/"} />;
+}
+
+function LanguageControlView({
   locale,
   market,
-  pathname,
+  pathname: activePathname,
   compact = false,
-}: InterfaceLanguageControlProps) {
-  const currentPathname = usePathname() || "/";
-  const activePathname = pathname ?? currentPathname;
+}: Omit<InterfaceLanguageControlProps, "pathname"> & { pathname: string }) {
   const browserSearch = useSyncExternalStore(
     subscribeToBrowserLocation,
     readBrowserSearch,

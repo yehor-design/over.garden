@@ -6,7 +6,6 @@ import { LocalizedHomePage } from "@/components/public/localized-public-pages";
 import {
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
   PUBLIC_LOCALES,
 } from "@/lib/public-localization";
@@ -24,7 +23,13 @@ import {
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { getSiteShellSessionState } from "@/server/site-shell-session";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 import {
   describeWorkspaceFailure,
   type WorkspaceFailureDescription,
@@ -40,7 +45,7 @@ interface LocalizedHomeRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 /**
@@ -77,6 +82,8 @@ export async function generateMetadata({
   const content = getLocalizedHomeContent(localeParam);
   const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_home",
+    // Prerendered with the page it describes (ADR-0032 D4).
+    document: "static",
     loadSource: async () => {
       const [feed, topics] = await Promise.all([
         loadFeedPage(
@@ -91,20 +98,36 @@ export async function generateMetadata({
   return buildHomeSurface(localeParam, content, [], discovery).metadata;
 }
 
+/**
+ * The feed, for one request against it.
+ *
+ * With the default request this is a static document (ADR-0032): both reads
+ * are `use cache` reads, nothing here asks who is reading or what the query
+ * string says, and the first card's photograph is in the served HTML. A
+ * filtered or paged feed is the same function called from the request-time
+ * twin at `/q`, which is where a query string is read.
+ */
 export async function renderLocalizedHomePage(
   locale: PublicLocale,
   searchParams: Record<string, string | string[] | undefined> = {},
+  /** `"static"` only from `renderStaticPublicPage`; the twin is a request already. */
+  phase: PublicRenderPhase = "request",
 ) {
   const request = normalizePublicFeedRequest(searchParams);
+  await deferStaticRenderWithoutDatabase(phase);
   const feedPromise: Promise<PublicFeedPage> = loadFeedPage(
     locale,
     feedRequestKey(request),
   );
-  const [feedResult, topicsResult, sessionResult] = await Promise.allSettled([
+  const [feedResult, topicsResult] = await Promise.allSettled([
     feedPromise,
     loadFeedTopics(locale),
-    getSiteShellSessionState(),
   ]);
+  // A failure is settled into a designed state below — for this reader. It is
+  // never prerendered into the shell every reader gets (ADR-0032 D4).
+  if (feedResult.status === "rejected" || topicsResult.status === "rejected") {
+    deferStaticRenderAfterFailure(phase);
+  }
   const feed: PublicFeedPage =
     feedResult.status === "fulfilled"
       ? feedResult.value
@@ -146,10 +169,6 @@ export async function renderLocalizedHomePage(
       feed={feed}
       request={request}
       topics={topics}
-      isAuthenticated={
-        sessionResult.status === "fulfilled" &&
-        sessionResult.value.isAuthenticated
-      }
       state={state}
       failure={failure}
       jsonLd={surface.jsonLd}
@@ -206,11 +225,16 @@ function buildHomeSurface(
 
 export default async function HomeRoute({
   params,
-  searchParams,
-}: LocalizedHomeRouteProps) {
+}: Pick<LocalizedHomeRouteProps, "params">) {
   const { locale: localeParam } = await params;
 
   if (!isPublicLocale(localeParam)) notFound();
 
-  return renderLocalizedHomePage(localeParam, (await searchParams) ?? {});
+  // No `searchParams` here, on purpose: reading them is what made this page
+  // dynamic from its first line. A request that carries a filter or a cursor
+  // is rewritten by the proxy to the twin at `/q`, which reads them.
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) => renderLocalizedHomePage(localeParam, {}, phase),
+  });
 }

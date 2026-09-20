@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
 
@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   notFound: mocks.notFound,
   permanentRedirect: mocks.permanentRedirect,
+  unstable_rethrow: () => undefined,
 }));
 vi.mock("@/server/public-cache", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/public-cache")>()),
@@ -53,6 +54,16 @@ vi.mock("@/app/(default)/variety/[slug]/source-credits", () => ({
     <footer data-organism-section="attribution">Source credits</footer>
   ),
 }));
+
+// A database is configured. Without one a static page defers its render to
+// the request (ADR-0032 D4) and these tests would be reading the fallback;
+// `static-public-page.test.tsx` holds that branch.
+beforeEach(() => {
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/overgarden");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("organism addresses (ADR-0026 D8, D9)", () => {
   beforeEach(() => {
@@ -237,12 +248,27 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
       page("plant_variety", "de-barao"),
     );
-    mocks.getEngagementSummary.mockRejectedValueOnce(
+    mocks.getEngagementSummary.mockRejectedValue(
       new Error("Engagement target is not public."),
     );
-    const degraded = renderToStaticMarkup(await FormRoute(props));
+    // A card without its panel is a degraded card, and a degraded card is not
+    // prerendered (ADR-0032 D4): the shell keeps the skeleton and a hole…
+    const deferred = (await FormRoute(props)) as React.ReactElement<{
+      children: React.ReactElement;
+    }>;
+    expect(renderToStaticMarkup(deferred)).toContain(
+      'data-site-shell-state="loading"',
+    );
+    // …and the reader's own request draws the card, without the panel.
+    const hole = deferred.props.children;
+    const atRequest = await (
+      hole.type as (props: unknown) => Promise<React.ReactNode>
+    )(hole.props);
+    const degraded = renderToStaticMarkup(atRequest);
     expect(degraded).toContain("Де Барао");
     expect(degraded).toMatch(/"@type":\s*"Taxon"/u);
+    expect(degraded).not.toContain("data-public-engagement-panel");
+    mocks.getEngagementSummary.mockReset();
   });
 
   it("renders a bee breed at its legacy address in the route family's locale, not the reader's", async () => {

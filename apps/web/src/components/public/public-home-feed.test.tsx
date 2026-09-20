@@ -184,7 +184,6 @@ function render(
       feed={page}
       request={{ cursor: null, kind: "all", topic: null }}
       topics={topics}
-      isAuthenticated={false}
       state="ready"
       {...overrides}
     />,
@@ -262,9 +261,12 @@ describe("the public home feed", () => {
     expect(html).not.toContain('href="/?topic=quiet-topic"');
   });
 
-  it("reveals the followed feed only to a reader who has one", () => {
+  it("leaves the followed feed to a region of its own, so the page never asks who is reading", () => {
+    // `SignedInOnly` answers from the session the document started; under a
+    // server render with no provider that is a guest, and the link is absent.
+    // What a gardener sees is asserted where it is decided:
+    // `src/components/site-shell/signed-in-only.test.tsx`.
     expect(render()).not.toContain('href="/feed"');
-    expect(render({ isAuthenticated: true })).toContain('href="/feed"');
   });
 
   it("paginates with real links and says when the feed is exhausted", () => {

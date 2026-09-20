@@ -1,9 +1,14 @@
 import "server-only";
 
+import { unstable_rethrow } from "next/navigation";
 import { connection } from "next/server";
 
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import type { PublicLocale } from "@/lib/public-localization";
+import {
+  deferFailureToRequest,
+  deferWithoutDatabase,
+} from "@/server/public-prerender";
 import {
   evaluatePublicSurfaceIndexability,
   type PublicSurfaceCandidateInput,
@@ -35,7 +40,7 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "localized_profile",
     "profile",
     "candidate",
-    "src/app/[locale]/[profileHandle]/page.tsx",
+    "src/app/[locale]/[profileHandle]/(profile)/page.tsx",
   ),
   inventory(
     "localized_blog_index",
@@ -264,6 +269,23 @@ export function resolveNonCandidatePublicSurfaceDiscovery(
 }
 
 /**
+ * Which document the caller belongs to (ADR-0032 D1, D4).
+ *
+ * `"request"`, the default, is every family that still renders at request
+ * time: it waits for the request before it reads, exactly as it did before
+ * ADR-0032, so a build never runs its query. `"static"` is a converted page's
+ * `generateMetadata`: its read is prerendered with the page — when a static
+ * render may read at all (`staticReadsAreAvailable`) — and a failed one is
+ * deferred rather than cached as `noindex`.
+ */
+export type PublicSurfaceDocument = "static" | "request";
+
+async function waitForTheReadsTurn(document: PublicSurfaceDocument = "request") {
+  if (document === "static") await deferWithoutDatabase();
+  else await connection();
+}
+
+/**
  * Loads the page's discovery source with no deadline (ADR-0022, D3): a slow
  * database never turns a live page into `noindex`. A load that fails leaves
  * the page unresolved, which is the only remaining `noindex` for a live route.
@@ -271,15 +293,21 @@ export function resolveNonCandidatePublicSurfaceDiscovery(
 export async function resolvePublicSurfaceDiscoveryFromLoad(input: {
   consumerId: PublicSurfaceDiscoveryConsumerId;
   loadSource: () => Promise<PublicSurfaceDiscoverySource>;
+  document?: PublicSurfaceDocument;
 }): Promise<PublicSurfaceDiscoveryResult> {
   try {
-    await connection();
+    await waitForTheReadsTurn(input.document);
     const source = await input.loadSource();
     if (source.consumerId !== input.consumerId) {
       return unresolvedResult(input.consumerId);
     }
     return resolvePublicSurfaceDiscovery(source);
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
+    // An unresolved surface is `noindex`. It is never prerendered into a
+    // static shell, where it would stand for every reader and every crawler
+    // until the cache ran out (ADR-0032 D4).
+    if (input.document === "static") await deferFailureToRequest();
     return unresolvedResult(input.consumerId);
   }
 }
@@ -290,9 +318,10 @@ export async function resolvePublicSurfacePayload<Payload>(input: {
     source: PublicSurfaceDiscoverySource;
     payload: Payload;
   }>;
+  document?: PublicSurfaceDocument;
 }): Promise<PublicSurfaceDiscoveryPayloadResult<Payload>> {
   try {
-    await connection();
+    await waitForTheReadsTurn(input.document);
     const loaded = await input.load();
     if (loaded.source.consumerId !== input.consumerId) {
       return { ...unresolvedResult(input.consumerId), payload: null };
@@ -301,7 +330,9 @@ export async function resolvePublicSurfacePayload<Payload>(input: {
       ...resolvePublicSurfaceDiscovery(loaded.source),
       payload: loaded.payload,
     };
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
+    if (input.document === "static") await deferFailureToRequest();
     return { ...unresolvedResult(input.consumerId), payload: null };
   }
 }

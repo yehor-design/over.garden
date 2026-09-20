@@ -18,7 +18,7 @@ export function AuthenticatedUtilityRegion({
   isAuthenticated,
 }: {
   locale: InterfaceLocale;
-  market: InterfaceMarket;
+  market?: InterfaceMarket;
   pathname: string;
   isAuthenticated: boolean;
 }) {

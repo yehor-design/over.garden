@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
-import { PublicJournalEntryView } from "./public-journal-entry";
+import {
+  OwnerEntryControlLink,
+  PublicJournalEntryView,
+} from "./public-journal-entry";
 
 vi.mock("next/image", () => ({
   default: ({
@@ -174,10 +177,12 @@ describe("public journal entry V2", () => {
         copy={getPublicJournalEntryCopy("uk")}
         page={objectPage}
         directoryReturnTo="/journals?kind=plant"
-        ownerControl={{
-          entryId: "entry-1",
-          managePath: "/garden/objects/object-1#passport-entry-entry-1",
-        }}
+        ownerControl={
+          <OwnerEntryControlLink
+            managePath="/garden/objects/object-1#passport-entry-entry-1"
+            label={getPublicJournalEntryCopy("uk").manageEntry}
+          />
+        }
       />,
     );
 

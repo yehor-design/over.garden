@@ -6,7 +6,7 @@ import {
   getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
+  PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
@@ -33,7 +33,7 @@ interface LocalizedGuideRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.flatMap((locale) =>
+  return PUBLIC_LOCALES.flatMap((locale) =>
     listGuides().map((guide) => ({
       locale,
       slug: guide.slug,

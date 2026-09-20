@@ -81,8 +81,17 @@ type PaletteState = "idle" | "ready" | "empty" | "unavailable";
 
 export interface CommandPaletteProps {
   locale: PublicLocale;
-  /** The palette's own actions: the rail's destinations, as commands. */
-  actions: readonly CommandPaletteResult[];
+  /**
+   * The palette's own actions: the rail's destinations, as commands.
+   *
+   * A function is read when a query settles, not when this renders. The shell
+   * passes one: its actions depend on who is reading, which a static document
+   * learns after it is served, and a provider this high must not render again
+   * for that (ADR-0032 D10). Keep the function's identity stable.
+   */
+  actions:
+    | readonly CommandPaletteResult[]
+    | (() => readonly CommandPaletteResult[]);
   /**
    * `field` is the rail's shape — a search field that opens the palette, the
    * way X and Substack draw it. `icon` is the narrow bar's, where a field
@@ -184,7 +193,8 @@ export function CommandPaletteProvider({
   const actionGroup = useMemo<PaletteGroup[]>(() => {
     const needle = settledQuery.trim().toLocaleLowerCase();
     if (needle.length === 0) return [];
-    const matched = actions.filter((action) =>
+    const available = typeof actions === "function" ? actions() : actions;
+    const matched = available.filter((action) =>
       action.label.toLocaleLowerCase().includes(needle),
     );
     return matched.length > 0 ? [{ key: "actions", results: matched }] : [];

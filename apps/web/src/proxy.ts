@@ -21,6 +21,10 @@ import {
   sanitizeInterfaceRouteSearch,
 } from "@/lib/interface-route-policy";
 import {
+  isPublicQueryTwinPath,
+  publicQueryTwinPath,
+} from "@/lib/public-query-twin";
+import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
   stripLocalePrefix,
@@ -559,7 +563,7 @@ function getAuthorScopedRewriteResponse(
 }
 
 /**
- * An unprefixed public address renders in the reader's language.
+ * A public address renders from the locale tree, in the reader's language.
  *
  * The address does not change and the status stays `200` (ADR-0029 D10): the
  * proxy picks which locale subtree renders it, the same move the `/@` family
@@ -567,25 +571,61 @@ function getAuthorScopedRewriteResponse(
  * country; a reader who has chosen is placed by their choice, on every page,
  * including the ones whose own address has a prefixed spelling.
  *
- * The default locale is not rewritten. Its pages are the unprefixed tree
- * itself, so a Ukrainian reader — and a crawler, which carries no preference
- * and no Bulgarian address — sees exactly what it saw before.
+ * **The default locale is rewritten too** (ADR-0032 D1). It used not to be:
+ * a Ukrainian reader rendered from the unprefixed tree, whose root layout also
+ * serves the workspace and therefore cannot know its language until the
+ * request arrives — so its every page sat behind one request-time boundary,
+ * and the product's largest market was the one that could not have a static
+ * document. Under `/uk/…` the language is in the route, like the other two.
+ * The author-scoped family has rendered Ukrainian readers from `/uk/@…` since
+ * `OVE-460`, which is the proof that nothing loops: a rewrite does not re-enter
+ * the proxy, so `/uk/…` is never folded back on the way in.
+ *
+ * **A query string renders from the listing's twin** (ADR-0032 D5). Reading
+ * `searchParams` is what makes a page dynamic, so the page at the canonical
+ * path never does; a request whose query the route's policy accepts goes to
+ * the same renderer mounted under `/q`. That holds for a prefixed spelling as
+ * well, which is otherwise left alone.
  *
  * Nothing private is rewritten: the workspace, the account, an archive and a
  * permalink have no prefixed twin, and `isReaderLocalizedPublicPath` is the
  * one place that says which addresses do.
  */
-function getReaderLocaleRewriteResponse(
+function getPublicDocumentRewriteResponse(
   request: NextRequest,
   locale: PublicLocale,
   requestHeaders: Headers,
 ) {
-  if (locale === DEFAULT_PUBLIC_LOCALE) return null;
-  if (request.method !== "GET" && request.method !== "HEAD") return null;
-  if (!isReaderLocalizedPublicPath(request.nextUrl.pathname)) return null;
+  // `POST` with the rest, for the reason the author-scoped rewrite carries it:
+  // a `POST` to a public address is a Server Action submission, and Next
+  // resolves a **progressive** form's action out of the matched route's own
+  // manifest. The page that drew the form rendered from the locale tree, so
+  // that is where its action has to land — and the tree the response rerenders
+  // is then the one the reader is already in, instead of the unprefixed twin's
+  // request-time document.
+  if (
+    request.method !== "GET" &&
+    request.method !== "HEAD" &&
+    request.method !== "POST"
+  ) {
+    return null;
+  }
 
+  const { pathname } = request.nextUrl;
+  const stripped = stripLocalePrefix(pathname);
+  if (stripped.locale === null && !isReaderLocalizedPublicPath(pathname)) {
+    return null;
+  }
+
+  const twinPath = publicQueryTwinPath(pathname, request.nextUrl.searchParams);
+  // A prefixed address already names its subtree; only a twin moves it.
+  if (stripped.locale !== null && twinPath === null) return null;
+
+  const routeLocale = stripped.locale ?? locale;
+  const routePath = twinPath ?? stripped.path;
   const url = request.nextUrl.clone();
-  url.pathname = localizedPath(locale, stripLocalePrefix(url.pathname).path);
+  url.pathname =
+    routePath === "/" ? `/${routeLocale}` : `/${routeLocale}${routePath}`;
 
   return NextResponse.rewrite(url, {
     request: {
@@ -657,6 +697,13 @@ export async function proxy(request: NextRequest) {
   }
 
   if (isRetiredControlPlanePath(request.nextUrl.pathname)) {
+    return getHardNotFoundResponse();
+  }
+
+  // `/q` is where a listing's query string renders (ADR-0032 D5). It is a
+  // rewrite target and never an address: a rewrite does not re-enter this
+  // function, so anything that names it here came from outside.
+  if (isPublicQueryTwinPath(request.nextUrl.pathname)) {
     return getHardNotFoundResponse();
   }
 
@@ -1282,7 +1329,7 @@ export async function proxy(request: NextRequest) {
   requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
   const response =
     authorScopedRewrite ??
-    getReaderLocaleRewriteResponse(request, locale, requestHeaders) ??
+    getPublicDocumentRewriteResponse(request, locale, requestHeaders) ??
     NextResponse.next({
       request: {
         headers: requestHeaders,

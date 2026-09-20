@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
 
@@ -41,6 +41,16 @@ vi.mock("@/server/site-shell-session", () => ({
 vi.mock("@/app/(default)/variety/[slug]/source-credits", () => ({
   PublicVarietySourceCredits: () => <section>Source credits</section>,
 }));
+
+// A database is configured. Without one a static page defers its render to
+// the request (ADR-0032 D4) and these tests would be reading the fallback;
+// `static-public-page.test.tsx` holds that branch.
+beforeEach(() => {
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/overgarden");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("/variety/[slug]", () => {
   beforeEach(() => {
@@ -161,16 +171,34 @@ describe("/variety/[slug]", () => {
     expect(html).toContain("First ripe cluster");
   });
 
-  it("renders the saved wishlist status after a successful action redirect", async () => {
+  it("renders the saved wishlist receipt from a region of its own, never from the card", async () => {
+    // The receipt is what a redirect leaves in the address, so it is request
+    // data — and the card is a static document (ADR-0032 D2): it renders the
+    // same bytes whatever the query string says.
     const { default: PublicVarietyRoute } = await import("./page");
-    const html = renderToStaticMarkup(
+    const card = renderToStaticMarkup(
       await PublicVarietyRoute({
         params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
-        searchParams: Promise.resolve({ wishlist: "saved" }),
+        searchParams: new Promise(() => undefined),
       }),
     );
+    expect(card).not.toContain("Збережено до вашого списку бажань.");
 
-    expect(html).toContain("Збережено до вашого списку бажань.");
+    const { WishlistSavedReceipt } = await import(
+      "@/app/catalog-evidence-route"
+    );
+    const label = "Збережено до вашого списку бажань.";
+    const saved = await WishlistSavedReceipt({
+      searchParams: Promise.resolve({ wishlist: "saved" }),
+      label,
+    });
+    expect(renderToStaticMarkup(saved)).toContain(label);
+    expect(
+      await WishlistSavedReceipt({
+        searchParams: Promise.resolve({}),
+        label,
+      }),
+    ).toBeNull();
   });
 
   it("indexes thin public variety metadata", async () => {

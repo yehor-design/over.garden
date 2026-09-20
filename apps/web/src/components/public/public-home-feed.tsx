@@ -1,3 +1,4 @@
+import { SignedInOnly } from "@/components/site-shell/signed-in-only";
 import Link from "next/link";
 import { MapPin, MessageCircle, PawPrint, Sprout } from "lucide-react";
 
@@ -97,7 +98,6 @@ export function PublicHomeFeed({
   feed,
   request,
   topics,
-  isAuthenticated,
   state,
   failure = null,
 }: {
@@ -106,7 +106,6 @@ export function PublicHomeFeed({
   feed: PublicFeedPage;
   request: PublicFeedRequest;
   topics: TrustedPublicFeedTopic[];
-  isAuthenticated: boolean;
   state: PublicHomeFeedState;
   /** The settled failure class behind `state="error"` (ADR-0023). */
   failure?: WorkspaceFailureDescription | null;
@@ -134,7 +133,6 @@ export function PublicHomeFeed({
         copy={copy}
         request={request}
         topics={topics}
-        isAuthenticated={isAuthenticated}
       />
 
       {state === "loading" ? (
@@ -228,13 +226,11 @@ function FeedFilterRow({
   copy,
   request,
   topics,
-  isAuthenticated,
 }: {
   locale: PublicLocale;
   copy: PublicHomeFeedCopy;
   request: PublicFeedRequest;
   topics: TrustedPublicFeedTopic[];
-  isAuthenticated: boolean;
 }) {
   const action = localizedPath(locale, "/");
   const offeredTopics = topics.filter(
@@ -272,7 +268,10 @@ function FeedFilterRow({
             />
           );
         })}
-        {isAuthenticated ? (
+        {/* The one thing on this page that differs for a gardener. It is a
+            region of its own so the page never asks who is reading, and stays
+            a static document (ADR-0032 D2). */}
+        <SignedInOnly>
           <Link
             href={localizedPath(locale, "/feed")}
             className={buttonVariants({
@@ -283,7 +282,7 @@ function FeedFilterRow({
           >
             {copy.followedFilter}
           </Link>
-        ) : null}
+        </SignedInOnly>
       </form>
 
       {offeredTopics.length > 0 ? (

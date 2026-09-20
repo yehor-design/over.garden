@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getLookup: vi.fn(),
@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   notFound: mocks.notFound,
+  unstable_rethrow: () => undefined,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -42,17 +43,20 @@ vi.mock("@/components/public/public-journal-entry", () => ({
   }: {
     locale: string;
     directoryReturnTo: string;
-    ownerControl: { managePath: string } | null;
+    ownerControl: React.ReactNode;
     children: React.ReactNode;
   }) => (
     <main
       data-testid="journal-view"
       data-locale={locale}
       data-return-to={directoryReturnTo}
-      data-owner-control={ownerControl?.managePath}
     >
+      <div data-testid="owner-slot">{ownerControl}</div>
       {children}
     </main>
+  ),
+  OwnerEntryControlLink: ({ managePath }: { managePath: string }) => (
+    <a data-owner-control={managePath} href={managePath} />
   ),
 }));
 
@@ -101,6 +105,18 @@ const SPELLINGS = [
 const ADDRESS = { profileHandle: "@yehor", entryNumber: "12" };
 
 const ROUTE = "@/app/[locale]/[profileHandle]/post/[entryNumber]/page";
+const REGIONS =
+  "@/app/[locale]/[profileHandle]/post/[entryNumber]/entry-regions";
+
+// A database is configured. Without one a static page defers its render to
+// the request (ADR-0032 D4) and these tests would be reading the fallback;
+// `static-public-page.test.tsx` holds that branch.
+beforeEach(() => {
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/overgarden");
+});
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("an entry at its address, /@{handle}/post/{n}", () => {
   beforeEach(() => {
@@ -118,13 +134,15 @@ describe("an entry at its address, /@{handle}/post/{n}", () => {
   });
 
   it.each(SPELLINGS)(
-    "renders localized guest-open readback and engagement without owner lookup when the segments arrive %s",
+    "renders the entry as a static document when the segments arrive %s",
     async (_name, segments) => {
       const { default: Route } = await import(ROUTE);
       const html = renderToStaticMarkup(
         await Route({
           params: Promise.resolve({ locale: "bg", ...segments }),
-          searchParams: Promise.resolve({ from: "/bg/journals?kind=plant" }),
+          // A static document never reads this (ADR-0032 D2): were the page
+          // to await it, a promise that never settles would hang this test.
+          searchParams: new Promise(() => undefined),
         }),
       );
 
@@ -132,12 +150,53 @@ describe("an entry at its address, /@{handle}/post/{n}", () => {
       // reaches the read as a number: the route received the string `"12"`.
       expect(mocks.getLookup).toHaveBeenCalledWith("yehor", 12, undefined, "bg");
       expect(html).toContain('data-locale="bg"');
-      expect(html).toContain('data-return-to="/bg/journals?kind=plant"');
+      // The plain directory: the exact view a reader came from is restored
+      // after hydration, by `DirectoryReturnLink`.
+      expect(html).toContain('data-return-to="/bg/journals"');
+      // What the document carries is the guest's panel. The two regions
+      // beside it do start — and in a prerender their session read never
+      // settles — but the page did not wait for either to draw itself.
       expect(html).toContain('data-testid="engagement"');
       expect(html).toContain('data-authenticated="false"');
+      expect(html).not.toContain("data-owner-control");
       expect(mocks.getOwnerControl).not.toHaveBeenCalled();
     },
   );
+
+  it("renders nothing for the build's placeholder sample, and reads nothing", async () => {
+    const { default: Route, generateStaticParams } = await import(ROUTE);
+    const [sample] = generateStaticParams();
+
+    expect(
+      await Route({ params: Promise.resolve({ locale: "uk", ...sample }) }),
+    ).toBeNull();
+    expect(mocks.getLookup).not.toHaveBeenCalled();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+  });
+
+  it("answers the reader's own panel from the region, with their session and their cursor", async () => {
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "owner-1" },
+      session: { id: "session-1" },
+    });
+    mocks.getSessionId.mockReturnValue("session-1");
+    const { ViewerEngagementPanel } = await import(REGIONS);
+    const html = renderToStaticMarkup(
+      await ViewerEngagementPanel({
+        locale: "uk",
+        target: { kind: "journal_entry", ref: page.entry.id },
+        returnTo: page.entry.publicPath,
+        searchParams: Promise.resolve({ authIntent: "comment", cursor: "c-2" }),
+      }),
+    );
+
+    expect(html).toContain('data-authenticated="true"');
+    expect(mocks.getEngagementSummary).toHaveBeenCalledWith(
+      { kind: "journal_entry", ref: page.entry.id },
+      expect.objectContaining({ userId: "owner-1", sessionId: "session-1" }),
+      { commentCursor: "c-2" },
+    );
+  });
 
   it("adds a separately scoped owner control for the signed-in author", async () => {
     mocks.getCurrentSession.mockResolvedValue({
@@ -149,11 +208,12 @@ describe("an entry at its address, /@{handle}/post/{n}", () => {
       entryId: "entry-1",
       managePath: "/garden/objects/object-1#passport-entry-entry-1",
     });
-    const { default: Route } = await import(ROUTE);
+    const { OwnerEntryControl } = await import(REGIONS);
     const html = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "uk", ...ADDRESS }),
-        searchParams: Promise.resolve({ authIntent: "comment" }),
+      await OwnerEntryControl({
+        locale: "uk",
+        publicSlug: page.entry.publicSlug,
+        publicPath: page.entry.publicPath,
       }),
     );
 
@@ -165,7 +225,24 @@ describe("an entry at its address, /@{handle}/post/{n}", () => {
     expect(html).toContain(
       'data-owner-control="/garden/entries/entry-1/edit?returnTo=%2F%40yehor%2Fpost%2F12"',
     );
-    expect(html).toContain('data-authenticated="true"');
+  });
+
+  it("offers a guest and another gardener no owner control", async () => {
+    const { OwnerEntryControl } = await import(REGIONS);
+    const props = {
+      locale: "uk" as const,
+      publicSlug: page.entry.publicSlug,
+      publicPath: page.entry.publicPath,
+    };
+
+    expect(await OwnerEntryControl(props)).toBeNull();
+    expect(mocks.getOwnerControl).not.toHaveBeenCalled();
+
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "someone-else" },
+      session: { id: "session-2" },
+    });
+    expect(await OwnerEntryControl(props)).toBeNull();
   });
 
   it("indexes the one address an entry has, in whichever language it renders", async () => {

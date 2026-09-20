@@ -31,6 +31,7 @@ vi.mock("@/server/profile-interaction-repository", () => ({
 // Only the router underneath is stubbed — the URL round-trip is a browser fact
 // and `tests/public-profile.spec.ts` is where it is proven.
 vi.mock("next/navigation", () => ({
+  unstable_rethrow: () => undefined,
   notFound: mocks.notFound,
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   usePathname: () => "/uk/@green_thumb",

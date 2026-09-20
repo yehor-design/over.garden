@@ -11,22 +11,14 @@ vi.mock("@/server/interface-localization", () => ({
 }));
 
 vi.mock("@/app/root-document", () => ({
-  RootDocument: ({
+  RequestRootDocument: ({
     lang,
-    localization,
     children,
   }: {
     lang: string;
-    localization: { locale: string; market: string } | null;
     children: React.ReactNode;
   }) => (
-    <div
-      data-testid="root-document"
-      data-lang={lang}
-      data-localization={
-        localization ? JSON.stringify(localization) : "request"
-      }
-    >
+    <div data-testid="root-document" data-document="request" data-lang={lang}>
       {children}
     </div>
   ),
@@ -66,7 +58,7 @@ describe("default root layout", () => {
     );
 
     expect(html).toContain('data-lang="uk"');
-    expect(html).toContain('data-localization="request"');
+    expect(html).toContain('data-document="request"');
     expect(html).toContain("<main>OverGarden</main>");
     expect(mocks.getRequestInterfaceLocalization).not.toHaveBeenCalled();
   });

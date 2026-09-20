@@ -8,7 +8,6 @@ import { getPublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy
 import {
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
@@ -25,7 +24,7 @@ interface RegisterHubRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 /**

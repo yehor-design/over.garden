@@ -1,14 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
 import {
-  createContext,
-  useContext,
-  useEffect,
-  type Dispatch,
-  type ReactNode,
-  type SetStateAction,
-} from "react";
+  createValueStore,
+  useValueStore,
+  type ValueStore,
+} from "@/lib/value-store";
 
 export interface SiteShellContextRailItem {
   href: string;
@@ -23,23 +22,31 @@ export interface SiteShellContextRailModule {
   emptyLabel?: string;
 }
 
-type ContextRailSetter = Dispatch<
-  SetStateAction<SiteShellContextRailModule[] | null>
->;
+type ContextRailStore = ValueStore<SiteShellContextRailModule[] | null>;
 
-const SiteShellContextRailContext = createContext<ContextRailSetter | null>(
+const SiteShellContextRailContext = createContext<ContextRailStore | null>(
   null,
 );
 
+/**
+ * What a page puts in the context rail, held in a store rather than in the
+ * shell's state (ADR-0032 D10).
+ *
+ * A page registers its modules from an effect, which runs while the rest of
+ * that page may still be hydrating — or still arriving. As state in the shell
+ * that rendered the shell again, above the page, in the middle of exactly that.
+ * Here the provider's value is the store and never changes; the rail's outlet
+ * is the only thing that renders when a page speaks.
+ */
 export function SiteShellContextRailProvider({
   children,
-  setModules,
 }: {
   children: ReactNode;
-  setModules: ContextRailSetter;
 }) {
+  const [store] = useState<ContextRailStore>(() => createValueStore(null));
+
   return (
-    <SiteShellContextRailContext.Provider value={setModules}>
+    <SiteShellContextRailContext.Provider value={store}>
       {children}
     </SiteShellContextRailContext.Provider>
   );
@@ -50,16 +57,30 @@ export function SiteShellContextRailRegistration({
 }: {
   modules: SiteShellContextRailModule[];
 }) {
-  const setModules = useContext(SiteShellContextRailContext);
+  const store = useContext(SiteShellContextRailContext);
 
   useEffect(() => {
-    if (!setModules) return;
-
-    setModules(modules);
-    return () => setModules(null);
-  }, [modules, setModules]);
+    if (!store) return;
+    store.set(modules);
+    return () => store.set(null);
+  }, [modules, store]);
 
   return null;
+}
+
+const NO_RAIL: ContextRailStore = createValueStore(null);
+
+/** The rail's content: what the page registered, or `fallback` until it does. */
+export function SiteShellContextRailOutlet({
+  fallback,
+}: {
+  fallback: ReactNode;
+}) {
+  const modules = useValueStore(
+    useContext(SiteShellContextRailContext) ?? NO_RAIL,
+  );
+
+  return modules ? <SiteShellContextRailModules modules={modules} /> : fallback;
 }
 
 export function SiteShellContextRailModules({

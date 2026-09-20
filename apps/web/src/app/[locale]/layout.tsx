@@ -14,7 +14,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getPublicSiteUrl } from "@/lib/runtime-url";
-import { RootDocument } from "@/app/root-document";
+import { StaticRootDocument } from "@/app/root-document";
 
 interface LocaleRootLayoutProps {
   children: React.ReactNode;
@@ -58,16 +58,15 @@ export default async function LocaleRootLayout({
   const localization = localizationForRoute((await params).locale);
 
   return (
-    // The document's language is the route's and stays static for the tree.
-    // The shell's is the reader's, resolved in the document's Suspense hole
-    // the way the unprefixed tree has always resolved it: this subtree is now
-    // where an unprefixed address renders for a reader who chose this
-    // language, and the market that decides what the language control offers
-    // is a fact about the reader, not about the prefix they were rewritten
-    // into.
-    <RootDocument lang={localization.locale} localization={null}>
+    // The language is in the route, so this document is static (ADR-0032 D1):
+    // the chrome and the page are part of the prerendered shell, and only the
+    // session arrives at request time. This subtree is also where an
+    // unprefixed address renders for a reader who chose this language — the
+    // proxy rewrites them into it — which is why the route's locale and the
+    // reader's are the same thing here.
+    <StaticRootDocument locale={localization.locale}>
       {children}
-    </RootDocument>
+    </StaticRootDocument>
   );
 }
 

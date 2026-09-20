@@ -12,8 +12,9 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0027-owner-health-page-retired.md` and
 `docs/adr/ADR-0028-notion-shaped-composer.md`,
 `docs/adr/ADR-0029-address-law.md`,
-`docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md` and
-`docs/adr/ADR-0031-design-system-and-redesign.md`; older ADRs and dated
+`docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md`,
+`docs/adr/ADR-0031-design-system-and-redesign.md` and
+`docs/adr/ADR-0032-static-public-documents.md`; older ADRs and dated
 documents are history and never override them.
 
 ## Product
@@ -164,6 +165,15 @@ Every Linear task uses this shape and nothing more:
   `docs/adr/ADR-0031-design-system-and-redesign.md` — one design system and the
   redesign that delivers it: two token layers, a real component library, a
   three-column shell, light theme only, and WCAG 2.2 AA as a build gate.
+  `docs/adr/ADR-0032-static-public-documents.md` — **read before adding or
+  changing a public page.** A public page is a static document: its content is
+  in the served bytes, outside every `<div hidden>`, and only who is reading
+  arrives at request time. It says why a page may not read `searchParams` or
+  the session, why a query string renders from a twin under `/q`, why a static
+  page has no `loading.tsx` above it, why a failed read is never prerendered,
+  and why nothing above a page may change by itself — what the chrome learns
+  late lives in a store, never in a context value (D10). Its D8 is the recipe
+  for converting a page family; `tests/static-documents.spec.ts` is the gate.
   `DESIGN.md` — **read before changing any interface.** It is authoritative for
   tokens, components, layout, patterns, accessibility and content, and its §10
   rules are enforced in CI rather than reviewed.

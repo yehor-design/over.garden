@@ -5,7 +5,7 @@ import { LocalizedBlogPostPage } from "@/components/public/localized-public-page
 import {
   getLanguageSwitcherLocales,
   isPublicLocale,
-  PREFIXED_PUBLIC_LOCALES,
+  PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
@@ -28,7 +28,7 @@ interface LocalizedBlogPostRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.flatMap((locale) =>
+  return PUBLIC_LOCALES.flatMap((locale) =>
     listBlogPosts().map((post) => ({
       locale,
       slug: post.slug,

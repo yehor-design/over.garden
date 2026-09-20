@@ -29,8 +29,10 @@ vi.mock("@/components/auth/owner-scope", () => ({
     children: React.ReactNode;
     ownerUserId: string | null;
   }) => <div data-owner-scope={ownerUserId ?? "guest"}>{children}</div>,
+  useOwnerScopeControl: () => () => undefined,
 }));
 
+import { GUEST_SITE_SHELL_SESSION_STATE } from "@/lib/site-shell-session-state";
 import { SiteShell } from "./site-shell";
 
 /** `import.meta.url` is not a file URL under jsdom, so resolve from the root. */
@@ -53,7 +55,11 @@ describe("the shell's landmarks", () => {
 
   it("renders exactly one banner and one contentinfo, and no main of its own", () => {
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Route content</main>
       </SiteShell>,
     );
@@ -72,8 +78,11 @@ describe("the shell's landmarks", () => {
       <SiteShell
         locale="uk"
         market="ukraine"
-        isAuthenticated
-        ownerUserId="00000000-0000-4000-8000-000000000001"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: "00000000-0000-4000-8000-000000000001",
+          hasOperatorAccess: false,
+        }}
       >
         <main>Сад</main>
       </SiteShell>,
@@ -103,7 +112,11 @@ describe("the shell's landmarks", () => {
 
   it("puts the skip link first in the tab order and shows it on focus", () => {
     const { container } = render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Route content</main>
       </SiteShell>,
     );
@@ -127,7 +140,11 @@ describe("the shell's landmarks", () => {
     // markup. A fixed height would cut a Cyrillic label in half at 200 % text
     // (WCAG 1.4.4, DESIGN.md §2.6).
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Route content</main>
       </SiteShell>,
     );
@@ -140,7 +157,11 @@ describe("the shell's landmarks", () => {
   it("marks the active navigation item and nothing else", () => {
     mocks.pathname = "/journals";
     const { container } = render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Журнали</main>
       </SiteShell>,
     );
@@ -171,8 +192,11 @@ describe("the one primary action", () => {
       <SiteShell
         locale="uk"
         market="ukraine"
-        isAuthenticated
-        ownerUserId="00000000-0000-4000-8000-000000000001"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: "00000000-0000-4000-8000-000000000001",
+          hasOperatorAccess: false,
+        }}
       >
         <main>Сад</main>
       </SiteShell>,
@@ -201,7 +225,11 @@ describe("the one primary action", () => {
 
   it("goes through sign-in for a signed-out reader, and returns to the composer", () => {
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Стрічка</main>
       </SiteShell>,
     );
@@ -222,7 +250,11 @@ describe("the tab bar", () => {
 
   it("is a named nav of five slots, and Sign in is not one of them", () => {
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Стрічка</main>
       </SiteShell>,
     );
@@ -245,7 +277,11 @@ describe("the tab bar", () => {
   it("marks the active tab and only it", () => {
     mocks.pathname = "/journals";
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Журнали</main>
       </SiteShell>,
     );
@@ -265,8 +301,11 @@ describe("the tab bar", () => {
       <SiteShell
         locale="uk"
         market="ukraine"
-        isAuthenticated
-        ownerUserId="00000000-0000-4000-8000-000000000001"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: "00000000-0000-4000-8000-000000000001",
+          hasOperatorAccess: false,
+        }}
       >
         <main>Редагування</main>
       </SiteShell>,
@@ -290,7 +329,11 @@ describe("the footer the product has never had", () => {
 
   it("links the three pages nothing linked, and the catalogue", () => {
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Стрічка</main>
       </SiteShell>,
     );
@@ -309,7 +352,11 @@ describe("the footer the product has never had", () => {
 
   it("carries the data-source attributions and no thiings.co credit", () => {
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Стрічка</main>
       </SiteShell>,
     );
@@ -337,7 +384,11 @@ describe("the footer the product has never had", () => {
       ["bg", "ukraine"],
     ] as const) {
       const { container, unmount } = render(
-        <SiteShell locale={locale} market={market} isAuthenticated={false}>
+        <SiteShell
+          locale={locale}
+          market={market}
+          session={GUEST_SITE_SHELL_SESSION_STATE}
+        >
           <main>Route content</main>
         </SiteShell>,
       );
@@ -351,9 +402,7 @@ describe("the footer the product has never had", () => {
         `${market}/${locale}`,
       ).toBe(market);
       expect(
-        screen
-          .getAllByRole("contentinfo")[0]!
-          .contains(controls[0]!),
+        screen.getAllByRole("contentinfo")[0]!.contains(controls[0]!),
         `${market}/${locale}`,
       ).toBe(true);
       // All three languages are offered in either market; the market decides
@@ -370,7 +419,11 @@ describe("the context rail is never the only home of an action", () => {
   it("offers nothing the page cannot reach without it", () => {
     mocks.pathname = "/journals";
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Журнали</main>
       </SiteShell>,
     );
@@ -399,7 +452,11 @@ describe("the shell's server HTML", () => {
 
   it("draws the brand lockup in the prerendered header and keeps its accessible name", () => {
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Route content</main>
       </SiteShell>,
     );
@@ -431,8 +488,11 @@ describe("the shell's server HTML", () => {
       <SiteShell
         locale="bg"
         market="bulgaria"
-        isAuthenticated
-        ownerUserId="00000000-0000-4000-8000-000000000001"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: "00000000-0000-4000-8000-000000000001",
+          hasOperatorAccess: false,
+        }}
       >
         <main>Лично съдържание</main>
       </SiteShell>,
@@ -459,7 +519,15 @@ describe("the shell's server HTML", () => {
   it("renders account moderation inside the product shell", () => {
     mocks.pathname = "/account/communities";
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={true}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: null,
+          hasOperatorAccess: false,
+        }}
+      >
         <main>Account moderation</main>
       </SiteShell>,
     );
@@ -474,7 +542,11 @@ describe("the shell's server HTML", () => {
   it("keeps guest account moderation free of owner links", () => {
     mocks.pathname = "/account/communities";
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Denied boundary</main>
       </SiteShell>,
     );
@@ -491,8 +563,11 @@ describe("the shell's server HTML", () => {
       <SiteShell
         locale="uk"
         market="ukraine"
-        isAuthenticated
-        ownerUserId="00000000-0000-4000-8000-000000000001"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: "00000000-0000-4000-8000-000000000001",
+          hasOperatorAccess: false,
+        }}
       >
         <main>Native erasure request</main>
       </SiteShell>,
@@ -512,7 +587,15 @@ describe("the shell's server HTML", () => {
   it("keeps the server-authorized erasure owner review outside the local garden gate", () => {
     mocks.pathname = "/garden/privacy/erasure-requests";
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: null,
+          hasOperatorAccess: false,
+        }}
+      >
         <main>Erasure owner review</main>
       </SiteShell>,
     );
@@ -525,27 +608,85 @@ describe("the shell's server HTML", () => {
   it("closes the mobile sheet before opening the shared sign-out flow", async () => {
     const source = await readShellSource();
 
-    expect(source).toContain("open={mobileMenuOpen}");
+    // The menu owns whether it is open — state in the chrome would render the
+    // chrome, and the page inside it, for a sheet (ADR-0032 D10).
+    expect(source).toContain("const [open, onOpenChange] = useState(false);");
     expect(source).toMatch(
       /onBeforeRequest=\{\(\)\s*=>\s*onOpenChange\(false\)\s*\}/,
     );
   });
 
-  it("mounts the owner scope and sign-out provider only for authenticated shells", async () => {
+  it("mounts the owner scope and the sign-out provider once around the framed shell", async () => {
     const source = await readShellSource();
-    expect(source).toContain("if (!isAuthenticated) {");
-    expect(source.indexOf("if (!isAuthenticated) {")).toBeLessThan(
-      source.lastIndexOf("<OwnerScopeProvider"),
-    );
+    // They used to wrap the shell only for a signed-in reader. A static
+    // document does not know who is reading while it renders (ADR-0032 D2), and
+    // wrapping a tree in a provider *after* the session settles is a different
+    // element type at the root — React would remount every page under it. So
+    // the framed shell always mounts both. The owner's id reaches the scope
+    // once it is known — through a leaf beside the page, never as a prop that
+    // changes above it (ADR-0032 D10). The order is unchanged: the scope
+    // outside, sign-out inside.
     expect(
       source.match(
-        /<OwnerScopeProvider locale=\{locale\} ownerUserId=\{ownerUserId\}>\s*<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>\s*<\/OwnerScopeProvider>/g,
+        /<OwnerScopeProvider\s+locale=\{locale\}\s+ownerUserId=\{renderedFor\?\.ownerUserId \?\? null\}\s*>\s*<OwnerScopeFromSession \/>\s*<SignOutProvider locale=\{locale\}>/g,
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    // The two unframed shapes are workspace routes in a request-time document,
+    // where the session is a value, and keep the rule they had.
+    expect(source).toContain(
+      'if (!isAuthenticated || placement !== "utility") {',
+    );
     expect(source).not.toMatch(
       /<SignOutProvider locale=\{locale\}>\s*<OwnerScopeProvider/,
     );
-    expect(source.match(/<SessionSignalBoundary /g)).toHaveLength(3);
+    // One per shape, and in the framed shell only once the session is known —
+    // a boundary that ran with "guest" first would tell every other tab the
+    // gardener had signed out.
+    expect(source.match(/<SessionSignalBoundary/g)).toHaveLength(3);
+  });
+
+  it("holds no state in the component the page renders inside", async () => {
+    // ADR-0032 D10. The page is a child of the framed shell, and the page is
+    // what may still be arriving when the session settles, the address becomes
+    // known or a page fills the rail. Anything that renders this component
+    // again by itself hands new props to every boundary it draws, and a context
+    // it changes reaches the ones below; React answers both by rendering what
+    // it has not hydrated on the client. `shell-state-stability.test.tsx`
+    // holds the mechanism; this holds the one place it is easy to undo.
+    const source = await readShellSource();
+    const framed = source.slice(
+      source.indexOf("function FramedSiteShell({"),
+      source.indexOf("function OwnerScopeFromSession("),
+    );
+
+    expect(framed.length).toBeGreaterThan(1_000);
+    expect(framed).not.toMatch(
+      /\buse(?:State|Reducer|SyncExternalStore|SettledShellSession|ShellPathnameValue|ShellSession|ValueStore)\(/,
+    );
+  });
+
+  it("never signals a session it has not been told about", () => {
+    mocks.pathname = "/journals";
+    const pending = renderToStaticMarkup(
+      <SiteShell
+        document="static"
+        locale="uk"
+        session={new Promise(() => undefined)}
+      >
+        <main>Route content</main>
+      </SiteShell>,
+    );
+    const known = renderToStaticMarkup(
+      <SiteShell locale="uk" session={GUEST_SITE_SHELL_SESSION_STATE}>
+        <main>Route content</main>
+      </SiteShell>,
+    );
+
+    expect(pending).not.toContain("data-session-signal-boundary");
+    expect(known).toContain('data-session-signal-boundary="guest"');
+    // And the static document still carries a guest's working chrome.
+    expect(pending).toContain('data-site-shell-action="sign-in"');
+    expect(pending).toContain("<main>Route content</main>");
   });
 });
 
@@ -557,7 +698,11 @@ describe("every guest sign-in control reaches the form itself", () => {
     // form. Reported by the owner on 2026-09-04.
     mocks.pathname = "/bg/journals";
     const html = renderToStaticMarkup(
-      <SiteShell locale="bg" market="bulgaria" isAuthenticated={false}>
+      <SiteShell
+        locale="bg"
+        market="bulgaria"
+        session={GUEST_SITE_SHELL_SESSION_STATE}
+      >
         <main>Route content</main>
       </SiteShell>,
     );
@@ -573,8 +718,10 @@ describe("every guest sign-in control reaches the form itself", () => {
     }
 
     // And it brings the reader back to what they were reading, rather than
-    // depositing them in the workspace.
-    expect(html).toContain("/auth/sign-in?next=%2Fbg%2Fjournals");
+    // depositing them in the workspace — by the address's one spelling
+    // (ADR-0032 D3): the prefix is how a language is chosen, and the reader who
+    // comes back has already chosen.
+    expect(html).toContain("/auth/sign-in?next=%2Fjournals");
   });
 
   it("offers no sign-in control at all once the reader is signed in", () => {
@@ -583,8 +730,11 @@ describe("every guest sign-in control reaches the form itself", () => {
       <SiteShell
         locale="bg"
         market="bulgaria"
-        isAuthenticated
-        ownerUserId="owner-1"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: "owner-1",
+          hasOperatorAccess: false,
+        }}
       >
         <main>Route content</main>
       </SiteShell>,
@@ -602,7 +752,15 @@ describe("the sealed owner's links", () => {
     mocks.pathname = "/garden";
     const user = (await import("@testing-library/user-event")).default;
     render(
-      <SiteShell locale="uk" market="ukraine" isAuthenticated hasOperatorAccess>
+      <SiteShell
+        locale="uk"
+        market="ukraine"
+        session={{
+          isAuthenticated: true,
+          ownerUserId: null,
+          hasOperatorAccess: true,
+        }}
+      >
         <main>Сад власника</main>
       </SiteShell>,
     );

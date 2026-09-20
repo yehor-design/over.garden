@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PublicArticle } from "@/components/public/public-article";
 import {
   isPublicLocale,
-  PREFIXED_PUBLIC_LOCALES,
+  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
@@ -19,7 +19,7 @@ interface LocalizedFirstPublicationDisclosureRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({

@@ -1,20 +1,13 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { Suspense } from "react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
-import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import { PublicJournalEntryView } from "@/components/public/public-journal-entry";
-import {
-  normalizeAuthIntentResumeAction,
-  normalizeAuthIntentResumeControl,
-} from "@/lib/auth/auth-intent-contract";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-directory-navigation";
 import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { getEngagementSummary } from "@/server/engagement-repository";
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
-import { getOwnerJournalEntryControl } from "@/server/owner-journal-entry-control";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
   resolvePublicSurfacePayload,
@@ -26,7 +19,15 @@ import { publicMediaAltText } from "@/lib/public-media-alt";
 import { logAddressRefusal } from "@/server/address-refusal-log";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { scopedToUser } from "@/server/request-scope";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
+import { STATIC_PARAMS_PLACEHOLDER } from "@/server/public-prerender";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 import {
   readGuestEngagementSummary,
   readPublicJournalEntry,
@@ -40,6 +41,8 @@ import {
   publicProfileBasePath,
 } from "@/lib/garden/public-paths";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
+
+import { OwnerEntryControl, ViewerEngagementPanel } from "./entry-regions";
 
 /**
  * An entry at its address: `/@{handle}/post/{n}` (ADR-0029 D9, amendment of
@@ -62,8 +65,6 @@ interface PublicJournalEntryRouteProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
-
 function resolveAddress(input: { profileHandle: string; entryNumber: string }) {
   // The handle is decoded — `@` arrives as itself or as `%40` — and the number
   // is not: digits are ASCII, `%31` is not how anything spells `1`, and the
@@ -83,6 +84,8 @@ export async function generateMetadata({
 
   const bounded = await resolvePublicSurfacePayload({
     consumerId: "localized_journal_entry",
+    // Prerendered with the page it describes (ADR-0032 D4).
+    document: "static",
     load: async () => {
       const lookup = await readPublicJournalEntry(
         address.handle,
@@ -103,14 +106,33 @@ export async function generateMetadata({
   return buildJournalSurface(localeParam, bounded.payload, bounded).metadata;
 }
 
+/**
+ * One sample, so the route is one Next prerenders per address (ADR-0032 D6).
+ *
+ * Without `generateStaticParams` an address's params are request data: the
+ * route has only its fallback shell, and an entry's words and photograph
+ * stream into it on every request. With a sample, the first request for an
+ * entry renders it whole and the result is kept — every reader after that gets
+ * the entry in the served bytes, and a mutation's cache tags expire it.
+ *
+ * The sample is a placeholder rather than a row: a build must not need a
+ * database (a Vercel Preview has none), and the route refuses the placeholder
+ * before it reads anything.
+ */
+export function generateStaticParams() {
+  return [
+    {
+      profileHandle: STATIC_PARAMS_PLACEHOLDER,
+      entryNumber: STATIC_PARAMS_PLACEHOLDER,
+    },
+  ];
+}
+
 export default async function PublicJournalEntryRoute({
   params,
   searchParams,
 }: PublicJournalEntryRouteProps) {
-  const [{ locale: localeParam, ...segments }, query] = await Promise.all([
-    params,
-    searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
-  ]);
+  const { locale: localeParam, ...segments } = await params;
   if (!isPublicLocale(localeParam)) {
     logAddressRefusal({
       route: "journal_entry",
@@ -119,6 +141,12 @@ export default async function PublicJournalEntryRoute({
     });
     notFound();
   }
+  // The build's one sample. It renders nothing rather than `notFound()`: a
+  // not-found render of a sampled path is a *static* render, where the
+  // document's session read is an error instead of a hole (18 of them in the
+  // build log, measured). No request reaches here — the proxy answers 404 to
+  // an address that spells neither a handle nor a number.
+  if (segments.profileHandle === STATIC_PARAMS_PLACEHOLDER) return null;
   const address = resolveAddress(segments);
   if (!address) {
     logAddressRefusal({
@@ -130,17 +158,44 @@ export default async function PublicJournalEntryRoute({
   }
 
   const locale: PublicLocale = localeParam;
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) =>
+      renderPublicJournalEntry(locale, address, searchParams, phase),
+  });
+}
+
+/**
+ * The entry, attempted as a static render and, failing that, at request time
+ * (`renderStaticPublicPage`). Every read comes before the first element, so an
+ * attempt that cannot finish has rendered nothing.
+ */
+async function renderPublicJournalEntry(
+  locale: PublicLocale,
+  address: NonNullable<ReturnType<typeof resolveAddress>>,
+  searchParams: PublicJournalEntryRouteProps["searchParams"],
+  phase: PublicRenderPhase,
+) {
+  await deferStaticRenderWithoutDatabase(phase);
+  // A read that fails is not prerendered (ADR-0032 D4): statically it defers
+  // to the request, and at request time it is the error this reader sees.
+  const notPrerendered = (error: unknown): never => {
+    unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    deferStaticRenderAfterFailure(phase);
+    throw error;
+  };
   const lookup = await readPublicJournalEntry(
     address.handle,
     address.entryNumber,
     locale,
-  );
+  ).catch(notPrerendered);
   if (lookup.status !== "active") {
     logAddressRefusal({
       route: "journal_entry",
       reason: `lookup_${lookup.status}`,
       detail: {
-        locale: localeParam,
+        locale,
         handle: address.handle,
         entryNumber: String(address.entryNumber),
       },
@@ -148,37 +203,21 @@ export default async function PublicJournalEntryRoute({
     notFound();
   }
 
-  const session = await getCurrentSession();
-  const userId = session?.user?.id;
-  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   // The entry's id (the engagement ref since `0073`): a like stored against
   // the slug was orphaned the day the slug moved under the author.
   const engagementTarget = {
     kind: "journal_entry" as const,
     ref: lookup.page.entry.id,
   };
-  const [engagement, ownerControl, likeState] = await Promise.all([
-    scope
-      ? getEngagementSummary(engagementTarget, scope, {
-          commentCursor: firstParam(query.cursor),
-        })
-      : readGuestEngagementSummary(engagementTarget, firstParam(query.cursor)),
-    scope
-      ? getOwnerJournalEntryControl(scope, lookup.page.entry.publicSlug)
-      : Promise.resolve(null),
-    readViewerLikeState(engagementTarget),
-  ]);
-  const directoryReturnTo = normalizePublicJournalDirectoryReturnTo(
-    firstParam(query.from),
-    locale,
-  );
+  // What a guest sees, which is also what the document carries in its bytes
+  // and what stays on screen for a reader without JavaScript: the counts, the
+  // first page of comments, and controls that post to real endpoints. A failed
+  // read is not prerendered (ADR-0032 D4).
+  const guestEngagement = await readGuestEngagementSummary(
+    engagementTarget,
+    null,
+  ).catch(notPrerendered);
   const engagementReturnTo = lookup.page.entry.publicPath;
-  const editOwnerControl = ownerControl
-    ? {
-        ...ownerControl,
-        managePath: `/garden/entries/${encodeURIComponent(ownerControl.entryId)}/edit?returnTo=${encodeURIComponent(lookup.page.entry.publicPath)}`,
-      }
-    : null;
   const surface = buildJournalSurface(locale, lookup.page);
   const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
 
@@ -194,23 +233,52 @@ export default async function PublicJournalEntryRoute({
         locale={locale}
         copy={getPublicJournalEntryCopy(locale)}
         page={lookup.page}
-        directoryReturnTo={directoryReturnTo}
-        ownerControl={editOwnerControl}
+        directoryReturnTo={normalizePublicJournalDirectoryReturnTo(
+          undefined,
+          locale,
+        )}
+        ownerControl={
+          <Suspense fallback={null}>
+            <OwnerEntryControl
+              locale={locale}
+              publicSlug={lookup.page.entry.publicSlug}
+              publicPath={lookup.page.entry.publicPath}
+            />
+          </Suspense>
+        }
       >
-        <PublicEngagementPanel
-          isAuthenticated={Boolean(userId)}
-          locale={locale}
-          target={engagementTarget}
-          summary={engagement}
-          likeState={likeState}
-          returnTo={engagementReturnTo}
-          resumeAction={normalizeAuthIntentResumeAction(
-            firstParam(query.authIntent) ?? undefined,
-          )}
-          resumeControl={normalizeAuthIntentResumeControl(
-            firstParam(query.authControl) ?? undefined,
-          )}
-        />
+        {/* The one part of the page that depends on who is reading and on the
+            query string. It is below the article, so nothing a reader came for
+            waits on it, and its fallback is the guest's panel — the swap
+            changes the controls' state, not the page's shape. */}
+        <Suspense
+          fallback={
+            <PublicEngagementPanel
+              isAuthenticated={false}
+              locale={locale}
+              target={engagementTarget}
+              summary={guestEngagement}
+              // The like control is drawn only with a like state, and a
+              // document has no reader: the count is the guest's, nobody has
+              // pressed it, and the form still posts to a real endpoint
+              // (ADR-0024 D3). The reader's own state replaces it below.
+              likeState={{
+                activeLikeCount: guestEngagement.activeLikeCount,
+                viewerLiked: false,
+              }}
+              returnTo={engagementReturnTo}
+              resumeAction={null}
+              resumeControl={null}
+            />
+          }
+        >
+          <ViewerEngagementPanel
+            locale={locale}
+            target={engagementTarget}
+            returnTo={engagementReturnTo}
+            searchParams={searchParams}
+          />
+        </Suspense>
       </PublicJournalEntryView>
     </>
   );
@@ -340,10 +408,6 @@ function summarize(body: string) {
   const normalized = body.replace(/\s+/g, " ").trim();
   if (normalized.length <= 160) return normalized;
   return `${normalized.slice(0, 157).trimEnd()}...`;
-}
-
-function firstParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null);
 }
 
 /**

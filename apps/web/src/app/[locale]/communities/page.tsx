@@ -10,7 +10,6 @@ import {
 import {
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
   PUBLIC_LOCALES,
 } from "@/lib/public-localization";
@@ -39,7 +38,7 @@ interface CommunityDirectoryRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({

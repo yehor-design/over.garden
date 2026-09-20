@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import NextLink from "next/link";
-import { notFound, permanentRedirect } from "next/navigation";
-import { cache } from "react";
+import {
+  notFound,
+  permanentRedirect,
+  unstable_rethrow,
+} from "next/navigation";
+import { cache, Suspense } from "react";
 import { Bookmark, ExternalLink, NotebookPen } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
@@ -38,7 +42,6 @@ import {
   formatPublicCount,
   getPublicSurfaceCopy,
 } from "@/lib/public-surface-localization";
-import { getEngagementSummary } from "@/server/engagement-repository";
 import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import {
   resolvePublicSurfacePayload,
@@ -68,9 +71,22 @@ import {
   recordWorkspaceSectionFailure,
 } from "@/server/workspace-failure";
 import {
+  readGuestEngagementSummary,
   readPublicCatalogAddress,
   readPublicVarietyPageByCatalogItemId,
 } from "@/server/public-cache";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
+import {
+  deferWithoutDatabase,
+  STATIC_PARAMS_PLACEHOLDER,
+} from "@/server/public-prerender";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 import type { PublicCatalogAddressRequest } from "@/lib/catalog/addresses";
 import {
   DEFAULT_PUBLIC_LOCALE,
@@ -108,11 +124,16 @@ const getCachedPublicCatalogEvidencePage = cache(
 async function resolveCatalogEvidenceRequest(
   family: PublicCatalogEvidenceFamily,
   props: PublicCatalogEvidenceRouteProps,
+  /**
+   * Who is asking. The page is attempted as a static render and defers by
+   * throwing (`renderStaticPublicPage`); its metadata has no boundary to return, so
+   * without a database it waits for the request the way it always has.
+   */
+  phase: PublicRenderPhase | "metadata",
 ) {
-  const [{ slug, form, locale: localeParam }, query] = await Promise.all([
-    props.params,
-    props.searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
-  ]);
+  // Not the query string: a card is a static document (ADR-0032), and the
+  // three things on it that read `searchParams` are regions of their own.
+  const { slug, form, locale: localeParam } = await props.params;
   // The route family decides the language, never the reader's cookie
   // (ADR-0029 D10). The unprefixed family is the default locale's.
   //
@@ -136,8 +157,14 @@ async function resolveCatalogEvidenceRequest(
     family === "species"
       ? { kind: "species", speciesSlug: slug, formSlug: form ?? null }
       : { kind: "legacy", catalogKind: family, slug };
+  // The build's one sample (`generateStaticParams`): nothing to look up.
+  if (slug === STATIC_PARAMS_PLACEHOLDER) {
+    return { locale, routeLocale, address: null, placeholder: true as const };
+  }
+  if (phase === "metadata") await deferWithoutDatabase();
+  else await deferStaticRenderWithoutDatabase(phase);
   const address = locale ? await getCachedCatalogAddress(request) : null;
-  return { locale, routeLocale, query, address };
+  return { locale, routeLocale, address, placeholder: false as const };
 }
 
 export async function generatePublicCatalogEvidenceMetadata(
@@ -147,6 +174,7 @@ export async function generatePublicCatalogEvidenceMetadata(
   const { locale, routeLocale, address } = await resolveCatalogEvidenceRequest(
     family,
     props,
+    "metadata",
   );
   const missing = () => ({
     title: `${getCatalogEvidenceCopy(locale ?? "uk", family).title} | OverGarden`,
@@ -158,6 +186,8 @@ export async function generatePublicCatalogEvidenceMetadata(
 
   const bounded = await resolvePublicSurfacePayload({
     consumerId: "catalog_evidence",
+    // Prerendered with the page it describes (ADR-0032 D4).
+    document: "static",
     load: async () => {
       const page = await getCachedPublicCatalogEvidencePage(
         address.catalogItemId,
@@ -189,39 +219,58 @@ export async function generatePublicCatalogEvidenceMetadata(
   };
 }
 
-export async function renderPublicCatalogEvidenceRoute(
+/** One placeholder sample per card family: see `STATIC_PARAMS_PLACEHOLDER`. */
+export function generatePublicCatalogEvidenceStaticParams(
+  family: PublicCatalogEvidenceFamily | "species_form",
+) {
+  return family === "species_form"
+    ? [{ slug: STATIC_PARAMS_PLACEHOLDER, form: STATIC_PARAMS_PLACEHOLDER }]
+    : [{ slug: STATIC_PARAMS_PLACEHOLDER }];
+}
+
+export function renderPublicCatalogEvidenceRoute(
   family: PublicCatalogEvidenceFamily,
   props: PublicCatalogEvidenceRouteProps,
 ) {
-  const { locale, routeLocale, query, address } =
-    await resolveCatalogEvidenceRequest(family, props);
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) => renderCatalogEvidenceCard(family, props, phase),
+  });
+}
+
+/**
+ * The card, attempted as a static render and, failing that, at request time
+ * (`renderStaticPublicPage`). Every read comes before the first element.
+ */
+async function renderCatalogEvidenceCard(
+  family: PublicCatalogEvidenceFamily,
+  props: PublicCatalogEvidenceRouteProps,
+  phase: PublicRenderPhase,
+) {
+  // A read that fails is not prerendered (ADR-0032 D4): statically it defers
+  // to the request, and at request time it is the error this reader sees.
+  const notPrerendered = (error: unknown): never => {
+    unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    deferStaticRenderAfterFailure(phase);
+    throw error;
+  };
+  const { locale, routeLocale, address, placeholder } =
+    await resolveCatalogEvidenceRequest(family, props, phase).catch(
+      notPrerendered,
+    );
+  // A sampled path renders nothing rather than `notFound()`, whose render is
+  // static and turns the document's session read into a build error.
+  if (placeholder) return null;
   if (!locale || !address || address.status === "not_found") notFound();
   if (address.status === "redirect") {
     permanentRedirect(localizedPath(routeLocale, address.canonicalPath));
   }
-  const [shellSession, page] = await Promise.all([
-    getSiteShellSessionState(),
-    getCachedPublicCatalogEvidencePage(address.catalogItemId, locale),
-  ]);
+  const page = await getCachedPublicCatalogEvidencePage(
+    address.catalogItemId,
+    locale,
+  ).catch(notPrerendered);
   if (!page) notFound();
-
-  // The owner's edit controls (ADR-0026 D10) render only for the owner's own
-  // session; a signed-in gardener and a guest see the same card without them.
-  const isOwner = shellSession.ownerUserId
-    ? await isOwnerUserId(shellSession.ownerUserId).catch(() => false)
-    : false;
-  // Two owner-only reads, and only for the owner: the names the card can pin
-  // and what has already been done to it. A failure costs the controls their
-  // lists, never the card.
-  const [ownerNames, ownerAudit] = isOwner
-    ? await Promise.all([
-        listCatalogCardNames(address.catalogItemId).catch(() => []),
-        listOwnerActionAudit({
-          catalogItemId: address.catalogItemId,
-          limit: 8,
-        }).catch(() => []),
-      ])
-    : [[], []];
 
   const catalogKind = page.catalog.catalogKind;
   const publicCopy = getPublicSurfaceCopy(locale);
@@ -232,20 +281,23 @@ export async function renderPublicCatalogEvidenceRoute(
   });
   const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
   const isPlantVariety = catalogKind === "plant_variety";
-  const wishlistStatus = firstParam(query.wishlist);
-  const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
-  const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const engagementTarget = {
     kind: "variety" as const,
     ref: page.catalog.publicSlug,
   };
   // A variety is a public engagement target only once it has public entries
   // (`buildPublicVarietyTargetQuery`): an organism without them renders with
-  // no panel, and a refused panel never takes the page down.
+  // no panel, and a refused panel never takes the page down. This is the
+  // guest's summary — what the document carries in its bytes; the reader's own
+  // like state arrives in the region below it.
   const engagement =
     isPlantVariety && page.entryCount > 0
-      ? await getEngagementSummary(engagementTarget).catch(
+      ? await readGuestEngagementSummary(engagementTarget, null).catch(
           (reason: unknown) => {
+            unstable_rethrow(reason);
+            // Never prerendered: a card without its panel would otherwise be
+            // what every reader gets until the cache ran out (ADR-0032 D4).
+            deferStaticRenderAfterFailure(phase);
             recordWorkspaceSectionFailure(describeWorkspaceFailure(reason), {
               surface: "engagement_panel",
               section: "summary",
@@ -254,9 +306,6 @@ export async function renderPublicCatalogEvidenceRoute(
           },
         )
       : null;
-  const likeState = engagement
-    ? await readViewerLikeState(engagementTarget)
-    : null;
 
   const cardCopy = publicCopy.organism;
   // ADR-0026 D11: a node EPPO says is a pest of something is called a pest or
@@ -384,10 +433,13 @@ export async function renderPublicCatalogEvidenceRoute(
               </button>
             </OwnerScopedProgressiveForm>
           ) : null}
-          {isPlantVariety && wishlistStatus === "saved" ? (
-            <p className="text-body-sm text-text-muted" role="status">
-              {publicCopy.variety.savedToWishlist}
-            </p>
+          {isPlantVariety ? (
+            <Suspense fallback={null}>
+              <WishlistSavedReceipt
+                searchParams={props.searchParams}
+                label={publicCopy.variety.savedToWishlist}
+              />
+            </Suspense>
           ) : null}
         </div>
       </header>
@@ -421,16 +473,34 @@ export async function renderPublicCatalogEvidenceRoute(
         >
 
           {isPlantVariety && engagement ? (
-            <PublicEngagementPanel
-              isAuthenticated={shellSession.isAuthenticated}
-              target={engagementTarget}
-              likeState={likeState}
-              summary={engagement}
-              returnTo={publicPath}
-              locale={locale}
-              resumeAction={resumeAction}
-              resumeControl={resumeControl}
-            />
+            <Suspense
+              fallback={
+                <PublicEngagementPanel
+                  isAuthenticated={false}
+                  target={engagementTarget}
+                  // A document has no reader: the guest's count, not pressed.
+                  // Without a like state the control is not drawn at all, and
+                  // the form is what works before hydration (ADR-0024 D3).
+                  likeState={{
+                    activeLikeCount: engagement.activeLikeCount,
+                    viewerLiked: false,
+                  }}
+                  summary={engagement}
+                  returnTo={publicPath}
+                  locale={locale}
+                  resumeAction={null}
+                  resumeControl={null}
+                />
+              }
+            >
+              <ViewerCardEngagementPanel
+                locale={locale}
+                target={engagementTarget}
+                summary={engagement}
+                returnTo={publicPath}
+                searchParams={props.searchParams}
+              />
+            </Suspense>
           ) : null}
 
           {page.card.regions.length > 0 ? (
@@ -852,16 +922,17 @@ export async function renderPublicCatalogEvidenceRoute(
         </Section>
       ) : null}
 
-      {isOwner ? (
-        <CatalogOwnerCardControls
+      {/* The owner's edit controls (ADR-0026 D10) render only for the owner's
+          own session; a signed-in gardener and a guest see the same card
+          without them — and so does the static document. */}
+      <Suspense fallback={null}>
+        <OwnerCardControlsRegion
           locale={locale}
           catalogItemId={page.catalog.catalogItemId}
           canonicalName={page.catalog.canonicalName}
           indexableOverride={page.card.indexableOverride}
-          names={ownerNames}
-          audit={ownerAudit}
         />
-      ) : null}
+      </Suspense>
 
       <PublicVarietySourceCredits
         locale={locale}
@@ -869,6 +940,99 @@ export async function renderPublicCatalogEvidenceRoute(
         contentUpdatedAt={page.catalog.contentUpdatedAt}
       />
     </main>
+  );
+}
+
+/** "Saved to your wishlist" — a receipt the redirect leaves in the address. */
+export async function WishlistSavedReceipt({
+  searchParams,
+  label,
+}: {
+  searchParams: PublicCatalogEvidenceRouteProps["searchParams"];
+  label: string;
+}) {
+  const query = (await searchParams) ?? EMPTY_SEARCH_PARAMS;
+  if (firstParam(query.wishlist) !== "saved") return null;
+
+  return (
+    <p className="text-body-sm text-text-muted" role="status">
+      {label}
+    </p>
+  );
+}
+
+/** The panel for this reader: their like state and their held action. */
+async function ViewerCardEngagementPanel({
+  locale,
+  target,
+  summary,
+  returnTo,
+  searchParams,
+}: {
+  locale: InterfaceLocale;
+  target: { kind: "variety"; ref: string };
+  summary: NonNullable<Awaited<ReturnType<typeof readGuestEngagementSummary>>>;
+  returnTo: string;
+  searchParams: PublicCatalogEvidenceRouteProps["searchParams"];
+}) {
+  const [query, shellSession, likeState] = await Promise.all([
+    searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
+    getSiteShellSessionState(),
+    readViewerLikeState(target),
+  ]);
+
+  return (
+    <PublicEngagementPanel
+      isAuthenticated={shellSession.isAuthenticated}
+      target={target}
+      likeState={likeState}
+      summary={summary}
+      returnTo={returnTo}
+      locale={locale}
+      resumeAction={normalizeAuthIntentResumeAction(query.authIntent)}
+      resumeControl={normalizeAuthIntentResumeControl(query.authControl)}
+    />
+  );
+}
+
+/**
+ * The owner's controls, for the owner. Two owner-only reads, and only for the
+ * owner: the names the card can pin and what has already been done to it. A
+ * failure costs the controls their lists, never the card.
+ */
+async function OwnerCardControlsRegion({
+  locale,
+  catalogItemId,
+  canonicalName,
+  indexableOverride,
+}: {
+  locale: InterfaceLocale;
+  catalogItemId: string;
+  canonicalName: string;
+  indexableOverride: React.ComponentProps<
+    typeof CatalogOwnerCardControls
+  >["indexableOverride"];
+}) {
+  const shellSession = await getSiteShellSessionState();
+  const isOwner = shellSession.ownerUserId
+    ? await isOwnerUserId(shellSession.ownerUserId).catch(() => false)
+    : false;
+  if (!isOwner) return null;
+
+  const [names, audit] = await Promise.all([
+    listCatalogCardNames(catalogItemId).catch(() => []),
+    listOwnerActionAudit({ catalogItemId, limit: 8 }).catch(() => []),
+  ]);
+
+  return (
+    <CatalogOwnerCardControls
+      locale={locale}
+      catalogItemId={catalogItemId}
+      canonicalName={canonicalName}
+      indexableOverride={indexableOverride}
+      names={names}
+      audit={audit}
+    />
   );
 }
 

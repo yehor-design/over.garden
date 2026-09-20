@@ -234,3 +234,27 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   the owner's separate approval. WCAG 2.2 AA is the target and the gate. Nothing
   here relaxes ADR-0023, ADR-0024 D3, ADR-0028 or ADR-0029. Accepted 2026-09-17;
   execution is SDD Slice 28 (`OVE-439`–`OVE-459`), foundation first.
+- ADR-0032 — A public page is a static document (2026-09-20). Binding: a public
+  page's content is part of the prerendered shell — in the served bytes, outside
+  every `<div hidden>`, painted without a runtime — and only who is reading
+  arrives at request time. Two documents, told apart by whether the route knows
+  its language: static for everything under `/[locale]`, request-time for the
+  workspace; the proxy rewrites the default locale into `/uk/…` too, so the
+  largest market gets the same document as the other two. The session is
+  started and never awaited; the regions that differ for a gardener are
+  boundaries whose fallback is the guest's working control. A static document
+  does not read its address on the server, and the only boundary it may carry
+  is one a prerender can only postpone — a boundary that *completes* during
+  Next's per-address prerender is given a segment id the request-time resume
+  allots again. A page does not read `searchParams`; a query string the route's
+  policy accepts renders from the listing's twin under the reserved segment
+  `/q`. No `loading.tsx` above a static page, one placeholder sample for a
+  dynamic route. A failed read is never prerendered, and a build never needs a
+  database. Nothing above a page changes by itself: what the chrome learns after
+  it is served (the address, the session, the owner, the rail) lives in a store
+  read with `useSyncExternalStore`, never in a context value, because React
+  renders a boundary it has not hydrated on the client when a context above it
+  changes — and a transition does not prevent it (D10). The LCP budget is
+  measured with throttling applied, and the simulated figure is recorded beside
+  it. Accepted 2026-09-20; delivered for the document, the shell, the home feed,
+  the journal entry and the organism card; the remaining families follow D8.

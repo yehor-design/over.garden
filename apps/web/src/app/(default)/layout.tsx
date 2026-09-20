@@ -8,7 +8,7 @@ import {
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import { getRequestInterfaceLocalization } from "@/server/interface-localization";
 import { getPublicSiteUrl } from "@/lib/runtime-url";
-import { RootDocument } from "@/app/root-document";
+import { RequestRootDocument } from "@/app/root-document";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, market } = await getRequestInterfaceLocalization();
@@ -39,8 +39,8 @@ export default function DefaultRootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <RootDocument lang={DEFAULT_PUBLIC_LOCALE} localization={null}>
+    <RequestRootDocument lang={DEFAULT_PUBLIC_LOCALE}>
       {children}
-    </RootDocument>
+    </RequestRootDocument>
   );
 }

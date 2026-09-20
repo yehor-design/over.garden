@@ -29,7 +29,12 @@ describe("OVE-348 atomic journal edit smoke", () => {
     const commitStatus = read(
       "src/server/media/ephemeral-staging-commit-status.ts",
     );
-    const publicPage = read("src/app/[locale]/[profileHandle]/post/[entryNumber]/page.tsx");
+    // The owner's way into the editor is request data, so it lives in the
+    // entry's regions rather than in the page, which is a static document
+    // (ADR-0032 D2).
+    const publicPage = read(
+      "src/app/[locale]/[profileHandle]/post/[entryNumber]/entry-regions.tsx",
+    );
     const workspaceRepository = read(
       "src/server/garden-workspace-repository.ts",
     );

@@ -65,7 +65,7 @@ export function SiteShellNavigationList({
   ariaLabel,
 }: {
   items: readonly SiteShellNavigationItem[];
-  pathname: string;
+  pathname: string | null;
   compact?: boolean;
   ariaLabel: string;
 }) {
@@ -110,7 +110,7 @@ export function SiteShellMobileNavigation({
   primaryActionKey,
 }: {
   items: readonly SiteShellNavigationItem[];
-  pathname: string;
+  pathname: string | null;
   ariaLabel: string;
   /** The one slot drawn as a filled action rather than a destination. */
   primaryActionKey?: SiteShellNavigationKey;
@@ -124,7 +124,7 @@ export function SiteShellMobileNavigation({
       <ul className="mx-auto grid max-w-lg grid-cols-5 items-stretch">
         {items.map((item) => {
           const Icon = NAVIGATION_ICONS[item.key];
-          const active = isSiteShellItemActive(pathname, item);
+          const active = pathname !== null && isSiteShellItemActive(pathname, item);
           const isPrimary = item.key === primaryActionKey;
 
           return (
@@ -205,11 +205,11 @@ function SiteShellNavigationLink({
   compact,
 }: {
   item: SiteShellNavigationItem;
-  pathname: string;
+  pathname: string | null;
   compact: boolean;
 }) {
   const Icon = NAVIGATION_ICONS[item.key];
-  const active = isSiteShellItemActive(pathname, item);
+  const active = pathname !== null && isSiteShellItemActive(pathname, item);
 
   return (
     <Link

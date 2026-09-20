@@ -9,7 +9,6 @@ import { getPublicJournalDirectoryCopy } from "@/lib/public-journal-directory-co
 import {
   isPublicLocale,
   localizedPath,
-  PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
   PUBLIC_LOCALES,
 } from "@/lib/public-localization";
@@ -44,7 +43,7 @@ interface PublicJournalsRouteProps {
 }
 
 export function generateStaticParams() {
-  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({

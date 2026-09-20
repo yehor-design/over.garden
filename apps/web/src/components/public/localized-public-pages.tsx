@@ -80,7 +80,6 @@ export function LocalizedHomePage({
   feed,
   request,
   topics,
-  isAuthenticated,
   state,
   failure = null,
   jsonLd,
@@ -90,7 +89,6 @@ export function LocalizedHomePage({
   feed: PublicFeedPage;
   request: PublicFeedRequest;
   topics: TrustedPublicFeedTopic[];
-  isAuthenticated: boolean;
   state: PublicHomeFeedState;
   failure?: WorkspaceFailureDescription | null;
   jsonLd?: Record<string, unknown> | null;
@@ -104,7 +102,6 @@ export function LocalizedHomePage({
         feed={feed}
         request={request}
         topics={topics}
-        isAuthenticated={isAuthenticated}
         state={state}
         failure={failure}
       />
