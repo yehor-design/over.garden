@@ -203,9 +203,18 @@ test.describe("the mobile shell", () => {
         ).toBe(true);
 
         if (width < 1024) {
-          await expect(
-            page.locator('[data-site-shell-region="mobile-navigation"]'),
-          ).toBeVisible();
+          const mobileNavigation = page.locator(
+            '[data-site-shell-region="mobile-navigation"]',
+          );
+          // The region streams in and is then replaced by its hydrated copy,
+          // so for a moment the document holds both — which failed this
+          // assertion on CI as a strict-mode violation rather than as what it
+          // is. `settleShell` hydrates the *header*; this region has a
+          // boundary of its own. One nav is also the assertion worth making:
+          // a reader must not be handed two identical navigation landmarks.
+          await expect(mobileNavigation).toHaveCount(1);
+          await waitForHydration(mobileNavigation);
+          await expect(mobileNavigation).toBeVisible();
 
           // Every tab label is one line at its own size. It is two in
           // Bulgarian the moment the slot loses four pixels to padding, and
