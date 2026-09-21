@@ -61,6 +61,15 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**Owned destination search (OVE-483):** the inventory writing entrance and
+first-entry parent selection share an authenticated picker over the complete
+owned corpus, with bounded cursor pages, parent/type/species context and genuine
+successful-publication recents. Multiple spaces have no implicit first choice.
+A removed destination is refused at publication and another parent can be
+selected without losing editor text. The routed global composer remains
+separate downstream work. See `docs/redesign/2026-09-21/OVE-483-PROOF.md` and
+the authenticated Linear receipt for verification and release identities.
+
 **Centered shell delivery (OVE-481):** navigation and reading share a centered
 1280 px desktop frame, a 976 px two-column frame and compact mobile navigation.
 The four destinations are Feed, Explore, My garden and Activity; account

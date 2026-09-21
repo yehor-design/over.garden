@@ -210,7 +210,8 @@ async function GardenHomeSections({
   const canWrite = true;
   const requestedSpaceId = uuidParam(params.space);
   const defaultSpaceId =
-    workspace.spaces.status === "ready"
+    workspace.spaces.status === "ready" &&
+    workspace.spaces.value.totalCount === 1
       ? (workspace.spaces.value.spaces[0]?.id ?? null)
       : null;
   const selectedSpaceId = requestedSpaceId || defaultSpaceId;
