@@ -140,7 +140,13 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   is a Server Action reference and never a client closure; choosing a language is
   a navigation, and cross-locale links carry `prefetch={false}`; there is one
   sign-in screen and `buildSignInHref` is the only place that spells its address.
-  Accepted and implemented by OVE-376 through OVE-379.
+  Accepted and implemented by OVE-376 through OVE-379. D4 amended 2026-09-21
+  (OVE-472): only a document load writes the language preference, the proxy
+  forwards a language to the render only when the address names one, and
+  `apps/web/patches/next@16.2.11.patch` backports facebook/react#36134 — without
+  it the in-place re-render after a workspace language choice never committed.
+  Delete the patch when `next` moves to 16.3 or later, which bundles the fix;
+  pnpm will not install with it left behind.
 - ADR-0025 — The Stable Registry release model and the Release Center are
   retired; the EPPO observed capture stays (2026-09-05). Binding: no Foundation
   release, edition, extension pack, Release Center or Stable Catalog; the

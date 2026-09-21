@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
 
+import { waitForHydration } from "./helpers/hydration";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import {
   removeSyntheticGardener,
@@ -292,5 +293,237 @@ test.describe("an entry keeps the language it was written in", () => {
       marked.marked.some((text) => text.includes(PREFIX)),
       JSON.stringify(marked),
     ).toBe(true);
+  });
+});
+
+/**
+ * A language, once chosen, stays chosen.
+ *
+ * The owner found this on 2026-09-21 on their own profile page: the language
+ * control there did nothing. Three defects stacked, and no test had ever
+ * pressed a language option to see any of them.
+ *
+ * 1. On a workspace route the choice is a Server Action that writes the
+ *    cookie. The render that follows it read the language from a header the
+ *    proxy had set *before* the choice, which outranked the cookie, so the page
+ *    came back in the language the reader had just left.
+ * 2. That page's own `/ru/…` links were then prefetched, and the proxy wrote
+ *    the preference from the prefix of every request it could not tell from a
+ *    landing — a router prefetch included — so each one wrote `ru` back.
+ * 3. With both fixed, a gardener's pages still stayed in the old language: the
+ *    transition that applies the action's render never committed. React's
+ *    canary in Next 16.2.11 drops a ping that arrives from inside a render that
+ *    has already suspended with delay (facebook/react#36134, backported in
+ *    `patches/next@16.2.11.patch`).
+ *
+ * Asserted on what is deterministic: what the page says after the choice and
+ * after a reload, and which responses wrote the preference at all. A prefetch's
+ * `Set-Cookie` racing a reload is not something to assert (see
+ * `next-strips-router-headers-before-middleware` in the proxy's history).
+ */
+const LOCALE_COOKIE = "overgarden_interface_locale";
+const CHOICE_PREFIX = "ove472";
+const CHROME = { uk: "Журнали", bg: "Дневници", ru: "Журналы" } as const;
+type ChoiceLocale = keyof typeof CHROME;
+
+function recordLanguageWrites(page: Page) {
+  const writes: Array<{ path: string; by: string; value: string }> = [];
+  const pending: Array<Promise<void>> = [];
+  page.on("response", (response) => {
+    pending.push(
+      response
+        .allHeaders()
+        .then((headers) => {
+          const line = (headers["set-cookie"] ?? "")
+            .split("\n")
+            .find((cookie) => cookie.startsWith(`${LOCALE_COOKIE}=`));
+          if (!line) return;
+          const request = response.request();
+          writes.push({
+            path: new URL(response.url()).pathname,
+            by: request.headers()["next-action"]
+              ? "action"
+              : request.resourceType(),
+            value: line.split(";")[0]!.split("=")[1]!,
+          });
+        })
+        // A response still arriving when the test closes its page cannot be
+        // read any more; it must not fail the test in place of what it proved.
+        .catch(() => undefined),
+    );
+  });
+  return {
+    async all() {
+      await Promise.all(pending);
+      return writes;
+    },
+    /** Everything that wrote the preference and was not a choice. */
+    async notChoices() {
+      await Promise.all(pending);
+      return writes.filter(
+        (write) => write.by !== "document" && write.by !== "action",
+      );
+    },
+  };
+}
+
+async function chooseLanguage(page: Page, locale: ChoiceLocale) {
+  const control = page.locator("[data-interface-language-control]");
+  await expect(control).toHaveCount(1);
+  const summary = control.locator("summary");
+  const option = control.locator(
+    `[data-interface-language-option][data-interface-locale="${locale}"]`,
+  );
+  await waitForHydration(summary);
+  await waitForHydration(option);
+  // A reader chooses from a page that has settled, and that is when the
+  // stalled transition (3 above) reproduced: pressed the instant the control
+  // hydrated, it committed often enough to pass against the broken build.
+  await page.waitForLoadState("networkidle");
+  await summary.click();
+  await option.click();
+}
+
+async function expectLanguage(page: Page, locale: ChoiceLocale) {
+  await expect(
+    page.locator(
+      `[data-interface-language-option][data-interface-locale="${locale}"]`,
+    ),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(page.locator('[data-site-shell-region="header"]')).toContainText(
+    CHROME[locale],
+  );
+}
+
+test.describe("a language, once chosen, stays chosen", () => {
+  let pool: Pool;
+  let gardenerId: string | null = null;
+
+  test.beforeAll(() => {
+    pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+  });
+
+  test.afterAll(async () => {
+    await removeSyntheticGardener(pool, gardenerId);
+    await pool.end();
+  });
+
+  test("a guest's choice on a workspace route re-renders the page, and holds", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    await selectVantage(context, baseURL, "ru", "bulgaria");
+    const writes = recordLanguageWrites(page);
+
+    await page.goto("/garden", { waitUntil: "load" });
+    await expectLanguage(page, "ru");
+    await chooseLanguage(page, "uk");
+    // No reload: the action's own render is the answer, and it used to be
+    // Russian.
+    await expectLanguage(page, "uk");
+
+    await page.reload({ waitUntil: "load" });
+    await expectLanguage(page, "uk");
+    expect(await writes.notChoices()).toEqual([]);
+    expect(await writes.all()).toContainEqual({
+      path: "/garden",
+      by: "action",
+      value: "uk",
+    });
+  });
+
+  test("a gardener's workspace and both profile pages keep the language chosen", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    test.setTimeout(90_000);
+    await selectVantage(context, baseURL, "ru", "bulgaria");
+    const gardener = await signInSyntheticGardener({
+      baseURL,
+      context,
+      pool,
+      prefix: CHOICE_PREFIX,
+    });
+    gardenerId = gardener.id;
+    const writes = recordLanguageWrites(page);
+
+    // The workspace's own page, which is the heaviest re-render there is.
+    // With the server fixed, it still came back Russian nine times in ten: the
+    // action's render suspended with delay, a Flight chunk pinged the root
+    // synchronously from inside that render, and React 19.3's canary of
+    // 2026-03-17 dropped the ping, so the transition waited for ever. Next
+    // 16.2.11 carries that canary; `patches/next@16.2.11.patch` backports the
+    // one-line fix (facebook/react#36134).
+    await page.goto("/garden", { waitUntil: "load" });
+    await expectLanguage(page, "ru");
+    await chooseLanguage(page, "uk");
+    await expectLanguage(page, "uk");
+
+    // The workspace profile, where the owner found it: a form over a Server
+    // Action, because the address names no language. The choice made on the
+    // page before is the one this page opens in.
+    await page.goto("/garden/profile", { waitUntil: "load" });
+    await expect(page.locator("h1")).toHaveText("Мій публічний профіль");
+    await chooseLanguage(page, "bg");
+    await expect(page.locator("h1")).toHaveText("Моят публичен профил");
+    await expectLanguage(page, "bg");
+    await page.reload({ waitUntil: "load" });
+    await expect(page.locator("h1")).toHaveText("Моят публичен профил");
+
+    // The public one: a link to the prefixed spelling of the same page, which
+    // the proxy folds back to its one address where the language has one.
+    const profile = `/@${gardener.handle}`;
+    await page.goto(profile, { waitUntil: "load" });
+    await expectLanguage(page, "bg");
+    await expect(
+      page.locator(
+        '[data-interface-language-option][data-interface-locale="uk"]',
+      ),
+    ).toHaveAttribute("href", `/uk${profile}`);
+    await chooseLanguage(page, "uk");
+    await expect(page).toHaveURL(new RegExp(`${profile}$`));
+    await expectLanguage(page, "uk");
+    await page.reload({ waitUntil: "load" });
+    await expectLanguage(page, "uk");
+
+    expect(await writes.notChoices()).toEqual([]);
+  });
+
+  test("a prefixed address the router fetches is never a choice", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    await selectVantage(context, baseURL, "uk", "bulgaria");
+    const writes = recordLanguageWrites(page);
+    await page.goto("/journals", { waitUntil: "load" });
+    await expectLanguage(page, "uk");
+
+    // What a router prefetch of a Russian link is by the time it reaches the
+    // proxy: Next strips its own headers first, and the browser's
+    // `Sec-Fetch-Dest: empty` is what is left of it.
+    const status = await page.evaluate(() =>
+      fetch("/ru/journals", { headers: { rsc: "1" } }).then(
+        (response) => response.status,
+      ),
+    );
+    expect(status).toBe(200);
+    expect(await writes.notChoices()).toEqual([]);
+    await page.reload({ waitUntil: "load" });
+    await expectLanguage(page, "uk");
+
+    // The same address *loaded* is a choice, and is written down.
+    await page.goto("/ru/journals", { waitUntil: "load" });
+    await expectLanguage(page, "ru");
+    expect(await writes.all()).toContainEqual({
+      path: "/ru/journals",
+      by: "document",
+      value: "ru",
+    });
   });
 });

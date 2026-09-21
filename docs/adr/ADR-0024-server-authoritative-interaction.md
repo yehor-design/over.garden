@@ -1,6 +1,7 @@
 # ADR-0024 — Interaction, language, and sign-in are platform primitives, not hand-written client protocols
 
-- **Status:** Accepted and implemented (OVE-376 – OVE-379, 2026-09-04)
+- **Status:** Accepted and implemented (OVE-376 – OVE-379, 2026-09-04); D4
+  amended 2026-09-21 (OVE-472)
 - **Date:** 2026-09-04
 - **Decision owner:** founder/owner
 - **Linear:** project "SDD Slice 22 — Server-Authoritative Interaction, Language And Sign-In"
@@ -153,6 +154,48 @@ On a route with no locale prefix the choice is a form over a Server Action that
 writes the cookie. Nothing replaces the document, so text typed into a composer
 survives a language change. No status message and no confirmation dialog exist,
 because there is no delay to explain and nothing to discard.
+
+**Amended 2026-09-21.** The owner reported that the language control on their
+profile page did nothing. Measured on production and on local production
+builds, the in-place half of this decision had never worked: on every
+workspace route the page came back in the language the reader had just left,
+and the choice was then overwritten. Three defects, each hiding the next:
+
+1. **The render after the action read the old language.** The proxy forwarded
+   the language it resolved on the request's headers, and the render ranked
+   that header above the cookie. Next hands the render that follows a Server
+   Action the cookies the action wrote, but not new headers — so the pinned
+   language won. The proxy now forwards a language only when the address names
+   one (`/bg/…`), the one fact the render cannot read for itself; anywhere else
+   the render reads the cookie (`forwardInterfaceLocalization`). OVE-379's
+   proof of the workspace path was a no-JavaScript POST that checked the cookie
+   was written, not what the page said afterwards.
+2. **A prefetch chose a language.** The sentence at the top of this decision —
+   the preference written "on RSC navigations as well as document loads" — made
+   every router fetch of a prefixed address a choice, and the proxy cannot tell
+   a prefetch from a navigation. Since OVE-460 the options are plain anchors,
+   so choosing is always a document load and a soft switch no longer exists;
+   what the RSC write still did was let the page's own `/ru/…` links, prefetched
+   the moment the action re-rendered it, write `ru` back within 400 ms. **The
+   preference is written on document loads only** (`isDocumentNavigationRequest`,
+   which reads `Sec-Fetch-Dest` — a header that does reach middleware, unlike the
+   router's). That supersedes the `prefetch={false}` guarantee above as the
+   mechanism: no prefetch can write the preference, whatever the link.
+3. **The transition never committed.** With both fixed, a gardener's pages —
+   the workspace, the account pages — still stayed in the old language nine
+   times in ten. The action's render suspended with delay, a Flight chunk in
+   `resolved_model` state pinged the root synchronously from inside that
+   render, and the React canary bundled with Next 16.2.11
+   (`19.3.0-canary-3f0b9e61-20260317`) drops such a ping: the root was marked
+   suspended with nothing left to wake it. React fixed it a week later
+   (facebook/react#36134); Next 16.3 bundles the fix. Until the upgrade,
+   `apps/web/patches/next@16.2.11.patch` backports that one change, and pnpm
+   refuses to install once `next` moves off 16.2.11 — the reminder to delete it.
+
+`tests/interface-locale.spec.ts` now presses a language option: on the
+workspace and the workspace profile as a gardener, on `/garden` as a guest, on
+a public profile, and with a router-shaped fetch of a prefixed address. Each
+case was falsified against the build without its fix.
 
 ### D5. There is one sign-in screen
 

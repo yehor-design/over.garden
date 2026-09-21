@@ -13,18 +13,24 @@ cookie value, request body, timing sample, or private route.
 ## Choosing a language today (ADR-0024, D4 — OVE-379)
 
 A language option is a link. On a public page the locale is in the path, so the
-option is an `<a>` carrying `prefetch={false}`, and the proxy writes the
-preference from the prefix the request lands on — including RSC navigations, so a
-soft switch persists immediately. On a route with no locale prefix the option is a
-form over a Server Action that writes the cookie; nothing replaces the document,
-so text typed into a composer survives the change. There is no status message and
-no discard dialog, because there is no delay to explain and nothing to discard.
+option is a plain `<a>` — a document navigation, never prefetched — and the
+proxy writes the preference from the prefix the document load lands on. On a
+route with no locale prefix the option is a form over a Server Action that writes
+the cookie; nothing replaces the document, so text typed into a composer survives
+the change. There is no status message and no discard dialog, because there is
+no delay to explain and nothing to discard.
 
-`prefetch={false}` is load-bearing and not decoration: Next strips
-`Next-Router-Prefetch` before middleware runs, so a router prefetch of `/ru/…`
-reaches the proxy looking exactly like a reader landing there. Hovering an option
-did rewrite the reader's saved language until that was fixed;
-`language-switcher.test.tsx` fails if the attribute is removed.
+**Only a document load writes the preference** (ADR-0024 D4, amended
+2026-09-21, `OVE-472`). Next strips `Next-Router-Prefetch` before middleware
+runs, so a router prefetch of `/ru/…` reaches the proxy looking exactly like a
+router navigation. The proxy used to write on both, and a page's own `/ru/…`
+links, prefetched the moment a choice re-rendered it, wrote `ru` back over the
+choice. `isDocumentNavigationRequest` reads `Sec-Fetch-Dest`, which does reach
+the proxy. The render after the choice reads the language from the cookie: the
+proxy forwards one on the request headers only when the address names it, since
+Next hands the post-action render new cookies but not new headers. And
+`patches/next@16.2.11.patch` backports the React fix (facebook/react#36134)
+without which that re-render's transition never committed on a gardener's pages.
 
 **Everything below this section, down to "Sessions (ADR-0022, D6)", describes the
 deleted coordinator** — `interfaceLocaleChangeCoordinator`, its participant

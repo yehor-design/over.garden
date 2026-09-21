@@ -4,7 +4,7 @@ Status: current. The market-and-locale model below was replaced on 2026-09-17
 (`OVE-460`, PR #398) and re-stated here on the same day (`OVE-446`). The
 sections after "Language-Control Ownership" are the OVE-205 text and are
 history unless this page says otherwise.
-Issues: OVE-205 (the market-before-locale resolver), OVE-208 (typography), OVE-338 (account routes), OVE-460 (the reader's language), OVE-446 (this restatement)
+Issues: OVE-205 (the market-before-locale resolver), OVE-208 (typography), OVE-338 (account routes), OVE-460 (the reader's language), OVE-446 (this restatement), OVE-472 (a choice that stays chosen)
 Date: 2026-09-17, superseding 2026-08-25
 
 ## Purpose
@@ -69,7 +69,13 @@ locale prefix.
    fails to the **Ukraine** market.
 4. The locale is taken from the first of: an explicit value, the route's locale
    prefix, the persisted preference. Each is accepted only if it is one of the
-   three; otherwise the market's default locale is used.
+   three; otherwise the market's default locale is used. The explicit value is
+   what the proxy forwards to the render, and it forwards one **only when the
+   address names a language** — the one fact the render cannot read for
+   itself. Everywhere else the render reads the cookie, which is where a Server
+   Action's choice lands: a language pinned on the request before the choice
+   used to outrank it, and every workspace page re-rendered in the language
+   just left (`OVE-472`, ADR-0024 D4 amended 2026-09-21).
 5. `Accept-Language` is **not** an input. A header the reader never set is not a
    choice they made, and `resolveInterfaceLocalization` has no parameter for it.
 6. A locale prefix chooses a language and says nothing about the market. A
@@ -81,15 +87,26 @@ signal x persisted market x URL prefix x persisted locale, 600 combinations —
 asserts every answer is a market-valid locale, and names the production failure
 above as its own case.
 
-**Cross-locale links are never prefetched.** Next strips
-`Next-Router-Prefetch` before middleware runs, so `proxy.ts` cannot tell a
-prefetch of `/ru/...` from a reader landing there and writes the preference
-either way; left prefetchable, merely _hovering_ an option rewrote the reader's
-saved language (ADR-0024 D4, reproduced in Chromium on 2026-09-04). Every
-option is a plain anchor. Three modules may build such an address — the route
-policy that declares the builder, the language control, and the raw
-`404`/`410` lifecycle document — and the same test fails if a fourth appears or
-if one of the three reaches for `next/link`.
+**The preference is written on a document load and on nothing else.** Next
+strips `Next-Router-Prefetch` before middleware runs, so `proxy.ts` cannot tell
+a router prefetch of `/ru/...` from a router navigation. It used to write the
+preference on both: merely _hovering_ an option rewrote the reader's saved
+language (ADR-0024 D4, reproduced in Chromium on 2026-09-04), and until
+2026-09-21 the prefetches of a page's own `/ru/...` links undid a choice made
+seconds earlier (`OVE-472`). A router fetch sends `Sec-Fetch-Dest: empty`, which
+does reach the proxy, so `isDocumentNavigationRequest` is the one gate, whatever
+the link. Every option is still a plain anchor, and never prefetched. Three
+modules may build such an address — the route policy that declares the
+builder, the language control, and the raw `404`/`410` lifecycle document — and
+the same test fails if a fourth appears or if one of the three reaches for
+`next/link`.
+
+**An address with no prefixed twin is linked unprefixed in every language.**
+`/support` and the workspace render in the reader's language at their one
+address; `/bg/support` and `/bg/garden` are 404s, and the footer and the
+owner's empty profile linked them until 2026-09-21.
+`site-shell-navigation.test.ts` asks the proxy's own classification about every
+link the shell draws, in every language.
 
 Legacy `/uk` public URLs permanently redirect to their corresponding
 unprefixed canonical URL. `/uk` is not a supported canonical prefix and must
