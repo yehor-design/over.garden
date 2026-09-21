@@ -161,6 +161,8 @@ number in `apps/web/sql` when these were taken.
 | `0077` | `OVE-465` | `journal_topic_slug_history` with its sync trigger and seed, and the generated Latin `CHECK` on `plant_objects.public_slug` and `journal_topics.slug`, each guarded on the absence of native-script rows so that it arrives on the replay after `pnpm address:names:romanize` (ADR-0029 D4, amendment of 2026-09-18). Applied to production 2026-09-19, **after** the release that issues Latin names, not before: narrowing the topic column first would have refused a Cyrillic tag from the release still live. `pnpm address:names:romanize --apply` followed and moved four passports |
 | `0078` | `OVE-459` (follow-up) | `source_unmatched` as its own item type, the 13,456 open rows moved onto it, the `CHECK` that an **open** `source_link` is appliable (a subject, a source slug and a snapshot), and the partial index the sources page counts unplaced records by. Not part of the `OVE-459` contract, which put the reconciliation ladder out of scope: found while proving it, that production's queue refused every row it held, and authorised by the owner on 2026-09-20. Applied to production 2026-09-21 |
 
+| `0079` | `OVE-476` | Account-scoped, versioned publication disclosure receipts, backfilled from surviving historical entry receipts without changing their versions; cascade on account erasure. Apply before deploying the version-aware publication reader. |
+
 `OVE-419` through `OVE-423`, `OVE-427` and `OVE-430` through `OVE-434` need no
 SQL and therefore hold no allocation; under rule 3 none of them may inherit a
 number from this block. The same holds for `OVE-463` and `OVE-466` of phase 5. `OVE-432` grows `JournalDocumentV1` additively at schema

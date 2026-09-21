@@ -106,7 +106,7 @@ async function runIntegrationFaultProof() {
     trackedJobKeys.add(finalizeKey(initialPublication));
     const uniqueTopic = `ove348-${ownerUserId.slice(0, 8)}`;
     const created = await repository.createSpaceJournalEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       mentionedPlantObjectIds: plantObjectIds,
       title: "Atomic edit baseline",
@@ -337,7 +337,7 @@ async function runIntegrationFaultProof() {
     const archivePublication = atomicPublication([]);
     trackedEntryIds.push(archivePublication.publishId);
     const archiveCreated = await repository.createSpaceJournalEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       mentionedPlantObjectIds: [plantObjectIds[0]!],
       title: "Archive race baseline",
@@ -377,7 +377,7 @@ async function runIntegrationFaultProof() {
     const faultPublication = atomicPublication([]);
     trackedEntryIds.push(faultPublication.publishId);
     const faultCreated = await repository.createSpaceJournalEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       mentionedPlantObjectIds: [plantObjectIds[0]!],
       title: "Rollback baseline",
@@ -432,7 +432,7 @@ async function runIntegrationFaultProof() {
     const archivedPublication = atomicPublication([]);
     trackedEntryIds.push(archivedPublication.publishId);
     await repository.createSpaceJournalEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       mentionedPlantObjectIds: [plantObjectIds[0]!],
       title: "Archived exclusion baseline",
@@ -657,6 +657,7 @@ function atomicPublication(mediaAssetIds: readonly string[]) {
       publishId,
       requestDigest: digest43(publishId),
       disclosureAccepted: true,
+      disclosureVersion: "first-publication-v6",
       coverMediaAssetId: null,
       handoff: null,
     };
@@ -666,6 +667,7 @@ function atomicPublication(mediaAssetIds: readonly string[]) {
     publishId,
     requestDigest: digest43(publishId),
     disclosureAccepted: true,
+    disclosureVersion: "first-publication-v6",
     coverMediaAssetId: mediaAssetIds[0]!,
     handoff: {
       stagingSessionId,

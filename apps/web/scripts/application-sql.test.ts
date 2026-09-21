@@ -77,6 +77,7 @@ describe("versioned application SQL bootstrap", () => {
       "0076_ove464_journal_entry_numbers.sql",
       "0077_ove465_latin_names.sql",
       "0078_queue_carries_answerable_questions.sql",
+      "0079_ove476_publication_disclosure_receipts.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

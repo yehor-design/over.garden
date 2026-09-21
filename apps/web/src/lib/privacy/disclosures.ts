@@ -1,4 +1,4 @@
-export const FIRST_PUBLICATION_DISCLOSURE_VERSION = "first-publication-v5";
+export const FIRST_PUBLICATION_DISCLOSURE_VERSION = "first-publication-v6";
 export const ERASURE_REQUEST_INTAKE_VERSION = "erasure-request-mvp-v1";
 
 export const SUPPORT_EMAIL = "support.overgarden@gmail.com";
@@ -18,7 +18,7 @@ export const MVP_RETENTION_RULES = [
     summary:
       "A selected photo is converted in the browser into the final WebP. Its exact bytes use short-lived private staging and the selected source file is not retained by OverGarden.",
     developerBoundary:
-      "Staging capabilities and object keys stay out of public HTML, search documents, analytics, support evidence, and operator readouts. Normal abandonment cleanup is 15 minutes; the one-day bucket lifecycle is catastrophic fallback only.",
+      "Staging capabilities and object keys stay out of public HTML, search documents, analytics, support evidence, and operator readouts. Normal abandonment cleanup is two hours after the last touch; the one-day bucket lifecycle is catastrophic fallback only.",
   },
   {
     title: "Public final WebPs",
@@ -26,6 +26,13 @@ export const MVP_RETENTION_RULES = [
       "The exact browser-created final WebP stays available while the related public entry is active and is made unreachable after entry deletion or erasure.",
     developerBoundary:
       "Public pages may render final media URLs only; erasure removes OverGarden-controlled objects when their keys are still known.",
+  },
+  {
+    title: "Publication acceptance",
+    summary:
+      "The accepted notice version and acceptance time are kept until account erasure. Deleting a journal entry does not remove this agreement.",
+    developerBoundary:
+      "Account-scoped receipts contain no journal text or request metadata and cascade on account deletion.",
   },
   {
     title: "Operator audit logs",
@@ -69,7 +76,7 @@ export const MVP_LEGAL_COPY_BOUNDARIES = [
 
 export const FIRST_PUBLICATION_DISCLOSURE_LINES = [
   "Publishing makes this journal entry publicly readable by visitors who can reach the public page and by OverGarden public surfaces that reference it.",
-  "Useful first-party editorial, guide, answer, and landing pages can be indexed for the MVP; thin or unsafe user-generated surfaces stay out of sitemaps unless explicit promotion rules allow indexing.",
+  "Published journal entries are public and eligible for search-engine indexing. Do not publish information you want to keep private.",
   "Precise location is not collected or shown; only supported coarse regions can appear when you choose region visibility.",
   "Selected photos are converted in the browser into final WebPs. Their exact bytes use short-lived private staging and become public only with a successful atomic Publish; OverGarden does not retain the selected source files.",
   "You can delete a public entry permanently. It disappears at once from your journal and from public pages, there is no archive and no restore, and a scrubbed technical record is kept for at most seven days only to finish removing it from search and to make its photos unreachable.",

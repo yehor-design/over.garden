@@ -100,7 +100,7 @@ describe("root route segments", () => {
 
   it("flags a prefixed path the prefixed tree cannot serve", () => {
     for (const path of [
-      "/bg/support",
+      "/bg/erasure",
       "/ru/erasure",
       "/bg/garden",
       "/bg/account",

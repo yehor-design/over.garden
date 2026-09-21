@@ -16,7 +16,7 @@ describe("/markets/[market]", () => {
     expect(html).toContain("OverGarden для садівників в Україні");
     expect(html).toContain("Для кого це");
     expect(html).toContain("Обіцянка");
-    expect(html).toContain("Почати приватний запис");
+    expect(html).toContain("Створити публічний запис");
     expect(html).not.toContain("/ru/markets/ukraine");
     expect(html).not.toContain("/bg/markets/ukraine");
     expect(html).not.toContain("data-interface-language-control");

@@ -1312,7 +1312,7 @@ describe("app route cache guardrail", () => {
     const workspace = await responseFor("/garden", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
-    const permalink = await responseFor("/support", {
+    const permalink = await responseFor("/erasure", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
     const alreadyPrefixed = await responseFor("/bg/journals", {
@@ -1727,8 +1727,15 @@ describe("organism addresses (ADR-0026 D8)", () => {
       expect(response.status).toBe(200);
     });
 
+    it("serves translated support documents", async () => {
+      for (const path of ["/bg/support", "/ru/support"]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(200);
+      }
+    });
+
     it("404s a prefixed path the prefixed tree cannot serve", async () => {
-      for (const path of ["/bg/support", "/ru/erasure"]) {
+      for (const path of ["/bg/erasure", "/ru/erasure"]) {
         const response = await responseFor(path, document);
         expect(response.status, path).toBe(404);
       }

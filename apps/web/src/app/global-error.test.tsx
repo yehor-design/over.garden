@@ -108,6 +108,8 @@ describe("global error market boundary", () => {
     expect(html.match(/data-interface-language-control=/g)).toHaveLength(1);
     expect(html.match(/data-interface-locale="/g)).toHaveLength(3);
     expect(html).not.toContain("private provider transport detail");
+    expect(html).toContain('href="/support"');
+    expect(html).toContain('href="/privacy"');
   });
 
   it("reconciles unprefixed failures from the bounded context endpoint without sending page state", async () => {

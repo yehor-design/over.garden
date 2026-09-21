@@ -61,6 +61,15 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. Current production still has the older layout;
 accepted documents/prototype do not imply that runtime migration is complete.
 
+**OVE-476 implementation, release verification pending:** public-only journal
+copy is aligned across UK/BG/RU. Notice v6 distinguishes public publication,
+browser WebP preparation, transient input and final deletion. Additive migration
+0079 was applied on 2026-09-21 before releasing its reader; acceptance now
+survives entry purge and cascades on account erasure. The implementation adds
+static support documents in all three languages and no-JavaScript notice proof.
+See `docs/redesign/2026-09-21/OVE-476-PUBLICATION-PROMISES.md`; Linear records
+the final deployed SHA after green CI and release verification.
+
 The older September 17 paragraphs below are historical implementation receipts;
 where they describe future design direction, the September 21 amendment to
 ADR-0031 and the new IA now govern. Existing OVE-467/468/469 technical work is

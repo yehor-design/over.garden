@@ -78,6 +78,7 @@ export interface AtomicJournalCreateRequest {
   mediaPlaceholders?: Record<string, string>;
   returnTo: string;
   disclosureAccepted: boolean;
+  disclosureVersion: string;
 }
 
 export interface AtomicJournalCreateResponse {

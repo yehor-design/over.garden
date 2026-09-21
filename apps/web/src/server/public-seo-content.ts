@@ -205,7 +205,7 @@ const BLOG_POSTS: BlogPostContent[] = [
       },
       {
         heading: "Public pages must earn trust before they earn traffic.",
-        body: "OverGarden will not index empty catalog stubs, transient composer text, or account-only data as search bait. Public discovery starts with authored pages, then expands only when real public entries and safe aggregation thresholds make a page useful on its own.",
+        body: "OverGarden will not index empty catalog stubs, transient composer text, or account-only data as search bait. Published journal entries are public and eligible for search-engine indexing.",
       },
       {
         heading: "The first publication is intentional.",
@@ -250,7 +250,7 @@ const GUIDES: GuideContent[] = [
       },
       {
         title: "Add a photo only when it helps future comparison",
-        body: "A photo is useful when it shows a visible stage or problem. OverGarden keeps public media derivative-only and strips photo metadata before any public display.",
+        body: "A photo is useful when it shows a visible stage or problem. Your browser prepares the photo before upload; OverGarden does not retain the source original. Review the image for details you do not want to make public.",
       },
       {
         title: "Return to the same object",
@@ -261,7 +261,7 @@ const GUIDES: GuideContent[] = [
       {
         label: "Open the workspace",
         href: "/garden",
-        description: "Create the first private record behind the auth gate.",
+        description: "Sign in and publish your first public observation.",
       },
       {
         label: "Why proof beats generic advice",
@@ -375,13 +375,13 @@ const MARKET_LANDINGS: MarketLandingContent[] = [
     path: "/markets/ukraine",
     title: "OverGarden for gardeners in Ukraine",
     description:
-      "A public landing page for Ukrainian gardeners who need a private-first plant record and optional public proof.",
+      "A public landing page for Ukrainian gardeners who need a public plant journal and dated observations.",
     localAudience:
       "Gardeners growing on balconies, dachas, village plots, greenhouses, and small household spaces in Ukraine.",
     promise:
-      "Keep a living record first, then decide what becomes public proof without exposing precise location.",
+      "Publish dated observations about your plants without adding a precise location. Every published entry is public.",
     proofPlan: [
-      "Private first-entry and same-object follow-up remain the activation core.",
+      "The first public entry and follow-up observations build the history of the same object.",
       "Public pages use authored guidance now and real public entries only after explicit publication.",
       "Location stays hidden or coarse-region only; precise coordinates stay out of product surfaces.",
     ],
@@ -392,10 +392,10 @@ const MARKET_LANDINGS: MarketLandingContent[] = [
     },
     relatedLinks: [
       {
-        label: "Start a private record",
+        label: "Create a public entry",
         href: "/garden",
         description:
-          "Save the first observation before deciding whether anything becomes public.",
+          "Publish your first observation. Unpublished writing exists only in the current tab; there are no saved drafts.",
       },
       {
         label: "Read the first-record guide",
@@ -411,13 +411,13 @@ const MARKET_LANDINGS: MarketLandingContent[] = [
     path: "/markets/bulgaria",
     title: "OverGarden for gardeners in Bulgaria",
     description:
-      "A public landing page for Bulgarian gardeners who need a private-first plant record and optional public proof.",
+      "A public landing page for Bulgarian gardeners who need a public plant journal and dated observations.",
     localAudience:
       "Gardeners growing in gardens, yards, greenhouses, terraces, villas, and small household spaces in Bulgaria.",
     promise:
-      "Keep a living record first, then decide what becomes public proof without exposing precise location.",
+      "Publish dated observations about your plants without adding a precise location. Every published entry is public.",
     proofPlan: [
-      "Private first-entry and same-object follow-up remain the activation core.",
+      "The first public entry and follow-up observations build the history of the same object.",
       "Market content starts authored and sparse until real public records make aggregation useful.",
       "Language-specific copy and hreflang are reserved for the localization foundation.",
     ],
@@ -428,10 +428,10 @@ const MARKET_LANDINGS: MarketLandingContent[] = [
     },
     relatedLinks: [
       {
-        label: "Start a private record",
+        label: "Create a public entry",
         href: "/garden",
         description:
-          "Save the first observation before deciding whether anything becomes public.",
+          "Publish your first observation. Unpublished writing exists only in the current tab; there are no saved drafts.",
       },
       {
         label: "Read the first-record guide",
@@ -491,16 +491,14 @@ export function isMarketLandingAvailableInLocale(
 export function resolveAuthoredPublicSurfaceDiscovery(
   input: AuthoredPublicSurfaceSourceInput,
 ): PublicSurfaceDiscoveryResult {
-  return resolvePublicSurfaceDiscoveryForRequest(
-    {
-      consumerId: input.consumerId,
-      candidateState: input.candidateState ?? "candidate",
-      visibleText: input.visibleText,
-      distinctPublicEntityIds: input.distinctPublicEntityIds,
-      canonicalPath: input.canonicalPath,
-      equivalentLocales: input.equivalentLocales,
-    },
-  );
+  return resolvePublicSurfaceDiscoveryForRequest({
+    consumerId: input.consumerId,
+    candidateState: input.candidateState ?? "candidate",
+    visibleText: input.visibleText,
+    distinctPublicEntityIds: input.distinctPublicEntityIds,
+    canonicalPath: input.canonicalPath,
+    equivalentLocales: input.equivalentLocales,
+  });
 }
 
 export function authoredContentEntityIds(

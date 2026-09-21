@@ -43,7 +43,7 @@ vi.mock("@/server/author-handle-repository", () => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: mocks.revalidatePath ,
+  revalidatePath: mocks.revalidatePath,
   revalidateTag: vi.fn(),
   updateTag: vi.fn(),
 }));
@@ -157,6 +157,25 @@ describe("POST /api/garden/entries atomic create", () => {
     expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
   });
 
+  it.each([undefined, "first-publication-v5", "invented-version"])(
+    "rejects stale or missing disclosure version %s before media or journal writes",
+    async (disclosureVersion) => {
+      const { POST } = await import("./route");
+      const request = { ...atomicRequest({}), disclosureVersion };
+      const response = await POST(
+        atomicJsonRequest(request as AtomicJournalCreateRequest),
+      );
+      expect(response.status).toBe(409);
+      await expect(response.json()).resolves.toEqual({
+        code: "disclosure_version_changed",
+      });
+      expect(mocks.claimEphemeralPublicationMedia).not.toHaveBeenCalled();
+      expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
+      expect(mocks.createPlantObjectJournalEntry).not.toHaveBeenCalled();
+      expect(mocks.createSpaceJournalEntry).not.toHaveBeenCalled();
+    },
+  );
+
   it("commits a first entry directly public and returns the exact safe source context", async () => {
     const { POST } = await import("./route");
     const request = atomicRequest({
@@ -188,6 +207,7 @@ describe("POST /api/garden/entries atomic create", () => {
         atomicPublication: expect.objectContaining({
           publishId: ENTRY_ID,
           disclosureAccepted: true,
+          disclosureVersion: "first-publication-v6",
           handoff: null,
         }),
       }),
@@ -353,9 +373,7 @@ describe("POST /api/garden/entries atomic create", () => {
       orderedMediaAssetIds: [MEDIA_ID],
     });
     // Every promoted object is proven reachable, variants included.
-    expect(
-      fetcher.mock.calls.map(([url]) => String(url)).sort(),
-    ).toEqual(
+    expect(fetcher.mock.calls.map(([url]) => String(url)).sort()).toEqual(
       [
         `https://media.over.garden/${publicPath}`,
         `https://media.over.garden/derivatives/${MEDIA_ID}/1-1280.webp`,
@@ -644,6 +662,7 @@ function atomicRequest(
     mediaClaimReceipts: [],
     returnTo: "/garden",
     disclosureAccepted: true,
+    disclosureVersion: "first-publication-v6",
     ...overrides,
   };
 }

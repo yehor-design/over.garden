@@ -34,14 +34,13 @@ const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 /**
  * Every path GA4 and GTM are wired on, with whether it has a prefixed twin.
  *
- * `/support` does not: it is an unprefixed `noindex` page, and the analytics
- * gate accepting `/bg/support` says nothing about a page existing there.
+ * `/support` also has a translated static document in every interface locale.
  */
 const INSTRUMENTED_PATHS = [
   { path: "/", localized: true },
   { path: "/blog", localized: true },
   { path: "/privacy", localized: true },
-  { path: "/support", localized: false },
+  { path: "/support", localized: true },
   { path: "/first-publication-disclosure", localized: true },
 ] as const;
 

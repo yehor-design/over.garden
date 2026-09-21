@@ -120,10 +120,10 @@ export const ROOT_SEGMENTS_WITHOUT_INDEX: ReadonlySet<string> = new Set([
  * one entry per directory in `src/app/[locale]`, minus `[profileHandle]`,
  * which is dynamic and matches a handle.
  *
- * The prefixed tree is a subset of the unprefixed one — `/support` exists and
- * `/bg/support` does not — and the gap used to answer `200`. `[profileHandle]`
- * matches any single segment, so `/bg/support` reached it with the handle set
- * to `support`, failed the `@` check, called `notFound()`, and the root
+ * The prefixed tree is a subset of the unprefixed one — `/erasure` exists and
+ * `/bg/erasure` does not — and the gap used to answer `200`. `[profileHandle]`
+ * matches any single segment, so `/bg/erasure` reached it with the handle set
+ * to `erasure`, failed the `@` check, called `notFound()`, and the root
  * loading boundary had already streamed the shell.
  */
 export const LOCALE_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
@@ -153,6 +153,7 @@ export const LOCALE_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "q",
   "sources",
   "species",
+  "support",
   "topics",
   "variety",
   "wikidata",

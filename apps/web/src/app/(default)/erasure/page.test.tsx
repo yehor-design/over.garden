@@ -65,7 +65,7 @@ describe("/erasure", () => {
       formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
     );
     expect(html).toContain("ничего не удаляет автоматически");
-    expect(html).toContain("удалить или анонимизировать ссылки");
+    expect(html).toContain("данные аккаунта удаляются или обезличиваются");
     expect(html).toContain("только по возможности");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).not.toContain("Local cleanup control");
@@ -99,7 +99,8 @@ describe("/erasure", () => {
     expect(html).toContain(copy.whatIsDeletedTitle);
     expect(html).toContain(copy.whatSurvivesTitle);
     expect(html).toContain(copy.addressWindowTitle);
-    expect(html).toContain("410");
+    expect(html).toContain("Восстановить запись нельзя");
+    expect(html).not.toContain("410");
 
     // The promise set is fixed (ADR-0021, MVP_PRIVACY_RETENTION_POLICY.md).
     // `erasure-schema-coverage.test.ts` exists because the promise and the

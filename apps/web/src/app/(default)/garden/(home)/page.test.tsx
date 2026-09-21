@@ -256,7 +256,7 @@ describe("/garden workspace V2", () => {
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("Ваш приватний сад починається тут");
+    expect(html).toContain("Ведіть історію свого саду");
     expect(html).toContain("Sign in prompt");
     expect(html).toContain("Продовжити читати журнали");
     expect(html).toContain('href="/journals"');
