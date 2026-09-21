@@ -43,7 +43,8 @@ function tabTriggerClass(selected: boolean, className?: string) {
 }
 
 /** The strip both shapes draw: one rule, the tabs sitting on it. */
-const TAB_STRIP_CLASS = "flex gap-1 overflow-x-auto border-b border-border";
+const TAB_STRIP_CLASS =
+  "flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border";
 
 function Tabs({
   className,

@@ -3,11 +3,7 @@ import {
   type InterfaceLocale,
 } from "./interface-localization";
 import { buildAuthIntentResumeHref } from "./auth/auth-intent-contract";
-import {
-  buildSignInHref,
-  SIGN_IN_PATH,
-  SIGN_UP_PATH,
-} from "./navigation/sign-in-href";
+import { buildSignInHref } from "./navigation/sign-in-href";
 import { CATALOG_BROWSE_PATH } from "./public-catalog-browse";
 import { localizedPath, stripLocalePrefix } from "./public-localization";
 
@@ -46,6 +42,8 @@ export interface SiteShellFooterLink {
 export interface SiteShellNavigation {
   publicItems: SiteShellNavigationItem[];
   personalItems: SiteShellNavigationItem[];
+  utilityItems: SiteShellNavigationItem[];
+  exploreItems: SiteShellNavigationItem[];
   mobileItems: SiteShellNavigationItem[];
   /**
    * The one action of the shell (DESIGN.md §3.2, ADR-0031 D4). It lives in the
@@ -54,10 +52,10 @@ export interface SiteShellNavigation {
    */
   primaryAction: SiteShellNavigationItem;
   /**
-   * Where the primary action goes for *this* reader: the composer when they
-   * have an account, the sign-in screen with the composer as its return path
-   * when they do not. A reader who signs in from here lands on the composer,
-   * not on the workspace around it — the extra press `OVE-378` removed once.
+   * The writing destination for this reader. During the shell migration it
+   * selects an existing owned object through the inventory; the shared routed
+   * composer replaces that bridge in its own delivery. Guests resume the same
+   * destination through sign-in.
    */
   primaryActionHref: string;
   /** The sign-in screen, with the reader's current page as its return path. */
@@ -83,28 +81,8 @@ export interface SiteShellNavigation {
   };
 }
 
-export type SiteShellRouteContextKey =
-  | "feed"
-  | "catalogue"
-  | "journal"
-  | "community"
-  | "knowledge"
-  | "garden"
-  | "profile"
-  | "generic";
-
-export interface SiteShellRouteContext {
-  key: SiteShellRouteContextKey;
-  title: string;
-  description: string;
-  primaryHref: string;
-  primaryLabel: string;
-  secondaryHref: string;
-  secondaryLabel: string;
-}
-
 /** Where a reader who presses the primary action ends up once signed in. */
-export const SITE_SHELL_COMPOSER_PATH = "/garden#first-entry-composer";
+export const SITE_SHELL_COMPOSER_PATH = "/garden#inventory";
 
 /**
  * The screen the editor owns on its own, where the tab bar would compete with
@@ -143,7 +121,6 @@ const CATALOGUE_MATCH_PATHS = [
   "/breed",
   "/col",
   "/lineage/objects",
-  "/garden/objects",
 ] as const;
 
 export function getSiteShellNavigation(
@@ -157,11 +134,78 @@ export function getSiteShellNavigation(
   currentPath?: string,
 ): SiteShellNavigation {
   const copy = getInterfaceCopy(locale);
+  const protectedHref = (path: string) =>
+    isAuthenticated ? path : buildSignInHref({ returnTo: path });
   const publicItems: SiteShellNavigationItem[] = [
     item("feed", copy.navigation.feed, localizedPath(locale, "/"), "public", {
-      match: "exact",
-      paths: ["/"],
+      match: "prefix",
+      paths: ["/", "/feed", "/journals", "/journal"],
     }),
+    item(
+      "catalogue",
+      copy.navigation.explore,
+      localizedPath(locale, CATALOG_BROWSE_PATH),
+      "public",
+      {
+        match: "prefix",
+        paths: [
+          ...CATALOGUE_MATCH_PATHS,
+          "/communities",
+          "/knowledge",
+          "/guides",
+          "/answers",
+          "/topics",
+          "/blog",
+          "/markets",
+        ],
+      },
+    ),
+  ];
+  const personalItems: SiteShellNavigationItem[] = [
+    item(
+      "garden",
+      copy.navigation.myGarden,
+      protectedHref("/garden"),
+      "personal",
+      {
+        match: "prefix",
+        paths: ["/garden"],
+      },
+    ),
+    item(
+      "notifications",
+      copy.navigation.activity,
+      protectedHref(localizedPath(locale, "/notifications")),
+      "personal",
+      {
+        match: "prefix",
+        paths: ["/notifications"],
+      },
+    ),
+  ];
+  const utilityItems: SiteShellNavigationItem[] = isAuthenticated
+    ? [
+        item(
+          "bookmarks",
+          copy.navigation.bookmarks,
+          localizedPath(locale, "/bookmarks"),
+          "utility",
+        ),
+        item(
+          "wishlist",
+          copy.navigation.wishlist,
+          localizedPath(locale, "/wishlist"),
+          "utility",
+        ),
+        item(
+          "lineage-claims",
+          copy.navigation.lineageClaims,
+          "/garden/lineage/claims",
+          "utility",
+        ),
+      ]
+    : [];
+  const exploreItems: SiteShellNavigationItem[] = [
     item(
       "catalogue",
       copy.navigation.catalogue,
@@ -169,27 +213,14 @@ export function getSiteShellNavigation(
       "public",
       { match: "prefix", paths: CATALOGUE_MATCH_PATHS },
     ),
-    item(
-      "journals",
-      copy.navigation.journals,
-      localizedPath(locale, "/journals"),
-      "public",
-      {
-        match: "prefix",
-        paths: ["/journals", "/journal"],
-      },
-    ),
     ...(communitiesReady
       ? [
           item(
-            "communities" as const,
+            "communities",
             copy.navigation.communities,
             localizedPath(locale, "/communities"),
-            "public" as const,
-            {
-              match: "prefix" as const,
-              paths: ["/communities"],
-            },
+            "public",
+            { match: "prefix", paths: ["/communities"] },
           ),
         ]
       : []),
@@ -211,50 +242,6 @@ export function getSiteShellNavigation(
       },
     ),
   ];
-
-  const personalItems: SiteShellNavigationItem[] = isAuthenticated
-    ? [
-        item("garden", copy.navigation.myGarden, "/garden", "personal", {
-          match: "exact",
-          paths: ["/garden"],
-        }),
-        item(
-          "followed-feed",
-          copy.navigation.followedFeed,
-          localizedPath(locale, "/feed"),
-          "personal",
-          { match: "exact", paths: ["/feed"] },
-        ),
-        item(
-          "notifications",
-          copy.navigation.notifications,
-          localizedPath(locale, "/notifications"),
-          "personal",
-          { match: "prefix", paths: ["/notifications"] },
-        ),
-        item(
-          "bookmarks",
-          copy.navigation.bookmarks,
-          localizedPath(locale, "/bookmarks"),
-          "personal",
-          { match: "prefix", paths: ["/bookmarks"] },
-        ),
-        item(
-          "wishlist",
-          copy.navigation.wishlist,
-          localizedPath(locale, "/wishlist"),
-          "personal",
-          { match: "prefix", paths: ["/wishlist"] },
-        ),
-        item(
-          "lineage-claims",
-          copy.navigation.lineageClaims,
-          "/garden/lineage/claims",
-          "personal",
-          { match: "prefix", paths: ["/garden/lineage/claims"] },
-        ),
-      ]
-    : [];
 
   // "Sign in" and "My garden" pointed at the same URL until OVE-378, and the
   // header then kept pointing at `/garden` for another day because it read this
@@ -283,33 +270,20 @@ export function getSiteShellNavigation(
   );
   const findItem = (key: SiteShellNavigationKey) =>
     [...publicItems, ...personalItems].find((entry) => entry.key === key);
-  // The fifth slot is identity, not authentication. A tab bar that spends a
-  // slot on "Sign in" has four slots for a product whose whole purpose is
-  // gardeners publishing, and no place at all for publishing (ADR-0031 D4).
-  const youItem = item(
-    "you",
-    copy.navigation.you,
-    isAuthenticated ? "/garden/profile" : signInItem.href,
-    "personal",
-    isAuthenticated
-      ? { match: "prefix", paths: ["/garden/profile"] }
-      : // The destination is spelled in one module and read here, never
-        // written again: a second spelling is how the header once pointed a
-        // reader at `/garden` while reading its label from this file.
-        { match: "prefix", paths: [SIGN_IN_PATH, SIGN_UP_PATH] },
-  );
-  // Five slots, in this order, at every width below `lg` and in both states.
+  const garden = findItem("garden")!;
   const mobileItems = [
-    findItem("feed"),
-    findItem("catalogue"),
+    findItem("feed")!,
+    findItem("catalogue")!,
     primaryAction,
-    findItem("journals"),
-    youItem,
-  ].flatMap((entry) => (entry ? [entry] : []));
+    { ...garden, label: copy.navigation.gardenShort },
+    findItem("notifications")!,
+  ];
 
   return {
     publicItems,
     personalItems,
+    utilityItems,
+    exploreItems,
     mobileItems,
     primaryAction,
     primaryActionHref,
@@ -368,123 +342,17 @@ export function isSiteShellItemActive(
   if (item.match === "never") return false;
 
   const normalizedPath = normalizeSiteShellPath(pathname);
+  if (normalizedPath.startsWith("/@")) {
+    return (
+      item.key === (normalizedPath.includes("/objects/") ? "catalogue" : "feed")
+    );
+  }
   return item.matchPaths.some((matchPath) =>
     item.match === "exact"
       ? normalizedPath === matchPath
       : normalizedPath === matchPath ||
         normalizedPath.startsWith(`${matchPath}/`),
   );
-}
-
-export function getSiteShellRouteContext(
-  pathname: string,
-  locale: InterfaceLocale,
-): SiteShellRouteContext {
-  const normalizedPath = normalizeSiteShellPath(pathname);
-  const copy = getInterfaceCopy(locale);
-  const publicHref = (path: string) => localizedPath(locale, path);
-  const base = {
-    description: copy.shell.contextDescription,
-    secondaryHref: publicHref("/privacy"),
-    secondaryLabel: copy.shell.privacy,
-  };
-
-  if (normalizedPath === "/garden") {
-    return {
-      ...base,
-      key: "garden",
-      title: copy.navigation.myGarden,
-      primaryHref: SITE_SHELL_COMPOSER_PATH,
-      primaryLabel: copy.shell.primaryAction,
-    };
-  }
-
-  if (
-    CATALOGUE_MATCH_PATHS.some(
-      (matchPath) =>
-        normalizedPath === matchPath ||
-        normalizedPath.startsWith(`${matchPath}/`),
-    )
-  ) {
-    return {
-      ...base,
-      key: "catalogue",
-      title: copy.navigation.catalogue,
-      primaryHref: publicHref("/journals"),
-      primaryLabel: copy.navigation.journals,
-    };
-  }
-
-  if (
-    normalizedPath === "/communities" ||
-    normalizedPath.startsWith("/communities/")
-  ) {
-    return {
-      ...base,
-      key: "community",
-      title: copy.navigation.communities,
-      primaryHref: publicHref("/journals"),
-      primaryLabel: copy.navigation.journals,
-    };
-  }
-
-  if (
-    normalizedPath.startsWith("/journal/") ||
-    normalizedPath.startsWith("/journals")
-  ) {
-    return {
-      ...base,
-      key: "journal",
-      title: copy.navigation.journals,
-      primaryHref: publicHref(CATALOG_BROWSE_PATH),
-      primaryLabel: copy.navigation.catalogue,
-    };
-  }
-
-  if (
-    normalizedPath.startsWith("/knowledge") ||
-    normalizedPath.startsWith("/guides/") ||
-    normalizedPath.startsWith("/answers/") ||
-    normalizedPath.startsWith("/topics/") ||
-    normalizedPath.startsWith("/blog") ||
-    normalizedPath.startsWith("/markets/")
-  ) {
-    return {
-      ...base,
-      key: "knowledge",
-      title: copy.navigation.knowledge,
-      primaryHref: publicHref("/journals"),
-      primaryLabel: copy.navigation.journals,
-    };
-  }
-
-  if (normalizedPath.startsWith("/@")) {
-    return {
-      ...base,
-      key: "profile",
-      title: copy.navigation.profile,
-      primaryHref: publicHref(CATALOG_BROWSE_PATH),
-      primaryLabel: copy.navigation.catalogue,
-    };
-  }
-
-  if (normalizedPath === "/") {
-    return {
-      ...base,
-      key: "feed",
-      title: copy.navigation.feed,
-      primaryHref: publicHref("/journals"),
-      primaryLabel: copy.navigation.journals,
-    };
-  }
-
-  return {
-    ...base,
-    key: "generic",
-    title: copy.shell.contextTitle,
-    primaryHref: "/garden",
-    primaryLabel: copy.shell.startJournal,
-  };
 }
 
 function item(
@@ -546,6 +414,8 @@ export function resolveSiteShellSection(
   pathname: string,
 ): SiteShellNavigationKey | null {
   const normalizedPath = normalizeSiteShellPath(pathname);
+  if (normalizedPath.startsWith("/@"))
+    return normalizedPath.includes("/objects/") ? "catalogue" : "feed";
   for (const entry of siteShellSectionMatchers()) {
     const matched = entry.paths.some((matchPath) =>
       entry.match === "exact"
@@ -556,6 +426,15 @@ export function resolveSiteShellSection(
     if (matched) return entry.key;
   }
   return null;
+}
+
+/** A secondary bar is decided before paint, never inserted after hydration. */
+export function resolveSiteShellSecondary(
+  pathname: string,
+): "feed" | "catalogue" | null {
+  const path = normalizeSiteShellPath(pathname);
+  if (["/", "/feed", "/journals"].includes(path)) return "feed";
+  return resolveSiteShellSection(path) === "catalogue" ? "catalogue" : null;
 }
 
 /**
@@ -579,8 +458,10 @@ export function siteShellDocumentBootScript(): string {
   return (
     `(function(){try{var p=location.pathname.replace(/^\\/(?:uk|bg|ru)(?=\\/|$)/,"")||"/";` +
     `p=p.replace(/^\\/%40/i,"/@");if(p.length>1&&p.charAt(p.length-1)==="/")p=p.slice(0,-1);` +
+    `function s(k){document.documentElement.setAttribute("${SITE_SHELL_SECTION_ATTRIBUTE}",k);var n=k==="catalogue"?k:(["/","/feed","/journals"].indexOf(p)!==-1?"feed":"");if(n)document.documentElement.setAttribute("data-shell-secondary",n);else document.documentElement.removeAttribute("data-shell-secondary")}` +
+    `if(p.indexOf("/@")===0){s(p.indexOf("/objects/")!==-1?"catalogue":"feed");return}` +
     `var m=${matchers};for(var i=0;i<m.length;i++){for(var j=0;j<m[i][2].length;j++){var q=m[i][2][j];` +
-    `if(p===q||(!m[i][1]&&p.indexOf(q+"/")===0)){document.documentElement.setAttribute("${SITE_SHELL_SECTION_ATTRIBUTE}",m[i][0]);return}}}` +
+    `if(p===q||(!m[i][1]&&p.indexOf(q+"/")===0)){s(m[i][0]);return}}}` +
     `}catch(e){}})()`
   );
 }

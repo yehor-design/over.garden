@@ -34,12 +34,12 @@ const PREFIX = "ove446";
 const TEST_PASSWORD = "OVE446-local-password-1!";
 
 const VANTAGES = [
-  { locale: "uk", market: "ukraine", chrome: "Журнали" },
-  { locale: "bg", market: "bulgaria", chrome: "Дневници" },
-  { locale: "ru", market: "bulgaria", chrome: "Журналы" },
+  { locale: "uk", market: "ukraine", chrome: "Стрічка" },
+  { locale: "bg", market: "bulgaria", chrome: "Емисия" },
+  { locale: "ru", market: "bulgaria", chrome: "Лента" },
   // A reader in Bulgaria who chose Ukrainian keeps both: their market and
   // their language. The old model took the control away from them.
-  { locale: "uk", market: "bulgaria", chrome: "Журнали" },
+  { locale: "uk", market: "bulgaria", chrome: "Стрічка" },
 ] as const;
 
 async function selectVantage(
@@ -323,7 +323,7 @@ test.describe("an entry keeps the language it was written in", () => {
  */
 const LOCALE_COOKIE = "overgarden_interface_locale";
 const CHOICE_PREFIX = "ove472";
-const CHROME = { uk: "Журнали", bg: "Дневници", ru: "Журналы" } as const;
+const CHROME = { uk: "Стрічка", bg: "Емисия", ru: "Лента" } as const;
 type ChoiceLocale = keyof typeof CHROME;
 
 function recordLanguageWrites(page: Page) {

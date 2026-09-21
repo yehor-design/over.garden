@@ -14,7 +14,10 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToPipeableStream } from "react-dom/server.node";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { OwnerScopeProvider, useOwnerScopeControl } from "@/components/auth/owner-scope";
+import {
+  OwnerScopeProvider,
+  useOwnerScopeControl,
+} from "@/components/auth/owner-scope";
 import type { SiteShellSessionState } from "@/lib/site-shell-session-state";
 
 vi.mock("next/navigation", () => ({
@@ -57,7 +60,13 @@ const GARDENER: SiteShellSessionState = {
   sessionStore: "reachable",
 };
 const NEVER = new Promise<never>(() => undefined);
-const RAIL_MODULES = [{ key: "rules", title: "Правила", items: [] }];
+const RAIL_MODULES = [
+  {
+    key: "rules",
+    title: "Правила",
+    items: [{ href: "/privacy", label: "Privacy" }],
+  },
+];
 
 /**
  * Inside an element, as a page is inside the shell's content region. A pending
@@ -107,10 +116,7 @@ function renderShell(element: React.ReactElement): Promise<string> {
   });
 }
 
-async function hydrate(
-  server: React.ReactElement,
-  client: React.ReactElement,
-) {
+async function hydrate(server: React.ReactElement, client: React.ReactElement) {
   // A document that is still arriving. In one that has finished loading React
   // treats a pending boundary as one the server failed to finish and renders
   // it on the client at once — which is jsdom's state, and would make every
@@ -159,10 +165,14 @@ describe("what the chrome learns late does not disturb the page (ADR-0032 D10)",
               />
               <ShellSettledSessionRegion
                 render={(known) => (
-                  <b data-known={known?.isAuthenticated ? "gardener" : "guest"} />
+                  <b
+                    data-known={known?.isAuthenticated ? "gardener" : "guest"}
+                  />
                 )}
               />
-              <SiteShellContextRailOutlet fallback={<u data-rail="default" />} />
+              <SiteShellContextRailOutlet
+                fallback={<u data-rail="default" />}
+              />
               <SiteShellContextRailRegistration modules={RAIL_MODULES} />
             </SiteShellContextRailProvider>
           </OwnerScopeProvider>
@@ -186,12 +196,12 @@ describe("what the chrome learns late does not disturb the page (ADR-0032 D10)",
     await act(async () => settle(GARDENER));
 
     // The chrome did learn all three…
-    expect(container.querySelector("[data-path]")?.getAttribute("data-path")).toBe(
-      "/communities/observation-and-care",
-    );
-    expect(container.querySelector("[data-known]")?.getAttribute("data-known")).toBe(
-      "gardener",
-    );
+    expect(
+      container.querySelector("[data-path]")?.getAttribute("data-path"),
+    ).toBe("/communities/observation-and-care");
+    expect(
+      container.querySelector("[data-known]")?.getAttribute("data-known"),
+    ).toBe("gardener");
     expect(container.querySelector("[data-site-shell-context]")).not.toBeNull();
     // …and the page is still the server's, waiting for the server.
     expect(container.querySelector("[data-page-fallback]")).toBe(served);
@@ -224,9 +234,9 @@ describe("what the chrome learns late does not disturb the page (ADR-0032 D10)",
     const { container, served } = await hydrate(<Chrome />, <Chrome />);
     await act(async () => publish("/communities/observation-and-care"));
 
-    expect(container.querySelector("[data-path]")?.getAttribute("data-path")).toBe(
-      "/communities/observation-and-care",
-    );
+    expect(
+      container.querySelector("[data-path]")?.getAttribute("data-path"),
+    ).toBe("/communities/observation-and-care");
     expect(container.querySelector("[data-page-fallback]")).not.toBe(served);
   });
 });

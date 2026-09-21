@@ -2,12 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { Pool } from "pg";
-import {
-  expect,
-  test,
-  type BrowserContext,
-  type Page,
-} from "playwright/test";
+import { expect, test, type BrowserContext, type Page } from "playwright/test";
 
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import {
@@ -109,7 +104,9 @@ test.describe("the workspace a gardener works in", () => {
 
     // The one primary action of the screen sits beside the objects it is
     // about, not three sections above them.
-    await expect(page.locator('[data-garden-next-action="true"]')).toBeVisible();
+    await expect(
+      page.locator('[data-garden-next-action="true"]'),
+    ).toBeVisible();
   });
 
   test("adding an object shows its path before its form", async ({ page }) => {
@@ -207,7 +204,9 @@ test.describe("the chrome and the page agree about the session", () => {
       await expect(page.locator("[data-section-failure]")).toHaveCount(1);
 
       // And now the chrome says the same thing instead of "Sign in".
-      const notice = page.locator('[data-site-shell-session="unreachable"]');
+      const notice = page.locator(
+        '[data-site-shell-session="unreachable"]:visible',
+      );
       await expect(notice).toHaveCount(1);
       await expect(
         page.locator('[data-site-shell-action="sign-in"]'),

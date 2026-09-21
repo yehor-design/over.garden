@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalSiteShellPath,
   resolveSiteShellSection,
+  resolveSiteShellSecondary,
   SITE_SHELL_SECTION_ATTRIBUTE,
   siteShellDocumentBootScript,
   siteShellSectionMatchers,
@@ -100,5 +101,34 @@ describe("the current section, before React is there to say so (ADR-0032 D3)", (
       );
       expect(globals, key).toContain(`[data-site-shell-nav-item="${key}"]`);
     }
+  });
+});
+
+describe("secondary navigation before paint", () => {
+  it.each([
+    "/",
+    "/bg/feed",
+    "/ru/journals",
+    "/catalog",
+    "/bg/communities",
+    "/@yehor",
+    "/@yehor/post/11",
+    "/@yehor/objects/tomato",
+    "/garden",
+    "/support",
+  ])("agrees with enhanced navigation at %s", (pathname) => {
+    const attrs = new Map<string, string>();
+    new Function("document", "location", siteShellDocumentBootScript())(
+      {
+        documentElement: {
+          setAttribute: (name: string, value: string) => attrs.set(name, value),
+          removeAttribute: (name: string) => attrs.delete(name),
+        },
+      },
+      { pathname },
+    );
+    expect(attrs.get("data-shell-secondary") ?? null).toBe(
+      resolveSiteShellSecondary(pathname),
+    );
   });
 });

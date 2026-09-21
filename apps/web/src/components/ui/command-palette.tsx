@@ -114,20 +114,36 @@ export function CommandPaletteTrigger({
   presentation = "field",
   label,
   className,
+  fallbackHref,
 }: {
+  fallbackHref?: string;
   presentation?: "field" | "icon";
   /** The control's accessible name; the palette's own copy by default. */
   label: string;
   className?: string;
 }) {
   const palette = useContext(CommandPaletteContext);
+  const Control = fallbackHref ? "a" : "button";
 
   return (
-    <button
-      type="button"
+    <Control
+      href={fallbackHref}
+      type={fallbackHref ? undefined : "button"}
       data-command-palette-trigger={presentation}
       aria-label={label}
-      onClick={() => palette?.open()}
+      onClick={(event) => {
+        if (
+          !palette ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey ||
+          event.button !== 0
+        )
+          return;
+        event.preventDefault();
+        palette.open();
+      }}
       className={cn(
         "flex items-center transition-colors duration-instant ease-out outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
         presentation === "field" &&
@@ -149,7 +165,7 @@ export function CommandPaletteTrigger({
           </kbd>
         </>
       ) : null}
-    </button>
+    </Control>
   );
 }
 

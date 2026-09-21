@@ -135,9 +135,11 @@
      an arbitrary value in a className, so the one place the shell's geometry
      is written is this file. `--grid-template-columns-*` is Tailwind's
      namespace for `grid-cols-*`. */
-  --container-rail: 15rem; /* 240 */
+  --container-shell-compact: 61rem; /* 976, two-column frame */
+  --container-shell-frame: 80rem; /* 1280, including two 20px gutters */
+  --container-rail: 13rem; /* 208 */
   --container-content: 44rem; /* 704 */
-  --container-context: 18.75rem; /* 300 */
+  --container-context: 17.5rem; /* 280 */
   --grid-template-columns-shell: var(--container-rail) minmax(0, 1fr);
   --grid-template-columns-shell-wide: var(--container-rail) minmax(0, 1fr)
     var(--container-context);
@@ -633,7 +635,8 @@ html[data-shell-section="lineage-claims"]
 
 html[data-shell-section="feed"] [data-site-shell-tab="feed"],
 html[data-shell-section="catalogue"] [data-site-shell-tab="catalogue"],
-html[data-shell-section="journals"] [data-site-shell-tab="journals"] {
+html[data-shell-section="garden"] [data-site-shell-tab="garden"],
+html[data-shell-section="notifications"] [data-site-shell-tab="notifications"] {
   color: var(--color-action-subtle-text);
 }
 
@@ -717,4 +720,12 @@ textarea,
   [data-slot="skeleton"] {
     background: GrayText;
   }
+}
+
+/* Secondary destinations exist in the served document. The inline address
+   marker chooses the bar before paint; hydration never inserts content above
+   the page. ShellSectionSync updates the same marker after native navigation. */
+html[data-shell-secondary="feed"] [data-site-shell-secondary="feed"],
+html[data-shell-secondary="catalogue"] [data-site-shell-secondary="catalogue"] {
+  display: flex;
 }

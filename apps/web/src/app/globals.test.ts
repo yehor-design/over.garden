@@ -415,9 +415,9 @@ describe("global responsive floor", () => {
     ]) {
       expect(globals, `${retired} outlived its markup`).not.toContain(retired);
     }
-    expect(globals).toContain("--container-rail: 15rem;");
+    expect(globals).toContain("--container-rail: 13rem;");
     expect(globals).toContain("--container-content: 44rem;");
-    expect(globals).toContain("--container-context: 18.75rem;");
+    expect(globals).toContain("--container-context: 17.5rem;");
     expect(globals).toContain(".site-shell-safe-bottom");
   });
 

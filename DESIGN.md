@@ -451,9 +451,12 @@ choice, not measured vc.ru dimensions): max group 1280 px; left rail 208 px;
 main minmax(0,704px); right context 280 px; two 24 px gaps, 20 px outer gutters.
 The 1280px outer frame includes two 20px paddings; its inner grid is 1240px.
 Use semantic tokens for these values. At >=1280 px all three columns fit. At 1024–1279 px
-use the centered two-column group without the optional context; below 1024 px
+use the centered two-column group (maximum 976 px including gutters) without
+the optional context; below 1024 px
 use one column, compact header and bottom navigation. Essential information and
 actions never live only in a rail. No horizontal page overflow at 320 CSS px.
+An empty context rail renders no landmark or placeholder. The wide grid keeps
+its context track reserved so late page context cannot shift the reading column.
 
 Desktop primary destinations: Feed, Explore, My garden, Activity. New entry is
 one persistent action. Saved reading, wishlist, public profile, settings and

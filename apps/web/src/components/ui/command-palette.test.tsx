@@ -12,6 +12,8 @@ vi.mock("next/navigation", () => ({
 
 import {
   CommandPalette,
+  CommandPaletteProvider,
+  CommandPaletteTrigger,
   isEditableTarget,
   type CommandPaletteResult,
 } from "./command-palette";
@@ -77,12 +79,7 @@ function renderPalette(
   props: Partial<React.ComponentProps<typeof CommandPalette>> = {},
 ) {
   const rendered = render(
-    <CommandPalette
-      locale="uk"
-      actions={ACTIONS}
-      search={search}
-      {...props}
-    />,
+    <CommandPalette locale="uk" actions={ACTIONS} search={search} {...props} />,
   );
   return { ...rendered, search };
 }
@@ -94,6 +91,34 @@ async function openPalette(search = vi.fn().mockResolvedValue(RESULTS)) {
   await user.click(screen.getByRole("button", { name: "Пошук" }));
   return { user, search };
 }
+
+describe("search fallback", () => {
+  it("serves a real localized search link without a palette provider", () => {
+    render(<CommandPaletteTrigger label="Пошук" fallbackHref="/bg/journals" />);
+    expect(
+      screen.getByRole("link", { name: "Пошук" }).getAttribute("href"),
+    ).toBe("/bg/journals");
+  });
+
+  it("enhances the same link into a keyboard-reachable dialog", async () => {
+    render(
+      <CommandPaletteProvider
+        locale="uk"
+        actions={ACTIONS}
+        search={vi.fn().mockResolvedValue([])}
+      >
+        <CommandPaletteTrigger label="Пошук" fallbackHref="/journals" />
+      </CommandPaletteProvider>,
+    );
+    const user = userEvent.setup();
+    const link = screen.getByRole("link", { name: "Пошук" });
+    link.focus();
+    await user.keyboard("{Enter}");
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(link));
+  });
+});
 
 describe("CommandPalette", () => {
   beforeEach(() => {
@@ -207,9 +232,7 @@ describe("CommandPalette", () => {
     const { user } = await openPalette();
     await user.keyboard("томат");
     const field = screen.getByRole("combobox");
-    await waitFor(() =>
-      expect(screen.getAllByRole("option")).toHaveLength(3),
-    );
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3));
 
     const activeLabel = () => {
       const id = field.getAttribute("aria-activedescendant");
@@ -230,9 +253,7 @@ describe("CommandPalette", () => {
   it("opens the active option on Enter", async () => {
     const { user } = await openPalette();
     await user.keyboard("томат");
-    await waitFor(() =>
-      expect(screen.getAllByRole("option")).toHaveLength(3),
-    );
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3));
     await user.keyboard("{ArrowDown}{Enter}");
     expect(mocks.push).toHaveBeenCalledWith("/@ivan/domati");
   });
@@ -240,17 +261,13 @@ describe("CommandPalette", () => {
   it("marks a result whose words are not the reader's language", async () => {
     const { user } = await openPalette();
     await user.keyboard("томат");
-    await waitFor(() =>
-      expect(screen.getAllByRole("option")).toHaveLength(3),
-    );
+    await waitFor(() => expect(screen.getAllByRole("option")).toHaveLength(3));
     const bulgarian = screen.getByRole("option", {
       name: /Домати/,
     });
     expect(bulgarian.querySelector('[lang="bg"]')).toBeTruthy();
     expect(
-      screen
-        .getByRole("option", { name: /Полив/ })
-        .querySelector("[lang]"),
+      screen.getByRole("option", { name: /Полив/ }).querySelector("[lang]"),
     ).toBeNull();
   });
 

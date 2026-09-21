@@ -1,3 +1,4 @@
+import { waitForHydration } from "./helpers/hydration";
 import { Pool } from "pg";
 import { expect, test, type BrowserContext } from "playwright/test";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
@@ -76,8 +77,10 @@ test("OVE-482: filter dismiss is named Close rather than Reset", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/journals");
-  await page.locator('[data-filter-bar-open="true"]:visible').click();
-  const dialog = page.getByRole("dialog");
+  const trigger = page.locator('[data-filter-bar-open="true"]:visible');
+  await waitForHydration(trigger);
+  await trigger.click();
+  const dialog = page.locator('[data-slot="sheet-content"]');
   await expect(dialog).toBeVisible();
   const close = dialog.locator('[data-slot="sheet-close"]');
   await expect(close).toBeVisible();

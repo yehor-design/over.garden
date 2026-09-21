@@ -95,8 +95,8 @@ test.beforeEach(async ({ context, baseURL }) => {
   await signGardenerInto(context, baseURL);
 });
 
-test.describe("one family, one strip", () => {
-  test("every page carries the same four addresses, and the bar under them is gone", async ({
+test.describe("personal pages use primary navigation and account utilities", () => {
+  test("personal pages do not repeat primary destinations as competing tabs", async ({
     page,
   }) => {
     for (const address of PERSONAL_PAGES) {
@@ -104,13 +104,16 @@ test.describe("one family, one strip", () => {
       expect(response?.status(), address).toBe(200);
 
       const strip = page.locator('[data-slot="tab-links"]');
-      await expect(strip, address).toHaveCount(1);
-      await expect(strip.locator("a"), address).toHaveCount(4);
-      // The selected tab is in the URL by being the URL: shareable,
-      // reloadable, and reachable with Back (DESIGN.md §5.7).
-      const current = strip.locator('a[aria-current="page"]');
-      await expect(current, address).toHaveCount(1);
-      expect(await current.getAttribute("href"), address).toBe(address);
+      await expect(strip, address).toHaveCount(0);
+      await page
+        .locator("[data-site-shell-account-menu-trigger]:visible")
+        .click();
+      for (const utility of ["/bookmarks", "/wishlist"]) {
+        await expect(
+          page.locator(`[data-site-shell-account-menu] a[href="${utility}"]`),
+        ).toBeVisible();
+      }
+      await page.keyboard.press("Escape");
 
       // The half-width bar was a bordered `role="group"` of links. A link
       // cannot carry `aria-pressed`, which is why it had to become a form of

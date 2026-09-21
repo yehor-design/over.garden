@@ -53,7 +53,8 @@ import {
 } from "@/lib/interface-route-policy";
 import {
   getSiteShellNavigation,
-  getSiteShellRouteContext,
+  canonicalSiteShellPath,
+  isSiteShellItemActive,
   isSiteShellComposerRoute,
   type SiteShellNavigation,
   type SiteShellNavigationItem,
@@ -93,12 +94,12 @@ import {
  *
  * ```
  * < lg        [ header 56 ]  [ content ]  [ tab bar 56 ]
- * lg → xl     [ rail 240 ]   [ content max 704 ]
- * ≥ xl        [ rail 240 ]   [ content max 704 ]  [ context 300 ]
+ * lg → xl     [ rail 208 ]   [ content max 704 ]
+ * ≥ xl        [ rail 208 ]   [ content max 704 ]  [ context 280 ]
  * ```
  *
  * The `<header>` element is one element in two shapes: a 56 px top bar below
- * `lg`, the 240 px left rail at `lg` and above. That is what keeps the `banner`
+ * `lg`, the 208 px left rail at `lg` and above. That is what keeps the `banner`
  * landmark present at every width while criterion 1 — exactly one top-level
  * `<header>` — stays literally true. The `<main>` is the page's own; the shell
  * renders the region it goes in and never a second one.
@@ -283,10 +284,13 @@ function FramedSiteShell({
                   {copy.shell.skipToContent}
                 </a>
 
-                <div className="grid min-w-0 flex-1 lg:grid-cols-shell xl:grid-cols-shell-wide">
+                <div
+                  data-site-shell-grid="true"
+                  className="mx-auto grid w-full min-w-0 flex-1 lg:max-w-shell-compact lg:grid-cols-shell lg:gap-x-6 lg:px-5 xl:max-w-shell-frame xl:grid-cols-shell-wide"
+                >
                   <header
                     data-site-shell-region="header"
-                    className="sticky top-0 z-header flex min-h-14 min-w-0 items-center gap-1 border-b border-border bg-surface px-2 lg:h-dvh lg:flex-col lg:items-stretch lg:gap-0 lg:self-start lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-4"
+                    className="sticky top-0 z-header flex min-h-14 min-w-0 items-center gap-1 border-b border-border bg-surface px-2 lg:h-dvh lg:flex-col lg:items-stretch lg:gap-0 lg:self-start lg:overflow-y-auto lg:border-b-0 lg:px-0 lg:py-4"
                   >
                     {/* Closed in the served HTML, so what is inside it may
                         wait for the session without a boundary. */}
@@ -310,12 +314,13 @@ function FramedSiteShell({
                       <span className="sr-only">OverGarden</span>
                     </Link>
 
-                    {/* The rail's navigation, at `lg` and above. The palette
-                        sits above it: search is a way into everything, and the
-                        two plain links below it are the way in without
-                        JavaScript (ADR-0031 D7). */}
+                    {/* Search retains a native route before enhancement;
+                        primary destinations are ordinary links (ADR-0031 D7). */}
                     <div className="hidden min-w-0 flex-col gap-4 lg:flex">
-                      <CommandPaletteTrigger label={copy.palette.open} />
+                      <CommandPaletteTrigger
+                        label={copy.palette.open}
+                        fallbackHref={guestNavigation.searchHref}
+                      />
                       <ShellPathnameRegion
                         render={(pathname) => (
                           <SiteShellNavigationList
@@ -325,9 +330,8 @@ function FramedSiteShell({
                           />
                         )}
                       />
-                      {/* A gardener's own destinations. A guest has none, so
-                          the static document carries nothing here and the list
-                          arrives with the session. */}
+                      {/* Stable personal destinations: guests receive sign-in
+                          return paths, members receive the direct links. */}
                       <ShellRegion
                         render={({ pathname, session: resolved }) => {
                           const personal = navigationFor(
@@ -370,7 +374,28 @@ function FramedSiteShell({
                     >
                       <CommandPaletteTrigger
                         presentation="icon"
+                        fallbackHref={guestNavigation.searchHref}
                         label={copy.palette.open}
+                      />
+                    </div>
+
+                    <div className="flex shrink-0 lg:hidden">
+                      <ShellRegion
+                        render={({ pathname, session: resolved }) => (
+                          <AccountRegion
+                            locale={locale}
+                            navigation={navigationFor(
+                              resolved?.isAuthenticated ?? false,
+                              pathname,
+                            )}
+                            isAuthenticated={resolved?.isAuthenticated ?? false}
+                            hasOperatorAccess={
+                              resolved?.hasOperatorAccess ?? false
+                            }
+                            sessionStore={resolved?.sessionStore ?? "reachable"}
+                            compact
+                          />
+                        )}
                       />
                     </div>
 
@@ -409,6 +434,15 @@ function FramedSiteShell({
                       tabIndex={-1}
                       className="mx-auto w-full max-w-content min-w-0 flex-1 outline-none"
                     >
+                      <ShellPathnameRegion
+                        render={(pathname) => (
+                          <SecondaryNavigation
+                            pathname={pathname}
+                            navigation={guestNavigation}
+                            locale={locale}
+                          />
+                        )}
+                      />
                       {children}
                     </div>
 
@@ -430,31 +464,15 @@ function FramedSiteShell({
                     />
                   </div>
 
-                  <aside
-                    data-site-shell-region="context"
-                    aria-label={guestNavigation.labels.contextRail}
-                    className="sticky top-0 hidden h-dvh self-start overflow-y-auto border-l border-border px-5 py-6 xl:block"
-                  >
-                    <SiteShellContextRailOutlet
-                      fallback={
-                        <ShellPathnameRegion
-                          render={(pathname) => (
-                            <DefaultRouteContext
-                              locale={locale}
-                              pathname={pathname}
-                              railTitle={guestNavigation.labels.contextTitle}
-                            />
-                          )}
-                        />
-                      }
-                    />
-                  </aside>
+                  <SiteShellContextRailOutlet
+                    fallback={null}
+                    label={guestNavigation.labels.contextRail}
+                  />
                 </div>
 
-                {/* Five slots in both states, and two of them lead somewhere
-                    else for a gardener: the action opens the composer instead
-                    of the sign-in screen, and "You" opens their profile. Same
-                    labels, same icons, same box — the swap moves nothing. */}
+                {/* Five stable slots in both states. Protected destinations resume
+                    through sign-in for guests; session resolution changes only
+                    their links, never the surrounding page. */}
                 <ShellRegion
                   render={({ pathname, session: resolved }) => {
                     if (
@@ -501,46 +519,70 @@ function OwnerScopeFromSession() {
   return null;
 }
 
-/**
- * What the context rail says on a route that feeds it nothing of its own.
- * With no address yet it says nothing: a heading that changes a moment later
- * is worse than a rail that is briefly empty.
- */
-function DefaultRouteContext({
-  locale,
+/** Secondary discovery links are destinations within Explore, not rail roots. */
+function SecondaryNavigation({
   pathname,
-  railTitle,
+  navigation,
+  locale,
 }: {
-  locale: InterfaceLocale;
   pathname: string | null;
-  railTitle: string;
+  navigation: SiteShellNavigation;
+  locale: InterfaceLocale;
 }) {
-  if (pathname === null) return null;
-  const context = getSiteShellRouteContext(pathname, locale);
-
+  const normalized = pathname ? canonicalSiteShellPath(pathname) : null;
+  const copy = getInterfaceCopy(locale);
+  const groups = [
+    {
+      key: "catalogue",
+      label: copy.navigation.explore,
+      items: navigation.exploreItems,
+    },
+    {
+      key: "feed",
+      label: copy.navigation.feed,
+      items: [
+        {
+          key: "latest",
+          label: copy.navigation.feed,
+          href: navigation.publicItems[0]!.href,
+        },
+        {
+          key: "following",
+          label: copy.navigation.followedFeed,
+          href: navigation.publicItems[0]!.href.replace(/\/$/, "") + "/feed",
+        },
+      ],
+    },
+  ];
   return (
-    <div className="flex flex-col gap-3">
-      {/* The eyebrow names the rail and the heading names the destination. On
-          a route with no destination of its own they are the same word, and
-          the rail read "Далі / Далі" until somebody looked at it. */}
-      {context.title === railTitle ? null : (
-        <p className="text-overline text-text-muted uppercase">{railTitle}</p>
-      )}
-      <h2 className="text-h4 text-text-heading">{context.title}</h2>
-      <p className="text-body-sm text-text-secondary">{context.description}</p>
-      <div className="flex flex-col gap-2 pt-1">
-        <Link
-          href={context.primaryHref}
-          className={buttonVariants({
-            variant: "secondary",
-            size: "sm",
-            className: "justify-start",
-          })}
+    <>
+      {groups.map((group) => (
+        <nav
+          key={group.key}
+          data-site-shell-secondary={group.key}
+          aria-label={group.label}
+          className="hidden min-w-0 gap-1 overflow-x-auto overflow-y-hidden border-b border-border px-4 py-1"
         >
-          {context.primaryLabel}
-        </Link>
-      </div>
-    </div>
+          {group.items.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href}
+              aria-current={
+                pathname &&
+                ("matchPaths" in item
+                  ? isSiteShellItemActive(pathname, item)
+                  : normalized === canonicalSiteShellPath(item.href))
+                  ? "page"
+                  : undefined
+              }
+              className="flex min-h-11 shrink-0 items-center rounded-md px-3 text-body-sm font-medium text-text-secondary hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      ))}
+    </>
   );
 }
 
@@ -626,26 +668,30 @@ function UnframedSiteShell({
  * rail is not a thing that can happen.
  */
 function paletteActions(navigation: SiteShellNavigation) {
-  return [
+  const items = [
     ...navigation.publicItems,
     ...navigation.personalItems,
+    ...navigation.exploreItems,
+    ...navigation.utilityItems,
     navigation.primaryAction,
-  ].map((item) => ({
-    key: "actions" as const,
-    id: `actions:${item.key}`,
-    label: item.label,
-    detail: null,
-    href: item.href,
-    language: null,
-  }));
+  ];
+  return [...new Map(items.map((item) => [item.key, item])).values()].map(
+    (item) => ({
+      key: "actions" as const,
+      id: `actions:${item.key}`,
+      label: item.label,
+      detail: null,
+      href: item.href,
+      language: null,
+    }),
+  );
 }
 
 /**
- * The rail's primary action. A signed-out reader reaches the composer through
- * the sign-in screen and comes back to it — never to the workspace around it,
- * which is the extra press `OVE-378` removed once already. The destination for
- * either state is decided in `getSiteShellNavigation`, so the rail and the tab
- * bar cannot drift apart.
+ * The shared writing entry point. Until the routed composer ships, it opens
+ * the owned inventory where each object has a working contextual composer.
+ * Guests resume the same destination after sign-in. Navigation owns the href
+ * so the desktop action and mobile tab cannot drift apart.
  */
 function PrimaryAction({ item }: { item: SiteShellNavigationItem }) {
   return (
@@ -661,13 +707,13 @@ function PrimaryAction({ item }: { item: SiteShellNavigationItem }) {
 }
 
 /**
- * The reader's own pages, in the account menu. The rail lists them too; the
- * menu is the only place they exist below `lg`, where there is no rail.
+ * Account utilities stay separate from the four primary destinations on
+ * desktop and mobile alike.
  */
 const ACCOUNT_MENU_PERSONAL_KEYS = new Set<SiteShellNavigationKey>([
-  "notifications",
   "bookmarks",
   "wishlist",
+  "lineage-claims",
 ]);
 
 /** The foot of the rail: who you are, and the way out. */
@@ -677,12 +723,14 @@ function AccountRegion({
   isAuthenticated,
   hasOperatorAccess,
   sessionStore,
+  compact = false,
 }: {
   locale: InterfaceLocale;
   navigation: SiteShellNavigation;
   isAuthenticated: boolean;
   hasOperatorAccess: boolean;
   sessionStore: SiteShellSessionState["sessionStore"];
+  compact?: boolean;
 }) {
   const copy = getInterfaceCopy(locale);
   const operatorCopy = getOperatorMenuCopy(locale);
@@ -695,6 +743,22 @@ function AccountRegion({
   // guest — and offering "Sign in" over a workspace page that has already said
   // the store is unreachable is the product contradicting itself.
   if (sessionStore === "unreachable") {
+    if (compact)
+      return (
+        <div role="status" data-site-shell-session="unreachable">
+          <span className="sr-only">{copy.shell.sessionUnavailable}</span>
+          <Link
+            href={navigation.signIn.href}
+            aria-label={`${copy.shell.sessionUnavailable}. ${copy.shell.sessionUnavailableRetry}`}
+            className={buttonVariants({
+              variant: "ghost",
+              className: "min-h-11 min-w-11 px-2",
+            })}
+          >
+            <TriangleAlert aria-hidden="true" />
+          </Link>
+        </div>
+      );
     return (
       <p
         role="status"
@@ -718,15 +782,18 @@ function AccountRegion({
   if (!isAuthenticated) {
     return (
       <Link
+        aria-label={compact ? navigation.signIn.label : undefined}
         data-site-shell-action="sign-in"
         href={navigation.signIn.href}
         className={buttonVariants({
           variant: "secondary",
-          className: "w-full justify-start",
+          className: compact
+            ? "min-h-11 min-w-11 px-2"
+            : "w-full justify-start",
         })}
       >
         <UserRound aria-hidden="true" />
-        {navigation.signIn.label}
+        {compact ? null : navigation.signIn.label}
       </Link>
     );
   }
@@ -736,9 +803,15 @@ function AccountRegion({
       <MenuTrigger
         data-site-shell-account-menu-trigger="true"
         render={
-          <Button variant="ghost" className="w-full justify-start">
+          <Button
+            variant="ghost"
+            aria-label={compact ? navigation.labels.openAccount : undefined}
+            className={
+              compact ? "min-h-11 min-w-11 px-2" : "w-full justify-start"
+            }
+          >
             <UserRound aria-hidden="true" />
-            {navigation.labels.accountRegion}
+            {compact ? null : navigation.labels.accountRegion}
           </Button>
         }
       />
@@ -758,7 +831,7 @@ function AccountRegion({
           <AccountMenuLink href="/garden/profile">
             {copy.navigation.profile}
           </AccountMenuLink>
-          {navigation.personalItems
+          {navigation.utilityItems
             .filter((item) => ACCOUNT_MENU_PERSONAL_KEYS.has(item.key))
             .map((item) => (
               <AccountMenuLink key={item.key} href={item.href}>

@@ -31,7 +31,7 @@ function ListRow({
     <li
       data-slot="list-row"
       className={cn(
-        "relative flex items-start gap-4 border-b border-border py-4 last:border-b-0",
+        "relative flex min-w-0 flex-wrap items-start gap-4 border-b border-border py-4 last:border-b-0 sm:flex-nowrap",
         href &&
           "transition-colors duration-instant ease-out hover:bg-surface-hover",
         className,
@@ -63,7 +63,7 @@ function ListRow({
       </div>
       {/* Above the stretched link, so a row action is still reachable. */}
       {actions ? (
-        <div className="relative z-sticky flex shrink-0 items-center gap-2">
+        <div className="relative z-sticky flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
           {actions}
         </div>
       ) : null}

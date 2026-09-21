@@ -6,7 +6,7 @@ import type { InterfaceIcon } from "@/components/icons";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/ui/page-header";
-import { TabLinks, type TabLinkModel } from "@/components/ui/tabs";
+import { type TabLinkModel } from "@/components/ui/tabs";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
 
@@ -104,7 +104,6 @@ export function MySocialLayout({
           ) : undefined
         }
       />
-      <TabLinks label={copy.my} items={personalSurfaceTabs(locale, active)} />
       {controls ? <div className="flex flex-col gap-3">{controls}</div> : null}
       {children}
       {notice}

@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 import {
   createValueStore,
@@ -73,14 +79,29 @@ const NO_RAIL: ContextRailStore = createValueStore(null);
 /** The rail's content: what the page registered, or `fallback` until it does. */
 export function SiteShellContextRailOutlet({
   fallback,
+  label,
 }: {
   fallback: ReactNode;
+  label?: string;
 }) {
   const modules = useValueStore(
     useContext(SiteShellContextRailContext) ?? NO_RAIL,
   );
 
-  return modules ? <SiteShellContextRailModules modules={modules} /> : fallback;
+  const useful = modules?.filter((module) => module.items.length > 0);
+  if (!useful?.length) return fallback;
+  const content = <SiteShellContextRailModules modules={useful} />;
+  return label ? (
+    <aside
+      data-site-shell-region="context"
+      aria-label={label}
+      className="sticky top-6 hidden min-w-0 self-start px-2 py-6 xl:block"
+    >
+      {content}
+    </aside>
+  ) : (
+    content
+  );
 }
 
 export function SiteShellContextRailModules({
@@ -101,7 +122,7 @@ export function SiteShellContextRailModules({
                 <li key={`${module.key}:${item.href}:${item.label}`}>
                   <Link
                     href={item.href}
-                    className="flex min-h-11 items-center justify-between gap-3 rounded-sm border-b border-border py-2 text-body-sm font-medium text-text outline-none transition-colors duration-instant ease-out hover:text-link focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
+                    className="hover:text-link flex min-h-11 items-center justify-between gap-3 rounded-sm border-b border-border py-2 text-body-sm font-medium text-text transition-colors duration-instant ease-out outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
                   >
                     <span className="min-w-0 break-words">{item.label}</span>
                     {item.meta ? (
@@ -114,9 +135,7 @@ export function SiteShellContextRailModules({
               ))}
             </ul>
           ) : (
-            <p className="text-body-sm text-text-muted">
-              {module.emptyLabel}
-            </p>
+            <p className="text-body-sm text-text-muted">{module.emptyLabel}</p>
           )}
         </section>
       ))}
