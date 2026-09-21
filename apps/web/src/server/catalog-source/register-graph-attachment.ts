@@ -503,7 +503,7 @@ export async function closeAnsweredRegisterQueueItems(
   const closed = await sql<{ id: string }>`
     update catalog_curation_queue as queued
        set state = 'auto_applied', decided_at = now()
-     where queued.item_type = 'source_link'
+     where queued.item_type in ('source_link', 'source_unmatched')
        and queued.state = 'open'
        and queued.subject_catalog_item_id in (
          select link.catalog_item_id
@@ -564,7 +564,7 @@ export async function readRegisterAttachmentInvariant(
                -- decision, not a question still on the owner's desk.
                select 1 from catalog_curation_queue as queued
                where queued.subject_catalog_item_id = item.id
-                 and queued.item_type = 'source_link'
+                 and queued.item_type in ('source_link', 'source_unmatched')
                  and queued.state = 'open'
              ) as queued
       from catalog_source_links as link
@@ -877,18 +877,29 @@ async function queueUnresolvedSpecies(
     denomination: claim.denomination,
     candidates: [...ambiguous],
   };
+  /**
+   * `source_unmatched`, not `source_link` (`0078`).
+   *
+   * The subject here is the **form**, and what the owner would be deciding is
+   * which species it belongs under — a `form_of` relation.
+   * `catalog_apply_queue_item`'s `source_link` branch writes an assertion and
+   * a source link, which is a different thing and not the answer. Until there
+   * is a control that attaches a form, this is a record the graph could not
+   * place: counted on the sources page, and closed by
+   * `closeAnsweredRegisterQueueItems` when a later run does place it.
+   */
   const row = await sql<{ id: string }>`
     insert into catalog_curation_queue (
       item_type, subject_catalog_item_id, subject_label, proposal, confidence,
       reasons, impact_score, state
     )
-    select 'source_link', ${form.catalogItemId}::uuid, ${(claim.denomination ?? form.canonicalName).slice(0, 200)},
+    select 'source_unmatched', ${form.catalogItemId}::uuid, ${(claim.denomination ?? form.canonicalName).slice(0, 200)},
            ${JSON.stringify(proposal)}::jsonb, ${ambiguous.length > 0 ? 0.5 : 0.2},
            ${ambiguous.length > 0 ? ["register_species_ambiguous"] : ["register_species_unmatched"]}::text[],
            1, 'open'
     where not exists (
       select 1 from catalog_curation_queue as open_item
-      where open_item.item_type = 'source_link'
+      where open_item.item_type in ('source_link', 'source_unmatched')
         and open_item.state in ('open', 'auto_applied', 'accepted')
         and open_item.subject_catalog_item_id = ${form.catalogItemId}::uuid
     )

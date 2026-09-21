@@ -24,6 +24,7 @@ import {
   readCatalogPickHealth,
   readOldestOpenQueueItemAgeDays,
   readTopCatalogSearchMisses,
+  readUnplacedRecords,
 } from "@/server/catalog-health-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
@@ -158,6 +159,7 @@ async function CatalogHealthSection({
       misses: await readTopCatalogSearchMisses(),
       precision: await readCatalogAutoAcceptPrecision(),
       queueAgeDays: await readOldestOpenQueueItemAgeDays(),
+      unplaced: await readUnplacedRecords(),
     }),
     {
       deadlineMs: workspaceSectionDeadlineMs(3),
@@ -178,7 +180,7 @@ async function CatalogHealthSection({
     );
   }
 
-  const { health, misses, precision, queueAgeDays } = settled.value;
+  const { health, misses, precision, queueAgeDays, unplaced } = settled.value;
   const duration = (value: number | null) =>
     value === null ? copy.health.notMeasured : `${Math.round(value)} ms`;
   const share = (part: number, whole: number) =>
@@ -348,6 +350,44 @@ async function CatalogHealthSection({
               : `${queueAgeDays} ${copy.health.days}`}
           </span>
         </p>
+      </div>
+
+      {/* Coverage, where the other measurements are. These used to sit in the
+          owner's decision stream — 13,450 of 13,456 open rows on 2026-09-20,
+          and the apply function refused every one of them, because there is
+          no node to attach an unplaced record to. */}
+      <div className="grid gap-2">
+        <h3 className="font-medium text-text">{copy.health.unplaced}</h3>
+        <p className="text-body-sm text-text-muted">
+          {copy.health.unplacedHint}
+        </p>
+        {unplaced.length === 0 ? (
+          <p
+            data-catalog-unplaced-empty="true"
+            className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted"
+          >
+            {copy.health.unplacedEmpty}
+          </p>
+        ) : (
+          <ul className="grid gap-1 text-body-sm" data-catalog-unplaced="true">
+            {unplaced.map((row) => (
+              <li
+                key={row.sourceSlug}
+                data-catalog-unplaced-source={row.sourceSlug}
+                data-catalog-unplaced-records={row.records}
+                className="flex flex-wrap justify-between gap-2 text-text-muted"
+              >
+                <span className="text-text">{row.sourceSlug}</span>
+                <span>
+                  {row.records} {copy.health.unplacedRecords}
+                  {row.oldestAgeDays === null
+                    ? ""
+                    : ` · ${row.oldestAgeDays} ${copy.health.days} ${copy.health.unplacedOldest}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </section>
   );

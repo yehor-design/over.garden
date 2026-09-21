@@ -1102,6 +1102,51 @@ and is not. What *was* proven on production is the guest half of criterion 7 —
 all three owner surfaces answer `private, no-store` with
 `noindex, nofollow` and carry none of the owner's data.
 
+**The queue carries questions it can answer** (`0078`, 2026-09-21). The owner
+authorised the repair the same day the wall was found.
+
+What was in the 13,456, once it was measured rather than counted:
+
+| rows | reason | subject | what it actually is |
+| -- | -- | -- | -- |
+| 13,007 | `eppo_unmatched` | none | EPPO knows a taxon the graph did not place |
+| 443 | `register_species_unmatched` | the form | a register form whose species did not resolve |
+| 6 | `*_identifier_conflict` | the node | an identifier another node already holds |
+
+Only the last six are the question `source_link` names, and **every one of the
+13,007 has impact 0–1** — zero EPPO hosts, by the producer's own measure of
+worth. By rank: 8,376 genera, 1,938 with no rank at all, 1,602 families, 408
+orders, 339 species with no kingdom, 169 classes, 113 subfamilies, 62 phyla.
+`_create_node_from_eppo` refuses to invent a node for any of them, correctly —
+the catalogue models species and below, because a gardener grows a species,
+not a family — and then queued each refusal as a question whose only answer
+was the one the code had already given.
+
+- **`source_unmatched` is its own item type.** A source record the graph could
+  not place is not "attach this to that": there is no *that*. It has no apply
+  branch, it is out of the decision stream, and it is counted by source on the
+  sources page — coverage, where the other measurements are. Nothing was
+  deleted; every row keeps its proposal, impact and reasons.
+- **An open `source_link` must be appliable**, by `CHECK`: a subject, a source
+  slug and a snapshot. The wall cannot be rebuilt.
+- **Three producers now write what the apply function reads**:
+  `source_snapshot_id`, and `identifiers` as an array. A snapshot is *which
+  import said so*, and `catalog_source_assertions.source_snapshot_id` is `not
+  null` — resolving one at apply time would be fabricating provenance, so it
+  travels with the question. EPPO stops queueing its coverage residue and
+  counts it in the receipt (`out_of_scope_rank`, `source_record_too_thin`).
+- **The register's forms go to `source_unmatched` too.** Their subject is the
+  *form*, and what the owner would be deciding is a `form_of` relation —
+  which the `source_link` branch does not write. Until there is a control that
+  attaches a form, it is an unplaced record, and
+  `closeAnsweredRegisterQueueItems` still closes it when a later run places it.
+
+`pnpm prove:queue-answerable` builds a disposable database from every
+migration and presses Accept: the constraint refuses all three shapes it was
+written for, a complete decision applies and reverts leaving both rows in
+`catalog_curation_actions`, and an unplaced record is shown to be counted
+rather than asked. 9 of 9.
+
 Slice 28 is complete: `OVE-439`–`OVE-459`.
 
 The empty states have their pictures: six 3D objects from `thiings.co` in

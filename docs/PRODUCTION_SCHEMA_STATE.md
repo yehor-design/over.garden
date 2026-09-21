@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` applied 2026-09-21. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -1163,3 +1163,37 @@ changes when an import runs, not when a gardener writes.
 Rollback `sql/rollback/0072_ove431_catalog_browse_index.sql` drops the index
 and is safe at any time — the browse stays correct and becomes a sequential
 scan again.
+
+
+## `0078`, the queue carries questions it can answer — applied 2026-09-21
+
+`0078_queue_carries_answerable_questions.sql` applied to production on
+2026-09-21: one transaction, host class `digitalocean_managed`, database
+`defaultdb`, 7 statements, **680 ms**. Dry-run first, inside a transaction that
+was rolled back: 886 ms, same counts.
+
+The owner's curation queue held **13,456 open items and
+`catalog_apply_queue_item` refused every one of them** — found on 2026-09-20
+while proving `OVE-459`, and authorised the same day.
+
+Before and after, measured on the row the applier writes to:
+
+```
+before  source_link       open  13456     appliable 0
+after   source_unmatched  open  13456     open decisions 0
+```
+
+Nothing was deleted. Every row keeps its proposal, its impact score and its
+reasons; what changed is the question it is filed under. `source_unmatched` —
+a source record the graph could not place — has no apply branch, is out of the
+owner's decision stream, and is counted by source on the sources page. The
+`CHECK` added here refuses an `open` `source_link` that lacks a subject, a
+source slug or a snapshot, so the wall cannot be rebuilt.
+
+Read the current state with `pnpm prove:owner-queue`, which separates open
+decisions from unplaced records and reports appliability for the decidable
+types only.
+
+Rollback `sql/rollback/0078_….down.sql` drops the constraint and the index and
+**does not** move the rows back: putting 13,450 questions that cannot be
+answered in front of the owner is not a rollback.

@@ -840,7 +840,9 @@ def _project(
             "id",
         )
     )
-    _write_identifier(conn, source, node, match, assertion_id, receipt)
+    _write_identifier(
+        conn, source, node, match, assertion_id, receipt, snapshot_id, record_id
+    )
 
 
 def _write_identifier(
@@ -850,6 +852,8 @@ def _write_identifier(
     match: Match,
     assertion_id: str,
     receipt: CrosswalkReceipt,
+    snapshot_id: str,
+    record_id: str,
 ) -> None:
     value = match.row.identifier
     owner = _field(
@@ -863,6 +867,12 @@ def _write_identifier(
         # Either another node already answers to this identifier, or this node
         # already answers to a different one. Both are decisions, never an
         # overwrite: the graph's uniqueness is the whole reason rung one works.
+        # What `catalog_apply_queue_item` reads, in the shape it reads it:
+        # `identifiers` is an array of `{scheme, value}`, and the snapshot is
+        # required because `catalog_source_assertions.source_snapshot_id` is
+        # `not null`. A snapshot is *which import said so*; resolving one at
+        # apply time would be fabricating provenance, so it travels with the
+        # question. Without it this row could not be decided at all.
         queued = conn.execute(
             QUEUE_SOURCE_LINK_SQL,
             (
@@ -870,6 +880,11 @@ def _write_identifier(
                 json.dumps(
                     {
                         "source_slug": source.slug,
+                        "source_snapshot_id": snapshot_id,
+                        "source_record_id": record_id,
+                        "identifiers": [
+                            {"scheme": source.scheme, "value": value}
+                        ],
                         "scheme": source.scheme,
                         "value": value,
                         "held_by_catalog_item_id": str(owner) if owner else None,

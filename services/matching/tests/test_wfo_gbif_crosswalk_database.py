@@ -271,6 +271,13 @@ def test_an_identifier_another_node_holds_becomes_a_decision_and_never_a_move(co
     assert queued[0]["item_type"] == "source_link"
     assert queued[0]["proposal"]["held_by_catalog_item_id"] == incumbent
     assert queued[0]["reasons"] == ["wfo_identifier_conflict"]
+    # Appliable: a snapshot, and identifiers in the array shape the apply
+    # function reads. Without them the row is a question with no answer, which
+    # is what 13,456 rows on production were (`0078`).
+    assert queued[0]["proposal"]["source_snapshot_id"]
+    assert queued[0]["proposal"]["identifiers"] == [
+        {"scheme": "wfo", "value": "wfo-0001029216"}
+    ]
     # And the node that already had it keeps a clean queue.
     assert open_queue_items(conn, incumbent) == []
 

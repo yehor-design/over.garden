@@ -301,13 +301,35 @@ const NODE_SUMMARY_SQL = sql`
  * item carries both sides of the decision, so the page shows two cards
  * without a second round trip per item.
  */
+/**
+ * The item types the owner decides, and the one that is not a decision.
+ *
+ * `source_unmatched` is a source record the graph could not place: EPPO knows
+ * a genus the catalogue does not model, a register form whose species did not
+ * resolve. There is no node to attach it to, so `catalog_apply_queue_item` has
+ * nothing to carry out — answering it means creating a node or attaching a
+ * form, and neither is a decision this queue can make. It is coverage, and
+ * coverage is counted on the sources page rather than asked one at a time.
+ *
+ * On 2026-09-20 production held 13,450 of them among 13,456 open rows, every
+ * one refused by the apply function. The stream is the six that were real.
+ */
+export const DECIDABLE_CURATION_ITEM_TYPES = [
+  "label_link",
+  "node_merge",
+  "source_link",
+  "split_review",
+] as const;
+
 export function buildCurationQueueStatement(input: {
   itemType?: string | null;
   limit?: number;
 }) {
   const typeFilter = input.itemType
     ? sql`and queue.item_type = ${input.itemType}`
-    : sql``;
+    : sql`and queue.item_type = any(${sql.val(
+        DECIDABLE_CURATION_ITEM_TYPES as readonly string[],
+      )}::text[])`;
   return sql<{
     id: string;
     itemType: CurationQueueItem["itemType"];
@@ -383,7 +405,11 @@ export async function countOpenCurationQueue(
 ): Promise<{ total: number; byType: Record<string, number> }> {
   const result = await sql<{ item_type: string; n: number }>`
     select item_type, count(*)::int as n
-    from catalog_curation_queue where state = 'open'
+    from catalog_curation_queue
+    where state = 'open'
+      and item_type = any(${sql.val(
+        DECIDABLE_CURATION_ITEM_TYPES as readonly string[],
+      )}::text[])
     group by item_type order by item_type
   `.execute(executor);
   const byType: Record<string, number> = {};

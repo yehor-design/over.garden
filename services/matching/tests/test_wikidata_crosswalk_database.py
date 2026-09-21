@@ -271,6 +271,14 @@ def test_an_identifier_another_node_holds_becomes_a_decision(conn):
     assert queued["state"] == "open"
     assert "wikidata_identifier_conflict" in queued["reasons"]
     assert queued["proposal"]["scheme"] in {"wikidata", "eppo"}
+    # A question the owner can answer: `catalog_apply_queue_item` needs a
+    # snapshot (`catalog_source_assertions.source_snapshot_id` is `not null`)
+    # and reads identifiers as an array. Production's queue had neither, so
+    # every Accept raised (`0078`).
+    assert queued["proposal"]["source_snapshot_id"]
+    assert queued["proposal"]["identifiers"] == [
+        {"scheme": queued["proposal"]["scheme"], "value": queued["proposal"]["value"]}
+    ]
 
 
 def test_a_word_two_organisms_share_waits_for_the_owner(conn):
