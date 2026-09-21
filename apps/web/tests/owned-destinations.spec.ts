@@ -23,7 +23,7 @@ import type { OwnedDestinationPage } from "../src/lib/garden/owned-destinations"
 test("owned corpus: 0/1/100/1000, complete cursor traversal, cross-user refusal, publication recency and removed target", async ({
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   test.setTimeout(150_000);
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   const context = await browser.newContext();
@@ -38,6 +38,24 @@ test("owned corpus: 0/1/100/1000, complete cursor traversal, cross-user refusal,
     });
     userId = member.id;
     const endpoint = `${baseURL}/api/garden/destinations`;
+    await context.addCookies([
+      { name: "overgarden_interface_locale", value: "uk", url: baseURL! },
+    ]);
+    const emptyPage = await context.newPage();
+    await emptyPage.setViewportSize({ width: 320, height: 900 });
+    await emptyPage.goto(`${baseURL}/garden`);
+    const emptyPicker = emptyPage.locator(
+      '#first-entry-composer [data-owned-destination-picker="space"]',
+    );
+    await waitForHydration(emptyPicker.getByRole("combobox"));
+    await emptyPicker.getByRole("combobox").click();
+    await expect(emptyPicker.getByRole("status")).toHaveText(
+      "У вас ще немає створених просторів.",
+    );
+    await emptyPicker.screenshot({
+      path: testInfo.outputPath("empty-space-picker.png"),
+    });
+    await emptyPage.close();
     expect((await stranger.request.get(endpoint)).status()).toBe(401);
     let fixture: Awaited<ReturnType<typeof seedCollection>>;
     for (const preset of COLLECTION_PRESETS) {

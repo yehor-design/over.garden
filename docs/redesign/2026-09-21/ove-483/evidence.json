@@ -74,6 +74,11 @@
       "file": "picker-uk-768.png",
       "bytes": 22480,
       "sha256": "a10dd094fee07992703c9354db1d593ff93962b609f0d8ebb1bdd4db53fc6189"
+    },
+    {
+      "file": "empty-space-picker.png",
+      "bytes": 8430,
+      "sha256": "f6daeb2daab1ace0075c07490c4019ebad7492a0e2e4168eb1c055740bd6b83b"
     }
   ],
   "accessibility": [

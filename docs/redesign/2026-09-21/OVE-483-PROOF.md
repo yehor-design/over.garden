@@ -115,3 +115,9 @@ until its outcome exists.
 
 Final focused browser rerun after the synonym-pagination assertion: two passed
 in 10.9 seconds against the same production build.
+
+The empty-corpus state is distinct from a query with no matches: it identifies
+which owned entities do not exist yet. A noninitial empty cursor page never
+claims that the whole collection is empty. The final 12.0-second focused run
+passed both scenarios, including the new empty-space browser assertion; its
+320 px capture is `ove-483/empty-space-picker.png` (16 captures total).

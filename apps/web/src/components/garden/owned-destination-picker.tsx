@@ -225,7 +225,13 @@ export function OwnedDestinationPicker({
           : open && status === "error"
             ? copy.error
             : open && status === "ready" && !rows.length
-              ? copy.empty
+              ? query.trim() || cursor
+                ? copy.empty
+                : kind === "space"
+                  ? copy.noSpaces
+                  : kind === "object"
+                    ? copy.noObjects
+                    : copy.noDestinations
               : ""}
       </p>
       {open && status === "error" ? (
