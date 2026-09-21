@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext } from "playwright/test";
 import { Pool } from "pg";
+import { buildAtomicTextJournalCreateRequest } from "../scripts/atomic-journal-text-request";
+import {
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 
 import {
   cleanupOrganismFixture,
@@ -300,10 +305,70 @@ test.describe("a public page is a static document", () => {
 
   let pool: Pool;
   let fixture: StaticFixture;
+  let directoryWriterId: string | null = null;
+  let directoryEntryPath: string;
 
-  test.beforeAll(async () => {
+  test.beforeAll(async ({ browser, baseURL }) => {
+    test.setTimeout(60_000);
+    if (
+      !baseURL ||
+      !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)
+    ) {
+      throw new Error(
+        "Static-document publication proof requires a loopback server",
+      );
+    }
     pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
     fixture = await seedStaticFixture(pool);
+    const writer = await browser.newContext();
+    try {
+      // A CI build prerenders an empty directory. Raw SQL fixtures do not
+      // invalidate that snapshot. Publish through the real ingress so this
+      // also proves that a new entry reaches the cached static document.
+      await writer.request.get(`${baseURL}/journals`);
+      const gardener = await signInSyntheticGardener({
+        baseURL,
+        context: writer,
+        pool,
+        prefix: "ove467directory",
+      });
+      directoryWriterId = gardener.id;
+      const spaceId = randomUUID();
+      await pool.query(
+        "insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)",
+        [spaceId, gardener.id, "Static directory publication proof"],
+      );
+      const objectId = randomUUID();
+      await pool.query(
+        `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, variety_state)
+         values ($1, $2, $3, 'Static directory tomato', 'plant', 'unknown')`,
+        [objectId, gardener.id, spaceId],
+      );
+      const response = await writer.request.post(
+        `${baseURL}/api/garden/entries`,
+        {
+          headers: {
+            origin: baseURL,
+            [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+              ATOMIC_JOURNAL_CREATE_PROTOCOL,
+          },
+          data: buildAtomicTextJournalCreateRequest({
+            publishId: randomUUID(),
+            context: {
+              target: "plant_object_entry",
+              plantObjectId: objectId,
+              entryDate: new Date().toISOString().slice(0, 10),
+            },
+            title: "Новий запис у статичному списку",
+            text: fixture.entry.body,
+          }),
+        },
+      );
+      expect(response.status(), await response.text()).toBe(200);
+      directoryEntryPath = (await response.json()).card.publicPath;
+    } finally {
+      await writer.close();
+    }
   });
 
   test.afterAll(async () => {
@@ -311,7 +376,19 @@ test.describe("a public page is a static document", () => {
       await cleanupPublishedEntryFixture(pool, fixture.entry);
       await cleanupOrganismFixture(pool, fixture.organism);
     }
-    await pool.end();
+    if (directoryWriterId) {
+      await pool.query("delete from journal_entries where owner_user_id = $1", [
+        directoryWriterId,
+      ]);
+      await pool.query("delete from plant_objects where owner_user_id = $1", [
+        directoryWriterId,
+      ]);
+      await pool.query("delete from spaces where owner_user_id = $1", [
+        directoryWriterId,
+      ]);
+      await removeSyntheticGardener(pool, directoryWriterId);
+    }
+    if (pool) await pool.end();
   });
 
   test("the home feed is in the served bytes", async ({ request }) => {
@@ -373,6 +450,10 @@ test.describe("a public page is a static document", () => {
       expect(html, address).not.toContain(
         'data-public-journal-directory-state="loading"',
       );
+      expect(
+        html,
+        `${address}: the publication invalidated the static snapshot`,
+      ).toContain(`data-entry-card="${directoryEntryPath}"`);
       const ranges = hiddenSegments(html);
       for (const marker of [
         'data-public-journal-directory-state="',

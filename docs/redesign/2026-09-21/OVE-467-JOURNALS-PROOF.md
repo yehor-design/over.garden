@@ -91,5 +91,10 @@ and diagnostics but omit redundant embedded screenshot images.
 - Full browser gate: 205 passed, one existing skip, no retries (5.9 minutes).
   The gate now covers visible directory content in UK/BG/RU, no-JS reading,
   query twins and held segment adoption for guest/member sessions.
+- The static-document fixture warms the directory, then publishes through the
+  real atomic API on loopback. Each locale must contain the returned public
+  entry address. This proves publication invalidates a prerendered snapshot,
+  including CI builds over an initially empty database; raw SQL seeding alone
+  cannot invalidate it.
 
 No production data, account settings or consent choices are changed by this work.
