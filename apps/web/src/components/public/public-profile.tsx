@@ -171,7 +171,9 @@ export function PublicProfileView({
               action={
                 ownerEmptyState ? (
                   <Link
-                    href={localizedPath(locale, "/garden")}
+                    // The workspace has one address in every language;
+                    // `/bg/garden` is a 404 (`LOCALE_ROUTE_SEGMENTS`).
+                    href="/garden"
                     className={buttonVariants({})}
                   >
                     <Sprout aria-hidden="true" />
