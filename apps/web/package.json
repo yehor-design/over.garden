@@ -235,6 +235,9 @@
       "postcss@8.5.26>nanoid": "3.3.18",
       "shadcn@4.13.1>undici": "7.29.0",
       "@dotenvx/dotenvx@1.75.1>undici": "7.29.0"
+    },
+    "patchedDependencies": {
+      "next@16.2.11": "patches/next@16.2.11.patch"
     }
   }
 }

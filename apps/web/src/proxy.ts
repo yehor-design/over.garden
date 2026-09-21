@@ -209,11 +209,12 @@ function isProductionInternalNamespaceRequest() {
  * is browser-initiated speculation: `Purpose: prefetch` and `Sec-Purpose`, and
  * `x-middleware-prefetch` when a runtime sets it.
  *
- * The consequence is that a `<Link>` to a *different* locale must not be
- * prefetchable, because this layer cannot tell that prefetch from a landing.
- * `language-switcher.tsx` passes `prefetch={false}` for exactly that reason, and
- * `language-switcher.test.tsx` fails if it comes back. Verified in Chromium
- * against a production build on 2026-09-04.
+ * The consequence is that this layer cannot tell a router prefetch of `/ru/…`
+ * from a reader landing there (verified in Chromium against a production build
+ * on 2026-09-04), so nothing it decides from a prefix may happen on a request
+ * that could be one. The saved language is written on document navigations
+ * only — see `withAppRouteContract` — and the language options are plain
+ * anchors that never prefetch (`language-switcher.test.tsx`).
  */
 function isPrefetchRequest(request: NextRequest) {
   const purpose = request.headers.get("purpose")?.toLowerCase() ?? "";
@@ -228,19 +229,14 @@ function isPrefetchRequest(request: NextRequest) {
 }
 
 /**
- * A navigation the reader performed, whether the browser fetched a document or
- * the router fetched an RSC payload. Browser-initiated prefetches are excluded;
- * a router prefetch is invisible here, so cross-locale links carry
- * `prefetch={false}` instead — see `isPrefetchRequest`.
+ * The browser loading a document. The router's own fetches — a navigation's
+ * RSC payload and every prefetch — send `Sec-Fetch-Dest: empty`, and unlike the
+ * router's headers that one does reach this layer (measured against production
+ * on 2026-09-21: `/uk/journals` answered 308 to `document` and 200 to
+ * `empty`). A browser's own speculative load is a document too, and says so in
+ * `Sec-Purpose` (`isPrefetchRequest`). So in every browser that sends Fetch
+ * Metadata — every current one — no prefetch passes this check.
  */
-function isNavigationRequest(request: NextRequest) {
-  if (request.method !== "GET" && request.method !== "HEAD") return false;
-  if (request.nextUrl.pathname.startsWith("/api/")) return false;
-  if (isPrefetchRequest(request)) return false;
-  if (request.headers.has("next-action")) return false;
-  return true;
-}
-
 function isDocumentNavigationRequest(request: NextRequest) {
   if (request.method !== "GET" && request.method !== "HEAD") return false;
   if (request.nextUrl.pathname.startsWith("/api/")) return false;
@@ -375,11 +371,19 @@ function withAppRouteContract(
   }
   response.headers.set("Content-Language", localization.locale);
 
-  // A client-side navigation is an RSC GET, not a document load, and choosing a
-  // language on a public page is now exactly that (OVE-379). Persisting only on
-  // document loads would show the new language immediately and forget it until
-  // the next full page load, so the preference is written on both.
-  if (isNavigationRequest(request)) {
+  // Written on a document load and on nothing else. A prefix in an address the
+  // reader loaded is a choice; a prefix the router merely fetched is not, and
+  // this layer cannot tell a router prefetch from a router navigation.
+  //
+  // It used to be written on RSC requests as well, from when the language
+  // options were `<Link>`s and choosing one was a client-side navigation
+  // (OVE-379). They have been plain anchors since OVE-460, so an RSC request
+  // for a prefixed address was never a choice any more — only every prefetch
+  // of one. Measured on production on 2026-09-21: a reader who chose Ukrainian
+  // on `/garden` had the choice overwritten within 400 ms by the prefetches of
+  // the page's own `/ru/…` links, and on `/@yehor` the old page's prefetches
+  // raced the new one's load and won.
+  if (isDocumentNavigationRequest(request)) {
     if (
       request.cookies.get(INTERFACE_MARKET_COOKIE_NAME)?.value !==
       localization.market
@@ -423,6 +427,35 @@ function resolveRequestLocalization(request: NextRequest) {
     persistedLocale: request.cookies.get(INTERFACE_LOCALE_COOKIE_NAME)?.value,
     countryCode: readInterfaceCountryCode(request.headers),
   });
+}
+
+/**
+ * What the render is told about the reader's language, on the request headers
+ * it receives (`resolveRequestInterfaceLocalization` reads them).
+ *
+ * The market always: it is where the reader is, and nothing a request does
+ * changes it. The language only when the *address* names one — `/bg/…` — which
+ * is the one thing the render cannot read for itself. Anywhere else it reads
+ * the cookie, exactly as this layer did, and the two agree on every request
+ * but one: a Server Action that writes the cookie. Next hands the render that
+ * follows an action the cookies the action wrote, but not new headers, and a
+ * language pinned here outranks the cookie. So choosing a language on a
+ * workspace route re-rendered the page in the language the reader had just
+ * left — on every workspace page, measured on production on 2026-09-21.
+ *
+ * A value a caller sent under the same name is removed, never passed on.
+ */
+function forwardInterfaceLocalization(
+  headers: Headers,
+  localization: ResolvedInterfaceLocalization,
+) {
+  headers.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
+  if (localization.localeSource === "route") {
+    headers.set(INTERFACE_LOCALE_REQUEST_HEADER, localization.locale);
+  } else {
+    headers.delete(INTERFACE_LOCALE_REQUEST_HEADER);
+  }
+  return headers;
 }
 
 /**
@@ -534,9 +567,13 @@ function getAuthorScopedRewriteResponse(
       return null;
     }
 
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
-    requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
+    // The language travels in the rewritten path, which is where the page
+    // reads it; the headers say only what `forwardInterfaceLocalization` says
+    // everywhere else.
+    const requestHeaders = forwardInterfaceLocalization(
+      new Headers(request.headers),
+      localization,
+    );
     url.pathname = `/${locale}${rootProfilePath}`;
     url.search = sanitizeInterfaceRouteSearch(
       rootProfilePath,
@@ -1330,11 +1367,12 @@ export async function proxy(request: NextRequest) {
     request,
     localization,
   );
-  const requestHeaders = new Headers(request.headers);
+  const requestHeaders = forwardInterfaceLocalization(
+    new Headers(request.headers),
+    localization,
+  );
   requestHeaders.delete(INTERNAL_PROFILE_REWRITE_HEADER);
   requestHeaders.delete(INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER);
-  requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
-  requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
   const response =
     authorScopedRewrite ??
     getPublicDocumentRewriteResponse(request, locale, requestHeaders) ??

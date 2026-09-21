@@ -1,0 +1,62 @@
+diff --git a/dist/compiled/react-dom/cjs/react-dom-client.development.js b/dist/compiled/react-dom/cjs/react-dom-client.development.js
+index a990d312d139038d84a7c342a01275b568919c1a..15371106a2bd20492d98084a5249407993398cfc 100644
+--- a/dist/compiled/react-dom/cjs/react-dom-client.development.js
++++ b/dist/compiled/react-dom/cjs/react-dom-client.development.js
+@@ -20121,8 +20121,9 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext
++            ? prepareFreshStack(root, 0)
++            : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/dist/compiled/react-dom/cjs/react-dom-client.production.js b/dist/compiled/react-dom/cjs/react-dom-client.production.js
+index dd553ca07f7cfb0c68f333df264e1403dab6ecaf..c99fbdeb6e390d22a7bd3167b07cdb346345cf77 100644
+--- a/dist/compiled/react-dom/cjs/react-dom-client.production.js
++++ b/dist/compiled/react-dom/cjs/react-dom-client.production.js
+@@ -13177,7 +13177,9 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2)
++        ? prepareFreshStack(root, 0)
++        : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));
+diff --git a/dist/compiled/react-dom/cjs/react-dom-profiling.development.js b/dist/compiled/react-dom/cjs/react-dom-profiling.development.js
+index e5a9afc5217ec30ea6c44e237cbb377253509bd2..700072e3b67c7091641c08546e0cf049925a3513 100644
+--- a/dist/compiled/react-dom/cjs/react-dom-profiling.development.js
++++ b/dist/compiled/react-dom/cjs/react-dom-profiling.development.js
+@@ -20129,8 +20129,9 @@
+           (workInProgressRootRenderLanes & 62914560) ===
+             workInProgressRootRenderLanes &&
+           now$1() - globalMostRecentFallbackTime < FALLBACK_THROTTLE_MS)
+-          ? (executionContext & RenderContext) === NoContext &&
+-            prepareFreshStack(root, 0)
++          ? (executionContext & RenderContext) === NoContext
++            ? prepareFreshStack(root, 0)
++            : (workInProgressRootPingedLanes |= pingedLanes)
+           : (workInProgressRootPingedLanes |= pingedLanes),
+         workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+           (workInProgressSuspendedRetryLanes = 0));
+diff --git a/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js b/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js
+index eaf340953dded451e15e69723778286738f1936d..1115597cf7bae697861ff45ef2086a2802f5331e 100644
+--- a/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js
++++ b/dist/compiled/react-dom/cjs/react-dom-profiling.profiling.js
+@@ -15045,7 +15045,9 @@ function pingSuspendedRoot(root, wakeable, pingedLanes) {
+       (workInProgressRootRenderLanes & 62914560) ===
+         workInProgressRootRenderLanes &&
+       300 > now$1() - globalMostRecentFallbackTime)
+-      ? 0 === (executionContext & 2) && prepareFreshStack(root, 0)
++      ? 0 === (executionContext & 2)
++        ? prepareFreshStack(root, 0)
++        : (workInProgressRootPingedLanes |= pingedLanes)
+       : (workInProgressRootPingedLanes |= pingedLanes),
+     workInProgressSuspendedRetryLanes === workInProgressRootRenderLanes &&
+       (workInProgressSuspendedRetryLanes = 0));

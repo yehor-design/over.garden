@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-20.
+Last reviewed: 2026-09-21.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -179,6 +179,34 @@ four pixels of it is the difference between "Дневници" on one line and o
 `::before`) rather than the class name, 400 % zoom at 1280 logical width, and
 axe at 375 px on the home page, the journals directory, an organism card and the
 workspace.
+
+**A language, once chosen, stays chosen** (`OVE-472`, 2026-09-21). The owner
+reported that the language control on their profile page did nothing. It had
+done nothing on any workspace page since the control became a form (OVE-379,
+2026-09-04), and three defects stacked to hide one another:
+
+- **The re-render after the choice read the old language.** The proxy pinned
+  the language it had resolved on the request's headers, and the render ranked
+  that header above the cookie; Next gives the render after a Server Action the
+  cookies the action wrote but not new headers. The proxy now forwards a
+  language only when the address names one.
+- **Prefetches undid the choice.** The proxy wrote the preference on router
+  fetches too, and cannot tell a prefetch from a navigation, so the page's own
+  `/ru/…` links wrote `ru` back within 400 ms — measured on production on
+  `/garden`, and on `/@yehor`, where the page being left raced the one being
+  loaded. It writes on document loads only now.
+- **The transition never committed on a gardener's pages.** React's canary in
+  Next 16.2.11 drops a ping that arrives from inside a render that has already
+  suspended with delay. `apps/web/patches/next@16.2.11.patch` backports the
+  upstream fix (facebook/react#36134); it goes when `next` moves to 16.3.
+
+The same investigation found two links to addresses that answer 404 for a
+Bulgarian or Russian reader — `/bg/support` in the footer and `/bg/garden` in
+the owner's empty profile — both unprefixed now, and a test that asks the
+proxy's own classification about every link the shell draws. No test had ever
+pressed a language option; `tests/interface-locale.spec.ts` now does, on the
+workspace, both profile pages and a router-shaped fetch, each case falsified
+against the build without its fix.
 
 **One page, one language, and the contract page says what the code does**
 (`OVE-446`, 2026-09-17). The defect the card was written for had already been

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { PUBLIC_LOCALES } from "./public-localization";
+import { isUnknownLocalizedPath, isUnknownRootPath } from "./root-route-segments";
 import {
   getSiteShellNavigation,
   getSiteShellRouteContext,
@@ -135,7 +137,7 @@ describe("site shell navigation contract", () => {
     expect(isSiteShellComposerRoute("/garden/entries/abc-1")).toBe(false);
   });
 
-  it("names the footer's four links and localizes each one", () => {
+  it("names the footer's four links and localizes each one that has a twin", () => {
     expect(
       getSiteShellNavigation("bg", false).footerLinks.map(
         ({ key, href }) => [key, href] as const,
@@ -143,9 +145,39 @@ describe("site shell navigation contract", () => {
     ).toEqual([
       ["catalogue", "/bg/catalog"],
       ["privacy", "/bg/privacy"],
-      ["support", "/bg/support"],
+      // `/support` has no prefixed twin: it renders in the reader's language
+      // at its one address, and `/bg/support` is a 404.
+      ["support", "/support"],
       ["first-publication-disclosure", "/bg/first-publication-disclosure"],
     ]);
+  });
+
+  it("draws only addresses the proxy serves, in every language", () => {
+    // This file pinned `/bg/support` for four days while the proxy answered it
+    // 404 by design (`LOCALE_ROUTE_SEGMENTS`). A string in a test cannot see
+    // that; asking the proxy's own classification can.
+    for (const locale of PUBLIC_LOCALES) {
+      for (const signedIn of [false, true]) {
+        const navigation = getSiteShellNavigation(locale, signedIn, true);
+        const hrefs = [
+          ...navigation.publicItems,
+          ...navigation.personalItems,
+          ...navigation.mobileItems,
+          navigation.primaryAction,
+          navigation.signIn,
+          ...navigation.footerLinks,
+        ].map(({ href }) => href);
+        hrefs.push(navigation.primaryActionHref, navigation.searchHref);
+
+        for (const href of hrefs) {
+          const pathname = href.split(/[?#]/, 1)[0] ?? href;
+          expect(
+            isUnknownLocalizedPath(pathname) || isUnknownRootPath(pathname),
+            `${locale} ${signedIn ? "gardener" : "guest"}: ${href}`,
+          ).toBe(false);
+        }
+      }
+    }
   });
 
   it("gives every landmark the shell renders an accessible name", () => {

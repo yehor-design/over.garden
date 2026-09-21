@@ -26,9 +26,11 @@ import { HiddenField } from "@/components/ui/hidden-field";
  * Choosing an interface language.
  *
  * On a public page the language lives in the path, so the choice is a link —
- * one client navigation, and the proxy writes the preference from the prefix it
- * lands on. On a workspace route, where the address does not change, the choice
- * is a small form that writes the cookie and re-renders in place.
+ * one document navigation, and the proxy writes the preference from the prefix
+ * it lands on (on a document load and nothing else: a prefix the router merely
+ * fetched is not a choice). On a workspace route, where the address does not
+ * change, the choice is a small form that writes the cookie and re-renders in
+ * place.
  *
  * It is a `<details>` disclosure rather than a popup menu on purpose. A popup
  * renders its items only once it opens, so the options are absent from the
@@ -198,8 +200,12 @@ function LocalePreferenceOption({
   // afterwards would replace the form's real endpoint with React's
   // `javascript:` placeholder, and the control would need hydration to do
   // anything — the exact defect OVE-377 shipped once. The refresh is not needed
-  // anyway: Next re-renders the current route after every Server Action, and
-  // workspace routes are `no-store`, so the new language is what comes back.
+  // anyway: Next re-renders the current route after an action that writes a
+  // cookie, and hands that render the cookies the action wrote. The new
+  // language comes back only because the render reads it from the cookie: a
+  // language the proxy pinned on the request's headers before the choice used
+  // to outrank it, and the page came back in the language just left
+  // (`forwardInterfaceLocalization` in `proxy.ts`).
   return (
     <form action={formAction}>
       <HiddenField name="locale" value={locale} />

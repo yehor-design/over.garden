@@ -990,11 +990,14 @@ describe("app route cache guardrail", () => {
 
     expect(gardenResponse.status).toBe(200);
     expect(gardenResponse.headers.get("Content-Language")).toBe("bg");
+    // The workspace reads the choice from the cookie, not from a header this
+    // layer pins: the address names no language, so none is forwarded — see
+    // "forwards the address's language to the render, and nothing else".
     expect(
       gardenResponse.headers.get(
         `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`,
       ),
-    ).toBe("bg");
+    ).toBeNull();
     expect(
       gardenResponse.headers.get(
         `x-middleware-request-${INTERFACE_MARKET_REQUEST_HEADER}`,
@@ -1041,6 +1044,88 @@ describe("app route cache guardrail", () => {
     expect(nextPrefetch.headers.get("set-cookie")).toBeNull();
     expect(browserPrefetch.headers.get("Content-Language")).toBe("ru");
     expect(browserPrefetch.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("writes the saved language on a document load and never on a fetch the router makes", async () => {
+    // The request a router prefetch actually is by the time it reaches the
+    // proxy: Next has stripped `rsc` and `next-router-prefetch`, and what is
+    // left is the browser's own `Sec-Fetch-Dest: empty`. Measured on
+    // production on 2026-09-21, each of these wrote `ru` over a reader's
+    // fresh choice of Ukrainian — the page's own `/ru/…` links, prefetched
+    // the moment the choice re-rendered it.
+    const routerFetch = await responseFor("/ru/journals", {
+      cookie: interfaceCookies("bulgaria", "uk"),
+      accept: "*/*",
+      "sec-fetch-dest": "empty",
+      "x-vercel-ip-country": "UA",
+    });
+    expect(routerFetch.status).toBe(200);
+    expect(routerFetch.headers.get("Content-Language")).toBe("ru");
+    // Neither the language nor the market: a fetch is not where a reader is.
+    expect(routerFetch.headers.get("set-cookie")).toBeNull();
+
+    const documentLoad = await responseFor("/ru/journals", {
+      cookie: interfaceCookies("bulgaria", "uk"),
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    expect(documentLoad.status).toBe(200);
+    expect(documentLoad.headers.get("set-cookie")).toContain(
+      `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
+    );
+  });
+
+  it("forwards the address's language to the render, and nothing else", async () => {
+    const localeHeader = `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`;
+    const overridden = (response: Response) =>
+      (response.headers.get("x-middleware-override-headers") ?? "")
+        .split(",")
+        .map((name) => name.trim());
+
+    // `/bg/…` names a language the render cannot read anywhere else.
+    const prefixed = await responseFor("/bg/journals", {
+      cookie: interfaceCookies("bulgaria", "ru"),
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    expect(prefixed.headers.get(localeHeader)).toBe("bg");
+
+    // The choice itself. A Server Action on a workspace route writes the
+    // cookie, and Next hands the render that follows it the cookies it wrote
+    // but the headers the request arrived with. A language pinned here would
+    // outrank the choice, and the page came back in the language just left.
+    const choice = await responseFor(
+      "/garden/profile",
+      {
+        cookie: interfaceCookies("bulgaria", "ru"),
+        "next-action": "action-id",
+        "x-vercel-ip-country": "BG",
+      },
+      { method: "POST" },
+    );
+    expect(choice.status).toBe(200);
+    expect(choice.headers.get(localeHeader)).toBeNull();
+    expect(overridden(choice)).not.toContain(INTERFACE_LOCALE_REQUEST_HEADER);
+    expect(
+      choice.headers.get(
+        `x-middleware-request-${INTERFACE_MARKET_REQUEST_HEADER}`,
+      ),
+    ).toBe("bulgaria");
+
+    // An unprefixed public address is rewritten into the reader's subtree;
+    // the language travels in the path the page is rendered from.
+    const rewritten = await responseFor("/@yehor", {
+      cookie: interfaceCookies("bulgaria", "ru"),
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    expect(rewritten.headers.get("x-middleware-rewrite")).toBe(
+      "https://over.garden/ru/@yehor",
+    );
+    expect(rewritten.headers.get(localeHeader)).toBeNull();
+    expect(overridden(rewritten)).not.toContain(
+      INTERFACE_LOCALE_REQUEST_HEADER,
+    );
   });
 
   it("keeps mutations, APIs, RSC requests, and server actions out of locale persistence and canonical redirects", async () => {
@@ -1098,7 +1183,7 @@ describe("app route cache guardrail", () => {
     ).toBe("bulgaria");
   });
 
-  it("overwrites caller-supplied internal market and locale headers", async () => {
+  it("never passes on a caller-supplied internal market or locale header", async () => {
     const response = await responseFor(
       "/api/interface/locale",
       {
@@ -1116,8 +1201,23 @@ describe("app route cache guardrail", () => {
         `x-middleware-request-${INTERFACE_MARKET_REQUEST_HEADER}`,
       ),
     ).toBe("bulgaria");
+    // The address names no language, so this layer forwards none — and the
+    // caller's is removed rather than passed through to outrank the cookie.
     expect(
       response.headers.get(
+        `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`,
+      ),
+    ).toBeNull();
+    expect(
+      (response.headers.get("x-middleware-override-headers") ?? "").split(","),
+    ).not.toContain(INTERFACE_LOCALE_REQUEST_HEADER);
+
+    const prefixed = await responseFor("/bg/privacy", {
+      "x-vercel-ip-country": "UA",
+      [INTERFACE_LOCALE_REQUEST_HEADER]: "ru",
+    });
+    expect(
+      prefixed.headers.get(
         `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`,
       ),
     ).toBe("bg");

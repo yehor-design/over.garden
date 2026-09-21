@@ -276,6 +276,29 @@ describe("PublicProfileView", () => {
     expect(html).not.toContain('data-auth-intent-control="follow"');
   });
 
+  it("sends the owner to the workspace's one address in every language", async () => {
+    const { PublicProfileView } = await import("./public-profile");
+    const { getPublicProfileCopy } = await import("@/lib/public-profile-copy");
+
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      const html = renderToStaticMarkup(
+        <PublicProfileView
+          profile={{ ...PROFILE, objects: [], journals: [] }}
+          locale={locale}
+          viewer={{ kind: "owner" }}
+        />,
+      );
+      const label = getPublicProfileCopy(locale).addFirstObject;
+      const anchor = [...html.matchAll(/<a\b[^>]*>[\s\S]*?<\/a>/g)]
+        .map(([markup]) => markup)
+        .find((markup) => markup.includes(label));
+
+      // `/bg/garden` and `/ru/garden` are 404s: the workspace has no twin in
+      // the `[locale]` tree, and renders in the reader's language as it is.
+      expect(anchor, locale).toContain('href="/garden"');
+    }
+  });
+
   it("shows a stranger nothing-yet without an illustration or an invitation", async () => {
     const { PublicProfileView } = await import("./public-profile");
     const html = renderToStaticMarkup(

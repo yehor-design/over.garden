@@ -329,7 +329,11 @@ export function getSiteShellNavigation(
       {
         key: "support",
         label: copy.shell.support,
-        href: localizedPath(locale, "/support"),
+        // Unprefixed in every language. `/support` has no twin in the
+        // `[locale]` tree, so `/bg/support` answered 404 to every Bulgarian
+        // and Russian reader who pressed this link (found on production on
+        // 2026-09-21); the one address renders in the reader's own language.
+        href: "/support",
       },
       {
         key: "first-publication-disclosure",
