@@ -105,7 +105,7 @@ export async function StaticDocumentShell({
           draw nothing, so they mount with the bundle that runs them. */}
       <AnalyticsConsentNotice locale={locale} />
       <AfterHydration>
-        <GoogleAnalytics locale={locale} notice="document" />
+        <GoogleAnalytics />
       </AfterHydration>
       <AfterHydration>
         <MetaMarketingAttribution locale={locale} />
@@ -160,7 +160,12 @@ export async function RequestDocumentShell({
       >
         {children}
       </SiteShell>
-      <GoogleAnalytics locale={locale} />
+      {/* The same notice a static document draws, for the same reason: a
+          banner React renders from the stored answer is rendered on the server
+          as if nobody had answered, and flashed on every hard load for the
+          reader who had. */}
+      <AnalyticsConsentNotice locale={locale} />
+      <GoogleAnalytics />
       <MetaMarketingAttribution locale={locale} />
     </div>
   );

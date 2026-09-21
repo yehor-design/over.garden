@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import Clarity from "@microsoft/clarity";
 
 import {
+  AnalyticsConsentNotice,
   AnalyticsPrivacyControls,
   GoogleAnalytics,
   GoogleTagManagerScripts,
@@ -150,7 +151,12 @@ describe("public analytics consent", () => {
     process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID = "clarity-project";
     mockedPathname = "/blog";
 
-    const html = renderToStaticMarkup(<GoogleAnalytics locale="bg" />);
+    const html = renderToStaticMarkup(
+      <>
+        <AnalyticsConsentNotice locale="bg" />
+        <GoogleAnalytics />
+      </>,
+    );
 
     expect(html).toContain("Приемете аналитиката");
     expect(html).toContain("Откажете");
@@ -165,15 +171,29 @@ describe("public analytics consent", () => {
     expect(html).not.toContain("clarity.ms");
   });
 
-  it("does not render consent UI or measurement scripts on private routes", () => {
+  it("asks on every page, and the tags draw nothing of the asking", () => {
+    // The owner, 2026-09-21: the notice is owed on every page until the reader
+    // answers, the private and unmeasured ones included. It reads no address,
+    // so no address can hide it; which paths are *measured* is still the
+    // tags' decision, and the tags render no notice of their own.
     process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_ENABLED = "true";
     process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID = "clarity-project";
 
-    mockedPathname = "/garden";
-    expect(renderToStaticMarkup(<GoogleAnalytics />)).toBe("");
-
-    mockedPathname = "/admin";
-    expect(renderToStaticMarkup(<GoogleAnalytics />)).toBe("");
+    for (const path of [
+      "/",
+      "/garden",
+      "/admin",
+      "/auth/sign-in",
+      "/journals",
+      "/@yehor/post/3",
+    ]) {
+      mockedPathname = path;
+      const notice = renderToStaticMarkup(<AnalyticsConsentNotice />);
+      expect(notice, path).toContain('data-analytics-consent-banner="true"');
+      expect(notice, path).toContain("Прийняти аналітику");
+      expect(notice, path).not.toContain("GTM-W979KSX3");
+      expect(renderToStaticMarkup(<GoogleAnalytics />), path).toBe("");
+    }
   });
 
   it("renders consented Google Tag Manager with advertising storage denied", () => {

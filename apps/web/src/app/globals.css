@@ -631,15 +631,17 @@ html[data-shell-section="journals"] [data-site-shell-tab="journals"] {
   color: var(--color-action-subtle-text);
 }
 
-/* A static document carries the notice in its bytes for every reader, and
+/* Every document carries the notice in its bytes for every reader, and
    `<html>` says — from an inline script, before first paint — whether this
-   path is measured and whether this reader has answered (ADR-0032 D7). Drawn
-   only when an answer is owed; one rule, unlayered, so it outranks the
-   notice's own `sm:flex` without naming it. A reader without JavaScript never
-   sees it, and nothing measures them. */
-[data-analytics-consent-notice="document"]:not(
-    html[data-analytics-route="true"][data-analytics-consent="undecided"] *
-  ) {
+   reader has answered (ADR-0032 D7). Drawn while an answer is owed, on every
+   page and through every navigation, until one of its two buttons is pressed
+   (the owner, 2026-09-21); which path the reader is on does not enter into it.
+   One rule, unlayered, so it outranks the notice's own `sm:flex` without
+   naming it. A reader without JavaScript never sees it, and nothing measures
+   them. */
+[data-analytics-consent-banner]:not(
+  html[data-analytics-consent="undecided"] *
+) {
   display: none;
 }
 

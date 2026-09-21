@@ -379,6 +379,11 @@ also what Medium and Substack do with a lead image.
 
 No other z-index values exist in the codebase.
 
+The consent notice is chrome, not a toast: it sits at `--z-header`. It is on
+every page until the reader answers it (ADR-0032 D7), so anything the reader
+opens — a menu, a popover, a sheet, a dialog — must be above it; at `--z-toast`
+it covered the language menu's options (`OVE-473`).
+
 ---
 
 ## 3. Layout

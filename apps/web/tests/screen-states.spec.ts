@@ -152,7 +152,11 @@ test.describe("an overlay keeps focus, and gives it back", () => {
     await expect(trigger).toBeVisible();
     await trigger.click();
 
-    const sheet = page.getByRole("dialog").first();
+    // The sheet by name of its slot: the consent notice is a dialog too, and
+    // on every page for a reader who has not answered it (`OVE-473`) — first
+    // in the document, ahead of the sheet's portal.
+    const SHEET = '[role="dialog"][data-slot="sheet-content"]';
+    const sheet = page.locator(SHEET);
     await expect(sheet).toBeVisible();
 
     for (let step = 0; step < 15; step += 1) {
@@ -166,21 +170,21 @@ test.describe("an overlay keeps focus, and gives it back", () => {
       // wrapping cleanly from the last link back to the close control.
       await page
         .waitForFunction(
-          () => {
+          (selector) => {
             const active = document.activeElement;
-            const dialog = document.querySelector('[role="dialog"]');
+            const dialog = document.querySelector(selector);
             return Boolean(active && dialog && dialog.contains(active));
           },
-          undefined,
+          SHEET,
           { timeout: 2_000 },
         )
         .catch(() => undefined);
 
-      const inside = await page.evaluate(() => {
+      const inside = await page.evaluate((selector) => {
         const active = document.activeElement;
-        const dialog = document.querySelector('[role="dialog"]');
+        const dialog = document.querySelector(selector);
         return Boolean(active && dialog && dialog.contains(active));
-      });
+      }, SHEET);
       expect(inside, `focus escaped the sheet on Tab ${step + 1}`).toBe(true);
     }
 
