@@ -39,6 +39,13 @@ export async function seedPublishedEntryFixture(
      * spec could see the page drawing that photograph twice (`OVE-471`).
      */
     photographInDocument?: boolean;
+    /** Omit for the historical single-cover fixture; [] is genuinely text-only. */
+    photographs?: Array<{
+      width: number;
+      height: number;
+      bytes: number;
+      key: string;
+    }>;
   } = {},
 ): Promise<PublishedEntryFixture> {
   const suffix = randomUUID().slice(0, 8);
@@ -46,7 +53,16 @@ export async function seedPublishedEntryFixture(
   const spaceId = randomUUID();
   const objectId = randomUUID();
   const entryId = randomUUID();
-  const assetId = randomUUID();
+  const photographs = options.photographs ?? [
+    {
+      width: 2560,
+      height: 1440,
+      bytes: 56744,
+      key: `derivatives/${randomUUID()}/1.webp`,
+    },
+  ];
+  const assets = photographs.map((photo) => ({ ...photo, id: randomUUID() }));
+  const assetId = assets[0]?.id;
   const title = options.title ?? "Перші зав'язі після тижня спеки";
   // Long enough to wrap at every width: the measure of a line is a laid-out
   // fact, and one short sentence never reaches the column's edge.
@@ -87,12 +103,12 @@ export async function seedPublishedEntryFixture(
     ? {
         schemaVersion: 1,
         blocks: [
-          {
-            id: "b_photograph",
+          ...assets.map((asset, index) => ({
+            id: `b_photograph_${index}`,
             type: "image",
-            mediaAssetId: assetId,
+            mediaAssetId: asset.id,
             caption: "Грядка з томатами у вечірньому світлі",
-          },
+          })),
           ...body.split(/\n\s*\n/).map((paragraph, index) => ({
             id: `b_paragraph_${index}`,
             type: "paragraph",
@@ -128,19 +144,30 @@ export async function seedPublishedEntryFixture(
   // document. Whether a file answers behind it is the media pipeline's
   // question; a missing file costs a broken image, never the page's shape —
   // the box is reserved by `aspect-ratio` (DESIGN.md §2.10).
-  await pool.query(
-    `insert into media_assets (id, owner_user_id, journal_entry_id, derivative_key, alt_text, caption,
+  for (const [position, asset] of assets.entries())
+    await pool.query(
+      `insert into media_assets (id, owner_user_id, journal_entry_id, derivative_key, alt_text, caption,
        document_position, usage_role, intrinsic_width, intrinsic_height, focal_x, focal_y,
        upload_generation, declared_size_bytes, variant_long_edges)
      values ($1, $2, $3, $4, 'Грядка з томатами у вечірньому світлі',
-             'Грядка з томатами у вечірньому світлі', 0, 'inline', 2560, 1440, 0.5, 0.45, 1, 56744,
+             'Грядка з томатами у вечірньому світлі', $5, 'inline', $6, $7, 0.5, 0.45, 1, $8,
              '{1280,480}')`,
-    [assetId, ownerUserId, entryId, `derivatives/${randomUUID()}/1.webp`],
-  );
-  await pool.query(
-    `update journal_entries set cover_media_asset_id = $2 where id = $1`,
-    [entryId, assetId],
-  );
+      [
+        asset.id,
+        ownerUserId,
+        entryId,
+        asset.key,
+        position,
+        asset.width,
+        asset.height,
+        asset.bytes,
+      ],
+    );
+  if (assetId)
+    await pool.query(
+      `update journal_entries set cover_media_asset_id = $2 where id = $1`,
+      [entryId, assetId],
+    );
 
   return {
     ownerUserId,

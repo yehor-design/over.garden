@@ -70,16 +70,37 @@ export async function signInSyntheticGardener(input: {
         'update public."user" set "emailVerified" = true where id = $1::uuid',
         [id],
       );
-      const signIn = await request.post(
-        `${input.baseURL}/api/auth/sign-in/email`,
-        {
-          headers: { origin: input.baseURL },
-          data: { email, password },
-        },
-      );
+      // Sign-in shares the same limiter as concurrent fixture accounts. A
+      // persisted signup does not mean its immediately following signin is admitted.
+      const signInStatuses: number[] = [];
+      let signedIn = false;
+      for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+        const response = await request.post(
+          `${input.baseURL}/api/auth/sign-in/email`,
+          {
+            headers: { origin: input.baseURL },
+            data: { email, password },
+          },
+        );
+        signInStatuses.push(response.status());
+        if (response.ok()) {
+          signedIn = true;
+          break;
+        }
+        const delay = RETRY_DELAYS_MS[attempt];
+        if (response.status() !== 429 || delay === undefined) break;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+      if (!signedIn) {
+        // The caller never received this ID, so it cannot clean this account.
+        await input.pool.query(
+          'delete from public."user" where id = $1::uuid',
+          [id],
+        );
+      }
       expect(
-        signIn.ok(),
-        `sign-in answered ${signIn.status()} for ${email}`,
+        signedIn,
+        `sign-in answered ${signInStatuses.join(", ")} for ${email}`,
       ).toBe(true);
 
       const claimed = await input.pool.query<{ normalized_handle: string }>(

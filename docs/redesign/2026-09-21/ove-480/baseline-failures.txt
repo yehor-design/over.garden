@@ -1,0 +1,14 @@
+2026-09-21, application build at 6b5a70402282adf021cae354ffc7c23b70496e2e
+REDESIGN_ENFORCE_BASELINES=1 pnpm exec tsx scripts/run-browser-gate.ts --spec=redesign-baselines.spec.ts --port=3188
+Expected nonzero exit: desired behavior before the corresponding UI changes.
+
+  1) [chromium] › tests/redesign-baselines.spec.ts:42:5 › OVE-486: global Write opens the destination-aware composer 
+    Expected: "/garden/new"
+    Received: "/garden#first-entry-composer"
+  2) [chromium] › tests/redesign-baselines.spec.ts:59:5 › OVE-483/486: no implicit first-space selection among three spaces 
+    Expected: ""
+    Received: "5fbbecd3-79ba-4a14-88eb-f54c7fa25b65"
+  3) [chromium] › tests/redesign-baselines.spec.ts:74:5 › OVE-482: filter dismiss is named Close rather than Reset 
+    Expected pattern: /Закрити/
+    Received string:  "Скинути все"
+  3 failed
