@@ -458,6 +458,9 @@ actions never live only in a rail. No horizontal page overflow at 320 CSS px.
 An empty context rail renders no landmark or placeholder. The wide grid keeps
 its context track reserved so late page context cannot shift the reading column.
 
+The brand wordmark is 48 px high (`h-12`) from the desktop breakpoint
+(`lg`, 64rem), with proportional width; below it the wordmark stays 28 px high.
+
 Desktop primary destinations: Feed, Explore, My garden, Activity. New entry is
 one persistent action. Saved reading, wishlist, public profile, settings and
 sealed-owner tools belong to account utilities. Explore keeps Catalogue,
