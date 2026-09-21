@@ -36,7 +36,13 @@ export const PUBLIC_QUERY_TWIN_SEGMENT = "q";
  * filesystem.
  */
 export const PUBLIC_QUERY_TWINS: ReadonlyMap<string, readonly string[]> =
-  new Map([["/", ["kind", "topic", "cursor"]]]);
+  new Map([
+    ["/", ["kind", "topic", "cursor"]],
+    [
+      "/journals",
+      ["q", "kind", "catalog", "topic", "season", "region", "sort", "page"],
+    ],
+  ]);
 
 /**
  * Where a request with a query string renders, as a canonical path under the
@@ -50,7 +56,8 @@ export function publicQueryTwinPath(
   const keys = PUBLIC_QUERY_TWINS.get(basePath);
   if (!keys || !search) return null;
 
-  const params = typeof search === "string" ? new URLSearchParams(search) : search;
+  const params =
+    typeof search === "string" ? new URLSearchParams(search) : search;
   // A parameter that is present and empty says nothing (`/?kind=`), and the
   // listing's own normalizer reads it as unset.
   if (!keys.some((key) => (params.get(key) ?? "").length > 0)) return null;

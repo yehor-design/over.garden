@@ -123,6 +123,7 @@ export function PublicJournalDirectory({
       <PageHeader title={copy.heading} description={copy.intro} />
 
       <FilterBar
+        documentNavigation
         action={listingPath}
         /* The search field and its own submit. The submit is not an "Apply
            filters" button — the facets apply on change (DESIGN.md §5.1) — it

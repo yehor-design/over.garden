@@ -1,7 +1,7 @@
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedJournalsMetadata,
-  renderPublicJournalsPage,
+  renderStaticPublicJournalsPage,
 } from "@/app/[locale]/journals/page";
 
 export async function generateMetadata() {
@@ -24,11 +24,6 @@ export async function generateMetadata() {
  * The language control in the shell is how a reader reaches their own prefix,
  * and `hreflang` is how a crawler does.
  */
-export default async function RootJournalsRoute({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-} = {}) {
-  const query = (await searchParams) ?? {};
-  return renderPublicJournalsPage(DEFAULT_PUBLIC_LOCALE, query);
+export default async function RootJournalsRoute() {
+  return renderStaticPublicJournalsPage(DEFAULT_PUBLIC_LOCALE);
 }

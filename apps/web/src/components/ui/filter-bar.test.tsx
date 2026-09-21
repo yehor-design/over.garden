@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FilterBar, type FilterBarProps } from "./filter-bar";
 
@@ -122,6 +122,21 @@ describe("FilterBar", () => {
 
     expect(push).toHaveBeenCalledTimes(1);
     expect(push.mock.calls[0]![0]).toContain("sort=relevance");
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("crosses the static query-twin boundary with a document navigation", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { assign });
+    renderBar({ documentNavigation: true });
+    await userEvent.selectOptions(screen.getByLabelText("Тема"), [
+      "winter-care",
+    ]);
+    expect(push).not.toHaveBeenCalled();
+    expect(assign).toHaveBeenCalledWith(
+      "/journals?kind=plant&topic=winter-care",
+    );
   });
 
   it("repeats a parameter for a multi-select facet", async () => {

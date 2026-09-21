@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type {
   PublicJournalDirectoryFacets,
@@ -73,7 +73,10 @@ const facets: PublicJournalDirectoryFacets = {
 };
 
 describe("/journals", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   beforeEach(() => {
+    vi.stubEnv("DATABASE_URL", "postgres://test:test@localhost:5432/test");
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
@@ -88,7 +91,7 @@ describe("/journals", () => {
 
   it("renders localized URL-owned search through canonical public repositories", async () => {
     const { default: Route, generateMetadata } =
-      await import("@/app/[locale]/journals/page");
+      await import("@/app/[locale]/q/journals/page");
     const html = renderToStaticMarkup(
       await Route({
         params: Promise.resolve({ locale: "bg" }),
@@ -121,7 +124,7 @@ describe("/journals", () => {
 
   it("renders a recoverable guest error if either canonical repository fails", async () => {
     mocks.listPage.mockRejectedValue(new Error("database unavailable"));
-    const { default: Route } = await import("@/app/[locale]/journals/page");
+    const { default: Route } = await import("@/app/[locale]/q/journals/page");
     const html = renderToStaticMarkup(
       await Route({
         params: Promise.resolve({ locale: "uk" }),
@@ -141,7 +144,7 @@ describe("/journals", () => {
     mocks.resolveSearchScope.mockRejectedValue(
       new Error("database unavailable"),
     );
-    const { default: Route } = await import("@/app/[locale]/journals/page");
+    const { default: Route } = await import("@/app/[locale]/q/journals/page");
     const html = renderToStaticMarkup(
       await Route({
         params: Promise.resolve({ locale: "uk" }),
@@ -151,6 +154,18 @@ describe("/journals", () => {
 
     expect(html).toContain('data-public-journal-directory-state="error"');
     expect(html).toContain("Журнали тимчасово недоступні");
+  });
+
+  it("defers a failed static read instead of caching the error document", async () => {
+    mocks.listPage.mockRejectedValue(new Error("database unavailable"));
+    const { renderPublicJournalsPage } =
+      await import("@/app/[locale]/journals/page");
+    await expect(
+      renderPublicJournalsPage("uk", {}, "static"),
+    ).rejects.toMatchObject({
+      name: "StaticRenderDeferred",
+      reason: "read_failed",
+    });
   });
 
   /**
@@ -166,13 +181,7 @@ describe("/journals", () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     const { default: RootJournalsRoute } = await import("./page");
 
-    const rendered = await RootJournalsRoute({
-      searchParams: Promise.resolve({
-        q: "пчёлы",
-        kind: "animal",
-        page: "2",
-      }),
-    });
+    const rendered = await RootJournalsRoute();
 
     expect(mocks.redirect).not.toHaveBeenCalled();
     expect(rendered).toBeTruthy();

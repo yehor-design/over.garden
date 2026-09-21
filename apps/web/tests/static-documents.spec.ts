@@ -147,8 +147,9 @@ interface SegmentOutcome {
 
 function installSegmentProbe(holdMs: number) {
   const outcomes: SegmentOutcome[] = [];
-  (window as unknown as { __segmentOutcomes: SegmentOutcome[] }).__segmentOutcomes =
-    outcomes;
+  (
+    window as unknown as { __segmentOutcomes: SegmentOutcome[] }
+  ).__segmentOutcomes = outcomes;
   const describe = (segment: Element | null) =>
     (segment?.innerHTML ?? "").replace(/\s+/gu, " ").slice(0, 120);
 
@@ -160,7 +161,11 @@ function installSegmentProbe(holdMs: number) {
       complete = function (this: unknown, boundary, segment) {
         const node = document.getElementById(segment);
         if (node && !document.getElementById(boundary)) {
-          outcomes.push({ boundary, outcome: "dropped", holds: describe(node) });
+          outcomes.push({
+            boundary,
+            outcome: "dropped",
+            holds: describe(node),
+          });
         }
         return original.call(this, boundary, segment);
       };
@@ -222,7 +227,10 @@ async function seedStaticFixture(pool: Pool): Promise<StaticFixture> {
  * is what puts the `<img>` in the document; no file answers behind it, and the
  * box is reserved either way (DESIGN.md §2.10).
  */
-async function photographTheSpeciesEntry(pool: Pool, organism: OrganismFixture) {
+async function photographTheSpeciesEntry(
+  pool: Pool,
+  organism: OrganismFixture,
+) {
   const photographed = await pool.query(
     `insert into media_assets (id, owner_user_id, journal_entry_id, derivative_key, alt_text, caption,
        document_position, usage_role, intrinsic_width, intrinsic_height, focal_x, focal_y,
@@ -259,11 +267,13 @@ async function photographTheSpeciesEntry(pool: Pool, organism: OrganismFixture) 
 function largestPhotographOnTheFirstScreen() {
   const candidates = [...document.querySelectorAll("img")].flatMap((image) => {
     const box = image.getBoundingClientRect();
-    const width = Math.min(box.right, window.innerWidth) - Math.max(box.left, 0);
+    const width =
+      Math.min(box.right, window.innerWidth) - Math.max(box.left, 0);
     const height =
       Math.min(box.bottom, window.innerHeight) - Math.max(box.top, 0);
     // An avatar is not what a page's LCP waits for.
-    if (box.width < 96 || box.height < 96 || width <= 0 || height <= 0) return [];
+    if (box.width < 96 || box.height < 96 || width <= 0 || height <= 0)
+      return [];
     // Neither is an empty state's illustration. It is decorative app art —
     // `alt=""`, 144 px, shipped with the code (DESIGN.md §2.9) — and it is
     // lazy on purpose. On a listing with nothing in it, it is nevertheless the
@@ -346,6 +356,61 @@ test.describe("a public page is a static document", () => {
     }
   });
 
+  test("journal directories serve their content and controls outside every hidden segment", async ({
+    request,
+  }) => {
+    for (const address of [
+      "/journals",
+      "/bg/journals",
+      "/ru/journals",
+      "/journals?utm_source=proof",
+    ]) {
+      const { status, html } = await getDocument(request, address);
+      expect(status, address).toBe(200);
+      const served = readStaticDocument(html);
+      expect(served.titleInHead, address).toBe(true);
+      expect(served.heading?.hidden, address).toBe(false);
+      expect(html, address).not.toContain(
+        'data-public-journal-directory-state="loading"',
+      );
+      const ranges = hiddenSegments(html);
+      for (const marker of [
+        'data-public-journal-directory-state="',
+        'data-filter-bar-form="true"',
+        'data-entry-card="',
+      ]) {
+        const occurrences = [...html.matchAll(new RegExp(marker, "g"))];
+        expect(occurrences.length, `${address}: ${marker}`).toBeGreaterThan(0);
+        for (const occurrence of occurrences) {
+          expect(
+            ranges.some(
+              ([start, end]) =>
+                occurrence.index! >= start && occurrence.index! < end,
+            ),
+            `${address}: ${marker}`,
+          ).toBe(false);
+        }
+      }
+      if (served.image) {
+        expect(served.image.hidden, address).toBe(false);
+        expect(served.imagePreloadInHead, address).toBe(true);
+      }
+    }
+  });
+
+  test("journal filters use their query twin while direct twin addresses stay unavailable", async ({
+    request,
+  }) => {
+    const filtered = await getDocument(request, "/journals?kind=animal");
+    expect(filtered.status).toBe(200);
+    expect(filtered.html).toMatch(
+      /<option[^>]*(?:value="animal"[^>]*selected=""|selected=""[^>]*value="animal")/,
+    );
+    for (const address of ["/q/journals", "/bg/q/journals", "/ru/q/journals"]) {
+      expect((await getDocument(request, address)).status, address).toBe(404);
+    }
+  });
+
   test("an organism card is in the served bytes", async ({ request }) => {
     const path = `/species/${fixture.organism.speciesSlug}`;
     for (const attempt of [1, 2]) {
@@ -389,7 +454,10 @@ test.describe("a public page is a static document", () => {
         // The entry and the card are this file's own rows, so their photograph
         // is known to be there; a listing shows whatever the database holds.
         if (address === fixture.entryPath || address === card) {
-          expect(largest, `${where}: a photograph on the first screen`).not.toBeNull();
+          expect(
+            largest,
+            `${where}: a photograph on the first screen`,
+          ).not.toBeNull();
         }
         expect(
           largest?.loading ?? "eager",
@@ -407,7 +475,11 @@ test.describe("a public page is a static document", () => {
     // served — the twin renders at request time, so a chip's *label* arrives in
     // a later segment and is not in the bytes beside its button.
     const chips = (html: string) =>
-      [...html.matchAll(/data-slot="toggle-chip" aria-pressed="(true|false)"/gu)]
+      [
+        ...html.matchAll(
+          /data-slot="toggle-chip" aria-pressed="(true|false)"/gu,
+        ),
+      ]
         .slice(0, 3)
         .map((match) => match[1]);
     const plain = await getDocument(request, "/");
@@ -439,6 +511,9 @@ test.describe("a public page is a static document", () => {
     try {
       for (const address of [
         "/",
+        "/journals",
+        "/bg/journals",
+        "/ru/journals",
         fixture.entryPath,
         `/species/${fixture.organism.speciesSlug}`,
       ]) {
@@ -474,6 +549,9 @@ test.describe("a public page is a static document", () => {
       "/",
       "/?kind=plant",
       "/journals",
+      "/journals?kind=plant",
+      "/bg/journals",
+      "/ru/journals",
       "/catalog",
       fixture.entryPath,
       `/@${fixture.handle}`,
@@ -528,6 +606,9 @@ test.describe("a public page is a static document", () => {
       fixture.entryPath,
       `/species/${fixture.organism.speciesSlug}`,
       "/journals",
+      "/journals?kind=plant",
+      "/bg/journals",
+      "/ru/journals",
       "/catalog",
       "/knowledge",
       "/communities",

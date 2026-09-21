@@ -61,6 +61,14 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**Static journal directory (first OVE-467 family):** the plain `/journals`
+document includes its title, controls, first photograph and cards in the visible
+served HTML. Recognized filters render through an internal `/q/journals` twin;
+the reader's public address does not change. Unavailable database reads use the
+existing bounded deferral mechanism. Other public families and the production
+performance budget remain separate work. See
+`docs/redesign/2026-09-21/OVE-467-JOURNALS-PROOF.md`.
+
 **Owned destination search (OVE-483):** the inventory writing entrance and
 first-entry parent selection share an authenticated picker over the complete
 owned corpus, with bounded cursor pages, parent/type/species context and genuine

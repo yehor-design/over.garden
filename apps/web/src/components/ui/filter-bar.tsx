@@ -49,7 +49,9 @@ import { cn } from "@/lib/utils";
  * 2. After hydration a change to a facet or to the sort navigates through the
  *    router rather than submitting the form. That keeps the document — which
  *    is what lets the result count's live region announce the new number, since
- *    a region that arrives with a fresh document announces nothing.
+ *    a region that arrives with a fresh document announces nothing. A caller
+ *    with query-dependent Proxy rewrites opts into document navigation so the
+ *    server resolves the correct route tree. Chip removals remain client links.
  * 3. The search field is **not** part of that: it submits on `Enter`. Pushing
  *    on every keystroke would announce a count per letter, and a live region
  *    that re-announces on every letter is worse than no count at all.
@@ -112,6 +114,8 @@ export interface FilterBarLabels {
 export interface FilterBarProps {
   /** The form's action: the listing's own address, with no query. */
   action: string;
+  /** Let Proxy resolve a query-dependent route tree on the server. */
+  documentNavigation?: boolean;
   facets: readonly FilterBarFacet[];
   sort?: {
     key: string;
@@ -144,6 +148,7 @@ export interface FilterBarProps {
 
 function FilterBar({
   action,
+  documentNavigation = false,
   facets,
   sort,
   chips = [],
@@ -176,7 +181,11 @@ function FilterBar({
     }
     params.delete("page");
     const query = params.toString();
-    router.push(query ? `${action}?${query}` : action);
+    const target = query ? `${action}?${query}` : action;
+    // A query twin changes the route tree. The client may otherwise reuse
+    // the static document without asking Proxy which tree serves this query.
+    if (documentNavigation) window.location.assign(target);
+    else router.push(target);
   };
 
   return (

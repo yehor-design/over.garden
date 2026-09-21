@@ -75,22 +75,15 @@ async function axeViolations(page: Page) {
 /**
  * The one filter bar a reader can see.
  *
- * `:visible` rather than the bare attribute, and that is not a convenience.
- * A streamed response carries several copies of every region — the
- * prerendered shell's skeleton and the real content inside `<div hidden>` —
- * and React's `$RC` script swaps them. Measured on 2026-09-18: `/journals`
- * serves **two** `[data-filter-bar-form]` and **four** `<main>` in its bytes,
- * and exactly one of each survives the swap. So the question worth asking is
- * "how many can a reader see", which is also the question that catches a
- * control genuinely duplicated per breakpoint.
+ * The plain directory is static (ADR-0032 D8); the query twin and a failed
+ * prerender still settle at request time. Count the visible, settled form so
+ * this test covers both documents and catches a control duplicated per
+ * breakpoint. The HTTP gate in static-documents.spec.ts separately proves
+ * that a healthy plain directory has no loading copy or hidden content.
  */
 /**
- * **And settled, not merely visible.** The directory's loading shape is the
- * directory itself with nothing in it — filter bar included, every select on
- * its default. Since ADR-0032 that shape is in the static document's first
- * bytes, so it *is* visible, before the real page has been revealed over it:
- * a read of "the visible bar" straight after a reload could be a read of the
- * skeleton's, where `kind` is "all" whatever the address says.
+ * **And settled, not merely visible.** A database-unavailable prerender may
+ * still use the directory's loading shape. It is not the filtered result.
  */
 const settledDirectory =
   '[data-public-journal-directory="true"]:not([data-public-journal-directory-state="loading"])';
@@ -123,6 +116,7 @@ test.describe("the journals directory applies its filters on change", () => {
     // each one is waited for before the next — which is also how a reader
     // uses it.
     const facet = async (key: string, value: string) => {
+      await waitForHydration(page.locator(visibleBar));
       // Scoped to the bar a reader can see. The streamed shell leaves the
       // loading skeleton's copy of the form in the document until the reveal,
       // so a document-wide locator matches two selects and fails in strict
@@ -141,6 +135,7 @@ test.describe("the journals directory applies its filters on change", () => {
 
     await facet("kind", "plant");
     await facet("season", "summer");
+    await waitForHydration(page.locator(visibleBar));
     const sort = page
       .locator(visibleBar)
       .locator('[data-filter-bar-sort="true"]');
