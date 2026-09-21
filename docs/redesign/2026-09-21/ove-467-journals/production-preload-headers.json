@@ -1,0 +1,5 @@
+{
+  "content-language": "bg",
+  "link": "</_next/static/media/21b5feb7d3f19772.p.3lfq07qcauanh.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/47d6d6c1e6da10b8.p.40-jm68xkzcno.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/827a210979ea4704.p.2c3m7wyps-z0s.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/a5a97b63a22530a6.p.2b_0b_rn96xdn.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", <https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82/1.webp>; rel=preload; as=\"image\"; imagesizes=\"(max-width: 767px) 100vw%2C 704px\"; fetchpriority=\"high\"",
+  "x-vercel-cache": "HIT"
+}

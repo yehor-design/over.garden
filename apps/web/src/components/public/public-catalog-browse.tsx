@@ -130,6 +130,7 @@ export function PublicCatalogBrowse({
       />
 
       <FilterBar
+        documentNavigation
         action={listingPath}
         search={
           <div className="flex items-end gap-2">

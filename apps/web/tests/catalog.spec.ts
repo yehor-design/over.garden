@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
+import { waitForHydration } from "./helpers/hydration";
 
 import {
   cleanupOrganismFixture,
@@ -124,8 +125,10 @@ test.describe("the catalogue's one door", () => {
     const hrefs = [
       ...html.matchAll(/href="(\/(?:species|variety|breed)\/[^"?#]+)"/gu),
     ].map((match) => match[1]!);
-    expect(hrefs.length, "the catalogue listed no organism to follow")
-      .toBeGreaterThan(0);
+    expect(
+      hrefs.length,
+      "the catalogue listed no organism to follow",
+    ).toBeGreaterThan(0);
 
     // The listing says what an organism's address *looks like*; which ones it
     // lists is a cached answer, and on a database other specs seed and clean
@@ -199,22 +202,21 @@ test.describe("the catalogue's one door", () => {
     }
   });
 
-  test("filters with the bundle absent, because the form is the mechanism", async ({
+  test("serves a GET filter form and honors its submitted query", async ({
     baseURL,
     request,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
 
-    // Asked over HTTP rather than in a scripts-disabled browser, for the same
-    // reason the journals directory asks it that way: with scripts off,
-    // React's `$RC` swap never runs, the page's content stays inside
-    // `<div hidden>`, and **nothing is visible at all**. That is one Suspense
-    // boundary in `app/root-document.tsx` and is `OVE-461`'s to fix; it is not
-    // a property of this form. What *is* this form's property — a real
-    // `method="get"` action the server honours — is what these bytes prove.
-    const document = await request.get(new URL("/catalog", baseURL).toString(), {
-      headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
-    });
+    // Inspect the actual form action and its server response. The plain
+    // listing's visible no-JavaScript document is held separately by
+    // static-documents.spec.ts; the query twin is request-time content.
+    const document = await request.get(
+      new URL("/catalog", baseURL).toString(),
+      {
+        headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
+      },
+    );
     expect(document.status()).toBe(200);
     const html = await document.text();
 
@@ -250,12 +252,9 @@ test.describe("the catalogue's one door", () => {
     // a word: `amanita` appears in the search field whatever the listing
     // holds, so matching on it would pass for the wrong reason on a database
     // that has no Amanita in it.
-    const unfilteredRows = [
-      ...html.matchAll(/data-slot="list-row"/gu),
-    ].length;
-    const filteredRows = [
-      ...filteredHtml.matchAll(/data-slot="list-row"/gu),
-    ].length;
+    const unfilteredRows = [...html.matchAll(/data-slot="list-row"/gu)].length;
+    const filteredRows = [...filteredHtml.matchAll(/data-slot="list-row"/gu)]
+      .length;
     expect(filteredRows).toBeLessThan(unfilteredRows);
     // The chosen option comes back selected, so a reader without the bundle
     // sees the state they asked for rather than a reset form.
@@ -277,9 +276,9 @@ test.describe("the catalogue's one door", () => {
     await selectLocale(context, baseURL);
     await page.goto("/catalog", { waitUntil: "load" });
 
-    // The streamed shell leaves the skeleton's copy in the document too; the
-    // reveal hides it, so the assertions run against what a reader can see.
-    const index = page.locator('nav[aria-label="За літерою"]').last();
+    // The static document has one visible alphabet; exercise the hydrated link
+    // so a cached default tree cannot pass merely by changing the URL.
+    const index = page.locator('nav[aria-label="За літерою"]');
     const letters = index.locator("a");
     await expect(letters.first()).toBeVisible();
 
@@ -296,6 +295,7 @@ test.describe("the catalogue's one door", () => {
     // Every one is a real anchor with a real href — this is the crawl path —
     // and focus moves through them by Tab without a roving tabindex to learn.
     const first = letters.nth(1);
+    await waitForHydration(first);
     await first.focus();
     await expect(first).toBeFocused();
     const href = await first.getAttribute("href");
@@ -304,6 +304,13 @@ test.describe("the catalogue's one door", () => {
     await page.keyboard.press("Enter");
     await page.waitForURL(/letter=/u);
     expect(page.url()).toContain("letter=");
+    const chosen = new URL(href!, baseURL).searchParams.get("letter")!;
+    await expect(
+      page.locator('nav[aria-label="За літерою"]:visible a[aria-current="true"]'),
+    ).toHaveText(chosen);
+    await expect(
+      page.locator('[data-filter-bar-form]:visible input[name="letter"]').first(),
+    ).toHaveValue(chosen);
   });
 
   test("axe reports nothing on the door, a listing and an empty view", async ({
@@ -400,10 +407,15 @@ test.describe("the catalogue's one door", () => {
     }
 
     samples.sort((left, right) => left - right);
-    const p95 = samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.95))]!;
+    const p95 =
+      samples[Math.min(samples.length - 1, Math.floor(samples.length * 0.95))]!;
     console.log(
       JSON.stringify({
-        catalogBrowseLatencyMs: { samples, p95, median: samples[Math.floor(samples.length / 2)] },
+        catalogBrowseLatencyMs: {
+          samples,
+          p95,
+          median: samples[Math.floor(samples.length / 2)],
+        },
       }),
     );
     // A first-load budget for a page nothing has cached: the listing is one

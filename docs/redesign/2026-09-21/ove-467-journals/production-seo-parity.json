@@ -1,0 +1,59 @@
+{
+  "equal": true,
+  "before": {
+    "title": [
+      "<title>Дневници | OverGarden</title>"
+    ],
+    "tags": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/journals\"/>",
+      "<link rel=\"canonical\" href=\"https://over.garden/bg/journals\"/>",
+      "<meta name=\"description\" content=\"Публични дневници за растения, животни и пчелни семейства с безопасни филтри по тема, сезон и регион.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Публични дневници за растения, животни и пчелни семейства с безопасни филтри по тема, сезон и регион.\"/>",
+      "<meta name=\"twitter:title\" content=\"Дневници | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Публични дневници за растения, животни и пчелни семейства с безопасни филтри по тема, сезон и регион.\"/>",
+      "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Дневници | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"https://over.garden/bg/journals\"/>"
+    ],
+    "jsonLd": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/journals\",\"url\":\"https://over.garden/bg/journals\",\"name\":\"Дневници\",\"description\":\"Датирани наблюдения с реален контекст за живите обекти.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/journals#collection\",\"name\":\"Дневници\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Томат - Sep 1\"},{\"@type\":\"Thing\",\"name\":\"Избрана корица, която не зависи от реда\"},{\"@type\":\"Thing\",\"name\":\"Кратък и отговорен запис след преглед на кошер\"},{\"@type\":\"Thing\",\"name\":\"Наблюдение, действие и следваща проверка\"},{\"@type\":\"Thing\",\"name\":\"Поливане според почвата, не според календара\"},{\"@type\":\"Thing\",\"name\":\"Полезна бележка за домат без снимка\"},{\"@type\":\"Thing\",\"name\":\"Обкладинка як сталий орієнтир сезону\"},{\"@type\":\"Thing\",\"name\":\"Що записувати після огляду вулика\"}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+    ]
+  },
+  "after": {
+    "title": [
+      "<title>Дневници | OverGarden</title>"
+    ],
+    "tags": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/journals\"/>",
+      "<link rel=\"canonical\" href=\"https://over.garden/bg/journals\"/>",
+      "<meta name=\"description\" content=\"Публични дневници за растения, животни и пчелни семейства с безопасни филтри по тема, сезон и регион.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Публични дневници за растения, животни и пчелни семейства с безопасни филтри по тема, сезон и регион.\"/>",
+      "<meta name=\"twitter:title\" content=\"Дневници | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Публични дневници за растения, животни и пчелни семейства с безопасни филтри по тема, сезон и регион.\"/>",
+      "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Дневници | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"https://over.garden/bg/journals\"/>"
+    ],
+    "jsonLd": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/journals\",\"url\":\"https://over.garden/bg/journals\",\"name\":\"Дневници\",\"description\":\"Датирани наблюдения с реален контекст за живите обекти.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/journals#collection\",\"name\":\"Дневници\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Томат - Sep 1\"},{\"@type\":\"Thing\",\"name\":\"Избрана корица, която не зависи от реда\"},{\"@type\":\"Thing\",\"name\":\"Кратък и отговорен запис след преглед на кошер\"},{\"@type\":\"Thing\",\"name\":\"Наблюдение, действие и следваща проверка\"},{\"@type\":\"Thing\",\"name\":\"Поливане според почвата, не според календара\"},{\"@type\":\"Thing\",\"name\":\"Полезна бележка за домат без снимка\"},{\"@type\":\"Thing\",\"name\":\"Обкладинка як сталий орієнтир сезону\"},{\"@type\":\"Thing\",\"name\":\"Що записувати після огляду вулика\"}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+    ]
+  }
+}

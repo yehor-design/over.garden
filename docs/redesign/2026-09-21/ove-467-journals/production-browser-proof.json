@@ -1,0 +1,184 @@
+{
+  "measuredAt": "2026-09-21T19:03:22.358Z",
+  "reader": "fresh guest",
+  "segmentHoldMs": 1200,
+  "results": [
+    {
+      "path": "/journals",
+      "status": 200,
+      "cache": "PRERENDER",
+      "title": "Журнали | OverGarden",
+      "heading": "Журнали",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "",
+      "errors": []
+    },
+    {
+      "path": "/bg/journals",
+      "status": 200,
+      "cache": "STALE",
+      "title": "Дневници | OverGarden",
+      "heading": "Дневници",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "",
+      "errors": []
+    },
+    {
+      "path": "/ru/journals",
+      "status": 200,
+      "cache": "STALE",
+      "title": "Журналы | OverGarden",
+      "heading": "Журналы",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "",
+      "errors": []
+    },
+    {
+      "path": "/journals?kind=plant",
+      "status": 200,
+      "cache": "HIT",
+      "title": "Журнали | OverGarden",
+      "heading": "Журнали",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:6",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "plant",
+      "errors": []
+    }
+  ]
+}

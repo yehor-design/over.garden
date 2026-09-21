@@ -1,0 +1,2203 @@
+{
+  "baseMain": "d10c002ead8962b543da3c8807185a1277430c25",
+  "localBaselineRuntime": "ca1a8ac5e177ef89cfa30cfe562800cecbacab17 (same runtime as base main)",
+  "note": "Local before/after: same loopback server and persistent 12-card catalog fixture. The full browser gate added one audit-linked ove391 test node; its address was temporarily unset for these after samples, retaining the audit, and restored afterward. Rebuilt before final after measurements to remove temporary ISR test fixtures. Production before was remeasured on base main after the preceding journal release. No concurrent build/test work during measurements. Reports omit screenshot payloads only.",
+  "samples": [
+    {
+      "report": "local-before-devtools-1.json.gz",
+      "stage": "local-before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T18:20:18.145Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4059,
+        "credits": {}
+      },
+      "lcpMs": 1508.447,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.709000061035156
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1504.7379999389648
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "305e567402622fa3bc29d751499d27488fcd3cf30580a18d6edb9c4112ec3be4",
+      "storedReportSha256": "0d9d13c0d675d5a4ff9b2adf06eea29bfee46df695e679d8317a4715ed00548c"
+    },
+    {
+      "report": "local-before-devtools-2.json.gz",
+      "stage": "local-before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T18:20:45.232Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4090,
+        "credits": {}
+      },
+      "lcpMs": 1507.843,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.677
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1504.166
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "b18d851088233d1d226a9d25fa8d2ff4fb30e736e5aee3df7f60caa7aa94db4a",
+      "storedReportSha256": "85ddc9b71ad377dc89a284777c11e3a0712966dd3a210ae32aff202e7a7841fc"
+    },
+    {
+      "report": "local-before-devtools-3.json.gz",
+      "stage": "local-before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T18:21:12.344Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4048.5,
+        "credits": {}
+      },
+      "lcpMs": 1490.284,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 2.826
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1487.458
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "95ac742cf56a50153fff67c14fd9049d7a51d711d4f8a6265190198399b8762b",
+      "storedReportSha256": "2f2bda1a07de673a11bddcf52cc8f01c27cdb9506fcace5d658d5c30debe3ad1"
+    },
+    {
+      "report": "local-before-simulate-1.json.gz",
+      "stage": "local-before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T18:21:39.375Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4073.5,
+        "credits": {}
+      },
+      "lcpMs": 3757.41,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.04
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 73.689
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "d6d172557328ae9716713380f5d1910503577a6ba3a10b7e01800073fd5181c3",
+      "storedReportSha256": "332b188ad4fc04a55231236d36e30c703ce7efe87c926d1198cd6d0debabcb2f"
+    },
+    {
+      "report": "local-before-simulate-2.json.gz",
+      "stage": "local-before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T18:21:49.646Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4109.5,
+        "credits": {}
+      },
+      "lcpMs": 3609.5749999999994,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 2.724
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 44.942
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "e04241859bd813d79f2b5745e8ee190f2b69bce3f112d2082d4530d472ad6237",
+      "storedReportSha256": "c203db759c8744978df2a43c015c0003015299706c0f48357cac2dd1245a3128"
+    },
+    {
+      "report": "local-before-simulate-3.json.gz",
+      "stage": "local-before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T18:21:59.912Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 3978.5,
+        "credits": {}
+      },
+      "lcpMs": 4207.97,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.1710000610351563
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 68.77499993896484
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "c829dca3b1ed6c759063dfc7185a0360966e5c16a7710502d12d104aa604cc09",
+      "storedReportSha256": "244c8cbc8ef7bfab7a6e18efdcb1648949da104b05fc9eef2cd1d2e99784ae0a"
+    },
+    {
+      "report": "local-after-devtools-1.json.gz",
+      "stage": "local-after",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:18:29.957Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4088,
+        "credits": {}
+      },
+      "lcpMs": 1771.795,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 6.313
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1765.482
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "1b32b9d70115cf5ead5b3af46e6794bb6f896920eb9384eb24d6ea306d3590b4",
+      "storedReportSha256": "5f69283ef356ceecca5cd8127b389fcc79bc311097d93babdc5b1c81e7944370"
+    },
+    {
+      "report": "local-after-devtools-2.json.gz",
+      "stage": "local-after",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:18:57.618Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4096.5,
+        "credits": {}
+      },
+      "lcpMs": 1767.954,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.239
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1764.715
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "b3befe10f3b451d05d781f9c87bf5f64acdbc79b1938f94ee3db534c46aab8bf",
+      "storedReportSha256": "22776eff59eb386bb73cce61fd202fa6b5be72a717421587f643d6b796c3a57d"
+    },
+    {
+      "report": "local-after-devtools-3.json.gz",
+      "stage": "local-after",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:19:25.302Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4074,
+        "credits": {}
+      },
+      "lcpMs": 1769.269,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.888
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1765.381
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "ecab14c853fb98981ac116875b9376721a866492496d7472102420c5109a1b95",
+      "storedReportSha256": "f3f657954c68e7d4fd84769f1efc32c597fed8fed3fe71033b060f06ef117a6a"
+    },
+    {
+      "report": "local-after-simulate-1.json.gz",
+      "stage": "local-after",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:19:52.892Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4074,
+        "credits": {}
+      },
+      "lcpMs": 3672.8279999999995,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 3.735
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 49.424
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "3d2f2b661b30057c574231c66080aea33e5429c407be145feb71151e358f41a7",
+      "storedReportSha256": "a0d4b0dbacfa9eed4a32dabd31d64152e683d9722ee8b21db1fd3f9d4f6af30a"
+    },
+    {
+      "report": "local-after-simulate-2.json.gz",
+      "stage": "local-after",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:20:03.221Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4092,
+        "credits": {}
+      },
+      "lcpMs": 3977.316,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 2.957
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 55.592
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "a16d912a8c567c36f8b8f3915784a39a9bfe5f16f303f8c4f83b0a655dc2e0da",
+      "storedReportSha256": "e42a4a46c4179e088424fb20982d03267f009aeba8a4f0ce22f493bb393aebfb"
+    },
+    {
+      "report": "local-after-simulate-3.json.gz",
+      "stage": "local-after",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:20:13.471Z",
+      "requestedUrl": "http://localhost:3189/catalog",
+      "finalDisplayedUrl": "http://localhost:3189/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4084,
+        "credits": {}
+      },
+      "lcpMs": 3975.2720000000013,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 2.95
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 42.251
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Ми використовуємо Google Tag Manager для аналітики лише на публічних, юридичних…"
+          }
+        ]
+      },
+      "originalReportSha256": "53e65b6f769e5e43c7c6fb6de100f08f802c89a03c2f0c08248905593425440a",
+      "storedReportSha256": "ecb605d093e418442fc3c3539ad40906f7efeeaafe32dcecfcaf3b3485d7a738"
+    },
+    {
+      "report": "production-before-devtools-1.json.gz",
+      "stage": "production-before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:12:05.369Z",
+      "requestedUrl": "https://over.garden/catalog",
+      "finalDisplayedUrl": "https://over.garden/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4093,
+        "credits": {}
+      },
+      "lcpMs": 3125.397,
+      "cls": 3.081779520405444e-05,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 177.657
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 2947.74
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Използваме Google Tag Manager за анализ само на публични, правни и страници за …"
+          }
+        ]
+      },
+      "originalReportSha256": "39d1ccad0b983ca8f2f446b7576857bfe82ed1ecd530ee86e32a16b112ebf5c8",
+      "storedReportSha256": "40ff8062614b997f4404493f2b89eebb7323060ac60266a931a8336022a9b13c"
+    },
+    {
+      "report": "production-before-devtools-2.json.gz",
+      "stage": "production-before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:12:36.111Z",
+      "requestedUrl": "https://over.garden/catalog",
+      "finalDisplayedUrl": "https://over.garden/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4096.5,
+        "credits": {}
+      },
+      "lcpMs": 3096.661,
+      "cls": 3.081779520405444e-05,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 145.01399993896484
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 2951.647000061035
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Използваме Google Tag Manager за анализ само на публични, правни и страници за …"
+          }
+        ]
+      },
+      "originalReportSha256": "f8c78919d56aaa999579a830f2a7be630d5f782e7c7d4de19056c1d4fafe3cb9",
+      "storedReportSha256": "311710558f213a6f889423d1f1764e39c30eceea01d2e57fa1e9332eb39afd1e"
+    },
+    {
+      "report": "production-before-devtools-3.json.gz",
+      "stage": "production-before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:13:06.833Z",
+      "requestedUrl": "https://over.garden/catalog",
+      "finalDisplayedUrl": "https://over.garden/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4064,
+        "credits": {}
+      },
+      "lcpMs": 3113.696,
+      "cls": 3.081779520405444e-05,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 153.778
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 2959.918
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Използваме Google Tag Manager за анализ само на публични, правни и страници за …"
+          }
+        ]
+      },
+      "originalReportSha256": "f768053e3aaea1d14f68685a040bce349ce93fe5a9ee2505517f02c1081fc17a",
+      "storedReportSha256": "78cf75a27af8fa890ca5e0a16ae24c5a6c8cb42d16a9af4809dd3ff01a2396f3"
+    },
+    {
+      "report": "production-before-simulate-1.json.gz",
+      "stage": "production-before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:13:37.578Z",
+      "requestedUrl": "https://over.garden/catalog",
+      "finalDisplayedUrl": "https://over.garden/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4083,
+        "credits": {}
+      },
+      "lcpMs": 3655.728,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 185.43200006103515
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1167.8779999389649
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Използваме Google Tag Manager за анализ само на публични, правни и страници за …"
+          }
+        ]
+      },
+      "originalReportSha256": "e30a84bcfcf4dccd9f0a1af378424d95201c0dafd74692b9293c6c2fc1b77198",
+      "storedReportSha256": "3954ce1a0a98291005b0ab6e611bd5caf960ef1ce453c2cc59bba6362acdaf32"
+    },
+    {
+      "report": "production-before-simulate-2.json.gz",
+      "stage": "production-before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:13:50.068Z",
+      "requestedUrl": "https://over.garden/catalog",
+      "finalDisplayedUrl": "https://over.garden/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4094.5,
+        "credits": {}
+      },
+      "lcpMs": 4710.736,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 150.18700006103515
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 2179.3969999389647
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Използваме Google Tag Manager за анализ само на публични, правни и страници за …"
+          }
+        ]
+      },
+      "originalReportSha256": "09957a4b28b81fc9e58f6423138973a91e635e003ff698da9cb48fe2ae820070",
+      "storedReportSha256": "73142cf6e124c6d862074d9dfc202615e0c9d25f87bc385b6d82a42f8382e26a"
+    },
+    {
+      "report": "production-before-simulate-3.json.gz",
+      "stage": "production-before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:14:03.416Z",
+      "requestedUrl": "https://over.garden/catalog",
+      "finalDisplayedUrl": "https://over.garden/catalog",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4103.5,
+        "credits": {}
+      },
+      "lcpMs": 4709.486,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 144.771
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 2199.144
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-0-P",
+            "path": "1,HTML,1,BODY,3,DIV,3,DIV,0,P",
+            "selector": "body.flex > div.contents > div.analytics-consent-banner > p.text-body-sm",
+            "boundingRect": {
+              "top": 462,
+              "bottom": 642,
+              "left": 29,
+              "right": 383,
+              "width": 354,
+              "height": 180
+            },
+            "snippet": "<p class=\"text-body-sm text-text-secondary\">",
+            "nodeLabel": "Използваме Google Tag Manager за анализ само на публични, правни и страници за …"
+          }
+        ]
+      },
+      "originalReportSha256": "35ccdab408828dac979253ea88df4e1c1677298198cc850fb05fd511f25639db",
+      "storedReportSha256": "616d2c312b7559b0f42a0b8b6be95789755ce6cb0aa6be4b7fb329e151f5a39d"
+    }
+  ]
+}

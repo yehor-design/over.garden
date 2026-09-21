@@ -33,18 +33,20 @@ const mocks = vi.hoisted(() => ({
   // Answers for the key it was asked about: an entry asked for by its number
   // is that number, and an entry asked for by a name it used to have is
   // yehor's twelfth (ADR-0029 D9, amendment of 2026-09-18).
-  getPublicJournalEntryLifecycleLookup: vi.fn().mockImplementation(
-    async (key: {
-      kind: "number" | "name";
-      entryNumber?: number;
-      publicSlug?: string;
-    }) => ({
-      status: "active",
-      publicSlug: key.kind === "name" ? key.publicSlug : "field-note",
-      entryNumber: key.kind === "number" ? key.entryNumber : 12,
-      addressHandle: "yehor",
-    }),
-  ),
+  getPublicJournalEntryLifecycleLookup: vi
+    .fn()
+    .mockImplementation(
+      async (key: {
+        kind: "number" | "name";
+        entryNumber?: number;
+        publicSlug?: string;
+      }) => ({
+        status: "active",
+        publicSlug: key.kind === "name" ? key.publicSlug : "field-note",
+        entryNumber: key.kind === "number" ? key.entryNumber : 12,
+        addressHandle: "yehor",
+      }),
+    ),
   getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
   }),
@@ -1285,7 +1287,7 @@ describe("app route cache guardrail", () => {
       ["privacy", privacyResponse, "bg", "/bg/privacy"],
       ["blog", blogResponse, "ru", "/ru/blog/field-note"],
       ["journal", ugcResponse, "bg", "/bg/@yehor/post/12"],
-      ["catalog", catalogResponse, "ru", "/ru/catalog"],
+      ["catalog", catalogResponse, "ru", "/ru/q/catalog"],
       ["topic", topicResponse, "bg", "/bg/topics/care-checks"],
     ] as const) {
       expect(response.status, name).toBe(200);
@@ -1294,10 +1296,9 @@ describe("app route cache guardrail", () => {
       // The address the reader asked for is the address they keep; which
       // locale subtree renders it is the proxy's business. Before this, the
       // language was a header on a Ukrainian document.
-      expect(
-        response.headers.get("x-middleware-rewrite"),
-        name,
-      ).toContain(rendered);
+      expect(response.headers.get("x-middleware-rewrite"), name).toContain(
+        rendered,
+      );
     }
   });
 
@@ -1385,6 +1386,21 @@ describe("app route cache guardrail", () => {
       expect(response.status).toBe(200);
       expect(response.headers.get("Location")).toBeNull();
     }
+  });
+
+  it("rewrites catalog facets without losing repeated values or the public address", async () => {
+    const filtered = await responseFor(
+      "/bg/catalog?kingdom=&kingdom=plantae&letter=s",
+    );
+    const rewritten = new URL(filtered.headers.get("x-middleware-rewrite")!);
+    expect(rewritten.pathname).toBe("/bg/q/catalog");
+    expect(rewritten.searchParams.getAll("kingdom")).toEqual(["", "plantae"]);
+    expect(rewritten.searchParams.get("letter")).toBe("s");
+    expect(filtered.headers.get("Location")).toBeNull();
+    const tracked = await responseFor("/catalog?utm_source=proof");
+    expect(new URL(tracked.headers.get("x-middleware-rewrite")!).pathname).toBe(
+      "/uk/catalog",
+    );
   });
 
   it("lands a Server Action in the tree that drew its form", async () => {
@@ -1618,7 +1634,10 @@ describe("organism addresses (ADR-0026 D8)", () => {
       catalogItemId: "11111111-1111-4111-8111-111111111111",
       canonicalPath: "/species/solanum-lycopersicum",
     });
-    const localized = await responseFor("/bg/species/lycopersicon-esculentum", document);
+    const localized = await responseFor(
+      "/bg/species/lycopersicon-esculentum",
+      document,
+    );
 
     expect(legacy.status).toBe(308);
     expect(legacy.headers.get("location")).toBe(
@@ -1641,7 +1660,9 @@ describe("organism addresses (ADR-0026 D8)", () => {
   });
 
   it("answers a real localized 404 for an unknown organism and passes canonical, RSC and failed lookups through", async () => {
-    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({ status: "not_found" });
+    mocks.resolvePublicCatalogAddress.mockResolvedValueOnce({
+      status: "not_found",
+    });
     const missing = await responseFor("/bg/species/no-such-organism", document);
     expect(missing.status).toBe(404);
     expect(missing.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
@@ -1650,7 +1671,10 @@ describe("organism addresses (ADR-0026 D8)", () => {
     expect(missingHtml).toContain(getPublicSurfaceCopy("bg").organism.notFound);
     expect(missingHtml).toContain('href="/bg/catalog"');
 
-    const canonical = await responseFor("/species/solanum-lycopersicum", document);
+    const canonical = await responseFor(
+      "/species/solanum-lycopersicum",
+      document,
+    );
     expect(canonical.status).toBe(200);
 
     mocks.resolvePublicCatalogAddress.mockClear();
@@ -1661,7 +1685,9 @@ describe("organism addresses (ADR-0026 D8)", () => {
     expect(rsc.status).toBe(200);
     expect(mocks.resolvePublicCatalogAddress).not.toHaveBeenCalled();
 
-    mocks.resolvePublicCatalogAddress.mockRejectedValueOnce(new Error("database away"));
+    mocks.resolvePublicCatalogAddress.mockRejectedValueOnce(
+      new Error("database away"),
+    );
     const failed = await responseFor("/species/solanum-lycopersicum", document);
     expect(failed.status).toBe(200);
   });
@@ -1676,7 +1702,10 @@ describe("organism addresses (ADR-0026 D8)", () => {
       for (const [from, to] of [
         ["/bg/topics/PLANTS", "https://over.garden/bg/topics/plants"],
         ["/bg/@YEHOR", "https://over.garden/bg/@yehor"],
-        ["/species/Solanum/De-Barao", "https://over.garden/species/solanum/de-barao"],
+        [
+          "/species/Solanum/De-Barao",
+          "https://over.garden/species/solanum/de-barao",
+        ],
         ["/variety/De-Barao", "https://over.garden/variety/de-barao"],
       ] as const) {
         const response = await responseFor(from, document);
@@ -1789,20 +1818,23 @@ describe("organism addresses (ADR-0026 D8)", () => {
       [`/topics/${encodeURIComponent("помідори")}`, "/topics/pomidory"],
       [`/bg/topics/${encodeURIComponent("помідори")}`, "/bg/topics/pomidory"],
       [`/ru/topics/${encodeURIComponent("помідори")}`, "/ru/topics/pomidory"],
-    ])("308s a topic's Cyrillic name at %s to its Latin one", async (path, target) => {
-      mocks.getPublicTopicLifecycleLookup.mockResolvedValueOnce({
-        status: "not_found",
-      });
-      mocks.resolvePublicTopicAddress.mockResolvedValueOnce("pomidory");
-      const response = await responseFor(path, document);
-      expect(response.status).toBe(308);
-      expect(response.headers.get("Location")).toBe(
-        `https://over.garden${target}`,
-      );
-      expect(mocks.resolvePublicTopicAddress).toHaveBeenLastCalledWith(
-        "помідори",
-      );
-    });
+    ])(
+      "308s a topic's Cyrillic name at %s to its Latin one",
+      async (path, target) => {
+        mocks.getPublicTopicLifecycleLookup.mockResolvedValueOnce({
+          status: "not_found",
+        });
+        mocks.resolvePublicTopicAddress.mockResolvedValueOnce("pomidory");
+        const response = await responseFor(path, document);
+        expect(response.status).toBe(308);
+        expect(response.headers.get("Location")).toBe(
+          `https://over.garden${target}`,
+        );
+        expect(mocks.resolvePublicTopicAddress).toHaveBeenLastCalledWith(
+          "помідори",
+        );
+      },
+    );
 
     it("reads no history for a topic that is there", async () => {
       mocks.resolvePublicTopicAddress.mockClear();
@@ -2012,7 +2044,10 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",
     });
-    const response = await responseFor("/@yehor/definitely-not-an-entry", document);
+    const response = await responseFor(
+      "/@yehor/definitely-not-an-entry",
+      document,
+    );
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(response.headers.get("x-middleware-rewrite")).toBeNull();
@@ -2072,7 +2107,10 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
       status: "not_found",
     });
     mocks.resolvePlantObjectAddress.mockClear();
-    const response = await responseFor("/@yehor/objects/no-such-object", document);
+    const response = await responseFor(
+      "/@yehor/objects/no-such-object",
+      document,
+    );
     expect(response.status).toBe(404);
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(await response.text()).toContain("Паспорт не знайдено");
@@ -2114,20 +2152,23 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     `/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
     `/bg/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
     `/uk/@yehor/objects/${encodeURIComponent("чорний-принц")}`,
-  ])("reaches a passport's Latin name from %s in one response", async (path) => {
-    mocks.getPublicObjectPassportLifecycleBySlug.mockResolvedValueOnce({
-      status: "not_found",
-    });
-    mocks.resolvePlantObjectAddress.mockResolvedValueOnce({
-      handle: "yehor",
-      slug: "chornyi-prynts",
-    });
-    const response = await responseFor(path, document);
-    expect(response.status).toBe(308);
-    expect(response.headers.get("Location")).toBe(
-      "https://over.garden/@yehor/objects/chornyi-prynts",
-    );
-  });
+  ])(
+    "reaches a passport's Latin name from %s in one response",
+    async (path) => {
+      mocks.getPublicObjectPassportLifecycleBySlug.mockResolvedValueOnce({
+        status: "not_found",
+      });
+      mocks.resolvePlantObjectAddress.mockResolvedValueOnce({
+        handle: "yehor",
+        slug: "chornyi-prynts",
+      });
+      const response = await responseFor(path, document);
+      expect(response.status).toBe(308);
+      expect(response.headers.get("Location")).toBe(
+        "https://over.garden/@yehor/objects/chornyi-prynts",
+      );
+    },
+  );
 
   it("308s a locale-prefixed passport that is there to its one address", async () => {
     const response = await responseFor("/bg/@yehor/objects/tomat", document);
@@ -2199,7 +2240,10 @@ describe("register hubs (OVE-433)", () => {
 
   it("404s a hub for a species with no registered forms, and for no species at all", async () => {
     mocks.hasCatalogRegisterHub.mockResolvedValueOnce(false);
-    const bare = await responseFor("/species/apis-mellifera/register", document);
+    const bare = await responseFor(
+      "/species/apis-mellifera/register",
+      document,
+    );
     expect(bare.status).toBe(404);
     expect(bare.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(await bare.text()).toContain("Організм не знайдено");
@@ -2251,7 +2295,9 @@ describe("register hubs (OVE-433)", () => {
   });
 
   it("lets a hub through when the existence read fails", async () => {
-    mocks.hasCatalogRegisterHub.mockRejectedValueOnce(new Error("database away"));
+    mocks.hasCatalogRegisterHub.mockRejectedValueOnce(
+      new Error("database away"),
+    );
     const response = await responseFor(
       "/species/solanum-lycopersicum/register",
       document,

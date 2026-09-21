@@ -1,0 +1,61 @@
+{
+  "equal": true,
+  "sameCardIds": true,
+  "cardCount": 12,
+  "before": {
+    "title": [
+      "<title>Каталог організмів | OverGarden</title>"
+    ],
+    "tags": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"http://127.0.0.1:3000/bg/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"http://127.0.0.1:3000/ru/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"http://127.0.0.1:3000/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"http://127.0.0.1:3000/catalog\"/>",
+      "<link rel=\"canonical\" href=\"http://127.0.0.1:3000/catalog\"/>",
+      "<meta name=\"description\" content=\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\"/>",
+      "<meta name=\"twitter:title\" content=\"Каталог організмів | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\"/>",
+      "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Каталог організмів | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"http://127.0.0.1:3000/catalog\"/>"
+    ],
+    "jsonLd": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"http://127.0.0.1:3000/catalog\",\"url\":\"http://127.0.0.1:3000/catalog\",\"name\":\"Каталог організмів\",\"description\":\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"http://127.0.0.1:3000/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"http://127.0.0.1:3000/catalog#collection\",\"name\":\"Каталог організмів\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Рослини\"}]},{\"@type\":\"Organization\",\"@id\":\"http://127.0.0.1:3000/#organization\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\"},{\"@type\":\"WebSite\",\"@id\":\"http://127.0.0.1:3000/#website\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\",\"publisher\":{\"@id\":\"http://127.0.0.1:3000/#organization\"}}]}"
+    ]
+  },
+  "after": {
+    "title": [
+      "<title>Каталог організмів | OverGarden</title>"
+    ],
+    "tags": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"http://127.0.0.1:3000/bg/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"http://127.0.0.1:3000/ru/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"http://127.0.0.1:3000/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"http://127.0.0.1:3000/catalog\"/>",
+      "<link rel=\"canonical\" href=\"http://127.0.0.1:3000/catalog\"/>",
+      "<meta name=\"description\" content=\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\"/>",
+      "<meta name=\"twitter:title\" content=\"Каталог організмів | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\"/>",
+      "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Каталог організмів | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"http://127.0.0.1:3000/catalog\"/>"
+    ],
+    "jsonLd": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"http://127.0.0.1:3000/catalog\",\"url\":\"http://127.0.0.1:3000/catalog\",\"name\":\"Каталог організмів\",\"description\":\"Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"http://127.0.0.1:3000/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"http://127.0.0.1:3000/catalog#collection\",\"name\":\"Каталог організмів\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Рослини\"}]},{\"@type\":\"Organization\",\"@id\":\"http://127.0.0.1:3000/#organization\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\"},{\"@type\":\"WebSite\",\"@id\":\"http://127.0.0.1:3000/#website\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\",\"publisher\":{\"@id\":\"http://127.0.0.1:3000/#organization\"}}]}"
+    ]
+  }
+}

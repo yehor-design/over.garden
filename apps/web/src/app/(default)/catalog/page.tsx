@@ -1,10 +1,8 @@
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedCatalogMetadata,
-  renderPublicCatalogPage,
+  renderStaticPublicCatalogPage,
 } from "@/app/[locale]/catalog/page";
-
-type SearchParams = Record<string, string | string[] | undefined>;
 
 export async function generateMetadata() {
   return generateLocalizedCatalogMetadata({
@@ -22,11 +20,6 @@ export async function generateMetadata() {
  * sailed. The language control in the shell is how a reader reaches their own
  * prefix, and `hreflang` is how a crawler does.
  */
-export default async function RootCatalogRoute({
-  searchParams,
-}: {
-  searchParams?: Promise<SearchParams>;
-} = {}) {
-  const query = (await searchParams) ?? ({} as SearchParams);
-  return renderPublicCatalogPage(DEFAULT_PUBLIC_LOCALE, query);
+export default async function RootCatalogRoute() {
+  return renderStaticPublicCatalogPage(DEFAULT_PUBLIC_LOCALE);
 }

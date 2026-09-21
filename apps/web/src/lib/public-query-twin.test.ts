@@ -32,7 +32,7 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
   });
 
   it("leaves a route without a mounted twin to read its own query string", () => {
-    expect(publicQueryTwinPath("/catalog", "?kind=plant")).toBeNull();
+    expect(publicQueryTwinPath("/knowledge", "?kind=plant")).toBeNull();
     expect(publicQueryTwinPath("/garden", "?kind=plant")).toBeNull();
   });
 
@@ -55,6 +55,38 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
     }
     expect(publicQueryTwinPath("/journals", "?utm_source=mail")).toBeNull();
     expect(publicQueryTwinPath("/journals", "?q=&kind=")).toBeNull();
+  });
+
+  it("routes every catalog facet, including repeated values, to its twin", () => {
+    for (const key of [
+      "kingdom",
+      "rank",
+      "register",
+      "grown",
+      "letter",
+      "q",
+      "sort",
+      "page",
+    ]) {
+      for (const prefix of ["", "/uk", "/bg", "/ru"]) {
+        expect(publicQueryTwinPath(`${prefix}/catalog`, `?${key}=value`)).toBe(
+          "/q/catalog",
+        );
+      }
+    }
+    expect(publicQueryTwinPath("/catalog", "?kingdom=&kingdom=plantae")).toBe(
+      "/q/catalog",
+    );
+    expect(
+      publicQueryTwinPath(
+        "/catalog",
+        new URLSearchParams("rank=&rank=cultivar"),
+      ),
+    ).toBe("/q/catalog");
+    expect(
+      publicQueryTwinPath("/catalog", "?kingdom=&rank=&utm_source=mail"),
+    ).toBeNull();
+    expect(publicQueryTwinPath("/catalog", "?kind=plant")).toBeNull();
   });
 
   it("recognises the reserved segment with and without a locale", () => {
