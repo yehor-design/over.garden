@@ -38,6 +38,8 @@ export type ComponentTestFailure =
  * outlive its reason or become somewhere to put an awkward component.
  */
 export const NAMELESS_COMPONENTS: Readonly<Record<string, string>> = {
+  "illustration.tsx":
+    "decorative art has empty alt and must expose no accessible image role",
   "badge.tsx": "a badge is its own text; it carries no accessible name",
   "callout.tsx":
     "an alert or status region takes its name from nothing — the message is its content",

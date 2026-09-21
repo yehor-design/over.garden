@@ -357,10 +357,34 @@ static WebP, never through the Vercel image optimizer, which ADR-0022 D2 bans.
 
 They are deliberately **not** in the media bucket. That pipeline exists for a
 gardener's photographs: a staging worker, an atomic publish, retention, and
-revocation. Six permanent pieces of app art have none of that, and putting them
+revocation. Permanent pieces of app art have none of that, and putting them
 in the user-media bucket would make every tool that reasons about that bucket
 learn an exception. Shipping them with the code also means a rollback rolls them
 back, which an object in a bucket does not.
+
+**Redesign placement contract (2026-09-21).** `Illustration` is the shared
+decorative renderer used by `EmptyState` and creation introductions. Use
+`resolveIllustrationRole` for first garden, space setup, object setup, no entries,
+no results and setup success. These purpose names are stable; the selected art
+can change without rewriting screens. The collection is open to additional
+selections, not a restricted shortlist. Source URLs, download/revalidation dates,
+dimensions, bytes and SHA-256 are in
+`docs/redesign/2026-09-21/ove-479/asset-manifest.json`.
+
+Retain each source's optical padding and transparent background, contain the
+whole square without cropping, add no colored medallion, outline or animation,
+and never stretch it into a hero. A page uses at most one illustration; the
+review contact sheet is deliberately a comparison, not a page template.
+The renderer reserves 96/144 CSS pixels, uses lazy loading and async decoding,
+and each 360px WebP stays below 40KB. No art is required for understanding or
+acting: the adjacent heading, explanation and action stand on their own.
+
+The no-results asset is available for a dedicated discovery introduction or
+unfiltered search miss. A filtered list keeps §5.4's text, active filters and
+clear action, without an illustration. Error, erasure, destructive confirmation,
+permission denial and pending states never borrow cheerful setup art. Show
+setup-success art only after an acknowledged server success; it must not imply
+an unsaved form is durable. Never use any illustration in an organism/photo slot.
 
 ### 2.10 Photography
 

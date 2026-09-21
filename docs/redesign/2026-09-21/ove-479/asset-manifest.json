@@ -1,0 +1,167 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "key": "empty-journal",
+      "name": "Pressed Flower Journal",
+      "itemUrl": "https://www.thiings.co/things/pressed-flower-journal",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-TW1PUAH4XgXein7fh8VJYSVCmJD3hO.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.106Z",
+      "sourceSha256": "ec94ac14b1b1c0ac3d5c55b693d14c9a4a533f4d75f2b3667269e0c52196bd6c",
+      "filename": "apps/web/public/illustrations/empty-journal.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 33946,
+      "sha256": "0d373277bd9951ba86fb6c37dce0e6da9780b00f148e772eec1859afa25b2c8b",
+      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "no-entries"
+      ]
+    },
+    {
+      "key": "empty-garden",
+      "name": "Plant Pot",
+      "itemUrl": "https://www.thiings.co/things/plant-pot",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-8eVLETSanZ7kQLCnwUYDSyJq2vK209.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.118Z",
+      "sourceSha256": "a7e38b8ebc185b100c7b836c383ba432a1c51e6d7dd81956ddd5af228596f786",
+      "filename": "apps/web/public/illustrations/empty-garden.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 17192,
+      "sha256": "e86e2ec293910a4ac6483fd8e699cb247260be58963a159200aed57c2907efe4",
+      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "first-garden"
+      ]
+    },
+    {
+      "key": "empty-community",
+      "name": "Village",
+      "itemUrl": "https://www.thiings.co/things/village",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-D82IhWyIP8ltpbzsHH6O7jLYuRWxWG.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.119Z",
+      "sourceSha256": "2fb249e954faf783938faf9a3c81357327d438ba6a67c6b23281cb8b85b0c7bc",
+      "filename": "apps/web/public/illustrations/empty-community.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 36384,
+      "sha256": "74cb031550578d6647cebdc1a35a5ad2c2d2638a150e20208f51eb64bdb553ca",
+      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "empty-community"
+      ]
+    },
+    {
+      "key": "empty-wishlist",
+      "name": "Wishlist",
+      "itemUrl": "https://www.thiings.co/things/wishlist",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-gam4qLogSyQtwgpQfwte8x3pjvW5wg.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.120Z",
+      "sourceSha256": "ab3e6f3f5bdd9f38862e0510be8b2b739bc71fecd740855b8d234b22cc9cbf98",
+      "filename": "apps/web/public/illustrations/empty-wishlist.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 23876,
+      "sha256": "a8a2e7ea4062607b2714b804af9a24619f6ff1f2473f395df6276fd3cb3f64f3",
+      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "empty-wishlist"
+      ]
+    },
+    {
+      "key": "empty-notifications",
+      "name": "Mailbox",
+      "itemUrl": "https://www.thiings.co/things/mailbox",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-WYuC7gUQSKvGrmWIMI6NB1Ec64dbEv.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.121Z",
+      "sourceSha256": "cafc81fc8e795fdd30c21a4c53ad71a07877090775f74ef9e33801eaa4b5230e",
+      "filename": "apps/web/public/illustrations/empty-notifications.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 19298,
+      "sha256": "3054130329da0abad36811c7bb5bd6c7d5ee939d90052aa4bbb3a5a5438ccb63",
+      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "empty-notifications"
+      ]
+    },
+    {
+      "key": "first-entry",
+      "name": "Sprout",
+      "itemUrl": "https://www.thiings.co/things/sprout",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-5t2FNENaP3SXP3MGLOSOBuatSt6RKU.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.122Z",
+      "sourceSha256": "0b9b5ac333adf92d2bdddc23521c23fb64e3d044e3576c5133ea5247e658fa9e",
+      "filename": "apps/web/public/illustrations/first-entry.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 16752,
+      "sha256": "67492c6ad8e2290f6b16cdff8075eb663737487fd16db4080ab6b5cff1739cb1",
+      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "setup-success"
+      ]
+    },
+    {
+      "key": "space-setup",
+      "name": "Garden",
+      "itemUrl": "https://www.thiings.co/things/garden",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-dqLT1QMu4LXBumfjD46JoLK8dtQntV.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.183Z",
+      "sourceSha256": "91de5ee4abe9439a9d5b39118976a35fe494aa133eb969e7622ad5a71701d851",
+      "filename": "apps/web/public/illustrations/space-setup.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 32816,
+      "sha256": "ab4d09a41e75fcca907b304de054dabc3d6b401bcc5a61a7541c77d6decc036a",
+      "artifactOrigin": "Source converted to 360px WebP, contain, quality 82; no crop or redrawing.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "space-setup"
+      ]
+    },
+    {
+      "key": "object-setup",
+      "name": "Terracotta Pot",
+      "itemUrl": "https://www.thiings.co/things/terracotta-pot",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-ZbYUMGqD0xR9DMMn5rg6np0fJviPTr.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.225Z",
+      "sourceSha256": "4aa4aa6f6e912481549956dc871b6ea8e01d4c252cea62008b67c13e2a0ff96c",
+      "filename": "apps/web/public/illustrations/object-setup.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 18160,
+      "sha256": "fbae562f7d87187229b5d7cadb8eaa1f20ce823dfca5543f7f90c1c1c3c0002f",
+      "artifactOrigin": "Source converted to 360px WebP, contain, quality 82; no crop or redrawing.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "object-setup"
+      ]
+    },
+    {
+      "key": "no-results",
+      "name": "Bird Watching Binoculars",
+      "itemUrl": "https://www.thiings.co/things/bird-watching-binoculars",
+      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-cni3o0BQKhCFsU0enNLsN9pIwKCvR4.png",
+      "sourceDownloadedAt": "2026-09-21T14:41:51.264Z",
+      "sourceSha256": "6a8ba6ed6141149afa56618b183945cf912d599cddd1759ac4b1cd87a6adff54",
+      "filename": "apps/web/public/illustrations/no-results.webp",
+      "width": 360,
+      "height": 360,
+      "bytes": 28518,
+      "sha256": "6f17d6b89d427514db0eb99bf26f1e9d09f06408ccaec25a41a3d64fe62d9fa4",
+      "artifactOrigin": "Source converted to 360px WebP, contain, quality 82; no crop or redrawing.",
+      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
+      "roles": [
+        "no-results"
+      ]
+    }
+  ]
+}

@@ -61,6 +61,14 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. Current production still has the older layout;
 accepted documents/prototype do not imply that runtime migration is complete.
 
+**Illustration delivery (OVE-479):** a shared decorative renderer and semantic
+setup/empty-state roles extend the existing Thiings library with three assets.
+The garden uses one illustration beside object creation; its repeated empty
+sections and the erasure queue are text-only. Source provenance, local byte
+budgets and rendered evidence are in `docs/redesign/2026-09-21/OVE-479-PROOF.md`.
+This does not deliver the subsequent space/object progressive flows; release
+identity and production confirmation are recorded in the Linear receipt.
+
 **OVE-477 shipped, 2026-09-21 (PR #433):** neutral Threads foundations and
 Phosphor-only interface icons are live at `6b5a70402282adf021cae354ffc7c23b70496e2e`.
 Both browser CI shards, web checks and Python passed; production deployment

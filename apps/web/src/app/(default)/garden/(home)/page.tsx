@@ -64,6 +64,8 @@ import {
 } from "./garden-home-shell";
 import { addCatalogPublicSlugToWishlistAction } from "../../wishlist/actions";
 import { FirstEntryComposer } from "../first-entry-composer";
+import { Illustration } from "@/components/ui/illustration";
+import { resolveIllustrationRole } from "@/lib/illustrations";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { GardenWorkspaceView } from "../garden-workspace-view";
 import { SaveProgressMoment } from "../save-progress-moment";
@@ -444,6 +446,10 @@ function GardenWriteTools({
         description={copy.page.creation.description}
         className="scroll-mt-20"
       >
+        <Illustration
+          asset={resolveIllustrationRole("object-setup")}
+          size="card"
+        />
         {/* The path, before the form (`OVE-457` criterion 5). Adding an object
             was a bare form with three unlabelled jobs inside it; a gardener
             could not tell where they were or how much was left. The result at

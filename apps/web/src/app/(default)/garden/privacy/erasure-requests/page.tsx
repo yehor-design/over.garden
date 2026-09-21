@@ -14,7 +14,6 @@ import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
 import { ConfirmSubmit } from "@/components/ui/confirm-submit";
 import { EmptyState } from "@/components/ui/empty-state";
-import { resolveIllustration } from "@/lib/illustrations";
 import {
   ERASURE_REQUEST_HANDLED_STATUS_OPTIONS,
   formatErasureRequestReference,
@@ -231,8 +230,6 @@ async function ErasureRequestsSection({
 
       {requests.length === 0 ? (
         <EmptyState
-          illustration={resolveIllustration("empty-garden")}
-          illustrationSize="card"
           title={copy.empty}
         />
       ) : (

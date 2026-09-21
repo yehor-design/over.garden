@@ -28,6 +28,7 @@ export const BROWSER_GATE_SPECS = [
   // DESIGN.md §10, gates 7 and 8.
   "accessibility.spec.ts",
   "screen-states.spec.ts",
+  "illustrations.spec.ts",
   "keyboard-sign-in.spec.ts",
   // The shell.
   "site-shell.spec.ts",

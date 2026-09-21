@@ -1,0 +1,182 @@
+[
+  {
+    "specimen": "bg-1280-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "bg-1920-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "bg-320-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "bg-390-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "bg-768-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "ru-1280-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "ru-1920-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "ru-320-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "ru-390-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "ru-768-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "uk-1280-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "uk-1920-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "uk-320-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "uk-390-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  },
+  {
+    "specimen": "uk-768-axe.json",
+    "version": "4.12.1",
+    "violations": 0,
+    "incomplete": 0,
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ]
+  }
+]
