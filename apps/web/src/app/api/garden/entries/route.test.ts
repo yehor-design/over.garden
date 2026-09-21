@@ -117,6 +117,24 @@ describe("POST /api/garden/entries atomic create", () => {
     mocks.finalizeEphemeralPublicationMedia.mockResolvedValue(undefined);
   });
 
+  it.each([
+    "Selected space was not found.",
+    "Space was not found in this garden.",
+    "Plant object was not found in this garden.",
+  ])(
+    "returns the same recoverable destination refusal for %s",
+    async (message) => {
+      mocks.createFirstPlantEntry.mockRejectedValue(new Error(message));
+      const { POST } = await import("./route");
+      const response = await POST(atomicJsonRequest(atomicRequest()));
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({
+        code: "destination_unavailable",
+      });
+      expect(mocks.finalizeEphemeralPublicationMedia).not.toHaveBeenCalled();
+    },
+  );
+
   it("refuses an authenticated pre-cutover client before reading its body", async () => {
     const { POST } = await import("./route");
     const response = await POST(

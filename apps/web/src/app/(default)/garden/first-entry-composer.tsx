@@ -1,5 +1,8 @@
 "use client";
 
+import { DESTINATION_COPY } from "@/lib/garden/owned-destinations";
+import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
+
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CloudArrowUpIcon as UploadCloud } from "@/components/icons/CloudArrowUp";
 import { XIcon as X } from "@/components/icons/X";
@@ -329,7 +332,12 @@ export function FirstEntryComposer({
           return;
         }
         setSubmitState("failed");
-        setMessage(atomicCopy.failed);
+        setMessage(
+          error instanceof LocalJournalComposerError &&
+            error.code === "destination_unavailable"
+            ? ""
+            : atomicCopy.failed,
+        );
       }
     } finally {
       endLocaleMutation();
@@ -375,19 +383,6 @@ export function FirstEntryComposer({
         ? withSuggestedTitle(next)
         : next;
     });
-  }
-
-  function updateSpaceChoice(value: string) {
-    if (isComposerPersistenceFrozen()) return;
-    setDraft((current) =>
-      value === initialSpace?.id
-        ? {
-            ...current,
-            spaceId: initialSpace.id,
-            spaceName: initialSpace.displayName,
-          }
-        : { ...current, spaceId: null, spaceName: "" },
-    );
   }
 
   function updateObjectKind(value: PlantObjectKind) {
@@ -634,7 +629,11 @@ export function FirstEntryComposer({
       <LocalJournalComposerStatus
         state={local.state}
         lease={local.media.lease}
-        copy={atomicCopy}
+        copy={
+          local.state.errorCode === "destination_unavailable"
+            ? { ...atomicCopy, failed: DESTINATION_COPY[locale].unavailable }
+            : atomicCopy
+        }
         onCancelPublishing={local.cancelPublishing}
       />
       <UnpublishedWorkGuard
@@ -700,21 +699,44 @@ export function FirstEntryComposer({
             </div>
           </div>
 
-          {initialSpace ? (
-            <Field label={copy.composer.fields.space} className="min-w-0">
-              <Select
-                name="spaceChoice"
-                value={draft.spaceId ?? "new"}
-                onChange={(event) => updateSpaceChoice(event.target.value)}
-              >
-                <option value={initialSpace.id}>
-                  {initialSpace.displayName}
-                </option>
-                <option value="new">
-                  {copy.composer.fields.createNewSpace}
-                </option>
-              </Select>
-            </Field>
+          <OwnedDestinationPicker
+            locale={locale}
+            kind="space"
+            disabled={persistenceFrozen}
+            selection={
+              draft.spaceId
+                ? {
+                    kind: "space",
+                    id: draft.spaceId,
+                    displayName: draft.spaceName,
+                  }
+                : null
+            }
+            onSelect={(space) => {
+              if (space.kind !== "space" || isComposerPersistenceFrozen())
+                return;
+              setDraft((current) => ({
+                ...current,
+                spaceId: space.id,
+                spaceName: space.displayName,
+              }));
+            }}
+          />
+          {draft.spaceId ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={persistenceFrozen}
+              onClick={() =>
+                setDraft((current) => ({
+                  ...current,
+                  spaceId: null,
+                  spaceName: "",
+                }))
+              }
+            >
+              {copy.composer.fields.createNewSpace}
+            </Button>
           ) : null}
         </div>
 
@@ -1018,16 +1040,18 @@ export function FirstEntryComposer({
         ) : null}
       </fieldset>
 
-      <p
-        role={submitState === "failed" ? "alert" : "status"}
-        className={
-          submitState === "failed"
-            ? "text-body-sm text-danger-text"
-            : "text-body-sm text-text-muted"
-        }
-      >
-        {message}
-      </p>
+      {message ? (
+        <p
+          role={submitState === "failed" ? "alert" : "status"}
+          className={
+            submitState === "failed"
+              ? "text-body-sm text-danger-text"
+              : "text-body-sm text-text-muted"
+          }
+        >
+          {message}
+        </p>
+      ) : null}
 
       {/* What Publish does, beside the control that does it (`OVE-458` AC3).
           The product has no drafts: an entry is public and indexable the

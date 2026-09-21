@@ -704,6 +704,15 @@ function attachMediaPlaceholders(
 
 function safeAtomicErrorCode(error: unknown) {
   if (error instanceof AtomicJournalCreateError) return error.code;
+  if (
+    error instanceof Error &&
+    [
+      "Selected space was not found.",
+      "Space was not found in this garden.",
+      "Plant object was not found in this garden.",
+    ].includes(error.message)
+  )
+    return "destination_unavailable";
   const candidate =
     error && typeof error === "object" && "code" in error
       ? (error as { code?: unknown }).code
@@ -741,6 +750,7 @@ function errorStatus(error: unknown, code: string) {
   ) {
     return 409;
   }
+  if (code === "destination_unavailable") return 404;
   if (code === "first_publication_disclosure_required") return 400;
   return 503;
 }

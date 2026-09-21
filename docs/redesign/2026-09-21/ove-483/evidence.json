@@ -1,0 +1,127 @@
+{
+  "screenshots": [
+    {
+      "file": "picker-bg-1280.png",
+      "bytes": 26592,
+      "sha256": "4790955e173ba8144e0aa9959da66c5ba3c57bc3d3dfcada1bd06148cdc63ec5"
+    },
+    {
+      "file": "picker-bg-1920.png",
+      "bytes": 26592,
+      "sha256": "4790955e173ba8144e0aa9959da66c5ba3c57bc3d3dfcada1bd06148cdc63ec5"
+    },
+    {
+      "file": "picker-bg-320.png",
+      "bytes": 26428,
+      "sha256": "4e55611a39437f785a0f6a40c3308927d90a0d7cca6dfc078dca2beafbcff3e0"
+    },
+    {
+      "file": "picker-bg-390.png",
+      "bytes": 27196,
+      "sha256": "7111ad21572af47649fb35406c24ae837964e4ec4863089d1a3f0abd51ba9505"
+    },
+    {
+      "file": "picker-bg-768.png",
+      "bytes": 26601,
+      "sha256": "9f933f382578e3f8da631820f27dccc78777b71761fb51fb4fc224aeb036b6b3"
+    },
+    {
+      "file": "picker-ru-1280.png",
+      "bytes": 24164,
+      "sha256": "f6346d811dee71da54743a8683dacd3f213b31d886cf4abf609e35e6c48ad9c8"
+    },
+    {
+      "file": "picker-ru-1920.png",
+      "bytes": 24164,
+      "sha256": "f6346d811dee71da54743a8683dacd3f213b31d886cf4abf609e35e6c48ad9c8"
+    },
+    {
+      "file": "picker-ru-320.png",
+      "bytes": 23349,
+      "sha256": "1d566e57c39c9d37c7ac8d99c74f8dd4245acfbdc16d7160c69e4def4d4b1a22"
+    },
+    {
+      "file": "picker-ru-390.png",
+      "bytes": 24886,
+      "sha256": "19628fec352fc627453ce6c7ab2e909b5b49eada38a67dad6f24c8a7e0218af0"
+    },
+    {
+      "file": "picker-ru-768.png",
+      "bytes": 24164,
+      "sha256": "f6346d811dee71da54743a8683dacd3f213b31d886cf4abf609e35e6c48ad9c8"
+    },
+    {
+      "file": "picker-uk-1280.png",
+      "bytes": 22480,
+      "sha256": "a10dd094fee07992703c9354db1d593ff93962b609f0d8ebb1bdd4db53fc6189"
+    },
+    {
+      "file": "picker-uk-1920.png",
+      "bytes": 22480,
+      "sha256": "a10dd094fee07992703c9354db1d593ff93962b609f0d8ebb1bdd4db53fc6189"
+    },
+    {
+      "file": "picker-uk-320.png",
+      "bytes": 21572,
+      "sha256": "6e22db31662e73e0f1bd8755d79f683ff9fc27fbf192f98e8e21bfcde2dbadf7"
+    },
+    {
+      "file": "picker-uk-390.png",
+      "bytes": 23159,
+      "sha256": "c851cadba2e54ff598c7cc9781c49f99dcc90ac42ef95cc42240e17dfd68de2f"
+    },
+    {
+      "file": "picker-uk-768.png",
+      "bytes": 22480,
+      "sha256": "a10dd094fee07992703c9354db1d593ff93962b609f0d8ebb1bdd4db53fc6189"
+    }
+  ],
+  "accessibility": [
+    {
+      "locale": "bg",
+      "axeVersion": "4.12.1",
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21aa",
+        "wcag22aa"
+      ],
+      "violations": [],
+      "incompleteRuleIds": [
+        "aria-prohibited-attr",
+        "color-contrast"
+      ]
+    },
+    {
+      "locale": "ru",
+      "axeVersion": "4.12.1",
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21aa",
+        "wcag22aa"
+      ],
+      "violations": [],
+      "incompleteRuleIds": [
+        "aria-prohibited-attr",
+        "color-contrast"
+      ]
+    },
+    {
+      "locale": "uk",
+      "axeVersion": "4.12.1",
+      "tags": [
+        "wcag2a",
+        "wcag2aa",
+        "wcag21aa",
+        "wcag22aa"
+      ],
+      "violations": [],
+      "incompleteRuleIds": [
+        "aria-prohibited-attr",
+        "color-contrast"
+      ]
+    }
+  ],
+  "limits": "Synthetic local member. Automated axe and browser keyboard checks; no native screen-reader speech claim."
+}

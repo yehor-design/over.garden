@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OwnedDestinationNavigation } from "@/components/garden/owned-destination-navigation";
 import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
 import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
 import { CameraIcon as Camera } from "@/components/icons/Camera";
@@ -368,6 +369,7 @@ function InventorySection({
         ) : undefined
       }
     >
+      <OwnedDestinationNavigation locale={locale} />
       {inventory.objects.length > 0 ? (
         <>
           {/* A count of nought is the absence of a fact (DESIGN.md §5.10): a

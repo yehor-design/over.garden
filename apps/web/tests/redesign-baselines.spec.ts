@@ -57,19 +57,14 @@ test("OVE-486: global Write opens the destination-aware composer", async ({
   await expect(write).toHaveAttribute("href", "/garden/new");
 });
 
-test("OVE-483/486: no implicit first-space selection among three spaces", async ({
-  page,
-}) => {
+test("multiple spaces require an explicit destination", async ({ page }) => {
   await page.goto("/garden");
-  const select = page.locator(
-    '#first-entry-composer select[name="spaceChoice"]',
-  );
-  await expect(select).toBeVisible();
-  test.fail(
-    !process.env.REDESIGN_ENFORCE_BASELINES,
-    "Known first-space default; desired choice is explicit",
-  );
-  await expect(select).toHaveValue("");
+  const composer = page.locator("#first-entry-composer");
+  await expect(
+    composer.locator('[data-owned-destination-picker="space"]'),
+  ).toBeVisible();
+  await expect(composer.locator("[data-destination-selection]")).toHaveCount(0);
+  await expect(composer.locator('input[name="spaceId"]')).toHaveCount(0);
 });
 
 test("OVE-482: filter dismiss is named Close rather than Reset", async ({
