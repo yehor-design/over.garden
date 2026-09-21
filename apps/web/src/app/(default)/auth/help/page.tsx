@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MailWarning } from "lucide-react";
+import { EnvelopeSimpleIcon as MailWarning } from "@/components/icons/EnvelopeSimple";
 
 import { buttonVariants } from "@/components/ui/button";
 import { SIGN_IN_PATH } from "@/lib/navigation/sign-in-href";
@@ -79,7 +79,7 @@ export default async function AuthHelpPage() {
           <p className="text-body-sm">
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className="rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              className="text-link rounded-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               {SUPPORT_EMAIL}
             </a>

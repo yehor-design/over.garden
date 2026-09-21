@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import NextLink from "next/link";
-import {
-  notFound,
-  permanentRedirect,
-  unstable_rethrow,
-} from "next/navigation";
+import { notFound, permanentRedirect, unstable_rethrow } from "next/navigation";
 import { cache, Suspense } from "react";
-import { Bookmark, ExternalLink, NotebookPen } from "lucide-react";
+import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
+import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
+import { NotebookIcon as NotebookPen } from "@/components/icons/Notebook";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { PublicVarietySourceCredits } from "@/app/(default)/variety/[slug]/source-credits";
@@ -475,7 +473,6 @@ async function renderCatalogEvidenceCard(
           level={2}
           title={cardCopy.sections.experience}
         >
-
           {isPlantVariety && engagement ? (
             <Suspense
               fallback={
@@ -831,15 +828,18 @@ async function renderCatalogEvidenceCard(
                         {href ? (
                           <Link
                             href={href}
-                            className="inline-flex min-h-6 items-center gap-1 font-mono text-code"
+                            className="text-code inline-flex min-h-6 items-center gap-1 font-mono"
                             rel="noreferrer"
                             target="_blank"
                           >
                             {identifier.value}
-                            <ExternalLink className="size-3.5" aria-hidden="true" />
+                            <ExternalLink
+                              className="size-4"
+                              aria-hidden="true"
+                            />
                           </Link>
                         ) : (
-                          <span className="font-mono text-code text-text">
+                          <span className="text-code font-mono text-text">
                             {identifier.value}
                           </span>
                         )}
@@ -1152,7 +1152,9 @@ function firstParam(value: string | string[] | undefined) {
  * the shape is a BCP-47 tag and the line is a name.
  */
 function isLanguageQualifier(qualifier: string | null): qualifier is string {
-  return qualifier !== null && /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/u.test(qualifier);
+  return (
+    qualifier !== null && /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/u.test(qualifier)
+  );
 }
 
 /**

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { MessageCircle } from "lucide-react";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
 
 import { AuthIntentTrigger } from "./auth-intent-trigger";
 

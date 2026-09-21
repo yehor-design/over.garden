@@ -1,14 +1,12 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpenText,
-  Camera,
-  CirclePlus,
-  ImageOff,
-  Leaf,
-  PawPrint,
-  SquarePen,
-} from "lucide-react";
+import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
+import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
+import { CameraIcon as Camera } from "@/components/icons/Camera";
+import { PlusCircleIcon as CirclePlus } from "@/components/icons/PlusCircle";
+import { ImageBrokenIcon as ImageOff } from "@/components/icons/ImageBroken";
+import { LeafIcon as Leaf } from "@/components/icons/Leaf";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { NotePencilIcon as SquarePen } from "@/components/icons/NotePencil";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import { Badge } from "@/components/ui/badge";

@@ -1,5 +1,8 @@
-import { Bell, Bookmark, Heart, ListFilter } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { BellIcon as Bell } from "@/components/icons/Bell";
+import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
+import { HeartIcon as Heart } from "@/components/icons/Heart";
+import { FunnelIcon as ListFilter } from "@/components/icons/Funnel";
+import type { InterfaceIcon } from "@/components/icons";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/ui/page-header";
@@ -23,7 +26,7 @@ import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
  */
 export type SocialTab = "feed" | "notifications" | "bookmarks" | "wishlist";
 
-const TAB_ICONS: Record<SocialTab, LucideIcon> = {
+const TAB_ICONS: Record<SocialTab, InterfaceIcon> = {
   feed: ListFilter,
   notifications: Bell,
   bookmarks: Bookmark,

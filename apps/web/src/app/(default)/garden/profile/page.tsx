@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
+import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 
 import {
   WorkspaceSectionError,

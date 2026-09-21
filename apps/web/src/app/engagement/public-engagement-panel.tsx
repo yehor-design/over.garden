@@ -1,16 +1,14 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  Ban,
-  Bookmark,
-  Flag,
-  MessageCircle,
-  MoreHorizontal,
-  Reply,
-  Trash2,
-  UserMinus,
-  UserPlus,
-} from "lucide-react";
+import { ProhibitIcon as Ban } from "@/components/icons/Prohibit";
+import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
+import { FlagIcon as Flag } from "@/components/icons/Flag";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { DotsThreeIcon as MoreHorizontal } from "@/components/icons/DotsThree";
+import { ArrowBendUpLeftIcon as Reply } from "@/components/icons/ArrowBendUpLeft";
+import { TrashIcon as Trash2 } from "@/components/icons/Trash";
+import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
+import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
 import Link from "next/link";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";

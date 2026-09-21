@@ -36,21 +36,23 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-action text-text-on-fill hover:bg-action-hover",
+        primary:
+          "bg-action text-text-on-fill hover:bg-action-hover active:bg-action-pressed",
         secondary:
-          "border-border-control bg-surface text-text hover:bg-surface-hover aria-expanded:bg-surface-hover",
-        // The subtle fill is `action-subtle`; its hover is the same action
-        // colour at 15 %, so the state needs no token of its own.
-        subtle: "bg-action-subtle text-action-subtle-text hover:bg-action/15",
+          "border-border-control bg-surface text-text hover:bg-surface-hover active:bg-surface-sunken aria-expanded:bg-surface-hover",
+        // Subtle controls use the neutral surface interaction states.
+        subtle:
+          "bg-action-subtle text-action-subtle-text hover:bg-surface-hover active:bg-surface-sunken",
         ghost:
-          "text-text-secondary hover:bg-surface-hover hover:text-text aria-expanded:bg-surface-hover",
+          "text-text-secondary hover:bg-surface-hover hover:text-text active:bg-surface-sunken aria-expanded:bg-surface-hover",
         // `danger-text` is the danger ramp's darker step; white on it measures
         // 7.67, so it is the hover fill as well as the text colour.
-        danger: "bg-danger-fill text-text-on-fill hover:bg-danger-text",
+        danger:
+          "bg-danger-fill text-text-on-fill hover:bg-danger-text active:bg-danger-text",
       },
       size: {
         sm: "min-h-8 px-3 py-1 text-body-sm [&_svg]:size-4",
-        md: "min-h-10 px-4 py-2 text-body-sm [&_svg]:size-4",
+        md: "min-h-11 px-4 py-2 text-body-sm [&_svg]:size-4",
         lg: "min-h-12 px-5 py-3 text-body [&_svg]:size-5",
       },
     },

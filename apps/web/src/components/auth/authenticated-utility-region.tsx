@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Sprout } from "lucide-react";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";

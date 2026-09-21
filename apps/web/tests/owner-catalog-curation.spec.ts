@@ -269,6 +269,7 @@ test.describe("OVE-391 owner curation", () => {
       await page.goto("/garden/catalog/sources", { waitUntil: "load" });
       const refresh = page.locator('[data-catalog-source-refresh="eppo"]');
       await expect(refresh).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath("owner-source-controls.png"), animations: "disabled", fullPage: true });
       await refresh.click();
       await expect
         .poll(() => readRefreshJobCount(pool), { timeout: 20_000 })

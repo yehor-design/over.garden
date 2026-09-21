@@ -1,6 +1,7 @@
 "use client";
 
-import { PawPrint, Sprout } from "lucide-react";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import type { PlantObjectKind } from "@/db/schema";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";

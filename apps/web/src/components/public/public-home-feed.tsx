@@ -1,6 +1,9 @@
 import { SignedInOnly } from "@/components/site-shell/signed-in-only";
 import Link from "next/link";
-import { MapPin, MessageCircle, PawPrint, Sprout } from "lucide-react";
+import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import {
   SiteShellContextRailModules,
@@ -350,7 +353,7 @@ function PublicFeedEntryCard({
         icon: KIND_ICONS[entry.object.kind],
         meta: entry.object.safeRegionCode ? (
           <>
-            <MapPin aria-hidden="true" className="size-3.5" />
+            <MapPin aria-hidden="true" className="size-4" />
             {copy.safeRegion} {entry.object.safeRegionCode}
           </>
         ) : null,

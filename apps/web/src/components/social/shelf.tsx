@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { TrashIcon as Trash2 } from "@/components/icons/Trash";
 import { useState, type ReactNode } from "react";
 
 import { IconButton } from "@/components/ui/icon-button";

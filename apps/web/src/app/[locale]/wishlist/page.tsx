@@ -1,4 +1,5 @@
-import { ExternalLink, Sprout } from "lucide-react";
+import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";

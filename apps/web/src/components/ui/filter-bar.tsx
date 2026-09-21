@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontalIcon as SlidersHorizontal } from "@/components/icons/SlidersHorizontal";
 
 import { Button } from "@/components/ui/button";
 import { Chip, FilterChip } from "@/components/ui/chip";
@@ -377,7 +377,7 @@ function FacetControl({
         <option value="">{facet.anyLabel ?? facet.label}</option>
         {facet.options.map((option) => (
           <option key={option.value} value={option.value}>
-            {option.countLabel ?? typeof option.count === "number"
+            {(option.countLabel ?? typeof option.count === "number")
               ? `${option.label} (${option.countLabel ?? option.count})`
               : option.label}
           </option>

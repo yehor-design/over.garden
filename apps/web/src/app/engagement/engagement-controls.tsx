@@ -1,13 +1,11 @@
 "use client";
 
-import {
-  Bookmark,
-  Heart,
-  MessageCircle,
-  Reply,
-  UserMinus,
-  UserPlus,
-} from "lucide-react";
+import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
+import { HeartIcon as Heart } from "@/components/icons/Heart";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { ArrowBendUpLeftIcon as Reply } from "@/components/icons/ArrowBendUpLeft";
+import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
+import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
 import { useActionState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -133,11 +131,7 @@ function LikeButton({
           className: "self-start",
         })}
       >
-        <Heart
-          className="size-4"
-          aria-hidden="true"
-          fill={liked ? "currentColor" : "none"}
-        />
+        <Heart className="size-4" aria-hidden="true" selected={liked} />
         {liked ? labels.liked : labels.like}
       </button>
       {/* The count, visible and polite — and the only live region in the bar
@@ -185,7 +179,9 @@ export function EngagementBookmarkControl({
       targetRef={targetRef}
       initialActive={initialActive}
       labels={labels}
-      icon={() => <Bookmark className="size-4" aria-hidden="true" />}
+      icon={(active) => (
+        <Bookmark selected={active} className="size-4" aria-hidden="true" />
+      )}
       submit={submit}
     />
   );

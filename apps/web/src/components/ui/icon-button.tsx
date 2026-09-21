@@ -25,17 +25,20 @@ const iconButtonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-action text-text-on-fill hover:bg-action-hover",
+        primary:
+          "bg-action text-text-on-fill hover:bg-action-hover active:bg-action-pressed",
         secondary:
-          "border-border-control bg-surface text-text hover:bg-surface-hover aria-expanded:bg-surface-hover",
-        subtle: "bg-action-subtle text-action-subtle-text hover:bg-action/15",
+          "border-border-control bg-surface text-text hover:bg-surface-hover active:bg-surface-sunken aria-expanded:bg-surface-hover",
+        subtle:
+          "bg-action-subtle text-action-subtle-text hover:bg-surface-hover active:bg-surface-sunken",
         ghost:
-          "text-text-secondary hover:bg-surface-hover hover:text-text aria-expanded:bg-surface-hover",
-        danger: "bg-danger-fill text-text-on-fill hover:bg-danger-text",
+          "text-text-secondary hover:bg-surface-hover hover:text-text active:bg-surface-sunken aria-expanded:bg-surface-hover",
+        danger:
+          "bg-danger-fill text-text-on-fill hover:bg-danger-text active:bg-danger-text",
       },
       size: {
         sm: "size-8 [&_svg]:size-4",
-        md: "size-10 [&_svg]:size-5",
+        md: "size-11 [&_svg]:size-5",
         lg: "size-12 [&_svg]:size-6",
       },
     },

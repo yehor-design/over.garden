@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
-import { Check } from "lucide-react";
+import { CheckIcon as Check } from "@/components/icons/Check";
 
 import { cn } from "@/lib/utils";
 

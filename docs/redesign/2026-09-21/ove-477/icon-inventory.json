@@ -1,0 +1,1221 @@
+{
+  "baseline": "a84b1c17cdae430936197bfae164fb7abdcfa22f",
+  "package": "@phosphor-icons/react@2.1.10",
+  "imports": [
+    {
+      "file": "apps/web/src/app/catalog-evidence-route.tsx",
+      "previous": "Bookmark",
+      "phosphor": "BookmarkSimpleIcon",
+      "localName": "Bookmark"
+    },
+    {
+      "file": "apps/web/src/app/catalog-evidence-route.tsx",
+      "previous": "ExternalLink",
+      "phosphor": "ArrowSquareOutIcon",
+      "localName": "ExternalLink"
+    },
+    {
+      "file": "apps/web/src/app/catalog-evidence-route.tsx",
+      "previous": "NotebookPen",
+      "phosphor": "NotebookIcon",
+      "localName": "NotebookPen"
+    },
+    {
+      "file": "apps/web/src/app/(default)/variety/[slug]/source-credits.tsx",
+      "previous": "ExternalLink",
+      "phosphor": "ArrowSquareOutIcon",
+      "localName": "ExternalLink"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "Ban",
+      "phosphor": "ProhibitIcon",
+      "localName": "Ban"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "Bookmark",
+      "phosphor": "BookmarkSimpleIcon",
+      "localName": "Bookmark"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "Flag",
+      "phosphor": "FlagIcon",
+      "localName": "Flag"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "MoreHorizontal",
+      "phosphor": "DotsThreeIcon",
+      "localName": "MoreHorizontal"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "Reply",
+      "phosphor": "ArrowBendUpLeftIcon",
+      "localName": "Reply"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "Trash2",
+      "phosphor": "TrashIcon",
+      "localName": "Trash2"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "UserMinus",
+      "phosphor": "UserMinusIcon",
+      "localName": "UserMinus"
+    },
+    {
+      "file": "apps/web/src/app/engagement/public-engagement-panel.tsx",
+      "previous": "UserPlus",
+      "phosphor": "UserPlusIcon",
+      "localName": "UserPlus"
+    },
+    {
+      "file": "apps/web/src/app/engagement/engagement-controls.tsx",
+      "previous": "Bookmark",
+      "phosphor": "BookmarkSimpleIcon",
+      "localName": "Bookmark"
+    },
+    {
+      "file": "apps/web/src/app/engagement/engagement-controls.tsx",
+      "previous": "Heart",
+      "phosphor": "HeartIcon",
+      "localName": "Heart"
+    },
+    {
+      "file": "apps/web/src/app/engagement/engagement-controls.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/app/engagement/engagement-controls.tsx",
+      "previous": "Reply",
+      "phosphor": "ArrowBendUpLeftIcon",
+      "localName": "Reply"
+    },
+    {
+      "file": "apps/web/src/app/engagement/engagement-controls.tsx",
+      "previous": "UserMinus",
+      "phosphor": "UserMinusIcon",
+      "localName": "UserMinus"
+    },
+    {
+      "file": "apps/web/src/app/engagement/engagement-controls.tsx",
+      "previous": "UserPlus",
+      "phosphor": "UserPlusIcon",
+      "localName": "UserPlus"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/feed/page.tsx",
+      "previous": "LogIn",
+      "phosphor": "SignInIcon",
+      "localName": "LogIn"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/feed/page.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/feed/page.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/feed/page.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/wishlist/page.tsx",
+      "previous": "ExternalLink",
+      "phosphor": "ArrowSquareOutIcon",
+      "localName": "ExternalLink"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/wishlist/page.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/lineage/objects/[objectId]/page.tsx",
+      "previous": "BellPlus",
+      "phosphor": "BellRingingIcon",
+      "localName": "BellPlus"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/lineage/objects/[objectId]/page.tsx",
+      "previous": "GitBranch",
+      "phosphor": "GitBranchIcon",
+      "localName": "GitBranch"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell.tsx",
+      "previous": "Menu",
+      "phosphor": "ListIcon",
+      "localName": "MenuIcon"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell.tsx",
+      "previous": "SquarePen",
+      "phosphor": "NotePencilIcon",
+      "localName": "SquarePen"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell.tsx",
+      "previous": "TriangleAlert",
+      "phosphor": "WarningIcon",
+      "localName": "TriangleAlert"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell.tsx",
+      "previous": "UserRound",
+      "phosphor": "UserIcon",
+      "localName": "UserRound"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "Bell",
+      "phosphor": "BellIcon",
+      "localName": "Bell"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "Bookmark",
+      "phosphor": "BookmarkSimpleIcon",
+      "localName": "Bookmark"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "BookOpenText",
+      "phosphor": "BookOpenTextIcon",
+      "localName": "BookOpenText"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "CircleUserRound",
+      "phosphor": "UserCircleIcon",
+      "localName": "CircleUserRound"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "GitBranch",
+      "phosphor": "GitBranchIcon",
+      "localName": "GitBranch"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "Heart",
+      "phosphor": "HeartIcon",
+      "localName": "Heart"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "LayoutDashboard",
+      "phosphor": "SquaresFourIcon",
+      "localName": "LayoutDashboard"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "ListFilter",
+      "phosphor": "FunnelIcon",
+      "localName": "ListFilter"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "LogIn",
+      "phosphor": "SignInIcon",
+      "localName": "LogIn"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "Newspaper",
+      "phosphor": "NewspaperIcon",
+      "localName": "Newspaper"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "NotebookText",
+      "phosphor": "NotebookIcon",
+      "localName": "NotebookText"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "ShieldCheck",
+      "phosphor": "ShieldCheckIcon",
+      "localName": "ShieldCheck"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "SquarePen",
+      "phosphor": "NotePencilIcon",
+      "localName": "SquarePen"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "UserRound",
+      "phosphor": "UserIcon",
+      "localName": "UserRound"
+    },
+    {
+      "file": "apps/web/src/components/site-shell/site-shell-navigation.tsx",
+      "previous": "UsersRound",
+      "phosphor": "UsersIcon",
+      "localName": "UsersRound"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/notifications/page.tsx",
+      "previous": "Bell",
+      "phosphor": "BellIcon",
+      "localName": "Bell"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/notifications/page.tsx",
+      "previous": "CheckCheck",
+      "phosphor": "ChecksIcon",
+      "localName": "CheckCheck"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/notifications/page.tsx",
+      "previous": "ChevronDown",
+      "phosphor": "CaretDownIcon",
+      "localName": "ChevronDown"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/notifications/page.tsx",
+      "previous": "EyeOff",
+      "phosphor": "EyeSlashIcon",
+      "localName": "EyeOff"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/notifications/page.tsx",
+      "previous": "MailOpen",
+      "phosphor": "EnvelopeOpenIcon",
+      "localName": "MailOpen"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/notifications/page.tsx",
+      "previous": "Settings2",
+      "phosphor": "SlidersIcon",
+      "localName": "Settings2"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-directory.tsx",
+      "previous": "MapPin",
+      "phosphor": "MapPinIcon",
+      "localName": "MapPin"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-directory.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-directory.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-directory.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-directory.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-topic.tsx",
+      "previous": "ArrowLeft",
+      "phosphor": "ArrowLeftIcon",
+      "localName": "ArrowLeft"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-topic.tsx",
+      "previous": "Tags",
+      "phosphor": "TagIcon",
+      "localName": "Tags"
+    },
+    {
+      "file": "apps/web/src/app/[locale]/bookmarks/page.tsx",
+      "previous": "ExternalLink",
+      "phosphor": "ArrowSquareOutIcon",
+      "localName": "ExternalLink"
+    },
+    {
+      "file": "apps/web/src/components/public/language-switcher.tsx",
+      "previous": "Languages",
+      "phosphor": "TranslateIcon",
+      "localName": "Languages"
+    },
+    {
+      "file": "apps/web/src/components/public/localized-public-pages.tsx",
+      "previous": "ArrowRight",
+      "phosphor": "ArrowRightIcon",
+      "localName": "ArrowRight"
+    },
+    {
+      "file": "apps/web/src/components/public/localized-public-pages.tsx",
+      "previous": "BookOpen",
+      "phosphor": "BookOpenIcon",
+      "localName": "BookOpen"
+    },
+    {
+      "file": "apps/web/src/components/public/localized-public-pages.tsx",
+      "previous": "Globe2",
+      "phosphor": "GlobeIcon",
+      "localName": "Globe2"
+    },
+    {
+      "file": "apps/web/src/components/public/localized-public-pages.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/public/directory-return-link.tsx",
+      "previous": "ArrowLeft",
+      "phosphor": "ArrowLeftIcon",
+      "localName": "ArrowLeft"
+    },
+    {
+      "file": "apps/web/src/components/public/public-home-feed.tsx",
+      "previous": "MapPin",
+      "phosphor": "MapPinIcon",
+      "localName": "MapPin"
+    },
+    {
+      "file": "apps/web/src/components/public/public-home-feed.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/components/public/public-home-feed.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/components/public/public-home-feed.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-hub.tsx",
+      "previous": "BookOpen",
+      "phosphor": "BookOpenIcon",
+      "localName": "BookOpen"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-hub.tsx",
+      "previous": "HelpCircle",
+      "phosphor": "QuestionIcon",
+      "localName": "HelpCircle"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-hub.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-hub.tsx",
+      "previous": "Tags",
+      "phosphor": "TagIcon",
+      "localName": "Tags"
+    },
+    {
+      "file": "apps/web/src/components/public/public-catalog-register-hub.tsx",
+      "previous": "ArrowLeft",
+      "phosphor": "ArrowLeftIcon",
+      "localName": "ArrowLeft"
+    },
+    {
+      "file": "apps/web/src/components/public/public-catalog-register-hub.tsx",
+      "previous": "FileText",
+      "phosphor": "FileTextIcon",
+      "localName": "FileText"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "ArrowRight",
+      "phosphor": "ArrowRightIcon",
+      "localName": "ArrowRight"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "BookOpenText",
+      "phosphor": "BookOpenTextIcon",
+      "localName": "BookOpenText"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "CalendarDays",
+      "phosphor": "CalendarBlankIcon",
+      "localName": "CalendarDays"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "CircleAlert",
+      "phosphor": "WarningCircleIcon",
+      "localName": "CircleAlert"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "Link2",
+      "phosphor": "LinkIcon",
+      "localName": "Link2"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "LoaderCircle",
+      "phosphor": "CircleNotchIcon",
+      "localName": "LoaderCircle"
+    },
+    {
+      "file": "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "previous": "ScanSearch",
+      "phosphor": "MagnifyingGlassPlusIcon",
+      "localName": "ScanSearch"
+    },
+    {
+      "file": "apps/web/src/app/(default)/account/communities/page.tsx",
+      "previous": "ShieldCheck",
+      "phosphor": "ShieldCheckIcon",
+      "localName": "ShieldCheck"
+    },
+    {
+      "file": "apps/web/src/components/public/catalog-front-door.tsx",
+      "previous": "Leaf",
+      "phosphor": "LeafIcon",
+      "localName": "Leaf"
+    },
+    {
+      "file": "apps/web/src/components/public/public-community.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/components/public/public-community.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/components/public/public-community.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/public/public-community.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/public/public-community.tsx",
+      "previous": "UsersRound",
+      "phosphor": "UsersIcon",
+      "localName": "UsersRound"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "BookOpen",
+      "phosphor": "BookOpenIcon",
+      "localName": "BookOpen"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "Flag",
+      "phosphor": "FlagIcon",
+      "localName": "Flag"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "MapPin",
+      "phosphor": "MapPinIcon",
+      "localName": "MapPin"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "MoreHorizontal",
+      "phosphor": "DotsThreeIcon",
+      "localName": "MoreHorizontal"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "Settings",
+      "phosphor": "GearIcon",
+      "localName": "Settings"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "ShieldBan",
+      "phosphor": "ShieldSlashIcon",
+      "localName": "ShieldBan"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "UserMinus",
+      "phosphor": "UserMinusIcon",
+      "localName": "UserMinus"
+    },
+    {
+      "file": "apps/web/src/components/public/public-profile.tsx",
+      "previous": "UserPlus",
+      "phosphor": "UserPlusIcon",
+      "localName": "UserPlus"
+    },
+    {
+      "file": "apps/web/src/components/public/public-catalog-browse.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/public/public-catalog-browse.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-entry.tsx",
+      "previous": "ArrowLeft",
+      "phosphor": "ArrowLeftIcon",
+      "localName": "ArrowLeft"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-entry.tsx",
+      "previous": "ArrowRight",
+      "phosphor": "ArrowRightIcon",
+      "localName": "ArrowRight"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-entry.tsx",
+      "previous": "MapPin",
+      "phosphor": "MapPinIcon",
+      "localName": "MapPin"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-entry.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-entry.tsx",
+      "previous": "Settings",
+      "phosphor": "GearIcon",
+      "localName": "Settings"
+    },
+    {
+      "file": "apps/web/src/components/public/public-journal-entry.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/living-object-passport/living-object-passport.tsx",
+      "previous": "BookOpen",
+      "phosphor": "BookOpenIcon",
+      "localName": "BookOpen"
+    },
+    {
+      "file": "apps/web/src/components/living-object-passport/living-object-passport.tsx",
+      "previous": "ChevronRight",
+      "phosphor": "CaretRightIcon",
+      "localName": "ChevronRight"
+    },
+    {
+      "file": "apps/web/src/components/living-object-passport/living-object-passport.tsx",
+      "previous": "ImageOff",
+      "phosphor": "ImageBrokenIcon",
+      "localName": "ImageOff"
+    },
+    {
+      "file": "apps/web/src/components/living-object-passport/living-object-passport.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/components/living-object-passport/living-object-passport.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/app/(default)/error.tsx",
+      "previous": "RotateCcw",
+      "phosphor": "ArrowCounterClockwiseIcon",
+      "localName": "RotateCcw"
+    },
+    {
+      "file": "apps/web/src/components/social/my-social-layout.tsx",
+      "previous": "Bell",
+      "phosphor": "BellIcon",
+      "localName": "Bell"
+    },
+    {
+      "file": "apps/web/src/components/social/my-social-layout.tsx",
+      "previous": "Bookmark",
+      "phosphor": "BookmarkSimpleIcon",
+      "localName": "Bookmark"
+    },
+    {
+      "file": "apps/web/src/components/social/my-social-layout.tsx",
+      "previous": "Heart",
+      "phosphor": "HeartIcon",
+      "localName": "Heart"
+    },
+    {
+      "file": "apps/web/src/components/social/my-social-layout.tsx",
+      "previous": "ListFilter",
+      "phosphor": "FunnelIcon",
+      "localName": "ListFilter"
+    },
+    {
+      "file": "apps/web/src/components/social/shelf.tsx",
+      "previous": "Trash2",
+      "phosphor": "TrashIcon",
+      "localName": "Trash2"
+    },
+    {
+      "file": "apps/web/src/components/social/social-surface-state.tsx",
+      "previous": "AlertTriangle",
+      "phosphor": "WarningIcon",
+      "localName": "AlertTriangle"
+    },
+    {
+      "file": "apps/web/src/components/social/social-surface-state.tsx",
+      "previous": "RefreshCw",
+      "phosphor": "ArrowsClockwiseIcon",
+      "localName": "RefreshCw"
+    },
+    {
+      "file": "apps/web/src/components/garden/workspace-error-boundary.tsx",
+      "previous": "RefreshCw",
+      "phosphor": "ArrowsClockwiseIcon",
+      "localName": "RefreshCw"
+    },
+    {
+      "file": "apps/web/src/components/garden/workspace-state-controls.tsx",
+      "previous": "RefreshCw",
+      "phosphor": "ArrowsClockwiseIcon",
+      "localName": "RefreshCw"
+    },
+    {
+      "file": "apps/web/src/components/garden/workspace-state-controls.tsx",
+      "previous": "RotateCw",
+      "phosphor": "ArrowClockwiseIcon",
+      "localName": "RotateCw"
+    },
+    {
+      "file": "apps/web/src/components/ui/accordion.tsx",
+      "previous": "ChevronDown",
+      "phosphor": "CaretDownIcon",
+      "localName": "ChevronDown"
+    },
+    {
+      "file": "apps/web/src/components/ui/chip.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/components/auth/authenticated-utility-region.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/components/ui/search-input.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/ui/combobox.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/ui/combobox.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/components/ui/command-palette.tsx",
+      "previous": "Search",
+      "phosphor": "MagnifyingGlassIcon",
+      "localName": "Search"
+    },
+    {
+      "file": "apps/web/src/components/ui/sheet.tsx",
+      "previous": "XIcon",
+      "phosphor": "XIcon",
+      "localName": "XIcon"
+    },
+    {
+      "file": "apps/web/src/components/ui/pagination.tsx",
+      "previous": "ChevronLeft",
+      "phosphor": "CaretLeftIcon",
+      "localName": "ChevronLeft"
+    },
+    {
+      "file": "apps/web/src/components/ui/pagination.tsx",
+      "previous": "ChevronRight",
+      "phosphor": "CaretRightIcon",
+      "localName": "ChevronRight"
+    },
+    {
+      "file": "apps/web/src/components/ui/select.tsx",
+      "previous": "ChevronDown",
+      "phosphor": "CaretDownIcon",
+      "localName": "ChevronDown"
+    },
+    {
+      "file": "apps/web/src/components/ui/file-drop.tsx",
+      "previous": "UploadCloud",
+      "phosphor": "CloudArrowUpIcon",
+      "localName": "UploadCloud"
+    },
+    {
+      "file": "apps/web/src/components/ui/error-state.tsx",
+      "previous": "TriangleAlert",
+      "phosphor": "WarningIcon",
+      "localName": "TriangleAlert"
+    },
+    {
+      "file": "apps/web/src/components/ui/password-input.tsx",
+      "previous": "Eye",
+      "phosphor": "EyeIcon",
+      "localName": "Eye"
+    },
+    {
+      "file": "apps/web/src/components/ui/password-input.tsx",
+      "previous": "EyeOff",
+      "phosphor": "EyeSlashIcon",
+      "localName": "EyeOff"
+    },
+    {
+      "file": "apps/web/src/components/ui/menu.tsx",
+      "previous": "Check",
+      "phosphor": "CheckIcon",
+      "localName": "Check"
+    },
+    {
+      "file": "apps/web/src/components/ui/checkbox.tsx",
+      "previous": "Check",
+      "phosphor": "CheckIcon",
+      "localName": "Check"
+    },
+    {
+      "file": "apps/web/src/components/ui/dialog.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/components/ui/toast.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/components/ui/callout.tsx",
+      "previous": "CircleAlert",
+      "phosphor": "WarningCircleIcon",
+      "localName": "CircleAlert"
+    },
+    {
+      "file": "apps/web/src/components/ui/callout.tsx",
+      "previous": "CircleCheck",
+      "phosphor": "CheckCircleIcon",
+      "localName": "CircleCheck"
+    },
+    {
+      "file": "apps/web/src/components/ui/callout.tsx",
+      "previous": "Info",
+      "phosphor": "InfoIcon",
+      "localName": "Info"
+    },
+    {
+      "file": "apps/web/src/components/ui/callout.tsx",
+      "previous": "TriangleAlert",
+      "phosphor": "WarningIcon",
+      "localName": "TriangleAlert"
+    },
+    {
+      "file": "apps/web/src/components/auth/auth-intent-trigger.test.tsx",
+      "previous": "MessageCircle",
+      "phosphor": "ChatCircleIcon",
+      "localName": "MessageCircle"
+    },
+    {
+      "file": "apps/web/src/components/ui/filter-bar.tsx",
+      "previous": "SlidersHorizontal",
+      "phosphor": "SlidersHorizontalIcon",
+      "localName": "SlidersHorizontal"
+    },
+    {
+      "file": "apps/web/src/components/auth/sign-out-control.tsx",
+      "previous": "LogOut",
+      "phosphor": "SignOutIcon",
+      "localName": "LogOut"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-selection-toolbar.tsx",
+      "previous": "Bold",
+      "phosphor": "TextBIcon",
+      "localName": "Bold"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-selection-toolbar.tsx",
+      "previous": "Code",
+      "phosphor": "CodeIcon",
+      "localName": "Code"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-selection-toolbar.tsx",
+      "previous": "Italic",
+      "phosphor": "TextItalicIcon",
+      "localName": "Italic"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-selection-toolbar.tsx",
+      "previous": "Link2",
+      "phosphor": "LinkIcon",
+      "localName": "Link2"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-selection-toolbar.tsx",
+      "previous": "Strikethrough",
+      "phosphor": "TextStrikethroughIcon",
+      "localName": "Strikethrough"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-selection-toolbar.tsx",
+      "previous": "Underline",
+      "phosphor": "TextUnderlineIcon",
+      "localName": "Underline"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-shortcut-sheet.tsx",
+      "previous": "Keyboard",
+      "phosphor": "KeyboardIcon",
+      "localName": "Keyboard"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-block-gutter.tsx",
+      "previous": "ChevronDown",
+      "phosphor": "CaretDownIcon",
+      "localName": "ChevronDown"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-block-gutter.tsx",
+      "previous": "ChevronUp",
+      "phosphor": "CaretUpIcon",
+      "localName": "ChevronUp"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-block-gutter.tsx",
+      "previous": "Copy",
+      "phosphor": "CopyIcon",
+      "localName": "Copy"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-block-gutter.tsx",
+      "previous": "GripVertical",
+      "phosphor": "DotsSixVerticalIcon",
+      "localName": "GripVertical"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-block-gutter.tsx",
+      "previous": "Plus",
+      "phosphor": "PlusIcon",
+      "localName": "Plus"
+    },
+    {
+      "file": "apps/web/src/components/garden/lexical-journal/journal-block-gutter.tsx",
+      "previous": "Trash2",
+      "phosphor": "TrashIcon",
+      "localName": "Trash2"
+    },
+    {
+      "file": "apps/web/src/app/(default)/auth/help/password-reset-request-form.tsx",
+      "previous": "Mail",
+      "phosphor": "EnvelopeIcon",
+      "localName": "Mail"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/save-progress-moment.tsx",
+      "previous": "CheckCircle2",
+      "phosphor": "CheckCircleIcon",
+      "localName": "CheckCircle2"
+    },
+    {
+      "file": "apps/web/src/app/(default)/auth/help/page.tsx",
+      "previous": "MailWarning",
+      "phosphor": "EnvelopeSimpleIcon",
+      "localName": "MailWarning"
+    },
+    {
+      "file": "apps/web/src/app/(default)/auth/sign-in-prompt.tsx",
+      "previous": "LogIn",
+      "phosphor": "SignInIcon",
+      "localName": "LogIn"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/first-entry-composer.tsx",
+      "previous": "UploadCloud",
+      "phosphor": "CloudArrowUpIcon",
+      "localName": "UploadCloud"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/first-entry-composer.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/(home)/page.tsx",
+      "previous": "BookOpenText",
+      "phosphor": "BookOpenTextIcon",
+      "localName": "BookOpenText"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/(home)/page.tsx",
+      "previous": "CirclePlus",
+      "phosphor": "PlusCircleIcon",
+      "localName": "CirclePlus"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/(home)/page.tsx",
+      "previous": "Compass",
+      "phosphor": "CompassIcon",
+      "localName": "Compass"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/(home)/page.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-service-state.tsx",
+      "previous": "AlertCircle",
+      "phosphor": "WarningCircleIcon",
+      "localName": "AlertCircle"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-service-state.tsx",
+      "previous": "ShieldCheck",
+      "phosphor": "ShieldCheckIcon",
+      "localName": "ShieldCheck"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/journal-mention-typeahead.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/journal-object-kind-selector.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/journal-object-kind-selector.tsx",
+      "previous": "Sprout",
+      "phosphor": "PlantIcon",
+      "localName": "Sprout"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/lineage/invitations/claim/claim-handoff.tsx",
+      "previous": "RotateCcw",
+      "phosphor": "ArrowCounterClockwiseIcon",
+      "localName": "RotateCcw"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "ArrowRight",
+      "phosphor": "ArrowRightIcon",
+      "localName": "ArrowRight"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "BookOpenText",
+      "phosphor": "BookOpenTextIcon",
+      "localName": "BookOpenText"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "Camera",
+      "phosphor": "CameraIcon",
+      "localName": "Camera"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "CirclePlus",
+      "phosphor": "PlusCircleIcon",
+      "localName": "CirclePlus"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "ImageOff",
+      "phosphor": "ImageBrokenIcon",
+      "localName": "ImageOff"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "Leaf",
+      "phosphor": "LeafIcon",
+      "localName": "Leaf"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "PawPrint",
+      "phosphor": "PawPrintIcon",
+      "localName": "PawPrint"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "previous": "SquarePen",
+      "phosphor": "NotePencilIcon",
+      "localName": "SquarePen"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/catalog/sources/page.tsx",
+      "previous": "ExternalLink",
+      "phosphor": "ArrowSquareOutIcon",
+      "localName": "ExternalLink"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/profile-shell.tsx",
+      "previous": "ArrowLeft",
+      "phosphor": "ArrowLeftIcon",
+      "localName": "ArrowLeft"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/page.tsx",
+      "previous": "ExternalLink",
+      "phosphor": "ArrowSquareOutIcon",
+      "localName": "ExternalLink"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/page.tsx",
+      "previous": "ShieldCheck",
+      "phosphor": "ShieldCheckIcon",
+      "localName": "ShieldCheck"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "previous": "UploadCloud",
+      "phosphor": "CloudArrowUpIcon",
+      "localName": "UploadCloud"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "previous": "X",
+      "phosphor": "XIcon",
+      "localName": "X"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/owner-profile-editor.tsx",
+      "previous": "AtSign",
+      "phosphor": "AtIcon",
+      "localName": "AtSign"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/owner-profile-editor.tsx",
+      "previous": "Eye",
+      "phosphor": "EyeIcon",
+      "localName": "Eye"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/owner-profile-editor.tsx",
+      "previous": "ImageOff",
+      "phosphor": "ImageBrokenIcon",
+      "localName": "ImageOff"
+    },
+    {
+      "file": "apps/web/src/app/(default)/garden/profile/owner-profile-editor.tsx",
+      "previous": "Save",
+      "phosphor": "FloppyDiskIcon",
+      "localName": "Save"
+    }
+  ],
+  "exceptions": [
+    {
+      "file": "apps/web/src/components/site-shell/over-garden-logo.tsx",
+      "reason": "Owned brand mark, not an interface action"
+    },
+    {
+      "file": "apps/web/src/components/auth/google-sign-in-button.tsx",
+      "reason": "Google identity provider brand mark"
+    },
+    {
+      "file": "apps/web/src/app/icon.svg",
+      "reason": "Owned favicon"
+    },
+    {
+      "file": "apps/web/src/lib/garden/journal-document.ts",
+      "reason": "Persisted authored callout emoji are document content"
+    }
+  ],
+  "additionalMigrations": {
+    "typeImports": [
+      "src/components/ui/callout.tsx",
+      "src/components/site-shell/site-shell-navigation.tsx",
+      "src/components/social/my-social-layout.tsx"
+    ],
+    "spinner": "CSS border ring replaced with Phosphor CircleNotch; accessible state remains on busy parent."
+  },
+  "runtimeConsumption": "Named local modules under @/components/icons/<Glyph>, each importing one official SSR module; broad runtime local imports are rejected by CI."
+}

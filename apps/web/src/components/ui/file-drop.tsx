@@ -1,6 +1,6 @@
 "use client";
 
-import { UploadCloud } from "lucide-react";
+import { CloudArrowUpIcon as UploadCloud } from "@/components/icons/CloudArrowUp";
 import { useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";

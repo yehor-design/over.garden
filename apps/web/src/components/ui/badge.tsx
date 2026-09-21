@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  * removable one is a `Chip`.
  */
 const badgeVariants = cva(
-  "inline-flex max-w-full shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-caption font-medium break-words whitespace-normal [&_svg]:size-3.5",
+  "inline-flex max-w-full shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-caption font-medium break-words whitespace-normal [&_svg]:size-4",
   {
     variants: {
       tone: {

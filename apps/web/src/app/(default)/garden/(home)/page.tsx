@@ -2,7 +2,10 @@ import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { BookOpenText, CirclePlus, Compass, Sprout } from "lucide-react";
+import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
+import { PlusCircleIcon as CirclePlus } from "@/components/icons/PlusCircle";
+import { CompassIcon as Compass } from "@/components/icons/Compass";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";

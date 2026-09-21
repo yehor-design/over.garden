@@ -148,6 +148,7 @@ test.describe("OVE-417 Notion-shaped composer", () => {
       await canvas.locator("strong").dblclick();
       const pill = canvas.locator("[data-journal-selection-toolbar]");
       await expect(pill).toBeVisible();
+      await page.screenshot({ path: test.info().outputPath("editor-selection-controls.png"), animations: "disabled" });
       await pill.locator('[data-journal-format="link"]').click();
       await pill
         .locator('input[type="url"]')

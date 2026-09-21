@@ -1,14 +1,12 @@
 import { DirectoryReturnLink } from "@/components/public/directory-return-link";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import {
-  ArrowLeft,
-  ArrowRight,
-  MapPin,
-  PawPrint,
-  Settings,
-  Sprout,
-} from "lucide-react";
+import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
+import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
+import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { GearIcon as Settings } from "@/components/icons/Gear";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import {
@@ -167,7 +165,7 @@ export function PublicJournalEntryView({
               {formatDate(page.entry.entryDate, locale)}
             </time>
             <span className="inline-flex items-center gap-1.5">
-              <MapPin aria-hidden="true" className="size-3.5" />
+              <MapPin aria-hidden="true" className="size-4" />
               {location}
             </span>
           </div>

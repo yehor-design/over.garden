@@ -61,14 +61,21 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. Current production still has the older layout;
 accepted documents/prototype do not imply that runtime migration is complete.
 
-**OVE-476 implementation, release verification pending:** public-only journal
+**OVE-477 implementation, 2026-09-21 (release pending):** shared neutral Threads
+foundations and the Phosphor-only interface migration are implemented. Local
+unit/design gates, production build and 177 browser cases pass (one external
+full-catalogue fixture skips). `docs/redesign/2026-09-21/OVE-477-PROOF.md` records
+the local specimen, icon inventory and measured bundle delta. Production is not
+claimed until the PR/Linear release receipt identifies the merge and deployment.
+
+**OVE-476 shipped, 2026-09-21 (PR #432):** public-only journal
 copy is aligned across UK/BG/RU. Notice v6 distinguishes public publication,
 browser WebP preparation, transient input and final deletion. Additive migration
 0079 was applied on 2026-09-21 before releasing its reader; acceptance now
 survives entry purge and cascades on account erasure. The implementation adds
 static support documents in all three languages and no-JavaScript notice proof.
 See `docs/redesign/2026-09-21/OVE-476-PUBLICATION-PROMISES.md`; Linear records
-the final deployed SHA after green CI and release verification.
+the production proof at `a84b1c17cdae430936197bfae164fb7abdcfa22f` after green CI.
 
 The older September 17 paragraphs below are historical implementation receipts;
 where they describe future design direction, the September 21 amendment to

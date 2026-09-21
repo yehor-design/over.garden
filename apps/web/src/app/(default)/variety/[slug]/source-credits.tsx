@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
 
 import { Badge } from "@/components/ui/badge";
 
@@ -62,10 +62,13 @@ export function PublicVarietySourceCredits({
                   href={credit.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex min-h-11 min-w-0 items-center gap-1 rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                  className="text-link inline-flex min-h-11 min-w-0 items-center gap-1 rounded-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                 >
                   <span className="truncate">{credit.sourceName}</span>
-                  <ExternalLink className="size-3 shrink-0" aria-hidden="true" />
+                  <ExternalLink
+                    className="size-4 shrink-0"
+                    aria-hidden="true"
+                  />
                 </a>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge tone="neutral">
@@ -102,7 +105,7 @@ export function PublicVarietySourceCredits({
                       href={credit.licenseUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="rounded-sm font-medium text-link underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+                      className="text-link rounded-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
                     >
                       {credit.license}
                     </a>

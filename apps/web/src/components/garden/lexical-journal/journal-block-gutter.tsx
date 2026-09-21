@@ -10,14 +10,12 @@ import {
   KEY_DOWN_COMMAND,
   type NodeKey,
 } from "lexical";
-import {
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  GripVertical,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { CaretDownIcon as ChevronDown } from "@/components/icons/CaretDown";
+import { CaretUpIcon as ChevronUp } from "@/components/icons/CaretUp";
+import { CopyIcon as Copy } from "@/components/icons/Copy";
+import { DotsSixVerticalIcon as GripVertical } from "@/components/icons/DotsSixVertical";
+import { PlusIcon as Plus } from "@/components/icons/Plus";
+import { TrashIcon as Trash2 } from "@/components/icons/Trash";
 import {
   useCallback,
   useEffect,

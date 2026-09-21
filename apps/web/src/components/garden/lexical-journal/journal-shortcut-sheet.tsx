@@ -1,6 +1,6 @@
 "use client";
 
-import { Keyboard } from "lucide-react";
+import { KeyboardIcon as Keyboard } from "@/components/icons/Keyboard";
 
 import { Button } from "@/components/ui/button";
 import {

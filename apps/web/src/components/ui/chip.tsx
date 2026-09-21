@@ -1,4 +1,4 @@
-import { X } from "lucide-react";
+import { XIcon as X } from "@/components/icons/X";
 
 import { cn } from "@/lib/utils";
 
@@ -43,7 +43,7 @@ function Chip({
             "outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
           )}
         >
-          <X aria-hidden="true" className="size-3.5" />
+          <X aria-hidden="true" className="size-4" />
         </button>
       ) : null}
     </span>
@@ -90,7 +90,7 @@ function FilterChip({
         {...props}
       />
       <span>{label}</span>
-      {countLabel ?? typeof count === "number" ? (
+      {(countLabel ?? typeof count === "number") ? (
         <span className="text-caption text-text-muted tabular-nums">
           {countLabel ?? count}
         </span>

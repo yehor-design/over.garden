@@ -1,5 +1,8 @@
-import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { WarningCircleIcon as CircleAlert } from "@/components/icons/WarningCircle";
+import { CheckCircleIcon as CircleCheck } from "@/components/icons/CheckCircle";
+import { InfoIcon as Info } from "@/components/icons/Info";
+import { WarningIcon as TriangleAlert } from "@/components/icons/Warning";
+import type { InterfaceIcon } from "@/components/icons";
 
 import { cn } from "@/lib/utils";
 
@@ -26,7 +29,7 @@ const TONES = {
     surface: "border-danger-border bg-danger-surface",
     mark: "text-danger-text",
   },
-} satisfies Record<string, { icon: LucideIcon; surface: string; mark: string }>;
+} satisfies Record<string, { icon: InterfaceIcon; surface: string; mark: string }>;
 
 export type CalloutTone = keyof typeof TONES;
 

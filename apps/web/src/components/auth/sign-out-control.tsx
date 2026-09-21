@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { SignOutIcon as LogOut } from "@/components/icons/SignOut";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

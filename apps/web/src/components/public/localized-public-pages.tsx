@@ -1,9 +1,7 @@
-import {
-  ArrowRight,
-  BookOpen,
-  Globe2,
-  Sprout,
-} from "lucide-react";
+import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
+import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
+import { GlobeIcon as Globe2 } from "@/components/icons/Globe";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import NextLink from "next/link";
 
@@ -380,7 +378,6 @@ function PublicSurfaceJsonLd({
   );
 }
 
-
 function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
   return {
     items: [],
@@ -389,8 +386,6 @@ function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
     allEvidencePath: localizedPath(locale, "/journals"),
   };
 }
-
-
 
 export function LocalizedMarketLandingPage({
   locale,

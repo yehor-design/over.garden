@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
 
 import { WorkspaceShell } from "@/components/garden/workspace-state";
 import { buttonVariants } from "@/components/ui/button";

@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { XIcon as X } from "@/components/icons/X";
 
 import {
   formatGardenWorkspaceTemplate,
@@ -192,7 +192,7 @@ export function JournalMentionTypeaheadPanel({
                   { label: selection.label },
                 )}
               >
-                <X className="size-3.5" />
+                <X className="size-4" />
               </button>
             </span>
           ))}
