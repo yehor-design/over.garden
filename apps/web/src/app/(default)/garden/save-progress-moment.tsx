@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircleIcon as CheckCircle2 } from "@/components/icons/CheckCircle";
 
 import { buttonVariants } from "@/components/ui/button";
 import { ProgressBar } from "@/components/ui/progress-bar";

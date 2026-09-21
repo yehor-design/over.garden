@@ -2,7 +2,10 @@
 
 import Image from "next/image";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { AtSign, Eye, ImageOff, Save } from "lucide-react";
+import { AtIcon as AtSign } from "@/components/icons/At";
+import { EyeIcon as Eye } from "@/components/icons/Eye";
+import { ImageBrokenIcon as ImageOff } from "@/components/icons/ImageBroken";
+import { FloppyDiskIcon as Save } from "@/components/icons/FloppyDisk";
 
 import {
   OwnerScopedProgressiveForm,

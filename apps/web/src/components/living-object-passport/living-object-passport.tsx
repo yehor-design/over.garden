@@ -2,7 +2,11 @@
 // `Link` carries link typography, and `buttonVariants` would have to fight it.
 import NextLink from "next/link";
 import type { ReactNode } from "react";
-import { BookOpen, ChevronRight, ImageOff, PawPrint, Sprout } from "lucide-react";
+import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
+import { CaretRightIcon as ChevronRight } from "@/components/icons/CaretRight";
+import { ImageBrokenIcon as ImageOff } from "@/components/icons/ImageBroken";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import {
   SiteShellContextRailRegistration,
@@ -349,7 +353,7 @@ function PassportBreadcrumbs({
             className="flex min-w-0 items-center gap-1.5"
           >
             {index > 0 ? (
-              <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
+              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
             ) : null}
             {item.href ? (
               <Link
@@ -490,7 +494,7 @@ function PassportTimeline({
               <summary
                 className={cn(
                   "flex min-h-11 cursor-pointer list-none items-center gap-2",
-                  "text-body-sm font-semibold text-link hover:underline",
+                  "text-link text-body-sm font-semibold hover:underline",
                 )}
               >
                 {passport.timeline.hasMore ? copy.showRecent : copy.showAll} ·{" "}
@@ -575,7 +579,7 @@ function renderTimelineEntries(
                       <span className="line-clamp-3 whitespace-pre-wrap">
                         {entry.body}
                       </span>
-                      <span className="mt-1 inline-block text-caption font-semibold text-link group-open/note:hidden">
+                      <span className="text-link mt-1 inline-block text-caption font-semibold group-open/note:hidden">
                         {copy.readFullNote}
                       </span>
                     </summary>

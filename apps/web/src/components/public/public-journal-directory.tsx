@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { MapPin, MessageCircle, PawPrint, Search, Sprout } from "lucide-react";
+import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import {
   SiteShellContextRailModules,
@@ -386,7 +390,7 @@ function DirectoryResultCard({
         // card drew its separator with nothing after it.
         meta: card.safeRegionCode ? (
           <>
-            <MapPin aria-hidden="true" className="size-3.5" />
+            <MapPin aria-hidden="true" className="size-4" />
             {copy.safeRegion} {card.safeRegionCode}
           </>
         ) : undefined,

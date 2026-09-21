@@ -1,6 +1,6 @@
 "use client";
 
-import { Languages } from "lucide-react";
+import { TranslateIcon as Languages } from "@/components/icons/Translate";
 import { usePathname } from "next/navigation";
 import { useActionState, useSyncExternalStore } from "react";
 
@@ -99,10 +99,7 @@ function LanguageControlView({
       data-interface-language-control="site-shell-interface-language-control"
       data-interface-market={market}
       aria-label={copy.languageControlLabel}
-      className={cn(
-        "relative min-w-0 text-text",
-        compact && "text-right",
-      )}
+      className={cn("relative min-w-0 text-text", compact && "text-right")}
     >
       <details className="group/language relative">
         <summary

@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { CaretDownIcon as ChevronDown } from "@/components/icons/CaretDown";
 
 import { cn } from "@/lib/utils";
 

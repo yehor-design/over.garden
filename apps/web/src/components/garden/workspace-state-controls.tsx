@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, RotateCw } from "lucide-react";
+import { ArrowsClockwiseIcon as RefreshCw } from "@/components/icons/ArrowsClockwise";
+import { ArrowClockwiseIcon as RotateCw } from "@/components/icons/ArrowClockwise";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {

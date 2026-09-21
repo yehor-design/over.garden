@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Leaf } from "lucide-react";
+import { LeafIcon as Leaf } from "@/components/icons/Leaf";
 
 import { buildPublicCatalogBrowseHref } from "@/lib/public-catalog-browse";
 import { getPublicCatalogBrowseCopy } from "@/lib/public-catalog-browse-copy";
@@ -27,14 +27,15 @@ export function CatalogFrontDoor({ locale }: { locale: PublicLocale }) {
       data-catalog-front-door="true"
       className="flex items-start gap-3 rounded-lg border border-border bg-surface p-4 transition-colors duration-instant ease-out outline-none hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
     >
-      <Leaf className="mt-0.5 size-5 shrink-0 text-text-muted" aria-hidden="true" />
+      <Leaf
+        className="mt-0.5 size-5 shrink-0 text-text-muted"
+        aria-hidden="true"
+      />
       <span className="flex flex-col gap-1">
         <span className="text-body-sm font-semibold text-text-heading">
           {copy.title}
         </span>
-        <span className="text-body-sm text-text-muted">
-          {copy.description}
-        </span>
+        <span className="text-body-sm text-text-muted">{copy.description}</span>
       </span>
     </Link>
   );

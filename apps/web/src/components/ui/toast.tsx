@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { XIcon as X } from "@/components/icons/X";
 
 import { IconButton } from "@/components/ui/icon-button";
 import { cn } from "@/lib/utils";
@@ -67,7 +67,7 @@ function Toast({
       onMouseLeave={() => setPaused(false)}
       {...props}
     >
-      <div className="grid min-w-0 flex-1 gap-1">
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-1 break-words">
         <p className="text-body-sm font-medium text-text-heading">{title}</p>
         {description ? (
           <p className="text-body-sm text-text-muted">{description}</p>

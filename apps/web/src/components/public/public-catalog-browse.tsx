@@ -1,4 +1,5 @@
-import { Search, Sprout } from "lucide-react";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import {
   SiteShellContextRailModules,
@@ -178,7 +179,12 @@ export function PublicCatalogBrowse({
         }}
       />
 
-      <CatalogAlphabetIndex locale={locale} copy={copy} request={request} facets={facets} />
+      <CatalogAlphabetIndex
+        locale={locale}
+        copy={copy}
+        request={request}
+        facets={facets}
+      />
 
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-3">
         <h2 className="text-h2 text-text-heading">{copy.resultsTitle}</h2>
@@ -580,11 +586,7 @@ function buildActiveFilterChips(
   }
   if (request.grown) add("grown", copy.grownOnly, "grown");
   if (request.initial) {
-    add(
-      `letter:${request.initial}`,
-      request.initial.toUpperCase(),
-      "letter",
-    );
+    add(`letter:${request.initial}`, request.initial.toUpperCase(), "letter");
   }
   return chips;
 }

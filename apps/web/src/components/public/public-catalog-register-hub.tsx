@@ -1,4 +1,5 @@
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
+import { FileTextIcon as FileText } from "@/components/icons/FileText";
 
 import { Link } from "@/components/ui/link";
 import { PageHeader } from "@/components/ui/page-header";
@@ -61,7 +62,7 @@ export function PublicCatalogRegisterHub({
           <Link
             href={localizedPath(locale, hub.speciesPath)}
             variant="muted"
-            className="inline-flex w-fit min-h-11 items-center gap-1.5 text-body-sm font-medium"
+            className="inline-flex min-h-11 w-fit items-center gap-1.5 text-body-sm font-medium"
           >
             <ArrowLeft className="size-4" aria-hidden="true" />
             {copy.backToSpecies}
@@ -139,7 +140,7 @@ function RegisterCell({
     <span className="flex flex-col gap-0.5">
       {entries.map((entry) => (
         <span key={entry} className="flex items-center gap-1.5">
-          <FileText className="size-3.5 shrink-0" aria-hidden="true" />
+          <FileText className="size-4 shrink-0" aria-hidden="true" />
           {entry}
         </span>
       ))}

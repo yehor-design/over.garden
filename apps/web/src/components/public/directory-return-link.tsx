@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
 import { startTransition, useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";

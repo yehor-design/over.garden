@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { WarningIcon as AlertTriangle } from "@/components/icons/Warning";
+import { ArrowsClockwiseIcon as RefreshCw } from "@/components/icons/ArrowsClockwise";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";

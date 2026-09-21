@@ -39,9 +39,8 @@ gardener must never feel they left the site to use one.
 
 Each principle is stated so that its violation is visible in a diff.
 
-1. **The photograph is the only colour that matters.** The interface is a
-   near-neutral grey-green. Saturated colour is reserved for a single primary
-   action, a state, or a photograph. A screen with two competing coloured areas
+1. **The photograph is the only colour that matters.** The interface is near-neutral with dark ink actions. Saturated colour is
+   reserved for a meaningful status or a photograph. A screen with two competing coloured areas
    and no photograph is wrong.
 2. **A control works before JavaScript does.** ADR-0024 D3. A public control is
    a `<form action={serverAction}>` or a link. Wrapping the action in a client
@@ -123,7 +122,7 @@ Two consequences you must not forget:
   checkbox, a select and a bordered button use `neutral-500`. `neutral-200` is
   for dividers _inside_ a surface, which identify nothing.
 
-**Green — brand and primary action.** Hue 151, anchored on the existing
+**Green — retained status ramp.** Hue 151, anchored on the existing
 `oklch(0.39 0.105 151)`, which becomes `green-700`.
 
 | Token            | OKLCH                    | Hex       | On white | Use                 |
@@ -135,11 +134,13 @@ Two consequences you must not forget:
 | `--og-green-400` | `oklch(0.680 0.110 151)` | `#61ac75` | 2.74     | decoration          |
 | `--og-green-500` | `oklch(0.575 0.115 151)` | `#3d8c55` | 4.13     | non-text accent     |
 | `--og-green-600` | `oklch(0.487 0.110 151)` | `#24713e` | 5.99     | focus ring, hover   |
-| `--og-green-700` | `oklch(0.390 0.105 151)` | `#005425` | **9.15** | primary fill, link  |
+| `--og-green-700` | `oklch(0.390 0.105 151)` | `#005425` | **9.15** | success fill       |
 | `--og-green-800` | `oklch(0.320 0.085 151)` | `#013e1a` | 12.31    | link hover, pressed |
 | `--og-green-900` | `oklch(0.262 0.065 151)` | `#042d13` | 15.11    | on-green text       |
 
-`white on green-700` = **9.15:1**. The primary button clears AAA.
+`white on green-700` = **9.15:1** for success states. Primary actions use
+neutral-900 (17.89:1), hover neutral-700 (9.34:1), and pressed neutral-950
+(19.75:1). `globals.test.ts` recomputes contrast from the actual token values.
 
 **Status ramps.** Each has a 50 (surface), 100 (border), and a text/fill step.
 
@@ -171,18 +172,18 @@ Components use these names and no others.
   text-muted         --color-text-muted           neutral-600
   text-disabled      --color-text-disabled        neutral-400
   text-on-fill       --color-text-on-fill         neutral-0
-  text-link          --color-text-link            green-700
-  text-link-hover    --color-text-link-hover      green-800
+  text-link          --color-text-link            neutral-900
+  text-link-hover    --color-text-link-hover      neutral-700
 
   border             --color-border               neutral-200   decorative
   border-control     --color-border-control       neutral-500   identifies a control
   border-strong      --color-border-strong        neutral-700
-  focus-ring         --color-focus-ring           green-600
+  focus-ring         --color-focus-ring           neutral-900
 
-  action             --color-action               green-700
-  action-hover       --color-action-hover         green-800
-  action-subtle      --color-action-subtle        green-50
-  action-subtle-text --color-action-subtle-text   green-700
+  action             --color-action               neutral-900
+  action-hover       --color-action-hover         neutral-700
+  action-subtle      --color-action-subtle        neutral-100
+  action-subtle-text --color-action-subtle-text   neutral-900
 
   success/danger/warning/info  ×  -surface, -border, -text, -fill
 ```
@@ -191,6 +192,11 @@ Light theme only. **There is no dark theme.** ADR-0031 D2 removes the `.dark`
 block, the four `dark:` utilities and the unbranded purple `--sidebar-primary`
 that had survived from the shadcn default. Reintroducing dark mode is a new ADR
 and a full pass over every component, not a pull request.
+
+`--color-action-pressed` maps to neutral-950. Selection also has an accessible
+state and never relies on color. Native selection uses action/on-fill; the
+caret follows text. Forced colors preserve system focus outlines and selected
+state underlines.
 
 ### 2.3 Space
 
@@ -206,7 +212,7 @@ needs a token, not an arbitrary utility.
 
 ### 2.4 Radius
 
-`--radius` is 10 px. Derived: `sm` 6 · `md` 8 · `lg` 10 · `xl` 14 · `2xl` 18 ·
+`--radius` is 12 px. Derived: `sm` 8 · `md` 12 · `lg` 16 · `xl` 24 · `2xl` 28 ·
 `full` 9999.
 
 Controls and inputs `md`. Cards and surfaces `lg`. Dialogs and sheets `xl`.
@@ -287,13 +293,20 @@ implemented in `globals.css` and it stays.
 ### 2.8 Icons
 
 Phosphor, and only Phosphor, for interface icons (owner decision 2026-09-21).
-Use regular weight at 16/20/24 px, with fill only for a documented selected state.
+Use regular weight at 16/20/24 px (`--size-icon-sm/md/lg`), with fill only for
+selected navigation, like and bookmark states. The typed `components/icons`
+entry point owns defaults and decorative accessibility. Consumers import the named
+local module (for example `@/components/icons/Heart`), not its runtime barrel, so
+unrelated glyphs cannot enter a route through wrapper initialization. Each glyph uses a
+narrow `@phosphor-icons/react/dist/ssr/<Glyph>` import. No provider or runtime
+whole-library lookup. The semantic map and package version are recorded in
+`docs/redesign/2026-09-21/ove-477/icon-inventory.json`.
 Icons beside text are decorative; icon-only controls have accessible names and
 matching supplementary tooltips. Real brand marks/favicons and author-authored
 emoji in persisted documents are content, not competing interface icon families.
 Do not rewrite persisted callout emoji or document schema to replace an editor
 control. Server-rendered icons use server-compatible narrow imports. OVE-477
-migrates existing Lucide consumers and the scaffold configuration; the old import
+migrated existing Lucide consumers and the scaffold configuration; the old import
 inventory is a migration baseline, not permission for new mixed families.
 
 ### 2.9 Illustration
@@ -474,7 +487,7 @@ not a per-page arrangement.
 
 ### 4.1 The inventory
 
-`apps/web/src/components/ui/` ships **7** primitives today, of which only
+The historical 2026-09-17 baseline had **7** primitives in `apps/web/src/components/ui/`, of which only
 `Button` is genuinely adopted (78 imports), while **50 files reach for a raw
 `<input>`, `<select>` or `<textarea>`**. That gap is the redesign's real work.
 
@@ -552,8 +565,9 @@ Every component in `ui/` obeys all of this:
 
 ### 4.3 Sizes
 
-Three, everywhere, with the same names: `sm` 32 px · `md` 40 px · `lg` 48 px
-control height. `md` is the default. **On touch, the hit target is 44 × 44 even
+Three action sizes: `sm` 32 px · `md` 44 px · `lg` 48 px. Form fields keep
+their 40 px default; primary actions and default icon buttons provide 44 px
+without depending on invisible hit padding. `md` is the default. **On touch, the hit target is 44 × 44 even
 when the visual control is 32** — extend with padding or a pseudo-element, never
 by growing the visual.
 
@@ -1114,6 +1128,7 @@ that needs it.
 | --------------------------------------------------------------------------------------------------------- | ---------------------------------- | -------------------- |
 | No Tailwind palette utility, no hex, no `oklch()` in a component                                          | ESLint rule                        | `pnpm lint`          |
 | No arbitrary value except a `data-*`/`has-*`/`[&…]` selector, a property list, or a `calc()` over a token | ESLint rule                        | `pnpm lint`          |
+| Phosphor-only controls, narrow SSR imports, explicit brand exceptions | `scripts/check-interface-icons.ts` | `pnpm test`, `pnpm gates` |
 | No primitive `--og-*` outside `globals.css`                                                               | `scripts/check-design-tokens.ts`   | `pnpm test`          |
 | No raw `<input>/<select>/<textarea>` outside `ui/`                                                        | ESLint rule                        | `pnpm lint`          |
 | No z-index literal                                                                                        | ESLint rule                        | `pnpm lint`          |
@@ -1200,3 +1215,14 @@ from, among others:
 [Twenty](https://mobbin.com/screens/4ff8ef07-dd4e-4e98-9678-f0a6ce5ec6e7),
 [Cal.com](https://mobbin.com/screens/65afa205-c915-462a-9f1a-14341c04893c),
 [Remote](https://mobbin.com/screens/33bb4d3b-441a-43d0-b694-51de065708a5).
+
+### Foundation verification artifacts
+
+`pnpm components:render` creates interactive UK/BG/RU specimens from real UI
+components and production CSS under ignored `test-results/component-specimens/`.
+They show default, pending, disabled and error states, 16/20/24px glyphs, tabs,
+menus, dialogs, sheets, status and empty states. These are local proof artifacts,
+never product navigation or production routes. Registered browser proof in
+`component-specimens.spec.ts` covers narrow/wide keyboard operation, dialog focus
+return, reduced motion and forced colors. Product browser gates still verify
+integration.

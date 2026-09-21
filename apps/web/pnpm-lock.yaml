@@ -79,6 +79,9 @@ importers:
       '@microsoft/clarity':
         specifier: 1.0.2
         version: 1.0.2
+      '@phosphor-icons/react':
+        specifier: ^2.1.10
+        version: 2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       better-auth:
         specifier: 1.6.25
         version: 1.6.25(@cloudflare/workers-types@5.20260823.1)(next@16.2.11(patch_hash=56epnbbenegc4z2iuu64jnfuey)(@babel/core@7.29.7)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(pg@8.22.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vitest@4.1.9(@types/node@20.19.43)(jsdom@30.1.0(@noble/hashes@2.2.0))(msw@2.15.0(@types/node@20.19.43)(typescript@5.9.3))(vite@8.1.0(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)))
@@ -97,9 +100,6 @@ importers:
       libheif-js:
         specifier: 1.19.8
         version: 1.19.8
-      lucide-react:
-        specifier: ^1.21.0
-        version: 1.21.0(react@19.2.4)
       meilisearch:
         specifier: 0.58.0
         version: 0.58.0
@@ -170,6 +170,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      esbuild:
+        specifier: 0.28.1
+        version: 0.28.1
       eslint:
         specifier: ^9
         version: 9.39.4(jiti@2.7.0)
@@ -1630,6 +1633,13 @@ packages:
 
   '@oxc-project/types@0.139.0':
     resolution: {integrity: sha512-r9gHphtCs+1M7J0pw6Sn/hh/Wpa/iQrOOkrNAlVLF/gHq+/CJmHIWKKUUhdWjcD6CIa8idarspCsASiXCXvFUw==}
+
+  '@phosphor-icons/react@2.1.10':
+    resolution: {integrity: sha512-vt8Tvq8GLjheAZZYa+YG/pW7HDbov8El/MANW8pOAz4eGxrwhnbfrQZq0Cp4q8zBEu8NIhHdnr+r8thnfRSNYA==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>= 16.8'
+      react-dom: '>= 16.8'
 
   '@poppinss/colors@4.1.6':
     resolution: {integrity: sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg==}
@@ -3732,11 +3742,6 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
-
-  lucide-react@1.21.0:
-    resolution: {integrity: sha512-reEZMXq8Qdd5jg5XYkQ5TR1fB/GiQ7ih4vcrthYDtgjSDwh0i6/YLiGjsWsIwgN49gpAnd4J2elSNzncMEEUUQ==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   lz-string@1.5.0:
     resolution: {integrity: sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==}
@@ -6425,6 +6430,11 @@ snapshots:
 
   '@oxc-project/types@0.139.0': {}
 
+  '@phosphor-icons/react@2.1.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+
   '@poppinss/colors@4.1.6':
     dependencies:
       kleur: 4.1.5
@@ -8532,10 +8542,6 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
-
-  lucide-react@1.21.0(react@19.2.4):
-    dependencies:
-      react: 19.2.4
 
   lz-string@1.5.0: {}
 

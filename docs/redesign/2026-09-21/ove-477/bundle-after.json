@@ -1,0 +1,129 @@
+{
+  "sha": "working tree based on a84b1c17cdae430936197bfae164fb7abdcfa22f",
+  "method": "Script src resources in prerendered uk/support.html; same local Next production build, gzip default; excludes deferred chunks and is not a performance measurement.",
+  "chunks": [
+    {
+      "path": "/_next/static/chunks/10vi719i786et.js",
+      "rawBytes": 36514,
+      "gzipBytes": 10545
+    },
+    {
+      "path": "/_next/static/chunks/12omsp2dvvrvb.js",
+      "rawBytes": 27797,
+      "gzipBytes": 8809
+    },
+    {
+      "path": "/_next/static/chunks/2j_xs_znrpkx6.js",
+      "rawBytes": 231717,
+      "gzipBytes": 72458
+    },
+    {
+      "path": "/_next/static/chunks/1ch-86lp1dimv.js",
+      "rawBytes": 108248,
+      "gzipBytes": 28809
+    },
+    {
+      "path": "/_next/static/chunks/26zw-sk0kcboy.js",
+      "rawBytes": 66987,
+      "gzipBytes": 14966
+    },
+    {
+      "path": "/_next/static/chunks/turbopack-42fppawpyljrc.js",
+      "rawBytes": 10647,
+      "gzipBytes": 4177
+    },
+    {
+      "path": "/_next/static/chunks/0emh13_62khjj.js",
+      "rawBytes": 282,
+      "gzipBytes": 224
+    },
+    {
+      "path": "/_next/static/chunks/2_-_giv49fetc.js",
+      "rawBytes": 36720,
+      "gzipBytes": 8123
+    },
+    {
+      "path": "/_next/static/chunks/0_z819iacdel5.js",
+      "rawBytes": 22123,
+      "gzipBytes": 8134
+    },
+    {
+      "path": "/_next/static/chunks/3i6sf6mgxc8u6.js",
+      "rawBytes": 24209,
+      "gzipBytes": 7965
+    },
+    {
+      "path": "/_next/static/chunks/1s-b0u8volrz6.js",
+      "rawBytes": 28931,
+      "gzipBytes": 9008
+    },
+    {
+      "path": "/_next/static/chunks/0z2fx7lxnzdzy.js",
+      "rawBytes": 117230,
+      "gzipBytes": 25738
+    },
+    {
+      "path": "/_next/static/chunks/3_b7499-nejxu.js",
+      "rawBytes": 49855,
+      "gzipBytes": 13883
+    },
+    {
+      "path": "/_next/static/chunks/0i8om2ujp63_y.js",
+      "rawBytes": 26580,
+      "gzipBytes": 9562
+    },
+    {
+      "path": "/_next/static/chunks/27g2pj8s0ozjc.js",
+      "rawBytes": 31297,
+      "gzipBytes": 11495
+    },
+    {
+      "path": "/_next/static/chunks/0u9jk_55ghcol.js",
+      "rawBytes": 65090,
+      "gzipBytes": 20408
+    },
+    {
+      "path": "/_next/static/chunks/2o-do_ngp-0m9.js",
+      "rawBytes": 71418,
+      "gzipBytes": 23195
+    },
+    {
+      "path": "/_next/static/chunks/0q0qp4i93a5gx.js",
+      "rawBytes": 69916,
+      "gzipBytes": 20694
+    },
+    {
+      "path": "/_next/static/chunks/3qq6do5-od33v.js",
+      "rawBytes": 33539,
+      "gzipBytes": 10600
+    },
+    {
+      "path": "/_next/static/chunks/3jqiskup6u6gq.js",
+      "rawBytes": 97646,
+      "gzipBytes": 32040
+    },
+    {
+      "path": "/_next/static/chunks/1415my1d1c9y3.js",
+      "rawBytes": 2878,
+      "gzipBytes": 1173
+    },
+    {
+      "path": "/_next/static/chunks/2k86nu-qb9mkh.js",
+      "rawBytes": 3324,
+      "gzipBytes": 1344
+    },
+    {
+      "path": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+      "rawBytes": 112594,
+      "gzipBytes": 39627
+    },
+    {
+      "path": "/_next/static/chunks/2asnoe9b02cmg.js",
+      "rawBytes": 1299,
+      "gzipBytes": 657
+    }
+  ],
+  "rawBytes": 1276841,
+  "gzipBytes": 383634,
+  "note": "Final tested commit recorded in PR and Linear release receipt."
+}

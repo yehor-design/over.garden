@@ -1,4 +1,7 @@
-import { LogIn, MessageCircle, PawPrint, Sprout } from "lucide-react";
+import { SignInIcon as LogIn } from "@/components/icons/SignIn";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";

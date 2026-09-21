@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { CheckIcon as Check } from "@/components/icons/Check";
 
 import { cn } from "@/lib/utils";
 
@@ -46,8 +46,7 @@ function Checkbox({
         />
         <Check
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 m-auto size-3.5 text-text-on-fill opacity-0 peer-checked:opacity-100"
-          strokeWidth={3}
+          className="pointer-events-none absolute inset-0 m-auto size-4 text-text-on-fill opacity-0 peer-checked:opacity-100"
         />
       </span>
       <span className="grid gap-1">

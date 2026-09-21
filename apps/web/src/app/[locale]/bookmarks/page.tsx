@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";

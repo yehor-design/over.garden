@@ -1,9 +1,10 @@
+import { CircleNotchIcon } from "@/components/icons/CircleNotch";
 import { cn } from "@/lib/utils";
 
 const sizes = {
-  sm: "size-4 border-2",
-  md: "size-5 border-2",
-  lg: "size-6 border-[3px]",
+  sm: "size-4",
+  md: "size-5",
+  lg: "size-6",
 } as const;
 
 /**
@@ -22,12 +23,14 @@ function Spinner({
       data-slot="spinner"
       aria-hidden="true"
       className={cn(
-        "inline-block shrink-0 animate-spin rounded-full border-current border-t-transparent",
+        "inline-flex shrink-0 animate-spin",
         sizes[size],
         className,
       )}
       {...props}
-    />
+    >
+      <CircleNotchIcon className="size-full" />
+    </span>
   );
 }
 

@@ -30,12 +30,15 @@ function PageHeader({
   return (
     <header
       data-slot="page-header"
-      className={cn("grid gap-3 border-b border-border pb-5", className)}
+      className={cn(
+        "grid min-w-0 grid-cols-1 gap-3 border-b border-border pb-5",
+        className,
+      )}
       {...props}
     >
       {breadcrumb}
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="grid min-w-0 gap-2">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-2">
           {eyebrow ? (
             <p className="text-overline text-text-muted uppercase">{eyebrow}</p>
           ) : null}

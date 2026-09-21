@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { ArrowsClockwiseIcon as RefreshCw } from "@/components/icons/ArrowsClockwise";
 
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import { Button } from "@/components/ui/button";

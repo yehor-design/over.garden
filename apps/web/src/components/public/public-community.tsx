@@ -1,4 +1,8 @@
-import { MessageCircle, PawPrint, Search, Sprout, UsersRound } from "lucide-react";
+import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
+import { UsersIcon as UsersRound } from "@/components/icons/Users";
 
 import {
   blockCommunityContributionAuthorAction,
@@ -879,7 +883,9 @@ function CommunityMembershipAction({
   }
 
   if (community.viewer.membershipState === "banned") {
-    return <p className="max-w-xs text-body-sm text-text-muted">{copy.banned}</p>;
+    return (
+      <p className="max-w-xs text-body-sm text-text-muted">{copy.banned}</p>
+    );
   }
 
   return (
@@ -1295,7 +1301,5 @@ function formatCommunityDate(value: Date | string, locale: PublicLocale) {
 /** `YYYY-MM-DD` for `<time datetime>`: a day, not an instant. */
 function isoDay(value: Date | string) {
   const date = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(date.getTime())
-    ? ""
-    : date.toISOString().slice(0, 10);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import {
   createContext,
   useCallback,

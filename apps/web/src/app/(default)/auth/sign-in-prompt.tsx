@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LogIn } from "lucide-react";
+import { SignInIcon as LogIn } from "@/components/icons/SignIn";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";

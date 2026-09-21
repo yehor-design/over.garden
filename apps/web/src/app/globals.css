@@ -60,6 +60,7 @@
   /* action */
   --color-action: var(--color-action);
   --color-action-hover: var(--color-action-hover);
+  --color-action-pressed: var(--color-action-pressed);
   --color-action-subtle: var(--color-action-subtle);
   --color-action-subtle-text: var(--color-action-subtle-text);
 
@@ -275,13 +276,13 @@
   --color-text-heading: var(--og-neutral-800);
   --color-text-secondary: var(--og-neutral-700);
   /* Muted text is `neutral-600`, not `neutral-500`. `neutral-500` measures
-     4.18 against white and fails body text; it is a border and placeholder
-     colour. `globals.test.ts` asserts this as a negative case. */
+     4.18 against white and fails body text; it is a control border, never placeholder
+     text. `globals.test.ts` asserts this as a negative case. */
   --color-text-muted: var(--og-neutral-600);
   --color-text-disabled: var(--og-neutral-400);
   --color-text-on-fill: var(--og-neutral-0);
-  --color-text-link: var(--og-green-700);
-  --color-text-link-hover: var(--og-green-800);
+  --color-text-link: var(--og-neutral-900);
+  --color-text-link-hover: var(--og-neutral-700);
 
   /* A divider inside a surface identifies nothing, so `neutral-200` at 1.28 is
      correct for it. A boundary that identifies a control is `neutral-500` at
@@ -289,12 +290,13 @@
   --color-border: var(--og-neutral-200);
   --color-border-control: var(--og-neutral-500);
   --color-border-strong: var(--og-neutral-700);
-  --color-focus-ring: var(--og-green-600);
+  --color-focus-ring: var(--og-neutral-900);
 
-  --color-action: var(--og-green-700);
-  --color-action-hover: var(--og-green-800);
-  --color-action-subtle: var(--og-green-50);
-  --color-action-subtle-text: var(--og-green-700);
+  --color-action: var(--og-neutral-900);
+  --color-action-hover: var(--og-neutral-700);
+  --color-action-pressed: var(--og-neutral-950);
+  --color-action-subtle: var(--og-neutral-100);
+  --color-action-subtle-text: var(--og-neutral-900);
 
   --color-success-surface: var(--og-green-50);
   --color-success-border: var(--og-green-100);
@@ -333,12 +335,16 @@
   --space-24: 6rem;
 
   /* ── radius · DESIGN.md §2.4 ─────────────────────────────────────────── */
-  --radius: 0.625rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.625rem;
-  --radius-xl: 0.875rem;
-  --radius-2xl: 1.125rem;
+  --size-icon-sm: 1rem;
+  --size-icon-md: 1.25rem;
+  --size-icon-lg: 1.5rem;
+
+  --radius: 0.75rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 1.75rem;
   --radius-full: 9999px;
 
   /* ── elevation · DESIGN.md §2.5 ──────────────────────────────────────── */
@@ -678,4 +684,37 @@ html[data-shell-section="journals"] [data-site-shell-tab="journals"] {
      found it after the variable alone had been declared a fix. */
   --tw-outline-style: solid;
   outline-style: solid;
+}
+
+/* Native selection and high-contrast focus are part of the same system. */
+::selection {
+  background: var(--color-action);
+  color: var(--color-text-on-fill);
+}
+input,
+textarea,
+[contenteditable="true"] {
+  caret-color: var(--color-text);
+}
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+  }
+  [data-slot="button"],
+  [data-slot="icon-button"],
+  [data-slot="input"],
+  [data-slot="select"],
+  [data-slot="textarea"] {
+    border-color: ButtonText;
+  }
+  [aria-pressed="true"],
+  [aria-selected="true"],
+  [aria-current="page"] {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+  [data-slot="skeleton"] {
+    background: GrayText;
+  }
 }

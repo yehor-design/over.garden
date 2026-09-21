@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { UploadCloud, X } from "lucide-react";
+import { CloudArrowUpIcon as UploadCloud } from "@/components/icons/CloudArrowUp";
+import { XIcon as X } from "@/components/icons/X";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -135,9 +136,9 @@ export function FollowUpEntryComposer({
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const dirty = Boolean(
     draft.title ||
-      draft.body ||
-      draft.contentDocument?.blocks.length ||
-      photoFile,
+    draft.body ||
+    draft.contentDocument?.blocks.length ||
+    photoFile,
   );
   const local = useLocalJournalComposer({
     enabled: true,

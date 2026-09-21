@@ -1,4 +1,4 @@
-import { TriangleAlert } from "lucide-react";
+import { WarningIcon as TriangleAlert } from "@/components/icons/Warning";
 
 import { cn } from "@/lib/utils";
 import type { WorkspaceFailureClass } from "@/server/workspace-failure";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { Badge } from "@/components/ui/badge";

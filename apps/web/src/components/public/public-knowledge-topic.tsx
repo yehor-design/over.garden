@@ -1,4 +1,5 @@
-import { ArrowLeft, Tags } from "lucide-react";
+import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
+import { TagIcon as Tags } from "@/components/icons/Tag";
 import type { ReactNode } from "react";
 
 import {

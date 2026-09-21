@@ -1,16 +1,14 @@
 import Link from "next/link";
-import {
-  BookOpen,
-  Flag,
-  MapPin,
-  MoreHorizontal,
-  PawPrint,
-  Settings,
-  ShieldBan,
-  Sprout,
-  UserMinus,
-  UserPlus,
-} from "lucide-react";
+import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
+import { FlagIcon as Flag } from "@/components/icons/Flag";
+import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
+import { DotsThreeIcon as MoreHorizontal } from "@/components/icons/DotsThree";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { GearIcon as Settings } from "@/components/icons/Gear";
+import { ShieldSlashIcon as ShieldBan } from "@/components/icons/ShieldSlash";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
+import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
+import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
@@ -140,8 +138,8 @@ export function PublicProfileView({
                 <details className="grid gap-3">
                   <summary
                     className={cn(
-                      "w-fit min-h-11 cursor-pointer list-none content-center",
-                      "text-body-sm font-semibold text-link hover:underline",
+                      "min-h-11 w-fit cursor-pointer list-none content-center",
+                      "text-link text-body-sm font-semibold hover:underline",
                     )}
                   >
                     {copy.showMore(moreObjects.length, profile.hasMoreObjects)}
@@ -215,8 +213,8 @@ export function PublicProfileView({
                 <details className="grid gap-3">
                   <summary
                     className={cn(
-                      "w-fit min-h-11 cursor-pointer list-none content-center",
-                      "text-body-sm font-semibold text-link hover:underline",
+                      "min-h-11 w-fit cursor-pointer list-none content-center",
+                      "text-link text-body-sm font-semibold hover:underline",
                     )}
                   >
                     {copy.showMore(
@@ -527,7 +525,7 @@ function ProfileActions({
                 icon={<ShieldBan aria-hidden="true" />}
                 variant="ghost"
                 size="sm"
-                className="w-full justify-start text-text-danger"
+                className="text-text-danger w-full justify-start"
                 formClassName="w-full"
                 id="profile-block"
               />
@@ -574,7 +572,7 @@ function ProfileActions({
                   className={buttonVariants({
                     variant: "ghost",
                     size: "sm",
-                    className: "w-full justify-start text-text-danger",
+                    className: "text-text-danger w-full justify-start",
                   })}
                 >
                   <ShieldBan aria-hidden="true" />

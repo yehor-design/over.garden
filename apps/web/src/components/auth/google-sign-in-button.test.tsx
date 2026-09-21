@@ -45,7 +45,7 @@ describe("GoogleSignInButton", () => {
     // 16 px. `tests/auth-screen.spec.ts` measures the rendered box, which is
     // what found it.
     const button = screen.getByRole("button");
-    expect(button.className).toContain("min-h-10");
+    expect(button.className).toContain("min-h-11");
     expect(button.className).toContain("[&_svg]:size-4.5");
     expect(button.className).not.toContain("[&_svg]:size-4 ");
   });

@@ -118,6 +118,7 @@ const SEMANTIC_COLOUR_NAMES = [
   "--color-focus-ring",
   "--color-action",
   "--color-action-hover",
+  "--color-action-pressed",
   "--color-action-subtle",
   "--color-action-subtle-text",
   ...["success", "danger", "warning", "info"].flatMap((role) =>
@@ -305,6 +306,7 @@ describe("measured contrast", () => {
     const fills: ReadonlyArray<readonly [string, string, string]> = [
       ["primary", "--color-action", "--color-text-on-fill"],
       ["primary hover", "--color-action-hover", "--color-text-on-fill"],
+      ["primary pressed", "--color-action-pressed", "--color-text-on-fill"],
       ["secondary", "--color-surface", "--color-text"],
       ["subtle", "--color-action-subtle", "--color-action-subtle-text"],
       ["ghost", "--color-surface", "--color-text-secondary"],

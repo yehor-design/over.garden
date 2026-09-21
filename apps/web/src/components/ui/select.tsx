@@ -1,4 +1,4 @@
-import { ChevronDown } from "lucide-react";
+import { CaretDownIcon as ChevronDown } from "@/components/icons/CaretDown";
 import { type VariantProps } from "class-variance-authority";
 
 import { controlVariants } from "@/components/ui/input";

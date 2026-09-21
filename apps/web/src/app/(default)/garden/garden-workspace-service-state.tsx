@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle, ShieldCheck } from "lucide-react";
+import { WarningCircleIcon as AlertCircle } from "@/components/icons/WarningCircle";
+import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 
 import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
 import {
@@ -133,7 +134,7 @@ export function GardenWorkspaceServiceStateError({
   const copy = getGardenWorkspaceCopy(locale);
   return (
     <span className="flex items-center gap-1.5 text-xs text-destructive">
-      <AlertCircle className="size-3.5" aria-hidden="true" />
+      <AlertCircle className="size-4" aria-hidden="true" />
       {copy.workspace.sectionError.description}
     </span>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { EyeIcon as Eye } from "@/components/icons/Eye";
+import { EyeSlashIcon as EyeOff } from "@/components/icons/EyeSlash";
 import { useId, useState } from "react";
 
 import { IconButton } from "@/components/ui/icon-button";

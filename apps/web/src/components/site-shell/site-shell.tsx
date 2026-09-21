@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Menu as MenuIcon,
-  SquarePen,
-  TriangleAlert,
-  UserRound,
-} from "lucide-react";
+import { ListIcon as MenuIcon } from "@/components/icons/List";
+import { NotePencilIcon as SquarePen } from "@/components/icons/NotePencil";
+import { WarningIcon as TriangleAlert } from "@/components/icons/Warning";
+import { UserIcon as UserRound } from "@/components/icons/User";
 import { useCallback, useEffect, useState } from "react";
 
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
@@ -270,7 +268,10 @@ function FramedSiteShell({
             {/* One dialog for however many triggers the shell draws. Mounted
                 twice, `⌘K` opened two palettes and a screen reader saw two
                 comboboxes — found by driving it, not by reading it. */}
-            <CommandPaletteProvider locale={locale} actions={readPaletteActions}>
+            <CommandPaletteProvider
+              locale={locale}
+              actions={readPaletteActions}
+            >
               <div
                 data-site-shell="root"
                 className="flex min-h-dvh min-w-0 flex-col bg-surface text-text"
@@ -387,9 +388,7 @@ function FramedSiteShell({
                             hasOperatorAccess={
                               resolved?.hasOperatorAccess ?? false
                             }
-                            sessionStore={
-                              resolved?.sessionStore ?? "reachable"
-                            }
+                            sessionStore={resolved?.sessionStore ?? "reachable"}
                           />
                         )}
                       />

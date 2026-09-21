@@ -1,11 +1,9 @@
-import {
-  Bell,
-  CheckCheck,
-  ChevronDown,
-  EyeOff,
-  MailOpen,
-  Settings2,
-} from "lucide-react";
+import { BellIcon as Bell } from "@/components/icons/Bell";
+import { ChecksIcon as CheckCheck } from "@/components/icons/Checks";
+import { CaretDownIcon as ChevronDown } from "@/components/icons/CaretDown";
+import { EyeSlashIcon as EyeOff } from "@/components/icons/EyeSlash";
+import { EnvelopeOpenIcon as MailOpen } from "@/components/icons/EnvelopeOpen";
+import { SlidersIcon as Settings2 } from "@/components/icons/Sliders";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";

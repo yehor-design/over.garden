@@ -1,4 +1,7 @@
-import { BookOpen, HelpCircle, Search, Tags } from "lucide-react";
+import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
+import { QuestionIcon as HelpCircle } from "@/components/icons/Question";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
+import { TagIcon as Tags } from "@/components/icons/Tag";
 
 import {
   SiteShellContextRailModules,
@@ -193,7 +196,6 @@ export function PublicKnowledgeHub({
   );
 }
 
-
 function KnowledgeResults({
   locale,
   copy,
@@ -233,9 +235,7 @@ function KnowledgeResults({
                   description={item.description}
                   meta={
                     <span className="flex flex-wrap items-center gap-2">
-                      <Badge
-                        tone={item.kind === "topic" ? "neutral" : "info"}
-                      >
+                      <Badge tone={item.kind === "topic" ? "neutral" : "info"}>
                         {item.kind === "guide" ? (
                           <BookOpen aria-hidden="true" />
                         ) : item.kind === "answer" ? (
@@ -286,11 +286,7 @@ function KnowledgeResults({
 
 function KnowledgeLoading({ label }: { label: string }) {
   return (
-    <ul
-      aria-label={label}
-      aria-busy="true"
-      className="grid list-none gap-3"
-    >
+    <ul aria-label={label} aria-busy="true" className="grid list-none gap-3">
       {[0, 1, 2].map((item) => (
         <li key={item} className="grid gap-2 border-b border-border py-4">
           <Skeleton className="h-4 w-36" />
@@ -431,7 +427,6 @@ function sectionTitle(
     topic: copy.topicsTitle,
   }[kind];
 }
-
 
 function formatCount(value: number, locale: PublicLocale) {
   return new Intl.NumberFormat(localeTag(locale)).format(value);

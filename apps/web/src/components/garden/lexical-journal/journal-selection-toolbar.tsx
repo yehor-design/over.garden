@@ -17,14 +17,12 @@ import {
   type RangeSelection,
   type TextFormatType,
 } from "lexical";
-import {
-  Bold,
-  Code,
-  Italic,
-  Link2,
-  Strikethrough,
-  Underline,
-} from "lucide-react";
+import { TextBIcon as Bold } from "@/components/icons/TextB";
+import { CodeIcon as Code } from "@/components/icons/Code";
+import { TextItalicIcon as Italic } from "@/components/icons/TextItalic";
+import { LinkIcon as Link2 } from "@/components/icons/Link";
+import { TextStrikethroughIcon as Strikethrough } from "@/components/icons/TextStrikethrough";
+import { TextUnderlineIcon as Underline } from "@/components/icons/TextUnderline";
 import {
   useCallback,
   useEffect,
@@ -318,7 +316,8 @@ export function JournalSelectionToolbar({
               disabled={disabled}
               className={cn(
                 "flex size-9 items-center justify-center rounded hover:bg-action-subtle hover:text-action-subtle-text disabled:opacity-40",
-                formats.has(format) && "bg-action-subtle text-action-subtle-text",
+                formats.has(format) &&
+                  "bg-action-subtle text-action-subtle-text",
               )}
               // The pointer must not move the caret: the selection is what the
               // command acts on.
@@ -338,7 +337,8 @@ export function JournalSelectionToolbar({
             disabled={disabled}
             className={cn(
               "flex size-9 items-center justify-center rounded hover:bg-action-subtle hover:text-action-subtle-text disabled:opacity-40",
-              linkValue.length > 0 && "bg-action-subtle text-action-subtle-text",
+              linkValue.length > 0 &&
+                "bg-action-subtle text-action-subtle-text",
             )}
             onMouseDown={(event) => event.preventDefault()}
             onClick={openLinkEditor}

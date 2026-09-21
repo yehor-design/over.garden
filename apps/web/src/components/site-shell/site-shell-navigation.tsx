@@ -1,25 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
-import {
-  Bell,
-  Bookmark,
-  BookOpenText,
-  CircleUserRound,
-  GitBranch,
-  Heart,
-  LayoutDashboard,
-  ListFilter,
-  LogIn,
-  Newspaper,
-  NotebookText,
-  ShieldCheck,
-  Sprout,
-  SquarePen,
-  UserRound,
-  UsersRound,
-} from "lucide-react";
+import type { InterfaceIcon } from "@/components/icons";
+import { BellIcon as Bell } from "@/components/icons/Bell";
+import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
+import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
+import { UserCircleIcon as CircleUserRound } from "@/components/icons/UserCircle";
+import { GitBranchIcon as GitBranch } from "@/components/icons/GitBranch";
+import { HeartIcon as Heart } from "@/components/icons/Heart";
+import { SquaresFourIcon as LayoutDashboard } from "@/components/icons/SquaresFour";
+import { FunnelIcon as ListFilter } from "@/components/icons/Funnel";
+import { SignInIcon as LogIn } from "@/components/icons/SignIn";
+import { NewspaperIcon as Newspaper } from "@/components/icons/Newspaper";
+import { NotebookIcon as NotebookText } from "@/components/icons/Notebook";
+import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
+import { PlantIcon as Sprout } from "@/components/icons/Plant";
+import { NotePencilIcon as SquarePen } from "@/components/icons/NotePencil";
+import { UserIcon as UserRound } from "@/components/icons/User";
+import { UsersIcon as UsersRound } from "@/components/icons/Users";
 
 import {
   isSiteShellItemActive,
@@ -29,7 +27,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const NAVIGATION_ICONS: Record<SiteShellNavigationKey, LucideIcon> = {
+const NAVIGATION_ICONS: Record<SiteShellNavigationKey, InterfaceIcon> = {
   feed: Newspaper,
   catalogue: Sprout,
   journals: NotebookText,
@@ -124,7 +122,8 @@ export function SiteShellMobileNavigation({
       <ul className="mx-auto grid max-w-lg grid-cols-tab-bar items-stretch">
         {items.map((item) => {
           const Icon = NAVIGATION_ICONS[item.key];
-          const active = pathname !== null && isSiteShellItemActive(pathname, item);
+          const active =
+            pathname !== null && isSiteShellItemActive(pathname, item);
           const isPrimary = item.key === primaryActionKey;
 
           return (
@@ -148,7 +147,7 @@ export function SiteShellMobileNavigation({
                       "size-10 rounded-full bg-action text-text-on-fill",
                   )}
                 >
-                  <Icon className="size-5 shrink-0" />
+                  <Icon selected={active} className="size-5 shrink-0" />
                 </span>
                 {/* The action's name is on the control, not under it. "Новий
                     запис" is the widest label the product has and this is its
@@ -222,7 +221,7 @@ function SiteShellNavigationLink({
         compact && "min-h-9 py-1.5",
       )}
     >
-      <Icon aria-hidden="true" className="size-4.5 shrink-0" />
+      <Icon selected={active} aria-hidden="true" className="size-5 shrink-0" />
       <span className="min-w-0 break-words">{item.label}</span>
     </Link>
   );

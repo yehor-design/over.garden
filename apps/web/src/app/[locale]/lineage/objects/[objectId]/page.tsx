@@ -2,7 +2,8 @@ import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { BellPlus, GitBranch } from "lucide-react";
+import { BellRingingIcon as BellPlus } from "@/components/icons/BellRinging";
+import { GitBranchIcon as GitBranch } from "@/components/icons/GitBranch";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
@@ -25,9 +26,7 @@ import {
   normalizeAuthIntentResumeControl,
   type AuthIntentAction,
 } from "@/lib/auth/auth-intent-contract";
-import {
-  publicCatalogEvidencePath,
-} from "@/lib/garden/public-paths";
+import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import {
   getPublicSurfaceCopy,
   publicObjectKindLabel,
@@ -96,7 +95,9 @@ export async function generateMetadata({
   // The served locale comes from the address, never from the cookie: this page
   // is prerendered and shared by every reader of that URL, so reading the
   // cookie here served one visitor's language to everyone (ADR-0029 D10).
-  const locale = isPublicLocale(localeParam) ? localeParam : DEFAULT_PUBLIC_LOCALE;
+  const locale = isPublicLocale(localeParam)
+    ? localeParam
+    : DEFAULT_PUBLIC_LOCALE;
   const copy = getPublicSurfaceCopy(locale);
   const bounded = await resolvePublicSurfacePayload({
     consumerId: "lineage_object",
@@ -375,53 +376,52 @@ function PublicLineageEdgeCard({
   return (
     <li className="min-w-0">
       <Card as="article" className="grid gap-4 p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-        <h3 className="text-h3 break-words text-text-heading">
-          {source.displayName}{" "}
-          <span aria-hidden="true">→</span>
-          <span className="sr-only">{copy.passport.grownObject}:</span>{" "}
-          {subject.displayName}
-        </h3>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tone="neutral">
-            {copy.passport.depth} {edge.depth}
-          </Badge>
-          <time
-            dateTime={edgeDateTime(edge.createdAt)}
-            className="text-caption text-text-muted tabular-nums"
-          >
-            {formatDate(edge.createdAt, locale)}
-          </time>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+          <h3 className="text-h3 break-words text-text-heading">
+            {source.displayName} <span aria-hidden="true">→</span>
+            <span className="sr-only">{copy.passport.grownObject}:</span>{" "}
+            {subject.displayName}
+          </h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="neutral">
+              {copy.passport.depth} {edge.depth}
+            </Badge>
+            <time
+              dateTime={edgeDateTime(edge.createdAt)}
+              className="text-caption text-text-muted tabular-nums"
+            >
+              {formatDate(edge.createdAt, locale)}
+            </time>
+          </div>
         </div>
-      </div>
 
-      <dl className="grid gap-4 md:grid-cols-2">
-        <PublicLineageNodeDescription
-          label={copy.passport.source}
-          node={source}
-          locale={locale}
-        />
-        <PublicLineageNodeDescription
-          label={copy.passport.grownObject}
-          node={subject}
-          locale={locale}
-        />
-      </dl>
+        <dl className="grid gap-4 md:grid-cols-2">
+          <PublicLineageNodeDescription
+            label={copy.passport.source}
+            node={source}
+            locale={locale}
+          />
+          <PublicLineageNodeDescription
+            label={copy.passport.grownObject}
+            node={subject}
+            locale={locale}
+          />
+        </dl>
 
-      {interactionTarget ? (
-        <LineageInteractionPanel
-          edge={edge}
-          rootPlantObjectId={rootPlantObjectId}
-          rootPublicPath={rootPublicPath}
-          target={interactionTarget}
-          isAuthenticated={isAuthenticated}
-          canInteract={canInteract}
-          resumeAction={resumeAction}
-          resumeControl={resumeControl}
-          status={status}
-          locale={locale}
-        />
-      ) : null}
+        {interactionTarget ? (
+          <LineageInteractionPanel
+            edge={edge}
+            rootPlantObjectId={rootPlantObjectId}
+            rootPublicPath={rootPublicPath}
+            target={interactionTarget}
+            isAuthenticated={isAuthenticated}
+            canInteract={canInteract}
+            resumeAction={resumeAction}
+            resumeControl={resumeControl}
+            status={status}
+            locale={locale}
+          />
+        ) : null}
       </Card>
     </li>
   );
@@ -492,10 +492,7 @@ function LineageInteractionPanel({
               name="targetPlantObjectId"
               value={target.plantObjectId}
             />
-            <HiddenField
-              name="rootPlantObjectId"
-              value={rootPlantObjectId}
-            />
+            <HiddenField name="rootPlantObjectId" value={rootPlantObjectId} />
             <button
               id={
                 isResumedFollow
@@ -524,14 +521,8 @@ function LineageInteractionPanel({
               name="targetPlantObjectId"
               value={target.plantObjectId}
             />
-            <HiddenField
-              name="rootPlantObjectId"
-              value={rootPlantObjectId}
-            />
-            <HiddenField
-              name="clientMutationId"
-              value={crypto.randomUUID()}
-            />
+            <HiddenField name="rootPlantObjectId" value={rootPlantObjectId} />
+            <HiddenField name="clientMutationId" value={crypto.randomUUID()} />
             <Field label={copy.passport.askWithinLineage} required>
               <Textarea
                 name="questionText"
@@ -620,10 +611,7 @@ function PublicLineageNodeMeta({
 
   return (
     <div
-      className={cn(
-        "flex flex-wrap items-center gap-2",
-        compact ? "" : "mt-1",
-      )}
+      className={cn("flex flex-wrap items-center gap-2", compact ? "" : "mt-1")}
     >
       {meta.map((item) => (
         <Badge key={item} tone="neutral">

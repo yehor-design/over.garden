@@ -1,6 +1,6 @@
 "use client";
 
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwiseIcon as RotateCcw } from "@/components/icons/ArrowCounterClockwise";
 
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import { Button } from "@/components/ui/button";

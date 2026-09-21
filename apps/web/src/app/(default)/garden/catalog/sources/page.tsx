@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
@@ -126,12 +126,16 @@ export default async function CatalogSourcesPage() {
   return shell(
     "allowed",
     <div className="grid gap-8">
-      <Suspense fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}
+      >
         <CatalogSourcesSection locale={locale} canMutate={canMutate} />
       </Suspense>
       {/* The health figures settle on their own, so a slow percentile never
           holds the source cards back (ADR-0023). */}
-      <Suspense fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}>
+      <Suspense
+        fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}
+      >
         <CatalogHealthSection locale={locale} canMutate={canMutate} />
       </Suspense>
     </div>,
@@ -263,9 +267,7 @@ async function CatalogHealthSection({
 
       <div className="grid gap-2">
         <h3 className="font-medium text-text">{copy.health.misses}</h3>
-        <p className="text-body-sm text-text-muted">
-          {copy.health.missesHint}
-        </p>
+        <p className="text-body-sm text-text-muted">{copy.health.missesHint}</p>
         {misses.length === 0 ? (
           <p
             data-catalog-health-misses-empty="true"
@@ -289,16 +291,15 @@ async function CatalogHealthSection({
                   {formatOperatorDate(locale, miss.lastSeenAt)}
                 </span>
                 {canMutate ? (
-                  <OwnerScopedProgressiveForm action={makeQueueItemFromMissAction}>
+                  <OwnerScopedProgressiveForm
+                    action={makeQueueItemFromMissAction}
+                  >
                     <HiddenField
                       name="queryNormalized"
                       value={miss.queryNormalized}
                     />
                     <HiddenField name="locale" value={miss.locale} />
-                    <HiddenField
-                      name="objectKind"
-                      value={miss.objectKind}
-                    />
+                    <HiddenField name="objectKind" value={miss.objectKind} />
                     <Button
                       type="submit"
                       variant="secondary"
@@ -325,7 +326,10 @@ async function CatalogHealthSection({
             {copy.health.precisionEmpty}
           </p>
         ) : (
-          <ul className="grid gap-1 text-body-sm" data-catalog-health-precision="true">
+          <ul
+            className="grid gap-1 text-body-sm"
+            data-catalog-health-precision="true"
+          >
             {precision.map((rule) => (
               <li
                 key={rule.ruleCode}
@@ -453,7 +457,7 @@ async function CatalogSourcesSection({
             className="inline-flex min-w-0 items-center gap-1 font-medium text-text underline-offset-4 hover:underline"
           >
             <span className="truncate">{source.sourceName}</span>
-            <ExternalLink className="size-3 shrink-0" />
+            <ExternalLink className="size-4 shrink-0" />
           </a>
           <div className="flex flex-wrap gap-2 text-caption text-text-muted">
             <span className="rounded-md border border-border px-2 py-1">
@@ -489,7 +493,9 @@ async function CatalogSourcesSection({
           ) : null}
           {source.lastRefreshQueuedAt ? (
             <p
-              data-catalog-source-refresh-status={source.lastRefreshStatus ?? ""}
+              data-catalog-source-refresh-status={
+                source.lastRefreshStatus ?? ""
+              }
               className="text-caption text-text-muted"
             >
               {copy.sources.lastRefresh}:{" "}

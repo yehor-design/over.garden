@@ -1,6 +1,7 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
+import { XIcon as X } from "@/components/icons/X";
 import { useId, useRef, useState } from "react";
 
 import { IconButton } from "@/components/ui/icon-button";

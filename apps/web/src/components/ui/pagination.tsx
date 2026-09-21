@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeftIcon as ChevronLeft } from "@/components/icons/CaretLeft";
+import { CaretRightIcon as ChevronRight } from "@/components/icons/CaretRight";
 
 import { cn } from "@/lib/utils";
 

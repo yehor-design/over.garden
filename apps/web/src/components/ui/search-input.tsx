@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import { type VariantProps } from "class-variance-authority";
 
 import { controlVariants } from "@/components/ui/input";

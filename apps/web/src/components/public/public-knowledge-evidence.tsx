@@ -1,13 +1,11 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BookOpenText,
-  CalendarDays,
-  CircleAlert,
-  Link2,
-  LoaderCircle,
-  ScanSearch,
-} from "lucide-react";
+import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
+import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
+import { CalendarBlankIcon as CalendarDays } from "@/components/icons/CalendarBlank";
+import { WarningCircleIcon as CircleAlert } from "@/components/icons/WarningCircle";
+import { LinkIcon as Link2 } from "@/components/icons/Link";
+import { CircleNotchIcon as LoaderCircle } from "@/components/icons/CircleNotch";
+import { MagnifyingGlassPlusIcon as ScanSearch } from "@/components/icons/MagnifyingGlassPlus";
 
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import { buttonVariants } from "@/components/ui/button";
@@ -107,9 +105,7 @@ export function PublicKnowledgeEvidenceList({
 
       {state === "empty" ? (
         <div className="grid gap-2 border-y border-border py-5">
-          <p className="font-semibold text-text">
-            {copy.emptyEvidenceTitle}
-          </p>
+          <p className="font-semibold text-text">{copy.emptyEvidenceTitle}</p>
           <p className="max-w-prose text-body-sm text-text-muted">
             {copy.emptyEvidenceBody}
           </p>
@@ -127,7 +123,7 @@ export function PublicKnowledgeEvidenceList({
               <div className="grid min-w-0 content-start gap-3 sm:col-span-3">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-text-muted">
                   <span className="inline-flex items-center gap-1.5">
-                    <CalendarDays className="size-3.5" aria-hidden="true" />
+                    <CalendarDays className="size-4" aria-hidden="true" />
                     <time dateTime={toIsoDate(item.card.entryDate)}>
                       {formatDate(item.card.entryDate, locale)}
                     </time>
@@ -163,7 +159,7 @@ export function PublicKnowledgeEvidenceList({
                 {item.matches.length > 0 ? (
                   <div className="grid gap-1.5 border-l-2 border-primary/40 pl-3 text-xs">
                     <p className="flex items-center gap-1.5 font-semibold text-text">
-                      <ScanSearch className="size-3.5" aria-hidden="true" />
+                      <ScanSearch className="size-4" aria-hidden="true" />
                       {copy.whyMatched}
                     </p>
                     {item.matches.map((match) => (
@@ -189,7 +185,7 @@ export function PublicKnowledgeEvidenceList({
                 <div className="flex flex-wrap gap-3 border-t border-border pt-3 text-sm font-medium">
                   <Link
                     href={item.card.publicPath}
-                    className="inline-flex min-h-11 items-center gap-1.5 text-link hover:underline"
+                    className="text-link inline-flex min-h-11 items-center gap-1.5 hover:underline"
                   >
                     {copy.readEntry}
                     <ArrowRight className="size-4" aria-hidden="true" />
