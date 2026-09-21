@@ -1,0 +1,1128 @@
+[
+  {
+    "key": "01",
+    "title": "Ratify the new product IA, wireflows and redesign canon",
+    "findings": [
+      1,
+      2,
+      5,
+      6,
+      7,
+      9,
+      42,
+      43
+    ],
+    "deps": [],
+    "paths": [
+      "DESIGN.md",
+      "docs/PROJECT_STATE.md",
+      "docs/adr/ADR-0031-design-system-and-redesign.md",
+      "docs/adr/ADR-0028-notion-shaped-composer.md",
+      "docs/audits/2026-09-21-product-design/"
+    ],
+    "outcome": "Replace the previous design direction with an explicit implementable architecture. Owner approval for radical UX/UI changes is already given; this task resolves implementation choices and records them, not requests the same approval again.",
+    "criteria": [
+      "Commit the audit package and this execution plan so a fresh checkout contains the actual findings, screenshots and manifest; verify no personal tokens or private data are added.",
+      "Create an old-to-new route/function matrix for every family in ROUTES.md: primary user job, audience, primary action, secondary information, destination and responsible issue. Existing public permalinks remain canonical.",
+      "Define Home/feed, Explore, My garden, Activity and account utilities as distinct jobs. Split timelines from settings and provenance. Record desktop/mobile nav labels and active-route rules; do not expose owner controls to ordinary members.",
+      "Produce linked low-fidelity wireflows for same-name object selection, a space observation, first object, changing destination mid-composition, community writing and failed publish. Use at least 3 spaces and 100 objects, including unassigned objects.",
+      "Amend the old Linear/Notion/GitHub visual priority to Threads, centered vc.ru shell plus applicable social patterns, Airbnb progressive setup, Phosphor-only interface icons and Thiings illustration direction. Resolve fixed composer width/gutter without deleting supported blocks.",
+      "Define measurable action budgets: contextual open 1 activation; global recent destination open+select 2; Publish explicit and separately counted. Search typing and media picking reported separately. Pick one transaction model for new destination+first entry and state what persists if publication fails.",
+      "Create a transition plan that keeps each intermediate merged page usable. Research with recruited gardeners is desirable but not falsely claimed; executable fixture walkthroughs are required now."
+    ],
+    "proof": "Attach IA map, route ownership table, wireflows and canon diff. Run the design/posture checks affected by documentation. Distinguish hypothesis, observed audit fact and owner decision; link each flow to acceptance scenarios.",
+    "ref": "all",
+    "priority": 2
+  },
+  {
+    "key": "02",
+    "title": "Correct public-first, media and deletion promises throughout the product",
+    "findings": [
+      3,
+      4,
+      37
+    ],
+    "deps": [
+      "01"
+    ],
+    "paths": [
+      "apps/web/src/lib/privacy/disclosures.ts",
+      "apps/web/src/components/public/",
+      "apps/web/src/app/[locale]/privacy/page.tsx",
+      "docs/ONLINE_ONLY_JOURNAL.md",
+      "docs/MEDIA_LIFECYCLE.md"
+    ],
+    "outcome": "Users understand that Publish creates a public entry and that unsent writing is transient. Remove factual contradictions before the new composer ships.",
+    "criteria": [
+      "Inventory FAQ, help, first-publication disclosure, privacy, erasure, composer hints and localized strings; map each claim to its actual server/data contract.",
+      "Remove private-first, saved-draft, original-image retention and server-processing promises where untrue. Explain browser WebP processing and public indexing in plain language without exposing implementation details in the main flow.",
+      "Distinguish journal transient input from owner editorial pipeline drafts allowed by ADR-0030; do not delete the latter promise or capability.",
+      "Describe deletion and retention using current runtime behavior; do not invent instant erasure from search engines or external copies.",
+      "Update UK/BG/RU together, including disclosure version behavior if the actual agreement changes; preserve meaningful acceptance receipts and avoid unnecessary repeated consent.",
+      "Ensure support and privacy remain reachable before sign-in and after an error."
+    ],
+    "proof": "Provide a before/after claim ledger with source paths and actual contract references. Verify public served content and disclosure acceptance in controlled fixtures, including returning users.",
+    "ref": "all",
+    "priority": 2
+  },
+  {
+    "key": "03",
+    "title": "Build the Threads design system with Phosphor-only interface icons",
+    "findings": [
+      5,
+      14,
+      31,
+      41,
+      42
+    ],
+    "deps": [
+      "01"
+    ],
+    "paths": [
+      "DESIGN.md",
+      "apps/web/src/components/ui/",
+      "apps/web/src/app/",
+      "apps/web/src/components/",
+      "apps/web/package.json"
+    ],
+    "outcome": "Create one quiet light visual language that all surfaces consume, with typography and hierarchy driven by reading and writing rather than decorative cards. Use Phosphor as the single UI icon source throughout public, signed-in and owner surfaces, including editor controls.",
+    "criteria": [
+      "Define primitive and semantic color, spacing, typography, radius, border, elevation and motion tokens. Keep existing fonts unless the canon explicitly changes them; do not introduce another visual theme for owner screens.",
+      "Build or adapt button, icon button, input, field error, select, tabs, menu, dialog, sheet, toast/status, skeleton and empty-state primitives with default/hover/focus/pressed/disabled/pending/error states.",
+      "Default to restrained surfaces, author-first text hierarchy and consistent separators. Give content photos their own sizing policy; no universal oversized 4:3 cover.",
+      "Meet text contrast 4.5:1 normal/3:1 large and meaningful non-text contrast 3:1; focus stays visible and unobscured. Controls meet WCAG 2.2 target sizing or documented exceptions; aim 44px for primary touch actions.",
+      "Respect reduced motion, text zoom and forced colors. Decorative motion never communicates the only state.",
+      "Update mechanical design gates to enforce the new canon without treating passing token checks as proof of usability. Publish a component specimen route or existing equivalent for visual verification.",
+      "Inventory Lucide, Radix icon assets, react-icons, bespoke functional SVGs and emoji used as controls; map every semantic action to one Phosphor glyph. Keep brand marks, favicons and user media as explicit non-interface-icon exceptions.",
+      "Create a small typed icon entry point with consistent weight and size tokens; selected states may use a documented fill variation of the same family, never a second family.",
+      "Use server-compatible imports for static/server components and narrow imports so the full icon collection is not bundled into guest chrome. Verify package API against its installed official docs.",
+      "Provide accessible names on icon-only controls; decorative icons are hidden from AT. Tooltips supplement labels, not replace them. Meaning cannot depend solely on glyph or color.",
+      "Remove unused old icon dependencies after all consumers migrate; prevent reintroduction through an appropriate import/source gate.",
+      "Inspect desktop/mobile navigation, dialogs, rich editor, social actions, validation, owner tables and loading states. Thiings art is illustration, not a substitute icon family."
+    ],
+    "proof": "Capture actual component states at narrow/wide sizes; measure color pairs, test keyboard focus and dialog return. Run relevant component/design gates. No screenshots of only default states.\n\nProvide inventory before/after and justified brand exceptions; run source gate, build/typecheck and bundle comparison. Visually verify representative controls at 16/20/24px and keyboard accessible names.",
+    "ref": "threads",
+    "priority": 2,
+    "mergedFrom": [
+      "04"
+    ]
+  },
+  {
+    "key": "04",
+    "title": "Integrate, verify and release the complete product redesign",
+    "findings": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45
+    ],
+    "deps": [
+      "01",
+      "02",
+      "03",
+      "05",
+      "06",
+      "07",
+      "08",
+      "09",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20",
+      "21",
+      "22",
+      "23",
+      "24",
+      "25",
+      "26",
+      "27",
+      "28",
+      "29",
+      "30",
+      "31",
+      "32",
+      "OVE-467",
+      "OVE-468",
+      "OVE-469"
+    ],
+    "paths": [
+      "apps/web/src/app/",
+      "apps/web/src/components/",
+      "apps/web/src/lib/",
+      "apps/web/tests/",
+      "apps/web/scripts/browser-gate-specs.ts",
+      "docs/PROJECT_STATE.md",
+      "docs/redesign/2026-09-21/",
+      "docs/audits/2026-09-21-product-design/VERIFICATION.md",
+      ".github/workflows/ci.yml"
+    ],
+    "outcome": "Finish cross-product localization, route/empty/error-state consistency, prove integrated accessibility and the many-destination writing journey, then release the complete redesign with exact production evidence.",
+    "criteria": [
+      "Run the route/function ownership matrix for all audit page families and new routes; classify each as migrated, intentionally redirected, retired by existing contract or explicitly future capability. No unowned family remains.",
+      "Review UK/BG/RU product terminology: space, object, organism, entry and journal each retain one meaning. Long translations never overlap controls; UGC language does not leak into localized chrome.",
+      "Check 404, seven-day 410, forbidden, expired link, empty/new user, no search results, pending and bounded failure states. Offer one useful next action and preserve context where available.",
+      "Apply Thiings only to appropriate benign setup/empty states and Phosphor to all functional controls, including owner and editor leftovers.",
+      "Remove dead links, duplicate right-rail information and old settings/editor affordances from moved pages. Add internal-route redirects where needed without changing permanent public address law.",
+      "Preserve static public bytes, settled workspace reads, late locale/session stability and essential no-JS links.",
+      "Run guest, ordinary member and owner on UK/BG/RU and representative viewport/zoom sizes. Include keyboard-only plus at least one real screen-reader/browser pairing and record its version.",
+      "Complete same-name object note, space weather note, change destination after text/media, create object while writing, failed publish recovery and find published entry. Count steps and verify actual acknowledged destination.",
+      "Validate visible/unobscured focus, logical headings/landmarks, dialogue focus return, accessible names, status/errors, 24px target minimum/exceptions, dragging alternatives and accessible auth. Automated wcag22aa rules supplement manual proof.",
+      "Exercise mobile keyboard, portrait/landscape media, 200% text and 400% zoom/reflow. Capture contrast measurements and reduced-motion behavior.",
+      "No wrong-destination or duplicate entry is accepted in the controlled suite. Report fixture observations as such, not research with real gardeners or population statistics.",
+      "Map every OG-UX finding to receipt or explicit unresolved condition. Fix integration defects under this issue; do not close with a list of unowned blockers.",
+      "Confirm each prerequisite receipt and exact branch/main/deployment relationship. Historical Done redesign tasks do not satisfy new criteria automatically.",
+      "Re-run relevant full CI/browser/static-document gates on the integrated candidate, including realistic photo/network fixtures from OVE-469 and guest bundle evidence from OVE-468.",
+      "Compare same-environment before/after measurements with methodology, sample count and raw results. Preserve existing production LCP/FCP/CLS acceptance owned by OVE-469; never substitute local measurements for production.",
+      "Verify public canonical links, no-JS served content, authenticated owner/member journeys and consent behavior after release. Production mutations/deployment actions follow existing project authorization rules; radical UX permission is not bulk-delete/provider permission.",
+      "Produce finding-by-finding closure ledger and full route-family coverage, with residual issues linked and honestly classified. Update PROJECT_STATE and design canon to the actual shipped state.",
+      "Close implementation issues only on their required proof; close coordination parent only when required children and external blockers are verified complete. Do not claim improvements in retention/conversion without data."
+    ],
+    "proof": "Publish a full route coverage table with role/locale/state and screenshot/proof links, link crawl results and representative hard-load failures. Unimplemented editorial routes are marked future contracts, not falsely passed.\n\nAttach automated gate outputs, manual AT transcript, viewport/state matrix, navigation counts and server outcome receipts. If real AT/tool access is unavailable, record the blocked proof and keep that acceptance criterion open.\n\nExact SHA, green CI links, deployment readiness, production read-only screenshots/HTML/performance receipts and authenticated Linear readback. Report production mutation proof unavailable if not authorized; do not fabricate it.",
+    "ref": "all",
+    "priority": 2,
+    "mergedFrom": [
+      "36",
+      "37",
+      "38"
+    ]
+  },
+  {
+    "key": "05",
+    "title": "Create the Thiings illustration system and integrate it into product states",
+    "findings": [],
+    "deps": [
+      "03"
+    ],
+    "paths": [
+      "DESIGN.md",
+      "apps/web/public/",
+      "apps/web/src/components/ui/",
+      "docs/redesign/2026-09-21/"
+    ],
+    "outcome": "Use playful dimensional Thiings illustrations in the Airbnb-like product moments while keeping the Threads reading surfaces calm.",
+    "criteria": [
+      "Owner direction: use illustrations from https://www.thiings.co/things with unrestricted selection across the collection and free use; do not introduce a paid subscription, purchase, restricted shortlist or licensing review as a start/completion gate. The factual provider-terms discrepancy is recorded in the execution contract and is not this task blocker.",
+      "Create an asset manifest with source item URL, download date, local filename, dimensions, checksum, role and any required source attribution. Do not fabricate a commercial-license receipt or hide the source; the user instruction is a product decision, not provider-issued licensing evidence.",
+      "Select a coherent set for first garden, space setup, object setup, no entries, no results and successful setup. Avoid making every screen decorative or using cheerful art for destructive/error consequences.",
+      "Define consistent scale, optical padding, background, cropping and maximum placement sizes. Use genuine user photos for living objects; illustration must never look like evidence of a real organism or claim a species match.",
+      "Deliver responsive locally served optimized assets with explicit dimensions and suitable empty alt for decorative art. No third-party hotlink dependency or critical above-fold heavy download. Never bypass payment/access controls or redistribute an asset collection.",
+      "Wire the shared illustration component into applicable creation and empty-state templates; subsequent surface issues choose semantic asset IDs rather than arbitrary image URLs."
+    ],
+    "proof": "Attach the asset/contact sheet and source manifest, rendered light-theme examples, byte/dimension checks and disabled-image/AT review. No licensing review gate or paid purchase; no invented commercial clearance.",
+    "ref": "thiings",
+    "priority": 3
+  },
+  {
+    "key": "06",
+    "title": "Build representative fixtures and accessibility gates before page migration",
+    "findings": [
+      27,
+      28,
+      29,
+      30,
+      43
+    ],
+    "deps": [
+      "01"
+    ],
+    "paths": [
+      "apps/web/tests/",
+      "apps/web/scripts/browser-gate-specs.ts",
+      "apps/web/scripts/run-browser-gate.ts",
+      "docs/audits/2026-09-21-product-design/ACCESSIBILITY.md"
+    ],
+    "outcome": "Give every executor a reproducible state matrix that exposes failures hidden by the owner-only and single-object audit environment.",
+    "criteria": [
+      "Seed guest, ordinary member, sealed owner and expired-session fixtures; 0/1/3/20 spaces and 0/1/100/1000 objects, duplicate names in distinct spaces, unassigned objects and long UK/BG/RU names.",
+      "Create text-only, portrait/landscape/multiple photo, mixed-script, long entry, deleted destination, empty list, failing section and realistic media-weight fixtures. Keep real production personal content out of fixtures.",
+      "Configure automated coverage for relevant WCAG 2.2 AA rules including wcag22aa where supported, and record tool/rule versions. Automated pass is not conformance certification.",
+      "Provide reusable keyboard, focus return, live status and pending/error assertions; include 320px, 390px, 768px, 1280px and 1920px plus 200% text/400% zoom checks where relevant.",
+      "Register every new browser spec in the actual browser gate. Document screen-reader/manual steps and which cannot be automated; no dormant spec outside CI.",
+      "Retain baseline reproductions for wrong global CTA, first-space selection and filter Close being named Reset all."
+    ],
+    "proof": "Run the fixture setup and representative gate from a clean checkout, attach command outputs and coverage matrix. Prove at least one baseline regression test fails before its corresponding UI correction.",
+    "ref": "all",
+    "priority": 2
+  },
+  {
+    "key": "07",
+    "title": "Replace global navigation with a centered responsive three-column shell",
+    "findings": [
+      5,
+      8,
+      9,
+      31,
+      40
+    ],
+    "deps": [
+      "03",
+      "06"
+    ],
+    "paths": [
+      "apps/web/src/components/site-shell/",
+      "apps/web/src/components/social/my-social-layout.tsx",
+      "DESIGN.md"
+    ],
+    "outcome": "Navigation, primary content and contextual support form one centered desktop application; mobile has a clear consistent primary navigation.",
+    "criteria": [
+      "Use one max-width grid centered as a group with outer margins; do not pin rails to opposite viewport edges. Document chosen dimensions as OverGarden decisions rather than reverse-engineered vc.ru facts.",
+      "At wide desktop show left navigation, main content and useful right context; collapse supporting context before sacrificing readable main width. At narrow widths use one content column and reachable primary navigation.",
+      "Give each surface one active navigation destination. Owned object/space pages highlight My garden rather than Catalogue. Collapse duplicate rail/account/personal tabs into clear primary and utility groups.",
+      "Keep New entry a consistent creation affordance with a safe routed destination until the shared composer lands; never send it to add-object as a substitute.",
+      "Right rail is page-specific: context about current object/community or meaningful related discovery. Hide when nothing relevant exists; no repeated generic welcome/info card.",
+      "Implement landmarks, skip link, one main, heading hierarchy and keyboard order. Sticky navigation may not obscure focused controls or the mobile keyboard; no nested accidental vertical scrollbar in horizontal strips.",
+      "Keep late session/locale updates outside unstable ancestor context and preserve static public bytes. Coordinate with OVE-468 lazy chrome; first click must work before/after enhancement."
+    ],
+    "proof": "Attach full-viewport screenshots and geometry at 320/390/768/1280/1920 and a very wide viewport, both guest/member. Verify centering numerically, no horizontal page overflow and no content remount on delayed session.",
+    "ref": "vc",
+    "priority": 2
+  },
+  {
+    "key": "08",
+    "title": "Standardize discovery search and mobile filter interactions",
+    "findings": [
+      10,
+      11,
+      15,
+      27,
+      31
+    ],
+    "deps": [
+      "07",
+      "OVE-467"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-journal-directory.tsx",
+      "apps/web/src/components/public/catalog-front-door.tsx",
+      "apps/web/src/components/ui/"
+    ],
+    "outcome": "Users can search the current content family, understand filters and return to their results without facing six equally prominent controls.",
+    "criteria": [
+      "Define a consistent prominent search input, compact primary modes and secondary filter entry point with applied count. Search scope is explicit; do not merge owned destination search with the public catalogue.",
+      "Desktop may expose frequent filters; mobile uses a labeled sheet with current values, result action and separate Clear filters. Close is named Close and preserves committed state, never Reset all.",
+      "Specify draft-vs-applied behavior and apply/cancel/back contracts consistently. Preserve query/filter/back position and pagination; empty filtered results offer clear reset without erasing unrelated query text.",
+      "Keep plants/animals selection in one place; meaningful tabs use proper semantics. Avoid scrollbars and clipped chips when labels grow.",
+      "Public parameterized results follow ADR-0032 /q twins and canonical rules, with usable direct links and no static-page session/searchParams reads.",
+      "Handle slow search, no results, validation and failure separately, retaining query and showing result count accessibly."
+    ],
+    "proof": "Exercise query→filter→result→back on desktop/mobile and keyboard. Verify accessible Close/Clear names, URLs, no-JS public paths and restored result context.",
+    "ref": "airbnb",
+    "priority": 3
+  },
+  {
+    "key": "09",
+    "title": "Build the all-owned-destinations search and selection contract",
+    "findings": [
+      2,
+      43
+    ],
+    "deps": [
+      "01",
+      "06"
+    ],
+    "paths": [
+      "apps/web/src/server/garden-workspace-repository.ts",
+      "apps/web/src/components/garden/",
+      "apps/web/src/app/(default)/garden/"
+    ],
+    "outcome": "A single picker finds any owned space or object by stable identity, even when it is absent from the loaded dashboard.",
+    "criteria": [
+      "Implement a typed discriminated destination model for space and object; preserve each server mutation contract. Return display name, parent space/type and useful species identity without confusing a catalogue organism with an owned object.",
+      "Use bounded server queries across all permitted destinations, pagination/cursor and stable ordering. Search name and supported useful synonyms. Never search only the first page or spaces[0].",
+      "Empty query shows genuinely recent successful destinations plus browse/search. Generic launch with multiple choices requires visible selection; one existing destination may be visibly preselected.",
+      "Every duplicate-name row and chosen destination shows parent context; unassigned is explicit. Selection uses immutable ID, never name. Do not silently choose the first search result.",
+      "Accessible search/list semantics support typing, arrows, Enter, Escape and visible selection; active descendant must exist. Avoid inaccessible virtualization or dumping 1000 options into a native select.",
+      "Keep query/selection through retry. Removed/revoked destinations fail clearly at server submit and permit another selection without clearing editor content; suggestions are never authorization."
+    ],
+    "proof": "Contract tests and keyboard browser scenarios for 0/1/100/1000 objects, duplicate names, cross-user access, pagination and server failure. Show late-page objects remain discoverable and no unauthorized destination is returned.",
+    "ref": "destination",
+    "priority": 2
+  },
+  {
+    "key": "10",
+    "title": "Create spaces through a focused Airbnb-inspired progressive flow",
+    "findings": [
+      6
+    ],
+    "deps": [
+      "05",
+      "07",
+      "09"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/",
+      "apps/web/src/server/garden-workspace-repository.ts",
+      "apps/web/src/components/garden/"
+    ],
+    "outcome": "Creating a space becomes a short understandable task with one active question and editable completed answers, separate from routine entry writing.",
+    "criteria": [
+      "Adapt Airbnb Where/When/Who progressive disclosure: one active section, compact summary of completed answers, obvious next action and back editing. Use existing actual space fields; do not invent required travel-like steps.",
+      "Ask only required name/type fields first; optional details are skippable. Explicitly display what will be created and its visibility before final create.",
+      "Support launch from My garden, destination chooser and object setup. Preserve the in-memory initiating entry/object context; successful creation returns the new stable ID to the caller.",
+      "Validate inline with retained values and focus on the first invalid field. Back does not reset previous answers; submitting twice yields one acknowledged space under actual server guarantees.",
+      "Show precise success/failure including uncertain network outcome. Creating a space is not publishing an entry. Do not make empty space creation claim publication.",
+      "Use Thiings as optional supporting art, Phosphor controls, localized concise labels and reachable mobile actions above the keyboard. No forced illustration splash step."
+    ],
+    "proof": "Walkthrough direct create and nested create with existing text, back-edit, invalid/duplicate names, server failure, keyboard and 320px. Verify database outcome in test environment and exact returned ID.",
+    "ref": "airbnb",
+    "priority": 2
+  },
+  {
+    "key": "11",
+    "title": "Create owned objects through progressive setup without catalogue dead ends",
+    "findings": [
+      12,
+      26,
+      43
+    ],
+    "deps": [
+      "10"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/first-entry-composer.tsx",
+      "apps/web/src/app/(default)/garden/journal-object-kind-selector.tsx",
+      "apps/web/src/components/garden/catalog-picker.tsx",
+      "apps/web/src/server/garden-workspace-repository.ts"
+    ],
+    "outcome": "A gardener can add a real plant or animal with the minimum identity and space decisions, whether starting from the garden, a species page or a half-written entry.",
+    "criteria": [
+      "Progress from living-subject type/name to optional supported catalogue identification and space selection, then concise editable summary; derive exact required fields from current schema and avoid adding arbitrary mandatory questions.",
+      "Show plant/animal-appropriate labels in every locale. A catalogue result describes a shared organism, not an owned specimen; unresolved identity follows existing permissive creation rules.",
+      "Offer all owned spaces, No space when supported and Create space inline. Preserve selected species and user text through step changes and nested space creation.",
+      "When launched from catalogue, show existing owned matches before offering another specimen so users can write to an existing tomato without duplicating it.",
+      "Use stable-ID results and acknowledge object creation separately from first-entry publication according to task 01 transaction decision. Failed publish must never masquerade as saved content.",
+      "Do not impose this wizard on contextual or global entry writing to an existing destination. Keep optional provenance and advanced attributes outside the main required path."
+    ],
+    "proof": "Cover first-time and returning gardeners, plant/animal, unresolved catalogue identity, 20 spaces, duplicate names, nested creation cancel/retry and exact object+entry outcomes.",
+    "ref": "airbnb",
+    "priority": 2
+  },
+  {
+    "key": "12",
+    "title": "Ship one text-first composer for global and contextual entry creation",
+    "findings": [
+      1,
+      2,
+      20,
+      21,
+      43
+    ],
+    "deps": [
+      "02",
+      "07",
+      "09",
+      "11"
+    ],
+    "paths": [
+      "apps/web/src/components/garden/structured-journal-composer.tsx",
+      "apps/web/src/app/(default)/garden/space-entry-composer.tsx",
+      "apps/web/src/app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "apps/web/src/app/(default)/garden/first-entry-composer.tsx"
+    ],
+    "outcome": "Every New entry action opens the same focused composer for the intended existing space or object. The primary path is writing, not adding another object.",
+    "criteria": [
+      "Contextual open preselects exact object/space visibly in one activation. Global open with multiple destinations immediately exposes picker; selecting a recent result focuses writing without another Continue step.",
+      "Keep destination and public visibility visible alongside editable observation date; handle timezone boundaries deliberately. Required content follows server contract, not an invented mandatory title/cover step.",
+      "Desktop uses accessible focused dialog or routed editor; mobile uses full-height reachable writing surface. Direct links have a working full-page fallback. Returning close restores launch context.",
+      "Changing destination preserves text/date/media. Space observations write to space itself; object entries may aggregate into its parent without duplicate publication.",
+      "First-publication disclosure appears only when required and uses corrected copy. Existing users do not receive recurring confirmation merely because the destination UI is unclear.",
+      "Keep Lexical/JournalDocumentV1 rich capability behind discoverable optional controls. No durable browser drafts, offline queue or claim of autosave.",
+      "Pending/success/failure messages reflect actual acknowledgment. Double activation yields one durable entry; timeout ambiguity uses existing idempotency/readback semantics. Stale authorization preserves in-memory input and explains recovery."
+    ],
+    "proof": "End-to-end seeded publish to space and each of two same-name objects, destination switch after typing, session expiry, removed destination, timeout/double-click and exact permalink. Record navigation counts separately from typing, media actions and Publish.",
+    "ref": "threads",
+    "priority": 2
+  },
+  {
+    "key": "13",
+    "title": "Make media and rich blocks progressive inside the shared composer",
+    "findings": [
+      20,
+      29,
+      41
+    ],
+    "deps": [
+      "12"
+    ],
+    "paths": [
+      "apps/web/src/components/garden/lexical-journal/",
+      "apps/web/src/components/garden/journal-cover-controls.tsx",
+      "apps/web/src/components/media/"
+    ],
+    "outcome": "Photo-first observations stay easy while advanced blocks remain available without overwhelming every entry.",
+    "criteria": [
+      "Expose Add photo and basic formatting; keep advanced blocks/slash menu discoverable via ordinary buttons as well as shortcuts. Preserve round-trip JournalDocumentV1 content for all supported legacy blocks.",
+      "Show browser conversion and direct-upload stages per attachment, clear retry/remove controls and aggregate Publish readiness; never claim an uploaded staging file is a published entry.",
+      "Present cover/focal controls after suitable media exists. Support portrait/landscape/multiple photos without forced destructive crop or giant empty slots.",
+      "Provide keyboard reorder alternatives and named remove controls identifying the attachment. Add meaningful alt/caption authoring where supported; decorative/duplicated descriptions should not repeat entire post text.",
+      "Preserve browser-generated WebP-only pipeline, direct staging upload and atomic promotion. No server image processing or original retention; no change to size constraints without explicit contract work.",
+      "Use selected Phosphor icons throughout Lexical tools; verify selection/focus does not vanish when toolbar or media controls open."
+    ],
+    "proof": "Run document golden/roundtrip tests, realistic mixed-media publish, conversion/upload failures, keyboard reorder and old entry rendering. Inspect actual network variants and no duplicate/abandoned-public artifacts in controlled tests.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "14",
+    "title": "Unify editing, dirty-exit recovery and entry deletion",
+    "findings": [
+      21,
+      45
+    ],
+    "deps": [
+      "13"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/entries/[entryId]/edit/",
+      "apps/web/src/components/garden/unpublished-work-guard.tsx",
+      "apps/web/src/components/garden/local-journal-composer-status.tsx"
+    ],
+    "outcome": "Editing shares the writing model, preserves input through recoverable errors and makes destructive consequences explicit.",
+    "criteria": [
+      "Load existing content into the shared editor with exact destination and date; retain supported document blocks and permanent entry URL when saving.",
+      "Clean close is immediate. Dirty close/Escape/internal navigation asks Stay or Discard with focus management; browser reload warning uses supported browser behavior and does not promise recoverable drafts.",
+      "A failed save retains text/media in memory and exposes retry. Session recovery must honestly state limitations across full-page auth navigation; never persist journal text locally as a hidden workaround.",
+      "Place delete in a contextual destructive menu separated from Save/Publish. Confirmation names the entry and actual consequences; cancel returns focus and leaves content unchanged.",
+      "Treat edit/delete success only on server acknowledgment and invalidate correct public views. Preserve current tombstone/address rules.",
+      "Test direct edit links, permission loss, stale/deleted entry, double-submit and return to original timeline position."
+    ],
+    "proof": "Browser walkthroughs for dirty and clean exit, failed save, keyboard destructive confirmation and preserved content/URL. Verify server outcomes and public invalidation with controlled data.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "15",
+    "title": "Rebuild My garden as a scalable collection home",
+    "findings": [
+      6,
+      8,
+      23,
+      43
+    ],
+    "deps": [
+      "12",
+      "07"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/(home)/",
+      "apps/web/src/app/(default)/garden/garden-workspace-view.tsx",
+      "apps/web/src/server/garden-workspace-repository.ts"
+    ],
+    "outcome": "My garden is a place to find owned spaces/objects and write again, not a dashboard mixing every editor and setting.",
+    "criteria": [
+      "Prioritize collection search, spaces/objects and visible New entry. Move full editors, settings, provenance and destructive actions to dedicated contexts defined in IA.",
+      "Support useful recent/all views with real sort semantics, object identity, space context and direct contextual Write action. Large collections use bounded loading/pagination and preserve query/back position.",
+      "Treat 0 destinations as setup with relevant Thiings illustration and clear first action; 1 destination stays simple; 100/1000 objects remain searchable without scanning cards.",
+      "Replace inferred needs-attention health claims with factual last-entry recency and optional neutral reminder wording. Do not diagnose plant status from logging frequency.",
+      "Keep all workspace reads settled independently. Failed section shows retry and does not hide other owned collections or claim empty.",
+      "Owned pages consistently retain My garden active navigation. Species/reference links are secondary and explicitly labeled."
+    ],
+    "proof": "Capture 0/1/100/1000 object views and query→object→back, contextual Write counts and partial failure. Keyboard/accessibility checks use ordinary member as well as owner.",
+    "ref": "threads",
+    "priority": 2
+  },
+  {
+    "key": "16",
+    "title": "Add dedicated space pages with space writing and object aggregates",
+    "findings": [
+      6,
+      19,
+      43
+    ],
+    "deps": [
+      "15",
+      "10"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/",
+      "apps/web/src/server/garden-workspace-repository.ts",
+      "apps/web/src/app/(default)/garden/space-entry-composer.tsx"
+    ],
+    "outcome": "Each owned space has a coherent destination showing its objects and history, with a direct way to record a space-level observation.",
+    "criteria": [
+      "Implement the workspace space route agreed in IA; mark new path in the change log and keep existing links functional. Do not invent a new public space permalink without address-law design.",
+      "Show space identity, a contextual Write action and clear Objects/History views when needed. Label whether an aggregate entry belongs to the space itself or a child object.",
+      "Keep one entry identity in aggregates: no copying object entries into additional space posts. Stable pagination and dates use the agreed chronological meaning.",
+      "Space settings/rename/move/delete are a secondary section with explicit consequences determined by existing backend. Never silently delete child objects to make a UI button work.",
+      "Write opens the space destination directly; optionally change to a child via the common picker. Creating an object here preselects the parent space.",
+      "Support empty space, many children, unassigned objects elsewhere, renamed space and bounded loading/error states."
+    ],
+    "proof": "Server fixture proof for aggregate deduplication and permissions; browser space note→acknowledged permalink→history, object creation in space and back navigation at mobile/desktop.",
+    "ref": "vc",
+    "priority": 3
+  },
+  {
+    "key": "17",
+    "title": "Separate owned-object timeline, settings and provenance",
+    "findings": [
+      7,
+      8,
+      19,
+      23,
+      26,
+      45
+    ],
+    "deps": [
+      "15",
+      "14",
+      "16"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/objects/[objectId]/",
+      "apps/web/src/components/living-object-passport/",
+      "apps/web/src/server/lineage-repository.ts"
+    ],
+    "outcome": "The owned object is primarily its readable history and next observation; technical identity, lineage and deletion no longer compete above the fold.",
+    "criteria": [
+      "One H1 and concise object/parent identity precede timeline and contextual Write. Keep tabs/sections purposeful: history, details/settings, provenance only as needed.",
+      "Separate public passport link from Catalogue link and garden breadcrumb; the gardener always knows whether they are viewing their specimen or a shared organism.",
+      "Move delete, catalogue re-identification and lineage reassignment into clearly named secondary workflows. Confirmation names current and proposed entities and preserves server validation.",
+      "Plant/animal terminology follows actual kind. Do not allow an apparent unrelated bee/tomato option to pass without validating the actual relation rules; distinguish observed UI ambiguity from a proven mutation bug.",
+      "Use neutral logging recency rather than health diagnoses. Keep reminders contextual and never a blocking step before writing.",
+      "Preserve settled reads, loading/error boundaries, permission changes and view/back position. Old direct links continue to work."
+    ],
+    "proof": "Compare main timeline against settings/provenance views using plant/animal and long histories. Test ambiguous relation choices and destructive cancel in fixtures; prove no unauthorized mutation and no multiple top-level H1.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "18",
+    "title": "Recompose the public feed with Threads hierarchy and vc.ru reading affordances",
+    "findings": [
+      10,
+      14,
+      15,
+      16,
+      29,
+      30,
+      41
+    ],
+    "deps": [
+      "07",
+      "08",
+      "13",
+      "OVE-467"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-home-feed.tsx",
+      "apps/web/src/components/public/public-journal-directory.tsx",
+      "apps/web/src/components/media/"
+    ],
+    "outcome": "Visitors scan who wrote what, where it belongs and when it happened before a large photo; feeds and journal discovery use a consistent reading grammar.",
+    "criteria": [
+      "Order ordinary journal cards author/avatar→object/space context→text→optional media→social actions. Respect first-party news no-author contract if that entity exists; do not manufacture a person for editorial items.",
+      "Adapt vc.ru explicit feed modes, topic/community attribution and readable expansion, without adding ranking/personalization unsupported by current backend. Following/latest modes must reflect actual data semantics.",
+      "Distinguish publication date from observation date in expanded metadata; use consistent meaning across feed and directories.",
+      "Remove repeated plants/animals controls. Preserve result/back context, stable paging and canonical entry links; compact cards must not become nested-link click traps.",
+      "Use natural/bounded image proportions and useful excerpts with accessible Read more. No mandatory giant hero for a short text note; image captions/alt are meaningful and not repeated post titles by default.",
+      "Scope UGC lang to UGC only; localized chrome dates retain interface language. Preserve static content in served bytes and valid no-JS links.",
+      "Define shared card variants for existing journal/article types, but leave not-yet-built news merge/cursor backend to OVE-382."
+    ],
+    "proof": "Render text-only, multi-photo, long, old observation/new publication and UK/BG/RU cards with slow images. Verify first viewport authorship, no clipping, static bytes, keyboard actions and back restoration.",
+    "ref": "vc",
+    "priority": 2
+  },
+  {
+    "key": "19",
+    "title": "Unify entry reading, comments, reactions, saving and sharing",
+    "findings": [
+      14,
+      17,
+      18,
+      29,
+      30
+    ],
+    "deps": [
+      "18"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-journal-entry.tsx",
+      "apps/web/src/app/[locale]/[profileHandle]/post/[entryNumber]/",
+      "apps/web/src/components/social/"
+    ],
+    "outcome": "A permanent entry page reads as one conversation with predictable social controls and clear object context.",
+    "criteria": [
+      "Use the same author/context/content anatomy as feed; show a compact coherent action row for supported reaction, comment, save and share functions. Do not introduce unsupported reaction types.",
+      "Share uses native share when supported with reliable copy-link fallback and accessible success/failure feedback; canonical permalink never includes transient auth/filter tracking state.",
+      "Comments have explicit reply target, pending/error state, keyboard reachability and meaningful deleted/moderated states. Guest actions preserve intent through sign-in within current constraints.",
+      "Prevent duplicate submissions and reconcile actual server response; an optimistic appearance is never accepted as server success. Preserve server-authoritative interactions and no-hydration gates.",
+      "Consolidate related entries into one relevant section and distinguish same-object history from unrelated recommendations. Maintain back-to-source context without changing canonical address.",
+      "Media, author links, object link and menu all have distinct targets. Long text and portrait photos remain readable at 320px, zoom and slow load."
+    ],
+    "proof": "Controlled guest/member comment, reaction, save and share tests including network failure and double press; keyboard traversal and read-only static HTML proof. Compare same content feed/detail and verify one related section.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "20",
+    "title": "Rebuild public profiles around identity, entries and owned journals",
+    "findings": [
+      10,
+      24,
+      32
+    ],
+    "deps": [
+      "18"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-profile.tsx",
+      "apps/web/src/components/public/public-profile-tabs.tsx",
+      "apps/web/src/app/[locale]/[profileHandle]/(profile)/"
+    ],
+    "outcome": "A public profile explains the gardener and their published experience, distinct from private account settings.",
+    "criteria": [
+      "Use compact avatar/name/handle/bio identity and meaningful Entries/Objects views with consistent labels; distinguish a journal history from an individual entry.",
+      "Owner sees contextual edit access while visitors see only supported follow/social actions. Profile settings and security are not embedded in public reading surface.",
+      "Handle empty/new, many entries, many objects, long bio, missing avatar and unavailable profile without decorative placeholders implying real activity.",
+      "Keep current handles/canonical aliases, pagination, public static content, indexability and server-resolved permissions.",
+      "Remove user-facing technical indexing status and internal implementation language. Shared card components come from feed, not a competing profile design."
+    ],
+    "proof": "Guest/self/other-member snapshots and keyboard flow; verify public HTML, profile URL redirects and entry/object navigation with many-page data.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "21",
+    "title": "Redesign object passports, lineage inboxes and ownership handoffs",
+    "findings": [
+      19,
+      32,
+      45
+    ],
+    "deps": [
+      "17",
+      "19",
+      "30"
+    ],
+    "paths": [
+      "apps/web/src/components/living-object-passport/living-object-passport.tsx",
+      "apps/web/src/app/[locale]/[profileHandle]/objects/[objectSlug]/",
+      "apps/web/src/app/[locale]/lineage/objects/[objectId]/",
+      "apps/web/src/app/(default)/garden/lineage/claims/",
+      "apps/web/src/app/(default)/garden/lineage/questions/",
+      "apps/web/src/app/(default)/garden/lineage/invitations/claim/",
+      "apps/web/src/lib/lineage/claim-handoff.ts"
+    ],
+    "outcome": "Visitors distinguish an individual living object, its gardener, chronological evidence and its optional provenance from catalogue reference data. Lineage questions and claims are understandable relationship tasks with explicit participants and consequences.",
+    "criteria": [
+      "Lead with object name, owner and real photo when present; provide a meaningful link to canonical species/form as secondary reference.",
+      "Use object-specific entry history and factual timeline. No empty technical provenance block above actual observations; progressively reveal relationships with clear labels.",
+      "Breadcrumbs reflect owner/object relationship rather than pretending the owned object is a catalogue species. Owner Write leads to exact owned destination.",
+      "Read-only guests never see executable owner mutations; claim/invitation UI uses existing server identity and authorization semantics.",
+      "Render uncertain lineage as uncertain, with source/relationship details; do not imply a verified genetic or ownership fact from an unreviewed claim.",
+      "Preserve permanent ASCII addresses, alias behavior, static public document and deleted-object semantics.",
+      "Separate questions requiring an answer, pending claims and invitation acceptance. Show source/target object, gardener and current status using real identity, not technical IDs alone.",
+      "Before accepting/rejecting/reassigning, state what relationship changes and what stays owned/public according to the backend. Do not equate a claimed relation with verified biology.",
+      "Preserve signed invitation/token and server authorization contract; expired, already used, conflicting and unauthorized claims have distinct explanations.",
+      "Keep return intent through authentication without exposing token values in UI/analytics. No secret-bearing screenshots in receipts.",
+      "Use deliberate secondary placement from object provenance; no lineage actions compete with routine New entry.",
+      "Support long labels, related objects with same names, safe cancel, failed action and keyboard focus return."
+    ],
+    "proof": "Compare guest and owner passport for unlinked and related objects; verify breadcrumbs, direct write context, static bytes and visible uncertainty using controlled lineage fixtures.\n\nFixture handoff for valid/expired/used invitation, cross-user misuse, duplicate names and failed acceptance; assert exact relationship outcome and no unsupported ownership change.",
+    "ref": "vc",
+    "priority": 3,
+    "mergedFrom": [
+      "34"
+    ]
+  },
+  {
+    "key": "22",
+    "title": "Make Catalogue a gardener-friendly discovery front door",
+    "findings": [
+      11,
+      12,
+      15
+    ],
+    "deps": [
+      "08",
+      "11",
+      "OVE-467"
+    ],
+    "paths": [
+      "apps/web/src/components/public/catalog-front-door.tsx",
+      "apps/web/src/components/public/public-catalog-browse.tsx",
+      "apps/web/src/components/public/public-catalog-register-hub.tsx",
+      "apps/web/src/server/catalog-repository.ts"
+    ],
+    "outcome": "Catalogue starts with finding a living subject and useful experience rather than an unexplained register of scientific counts.",
+    "criteria": [
+      "Provide prominent common/scientific-name search with explicit plant/animal scope and simple useful filters. Keep browse and technical register distinct.",
+      "Explain species/form/owned object through labels and context, not a mandatory tutorial. Numeric cultivar names and missing common names remain usable without becoming the default story of the product.",
+      "Results prioritize honest identity and available real experience; do not fabricate popularity or claim every taxonomy row has journal evidence.",
+      "Open a reference card for understanding; Add to my garden uses progressive creation, and Write where already owned offers matching specimens first.",
+      "Preserve typeahead architecture and server/source contract; no second search service, heavy taxonomy download or fake private gate.",
+      "Empty, loading, search failure, ambiguous names, diacritics and pagination have distinct states and share filter patterns."
+    ],
+    "proof": "Common-name/scientific/ambiguous/no-result searches in UK/BG/RU, catalogue→existing object write and catalogue→new object. Verify database bounded query and public /q/static behavior.",
+    "ref": "airbnb",
+    "priority": 3
+  },
+  {
+    "key": "23",
+    "title": "Reorganize organism, variety, breed and register detail pages",
+    "findings": [
+      13,
+      32,
+      33
+    ],
+    "deps": [
+      "22"
+    ],
+    "paths": [
+      "apps/web/src/app/[locale]/species/",
+      "apps/web/src/app/[locale]/variety/",
+      "apps/web/src/app/[locale]/breed/",
+      "apps/web/src/components/public/public-catalog-register-hub.tsx"
+    ],
+    "outcome": "Organism pages put practical identity and actual gardener experience first, with large form lists and source records accessible on demand.",
+    "criteria": [
+      "Lay out concise identity, real evidence/experience and supported add/write actions before exhaustive forms. A 621-form example must not dominate the first screen.",
+      "Move/search/paginate forms and aliases in a secondary register view with stable return context. Preserve every reachable record and canonical form URL.",
+      "Separate externally sourced botanical facts, editorial mentions and actual first-hand journals. Display sources/factual uncertainty where relevant.",
+      "Do not expose indexing eligibility as user-facing content and do not relax evidence thresholds merely to fill a redesigned page.",
+      "Use meaningful reference images with attribution where present; Thiings is not a scientific identification photograph.",
+      "Handle unknown/common-name-less entities, no experience, retired aliases, plant/animal variants and bounded failure; no fabricated text to make sparse pages look complete."
+    ],
+    "proof": "Fixture proof with 0/1/621 forms, organism/form back navigation, referenced evidence and correct indexability; static served HTML plus mobile/keyboard register interaction.",
+    "ref": "vc",
+    "priority": 3
+  },
+  {
+    "key": "24",
+    "title": "Restructure knowledge, answers, guides and topics around credible help",
+    "findings": [
+      33,
+      34,
+      32
+    ],
+    "deps": [
+      "08",
+      "23"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-knowledge-hub.tsx",
+      "apps/web/src/components/public/public-knowledge-topic.tsx",
+      "apps/web/src/components/public/public-knowledge-evidence.tsx",
+      "apps/web/src/app/[locale]/answers/",
+      "apps/web/src/app/[locale]/guides/"
+    ],
+    "outcome": "Knowledge discovery answers gardeners’ questions and clearly shows the basis for advice rather than product principles presented as horticultural evidence.",
+    "criteria": [
+      "Give hub/topic pages descriptive navigation and scoped search using current supported content, with readable answer/guide previews.",
+      "On answer/guide detail separate advice, sources, qualifications and related first-hand observations. Replace misleading product-principle evidence with actual sources or explicitly state insufficient evidence; do not generate unsupported horticultural claims.",
+      "Keep product help distinct from gardening knowledge. Source provenance and editorial disclosure are accessible without overwhelming the answer.",
+      "Use one related-content section with relevant labels; no duplicate recommendation blocks or keyword-stuffed SEO headings.",
+      "Preserve current locale availability, hreflang, structured data, canonical URLs and public indexability rules.",
+      "Support long reading, heading navigation, citations, no results and partial unavailable evidence with shared typography and accessible links."
+    ],
+    "proof": "Content provenance ledger and representative topic→answer→source→back journeys; static HTML, heading/AT navigation, UK/BG/RU and empty evidence states.",
+    "ref": "vc",
+    "priority": 3
+  },
+  {
+    "key": "25",
+    "title": "Align blog, articles, markets and source archives with the new reading system",
+    "findings": [
+      34,
+      32
+    ],
+    "deps": [
+      "24"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-article.tsx",
+      "apps/web/src/components/public/public-eppo-archive-explorer.tsx",
+      "apps/web/src/app/[locale]/blog/",
+      "apps/web/src/app/[locale]/markets/",
+      "apps/web/src/app/(default)/sources/"
+    ],
+    "outcome": "Finish the supporting public page families so the redesign does not stop at the feed and garden.",
+    "criteria": [
+      "Blog listing/detail use clear reader language, appropriate metadata and shared long-form typography; remove SEO implementation headings from product copy.",
+      "Markets pages explain their actual current purpose and link relevant content; do not invent commerce, prices, checkout or location tracking.",
+      "EPPO/source explorers expose reference provenance with searchable bounded records and distinct technical context. They are not competing gardener front doors.",
+      "Build current existing surfaces only. News/blog database entities, translation generation, mixed-feed merge and editorial pipeline remain owned by OVE-381/382/383/384/401/402/406/409/437/438.",
+      "Document compatible article/editorial component contracts for those existing tasks, including no-author news and source disclosure. Existing static pages cannot falsely imply an already shipped database/editorial capability.",
+      "Preserve canonical addresses, public static bytes, source attributions, locale grouping and actual unavailable/error states."
+    ],
+    "proof": "Route-family matrix with before/after screenshots for blog listing/detail, market and source archive/detail; static checks, long-form keyboard reading and explicit future-work boundary receipts.",
+    "ref": "vc",
+    "priority": 3
+  },
+  {
+    "key": "26",
+    "title": "Redesign communities, discussions and moderation operations",
+    "findings": [
+      17,
+      35,
+      40
+    ],
+    "deps": [
+      "19",
+      "12"
+    ],
+    "paths": [
+      "apps/web/src/components/public/public-community.tsx",
+      "apps/web/src/app/[locale]/communities/",
+      "apps/web/src/app/(default)/account/communities/",
+      "apps/web/src/app/(default)/account/moderation/comments/"
+    ],
+    "outcome": "A community is a coherent context for reading and contributing; its first-post action no longer drops users into an unrelated garden setup. Owner moderation and community management are clear task-oriented extensions of the same design system.",
+    "criteria": [
+      "Directory cards and detail header explain topic, community identity and actual supported membership/contribution actions. Use vc.ru topic attribution/navigation mechanism while retaining Threads styling.",
+      "Community Write carries exact community context through sign-in and supported contribution composer; do not silently turn a discussion into an owned-object entry. If entries can be shared, preserve one original identity and existing association rules.",
+      "Show current discussion list, author/date, relevant community information and clear empty-first-contribution state. Right rail supports this community rather than generic welcome content.",
+      "Discussion detail reuses readable post/comment controls while respecting its own entity and canonical URL. No unsupported ranking or moderation capability invented.",
+      "Move community management to appropriate owner/account context with role checks and purposeful settings; no admin panel recreation.",
+      "Verify back navigation, guest entry points, deleted discussions, forbidden contribution and partial errors.",
+      "Show content context, author, reason/state and actual available action before changing moderation state; avoid unlabeled icon-only destructive actions.",
+      "Separate queue filtering, item review and community settings into meaningful sections. Preserve exact comment/discussion/community identity when moving between them.",
+      "Confirm destructive consequences where required, keep cancel and retry safe, prevent double submission and reconcile actual server result.",
+      "Guest/ordinary member cannot read protected content or perform owner mutations even when copying a URL or submitting a forged form.",
+      "Provide empty queue, loading, failed row and failed list states; preserve filter/scroll on action and do not hide unrelated rows after one error.",
+      "Use Phosphor, semantic tables/lists, accessible menus and responsive controls; reuse community public context without exposing private moderation metadata."
+    ],
+    "proof": "Guest→sign-in→same community intent, member post in seeded environment, comments and directory/detail/back across locales. Assert submitted community ID and absence of accidental garden-object creation.\n\nControlled owner review, failed action, duplicate submit and ordinary-member forged request tests; keyboard and mobile populated queues with exact server-state readback.",
+    "ref": "vc",
+    "priority": 3,
+    "mergedFrom": [
+      "33"
+    ]
+  },
+  {
+    "key": "27",
+    "title": "Make activity and reminders identify the exact next action",
+    "findings": [
+      22,
+      23
+    ],
+    "deps": [
+      "12",
+      "17"
+    ],
+    "paths": [
+      "apps/web/src/app/[locale]/notifications/",
+      "apps/web/src/app/api/notifications/",
+      "apps/web/src/lib/garden-workspace-copy.ts"
+    ],
+    "outcome": "Activity items say what happened and which object/space they concern, and reminders open writing in that precise context.",
+    "criteria": [
+      "Differentiate social events, system notices and optional journaling reminders with truthful labels and actual object+space identity. Repeated same-wording rows must be disambiguated.",
+      "Reminder Write opens shared composer with exact stable destination in one activation. Notification links preserve intended target through auth; deleted destination gives a useful explanation.",
+      "Use factual last-entry timing, not unsupported health/urgent-attention interpretation. Do not add notification frequency or medical/care claims as a design shortcut.",
+      "Pending/read states and unread count reflect server receipts. Group only when action/context remains unambiguous; do not create new notification backend semantics in this task.",
+      "Separate preferences from the activity list and offer clear empty/error/retry states. Use Phosphor and shared list hierarchy with keyboard-readable timestamps."
+    ],
+    "proof": "Four same-named reminders for two same-name objects in different spaces, expired/deleted destination, ordinary member and receipt failure. Assert exact composer destination and count reconciliation.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "28",
+    "title": "Unify saved entries and wishlist navigation and states",
+    "findings": [
+      36,
+      9
+    ],
+    "deps": [
+      "19",
+      "22"
+    ],
+    "paths": [
+      "apps/web/src/components/social/shelf.tsx",
+      "apps/web/src/components/social/my-social-layout.tsx",
+      "apps/web/src/app/[locale]/bookmarks/",
+      "apps/web/src/app/[locale]/wishlist/"
+    ],
+    "outcome": "Users understand what they saved and why, with consistent naming and useful return paths rather than empty filtering controls.",
+    "criteria": [
+      "Distinguish saved reading entries from wanted organisms using explicit names and shared utility navigation. Do not merge distinct entities into an ambiguous bucket.",
+      "Empty shelves show one relevant browse action and optional restrained Thiings art, without unusable filter chrome.",
+      "Populated shelves support existing sorting/filtering with preserved back position, shared post/reference cards and exact removal feedback.",
+      "Guest links lead to appropriate sign-in intent; owner-only access and ordinary-member access use existing authorization.",
+      "Handle deleted/unavailable saved items and failed unsave without silently removing successful state or throwing away the whole shelf.",
+      "Remove duplicate personal navigation patterns replaced by the shell."
+    ],
+    "proof": "0/1/many saved entities, saved item→detail→back, keyboard unsave failure and expired session; assert state matches backend and names are consistent in all locales.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "29",
+    "title": "Separate public profile editing from account and security settings",
+    "findings": [
+      24,
+      25
+    ],
+    "deps": [
+      "07",
+      "20"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/profile/",
+      "apps/web/src/components/public/language-switcher.tsx",
+      "apps/web/src/lib/"
+    ],
+    "outcome": "Account settings have clear boundaries between public identity, preferences, security and destructive account actions.",
+    "criteria": [
+      "Define sections and routes according to IA: public profile fields and preview; interface/language preferences; authentication/security; data/deletion entry point. Preserve existing settings capabilities.",
+      "Show public visibility beside identity fields and handle canonical implications before save. Handle collisions and validation inline with retained input.",
+      "Localize region and field labels in UK/BG/RU; never mix English option names accidentally or infer precise location from region selection.",
+      "Keep save/pending/success/error local to the affected form; do not force unrelated fields to validate or save together.",
+      "Use explicit labels, appropriate autocomplete, accessible errors and mobile keyboard types. Never obstruct password managers or paste.",
+      "Sealed owner menu remains a role-scoped utility, not a separate visual design or public navigation item."
+    ],
+    "proof": "Ordinary member and owner settings walkthrough, handle collision, long localized fields, failed save and screen-reader error focus. Verify only intended persisted fields change.",
+    "ref": "threads",
+    "priority": 3
+  },
+  {
+    "key": "30",
+    "title": "Redesign authentication and preserve action intent",
+    "findings": [
+      1,
+      35
+    ],
+    "deps": [
+      "07",
+      "12",
+      "29"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/auth/",
+      "apps/web/src/server/workspace-access.ts"
+    ],
+    "outcome": "Sign-in/sign-up/recovery are concise and return users to the action they intended without losing destination or promising persisted journal drafts.",
+    "criteria": [
+      "Use consistent focused layouts for sign-in, sign-up, reset-password and auth help, with clear mode changes and inline recoverable errors.",
+      "Preserve validated same-origin return intent for writing, commenting, saving and community contribution. Reject open redirects and unauthorized object IDs server-side.",
+      "Allow password-manager/autofill/paste; accessible authentication never requires memorization puzzles introduced by the redesign.",
+      "Explain when a full-page transition cannot preserve transient writing; use in-memory recovery only where viable and no IndexedDB/local draft workaround.",
+      "Expired links, already authenticated users, provider/network failure and pending submissions have distinct states. Existing security and anti-enumeration behavior stays intact.",
+      "Locale choice persists according to shipped ADR-0029/current language contract rather than flipping when a canonical unprefixed link opens."
+    ],
+    "proof": "Guest action→auth→target for object/space/community/bookmark, invalid return URL, expired reset and keyboard/autofill scenarios; verify no unauthorized destination and no durable browser journal data.",
+    "ref": "airbnb",
+    "priority": 3
+  },
+  {
+    "key": "31",
+    "title": "Redesign consent, privacy and member/owner erasure workflows",
+    "findings": [
+      4,
+      37,
+      44
+    ],
+    "deps": [
+      "02",
+      "07",
+      "30"
+    ],
+    "paths": [
+      "apps/web/src/lib/privacy/",
+      "apps/web/src/app/[locale]/privacy/",
+      "apps/web/src/app/(default)/first-publication-disclosure/",
+      "apps/web/src/app/(default)/erasure/",
+      "apps/web/src/app/(default)/support/",
+      "apps/web/src/app/(default)/garden/privacy/erasure-requests/"
+    ],
+    "outcome": "Trust surfaces communicate real choices and consequences while keeping public reading accessible. The owner can understand and process erasure requests with accurate consequences and clear state while existing deletion policy remains authoritative.",
+    "criteria": [
+      "Reduce consent obstruction using an accessible responsive placement. Preserve the existing requirement that undecided visitors see the notice on every page until a choice; no silent acceptance or hidden rejection.",
+      "Choice controls remain equally understandable, keyboard reachable and usable at 320px/zoom. The overlay must not cover focused primary content indefinitely; test mobile safe areas.",
+      "Privacy/disclosure/support follow reader-oriented typography and corrected factual content from task 02. Link to detailed explanations instead of showing database/queue jargon in the main flow.",
+      "Erasure request describes scope, current retention and actual receipt/status; distinguish deleting an entry from erasing account-associated data and external cached copies.",
+      "Keep token/verification failure, pending, accepted and completed states honest. Do not implement a destructive schema or bulk purge under UX authorization.",
+      "Preserve consent-based analytics exclusions and first-publication acceptance logic.",
+      "List requests with appropriate minimal identity, received date, verification state and next permissible action; keep sensitive details limited to needed role-protected views.",
+      "Explain queue/processing/completed/failed state in plain language. Technical references may be available as secondary diagnostics rather than primary instructions.",
+      "Destructive confirmation must describe actual scope; never implement bulk purge or destructive schema changes under redesign authorization.",
+      "Retry follows existing idempotent lifecycle and does not manufacture completion. Preserve audit receipts and retention behavior.",
+      "Cover empty/populated/error states, keyboard action flow, mobile tables and owner-role rejection for ordinary members."
+    ],
+    "proof": "Undecided/accepted/rejected consent on multiple public routes, mobile zoom, keyboard and no-JS behavior; seeded erasure/support states and a content-to-contract reconciliation.\n\nSeed lifecycle fixtures and demonstrate safe cancel/failed retry/read-only state transitions. Use approved controlled environment for mutation proof; report production approval requirements separately.",
+    "ref": "airbnb",
+    "priority": 3,
+    "mergedFrom": [
+      "35"
+    ]
+  },
+  {
+    "key": "32",
+    "title": "Rebuild owner catalogue curation and sources as focused work queues",
+    "findings": [
+      38,
+      39,
+      40
+    ],
+    "deps": [
+      "07",
+      "23"
+    ],
+    "paths": [
+      "apps/web/src/app/(default)/garden/catalog/queue/",
+      "apps/web/src/app/(default)/garden/catalog/sources/",
+      "apps/web/src/app/(default)/garden/catalog/catalog-operator-shell.tsx"
+    ],
+    "outcome": "The sealed owner can review catalogue issues and source health in production with clear next actions and trustworthy status.",
+    "criteria": [
+      "Separate curation queue work from source diagnostics; use consistent tables/detail panes with identity, reason, state and one primary review action.",
+      "Owner access stays behind server role checks and account utilities. No public leakage and no resurrected separate admin/health page.",
+      "Partial source timeout affects only that source/section, with retry and freshness metadata; other useful information remains available.",
+      "Show sample size and time window for latency statistics; suppress or qualify P95 from one observation rather than presenting false precision.",
+      "Provide accessible table/list alternatives on mobile, keyboard row actions and readable long identifiers without page overflow.",
+      "Keep existing match/merge/source mutation semantics and confirmation boundaries; no provider changes or destructive data cleanup under this UI issue."
+    ],
+    "proof": "Populated/empty/partial-timeout fixtures, one-sample metric, ordinary-user rejection and owner keyboard review. Verify bounded settleSection behavior on hard load, not only client navigation.",
+    "ref": "threads",
+    "priority": 3
+  }
+]

@@ -1,0 +1,33 @@
+- dialog "Фильтры журналов":
+  - heading "Фильтры журналов" [level=2]
+  - paragraph: Выберите фильтры и примените их — результаты под ними.
+  - generic: Живой объект
+  - combobox "Живой объект" [active]:
+    - option "Все объекты" [selected]
+    - option "Растения"
+    - option "Животные"
+  - generic: Идентичность
+  - combobox "Идентичность":
+    - option "Все идентичности" [selected]
+    - option "Solanum lycopersicum L. (9)"
+    - option "Apis mellifera (2)"
+  - generic: Тема или проблема
+  - combobox "Тема или проблема":
+    - option "Все темы" [selected]
+    - option "Растения (9)"
+    - option "Животные (2)"
+  - generic: Сезон
+  - combobox "Сезон":
+    - option "Все сезоны" [selected]
+    - option "Зима"
+    - option "Весна"
+    - option "Лето"
+    - option "Осень"
+  - generic: Безопасный регион
+  - combobox "Безопасный регион":
+    - option "Все публичные регионы" [selected]
+  - link "Сбросить всё":
+    - /url: /ru/journals
+  - button "Применить":
+    - generic: Применить
+  - button "Сбросить всё":

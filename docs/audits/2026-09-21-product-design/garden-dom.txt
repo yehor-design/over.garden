@@ -1,0 +1,377 @@
+- link "Перейти к основному содержанию":
+  - /url: "#main-content"
+- banner:
+  - link "OverGarden":
+    - /url: /ru
+    - generic: OverGarden
+  - button "Поиск":
+    - generic: Поиск
+    - generic: ⌘K
+  - navigation "Основная навигация":
+    - list:
+      - link "Лента":
+        - /url: /ru
+        - generic: Лента
+      - link "Каталог":
+        - /url: /ru/catalog
+        - generic: Каталог
+      - link "Журналы":
+        - /url: /ru/journals
+        - generic: Журналы
+      - link "Знания":
+        - /url: /ru/knowledge
+        - generic: Знания
+  - navigation "Моё":
+    - list:
+      - link "Мой сад":
+        - /url: /garden
+        - generic: Мой сад
+      - link "Лента подписок":
+        - /url: /ru/feed
+        - generic: Лента подписок
+      - link "Уведомления":
+        - /url: /ru/notifications
+        - generic: Уведомления
+      - link "Закладки":
+        - /url: /ru/bookmarks
+        - generic: Закладки
+      - link "Список желаний":
+        - /url: /ru/wishlist
+        - generic: Список желаний
+      - link "Заявки о происхождении":
+        - /url: /garden/lineage/claims
+        - generic: Заявки о происхождении
+  - link "Новая запись":
+    - /url: /garden#first-entry-composer
+    - generic: Новая запись
+  - separator
+  - button "Аккаунт":
+    - text: Аккаунт
+- main:
+  - paragraph: Мой сад
+  - heading "Пространство сада" [level=1]
+  - paragraph: Ваши живые объекты, последние изменения и следующее действие в журнале в одном личном месте.
+  - region "Что требует внимания":
+    - heading "Что требует внимания" [level=2]
+    - paragraph: Объекты, которым давно не добавляли наблюдений, и те, что ещё ждут первой записи.
+    - generic: "Требуют внимания: 4"
+    - paragraph: Обновите Бджолина сім’я
+    - paragraph: С последнего прямого обновления прошло достаточно времени, поэтому свежее наблюдение восстановит непрерывность истории.
+    - link "Добавить обновление":
+      - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6#follow-up-composer
+      - text: Добавить обновление
+    - link "Добавить объект":
+      - /url: "#first-entry-composer"
+      - text: Добавить объект
+    - list:
+      - paragraph:
+        - link "Пчелно семейство":
+          - /url: /garden/objects/9f16ff2f-6526-585e-9c04-3a7a87c87dca
+      - paragraph:
+        - generic: 104 дн. с обновления
+        - text: Животное · Редакционна градина
+      - paragraph: "Вид растения: Apis mellifera · Сопоставлено с каталогом · 1 запись"
+      - link "Добавить обновление":
+        - /url: /garden/objects/9f16ff2f-6526-585e-9c04-3a7a87c87dca#follow-up-composer
+        - text: Добавить обновление
+      - paragraph:
+        - link "Домат":
+          - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2
+      - paragraph:
+        - generic: 96 дн. с обновления
+        - text: Растение · Редакционна градина
+      - paragraph: "Вид растения: Solanum lycopersicum · Сопоставлено с каталогом · 4 записи"
+      - link "Добавить обновление":
+        - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2#follow-up-composer
+        - text: Добавить обновление
+      - paragraph:
+        - link "Бджолина сім’я":
+          - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6
+      - paragraph:
+        - generic: 105 дн. с обновления
+        - text: Животное · Редакційний город
+      - paragraph: "Вид растения: Apis mellifera · Сопоставлено с каталогом · 1 запись"
+      - link "Добавить обновление":
+        - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6#follow-up-composer
+        - text: Добавить обновление
+      - paragraph:
+        - link "Томат":
+          - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - paragraph:
+        - generic: 20 дн. с обновления
+        - text: Растение · Редакційний город
+      - paragraph: "Вид растения: Solanum lycopersicum · Сопоставлено с каталогом · 5 записей"
+      - link "Добавить обновление":
+        - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7#follow-up-composer
+        - text: Добавить обновление
+  - region "Последние события":
+    - heading "Последние события" [level=2]
+    - paragraph: Самые новые датированные записи из журналов объектов и пространств. Приватный текст в этом обзоре не повторяется.
+    - list:
+      - paragraph:
+        - link "Томат - Sep 1":
+          - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - paragraph: Томат · Журнал объекта
+      - paragraph: 1 сент. 2026 г.
+      - paragraph:
+        - link "Избрана корица, която не зависи от реда":
+          - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2
+      - paragraph: Домат · Журнал объекта
+      - paragraph: 17 июн. 2026 г.
+      - paragraph:
+        - link "Обкладинка як сталий орієнтир сезону":
+          - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - paragraph: Томат · Журнал объекта
+      - paragraph: 16 июн. 2026 г.
+      - paragraph:
+        - link "Кратък и отговорен запис след преглед на кошер":
+          - /url: /garden/objects/9f16ff2f-6526-585e-9c04-3a7a87c87dca
+      - paragraph: Пчелно семейство · Журнал объекта
+      - paragraph: 9 июн. 2026 г.
+      - paragraph:
+        - link "Що записувати після огляду вулика":
+          - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6
+      - paragraph: Бджолина сім’я · Журнал объекта
+      - paragraph: 8 июн. 2026 г.
+      - paragraph:
+        - link "Наблюдение, действие и следваща проверка":
+          - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2
+      - paragraph: Домат · Журнал объекта
+      - paragraph: 4 июн. 2026 г.
+      - paragraph:
+        - link "Три сигнали перед зав’язуванням плодів":
+          - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - paragraph: Томат · Журнал объекта
+      - paragraph: 3 июн. 2026 г.
+      - paragraph:
+        - link "Поливане според почвата, не според календара":
+          - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2
+      - paragraph: Домат · Журнал объекта
+      - paragraph: 27 мая 2026 г.
+  - region "Живые объекты":
+    - heading "Живые объекты" [level=2]
+    - paragraph: Растения, животные и пчелиные семьи находятся в одном рабочем списке с подсказкой о последнем событии.
+    - text: Растения 2
+    - text: Животные 2
+    - list:
+      - img "Дървен кошер сред зелена трева"
+      - paragraph:
+        - link "Пчелно семейство":
+          - /url: /garden/objects/9f16ff2f-6526-585e-9c04-3a7a87c87dca
+      - paragraph:
+        - generic: 104 дн. с обновления
+        - text: Животное · Редакционна градина
+      - paragraph: "Вид растения: Apis mellifera · Сопоставлено с каталогом · 1 запись"
+      - link "Добавить обновление":
+        - /url: /garden/objects/9f16ff2f-6526-585e-9c04-3a7a87c87dca#follow-up-composer
+        - text: Добавить обновление
+      - img "Домати растат върху растение в оранжерия"
+      - paragraph:
+        - link "Домат":
+          - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2
+      - paragraph:
+        - generic: 96 дн. с обновления
+        - text: Растение · Редакционна градина
+      - paragraph: "Вид растения: Solanum lycopersicum · Сопоставлено с каталогом · 4 записи"
+      - link "Добавить обновление":
+        - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2#follow-up-composer
+        - text: Добавить обновление
+      - img "Бджоли літають біля дерев’яного вулика"
+      - paragraph:
+        - link "Бджолина сім’я":
+          - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6
+      - paragraph:
+        - generic: 105 дн. с обновления
+        - text: Животное · Редакційний город
+      - paragraph: "Вид растения: Apis mellifera · Сопоставлено с каталогом · 1 запись"
+      - link "Добавить обновление":
+        - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6#follow-up-composer
+        - text: Добавить обновление
+      - img "Томат journal photo"
+      - paragraph:
+        - link "Томат":
+          - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - paragraph:
+        - generic: 20 дн. с обновления
+        - text: Растение · Редакційний город
+      - paragraph: "Вид растения: Solanum lycopersicum · Сопоставлено с каталогом · 5 записей"
+      - link "Добавить обновление":
+        - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7#follow-up-composer
+        - text: Добавить обновление
+  - region "Пространства":
+    - heading "Пространства" [level=2]
+    - paragraph: Пространства объединяют связанные объекты, но первый объект можно добавить без предварительной настройки структуры.
+    - list:
+      - paragraph: Редакционна градина
+      - paragraph: 2 объекта · 1 растение · 1 животное
+      - link "Открыть журнал":
+        - /url: /garden?space=c9d1ea9d-32af-51cf-9be6-8743ae3234be#space-journal
+        - text: Открыть журнал
+      - paragraph: Редакційний город
+      - paragraph: 2 объекта · 1 растение · 1 животное
+      - link "Открыть журнал":
+        - /url: /garden?space=6de855ee-4ebc-5013-9785-f0daf910f852#space-journal
+        - text: Открыть журнал
+  - paragraph:
+    - generic: "Объекты: 4"
+    - generic: "Пространства: 2"
+  - region "Добавить живой объект":
+    - heading "Добавить живой объект" [level=2]
+    - paragraph: Начните узнаваемую историю растения, животного или пчелиной семьи. Пространство создаётся тем же путём, поэтому настройка не блокирует первую полезную заметку.
+    - list "Три шага до первой записи":
+      - generic: "1"
+      - generic: Назовите объект и, если хотите, выберите его из каталога.
+      - generic: "2"
+      - generic: Опишите одно наблюдение с датой — то, что видите сегодня.
+      - generic: "3"
+      - generic: Опубликуйте. Запись сразу становится публичной и попадает в поиск.
+    - status: До публикации текст и фото остаются только в этой вкладке. Обновление или закрытие страницы отбросит их.
+    - group "Тип живого объекта":
+      - generic: Тип живого объекта
+      - button "Растение Деревья, цветы, культуры" [pressed]:
+        - generic: Растение
+        - generic: Деревья, цветы, культуры
+      - button "Животное Ульи, птица, домашние и сельскохозяйственные животные":
+        - generic: Животное
+        - generic: Ульи, птица, домашние и сельскохозяйственные животные
+    - generic: Название
+    - combobox "Название"
+    - paragraph: Выберите вид, сорт или породу из списка или добавьте своё название. Стрелки вверх и вниз двигают список, Enter выбирает, Escape закрывает список.
+    - paragraph
+    - generic: Соответствия каталогу пока нет · Можно безопасно сохранить и сопоставить позже
+    - button "Оставить без соответствия"
+    - generic: Пространство
+    - combobox "Пространство":
+      - option "Редакционна градина" [selected]
+      - option "Создать новое пространство"
+    - generic: Первое обновление
+    - textbox "Содержимое записи":
+      - paragraph: Как прошёл день в саду? Нажмите «/» для команд
+    - button "Подсказки и сокращения":
+      - text: Подсказки и сокращения
+    - status
+    - region "Обложка":
+      - heading "Обложка" [level=2]
+      - paragraph: Необязательно. Без выбора обложкой станет первое фото в истории.
+      - paragraph: "Выбрано: Автоматически"
+      - group "Обложка":
+        - button "Автоматически" [pressed]:
+          - generic: Автоматически
+        - button "Отдельное фото обложки":
+          - generic: Отдельное фото обложки
+        - button "Без обложки":
+          - generic: Без обложки
+      - paragraph: Добавьте фото в историю, чтобы выбрать его обложкой.
+    - generic: Необязательное фото
+    - button "Выбрать фото":
+      - text: Выбрать фото
+    - paragraph: "Необязательно: JPEG, PNG, WebP, HEIC или HEIF до 50 МиБ."
+    - generic "Больше подробностей каталог, дата, конфиденциальность, темы":
+      - text: Больше подробностей
+      - generic: каталог, дата, конфиденциальность, темы
+    - status: До публикации текст и фото остаются только в этой вкладке. Обновление или закрытие страницы отбросит их.
+    - paragraph: Запись сразу становится публичной и попадает в поиск. Черновиков нет.
+    - button "Опубликовать":
+      - text: Опубликовать
+    - button "Отменить":
+      - generic: Отменить
+  - paragraph: Инструменты журнала пространства
+  - heading "Редакционна градина" [level=2]
+  - paragraph: Одна заметка может упоминать несколько объектов в этом пространстве.
+  - generic: "Показано последних записей пространства: 0"
+  - status: До публикации текст и фото остаются только в этой вкладке. Обновление или закрытие страницы отбросит их.
+  - generic: Заголовок
+  - textbox "Что изменилось в этом пространстве?"
+  - generic: Дата
+  - textbox: 2026-09-21
+  - generic: История
+  - textbox "Содержимое записи":
+    - paragraph: Как прошёл день в саду? Нажмите «/» для команд
+  - button "Подсказки и сокращения":
+    - text: Подсказки и сокращения
+  - status
+  - region "Обложка":
+    - heading "Обложка" [level=2]
+    - paragraph: Необязательно. Без выбора обложкой станет первое фото в истории.
+    - paragraph: "Выбрано: Автоматически"
+    - group "Обложка":
+      - button "Автоматически" [pressed]:
+        - generic: Автоматически
+      - button "Отдельное фото обложки":
+        - generic: Отдельное фото обложки
+      - button "Без обложки":
+        - generic: Без обложки
+    - paragraph: Добавьте фото в историю, чтобы выбрать его обложкой.
+  - group "Упомянутые объекты":
+    - generic: Упомянутые объекты
+    - checkbox "Пчелно семейство Животное · Apis mellifera"
+    - generic: Пчелно семейство
+    - generic: Животное · Apis mellifera
+    - checkbox "Домат Растение · Solanum lycopersicum"
+    - generic: Домат
+    - generic: Растение · Solanum lycopersicum
+  - paragraph: Запись сразу становится публичной и попадает в поиск. Черновиков нет.
+  - button "Опубликовать":
+    - generic: Опубликовать
+  - paragraph: Записей на уровне пространства пока нет.
+- contentinfo:
+  - paragraph: "Публичный журнал садоводства: каждая запись открыта и видна в поиске."
+  - navigation "Выбор языка интерфейса":
+    - generic "Сменить язык":
+      - generic: RU
+  - navigation "Навигация в подвале":
+    - list:
+      - link "Каталог":
+        - /url: /ru/catalog
+      - link "Конфиденциальность":
+        - /url: /ru/privacy
+      - link "Поддержка":
+        - /url: /support
+      - link "Раскрытие первой публикации":
+        - /url: /ru/first-publication-disclosure
+  - paragraph: Источники данных
+  - paragraph: Названия организмов — из Catalogue of Life; реестровые данные — из EPPO Global Database. Фотографии принадлежат их авторам.
+- complementary "Дополнительный контекст":
+  - heading "Следующее действие" [level=2]
+  - list:
+    - link "Добавить обновление":
+      - /url: /garden/objects/88fcda30-d3e9-527c-93a7-1b5c4c0caba6#follow-up-composer
+      - generic: Добавить обновление
+  - heading "Последние события" [level=2]
+  - list:
+    - link "Томат - Sep 1 1 сент.":
+      - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - generic: Томат - Sep 1
+      - generic: 1 сент.
+    - link "Избрана корица, която не зависи от реда 17 июн.":
+      - /url: /garden/objects/614121b8-59bc-5859-993a-0677574c6ff2
+      - generic: Избрана корица, която не зависи от реда
+      - generic: 17 июн.
+    - link "Обкладинка як сталий орієнтир сезону 16 июн.":
+      - /url: /garden/objects/a34a3e5d-ac80-5203-96ae-b9d8fa7eeef7
+      - generic: Обкладинка як сталий орієнтир сезону
+      - generic: 16 июн.
+  - heading "Входящие" [level=2]
+  - list:
+    - link "Уведомления 0":
+      - /url: /ru/notifications
+      - generic: Уведомления
+      - generic: "0"
+    - link "Запросы о происхождении 0":
+      - /url: /garden/lineage/claims
+      - generic: Запросы о происхождении
+      - generic: "0"
+  - heading "Конфиденциальность" [level=2]
+  - list:
+    - link "Настройки конфиденциальности":
+      - /url: /ru/privacy
+      - generic: Настройки конфиденциальности
+- dialog "Согласие на использование аналитики":
+  - paragraph: Мы используем Google Tag Manager для аналитики только на публичных, юридических страницах и страницах поддержки, чтобы понять, что помогает садоводам находить OverGarden. С согласия Microsoft Clarity также может предоставлять сведения о сессиях на этих же страницах. Эти инструменты не работают в личном саду, аутентификации, админке, приглашениях, удалении данных, журнале, происхождении, API или callback-маршрутах.
+  - button "Принять аналитику":
+    - generic: Принять аналитику
+  - button "Отклонить":
+    - generic: Отклонить
+- alert
+- status
+- status

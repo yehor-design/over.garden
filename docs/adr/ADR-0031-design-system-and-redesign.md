@@ -16,6 +16,42 @@
   ADR-0029 (addresses; a redesign never changes a permalink),
   `docs/INTERFACE_LOCALE_CONTRACT.md` (markets and locales).
 
+## Amendment — complete product redesign, 2026-09-21
+
+Accepted by the owner, implemented as decisions by OVE-475; runtime work remains
+in OVE-476–OVE-506, with OVE-478 last. This amendment overrides conflicting
+2026-09-17 clauses below, which retain their historical explanation.
+
+- D3: Threads (Meta) is the primary light visual grammar. vc.ru supplies a
+  centered three-column group and applicable feed/topic/conversation patterns.
+  Airbnb supplies progressive creation with one active question and editable
+  completed answers. Use the observed links in the execution contract.
+- D4: one centered max-1280px group: 208px navigation, fluid max-704px main,
+  optional 280px context and 24px gaps; desktop and mobile navigation follow
+  INFORMATION_ARCHITECTURE.md. My garden owns spaces and objects; Explore owns
+  catalogue/reference/community/knowledge discovery. Rails never stretch to the
+  opposite viewport edges. Historical widths are not acceptance constraints.
+- D8: the owner explicitly authorizes new screens, moving functions and radical
+  regrouping for this redesign. No repeat product approval is required for the
+  route/function matrix. Existing security/data/public-address laws remain.
+- D9: WCAG 2.2 AA requires automated AND manual evidence. Earlier single-page
+  measurements are not evidence of current whole-product conformance.
+- D10: Thiings selection across the collection is reaffirmed without a purchase
+  or license-review gate. The recorded provider facts and existing no-credit
+  owner decision remain; no fictitious license receipt is created.
+- D11: the fixed 708px composer and 56px gutter are superseded by ADR-0028 D3's
+  responsive amendment; document blocks, accessibility and persistence stay.
+- D13: Phosphor replaces Lucide for all interface controls, including editor and
+  owner tools. Real brand marks and authored emoji are content exceptions.
+- D14: prioritize acknowledged writing to the correct owned space/object, not
+  minimum clicks with a hidden default. Contextual launch 1 activation; global
+  recent destination open+select 2; typing/media/Publish counted separately.
+
+Source/transition authority: `../redesign/2026-09-21/INFORMATION_ARCHITECTURE.md`,
+`../redesign/2026-09-21/EXECUTION_CONTRACT.md`, and the dated audit. Hypotheses
+are not claimed user-research results. OVE-475 ships the decision and executable
+wireflow model, not a claim that all new production behavior already exists.
+
 ## Context
 
 The interface was never designed. It accreted across twenty-six slices, each of

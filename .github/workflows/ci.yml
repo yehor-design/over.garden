@@ -75,6 +75,9 @@ jobs:
         uses: ./.github/actions/web-setup
 
 
+      - name: Verify accepted redesign wireflows
+        run: node --test ../../docs/redesign/2026-09-21/wireflows/model.test.mjs
+
       - name: Verify fresh-bootstrap public identity recovery contract
         run: pnpm smoke:public-identity
 

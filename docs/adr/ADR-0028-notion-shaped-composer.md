@@ -97,6 +97,18 @@ repairs that rather than making the entry unrenderable.
 
 ### D3. Notion's canvas, OverGarden's tokens
 
+
+**Amended 2026-09-21 (owner-authorized complete redesign).** Threads now governs
+the focused writing frame, with one visible owned destination, date and public
+publication action. Keep Lexical, JournalDocumentV1 and every supported block,
+mark, keyboard and accessible menu capability. The fixed 708px canvas and 56px
+gutter below are historical, superseded by the responsive 704px content cap,
+fluid padding and compact focusable block controls on narrow screens in DESIGN.md.
+Advanced formatting remains progressively available through ordinary controls;
+removing a permanent toolbar must never make slash/drag the only way to act.
+This amendment does not change persistence or add drafts, dictation or offline
+behavior. The following original dimensions describe the prior design.
+
 The composer adopts Notion's spatial and interaction model:
 
 - one 708 px column with a 56 px gutter — Notion's own numbers, and 56 px is

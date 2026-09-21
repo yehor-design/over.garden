@@ -1,0 +1,675 @@
+- link "Към основното съдържание":
+  - /url: "#main-content"
+- banner:
+  - link "OverGarden":
+    - /url: /bg
+    - generic: OverGarden
+  - button "Търсене":
+    - generic: Търсене
+    - generic: ⌘K
+  - navigation "Основна навигация":
+    - list:
+      - link "Поток":
+        - /url: /bg
+        - generic: Поток
+      - link "Каталог":
+        - /url: /bg/catalog
+        - generic: Каталог
+      - link "Дневници":
+        - /url: /bg/journals
+        - generic: Дневници
+      - link "Знания":
+        - /url: /bg/knowledge
+        - generic: Знания
+  - link "Нов запис":
+    - /url: /auth/sign-in?next=%2Fgarden%3FauthIntent%3Dcreate_entry%23first-entry-composer&intent=create_entry
+    - generic: Нов запис
+  - separator
+  - link "Вход":
+    - /url: /auth/sign-in?next=%2Fcatalog
+    - text: Вход
+- main:
+  - paragraph: Каталог
+  - heading "Каталог на организмите" [level=1]
+  - paragraph: Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.
+  - generic: Търсене в каталога
+  - searchbox "Търсене в каталога"
+  - button "Търсене":
+    - text: Търсене
+  - generic: Царство
+  - combobox "Царство":
+    - option "Всички царства" [selected]
+    - option "Растения (65 811)"
+    - option "Животни (27 640)"
+    - option "Гъби (6250)"
+    - option "Бактерии (979)"
+    - option "Хромисти (498)"
+    - option "Вируси (339)"
+    - option "Протозои (89)"
+    - option "Археи (13)"
+  - generic: Ранг
+  - combobox "Ранг":
+    - option "Всички рангове" [selected]
+    - option "Вид (85 629)"
+    - option "Сорт (15 905)"
+    - option "Подвид (62)"
+    - option "Разновидност (18)"
+    - option "Порода (5)"
+  - generic: Регистър
+  - combobox "Регистър":
+    - option "Всеки" [selected]
+    - option "Регистър на Украйна (15 415)"
+    - option "Регистър на ЕС (766)"
+  - generic: Записи на градинари
+  - combobox "Записи на градинари":
+    - option "Всички организми" [selected]
+    - option "Само тези със записи (2)"
+  - combobox "Подредба":
+    - option "По име" [selected]
+    - option "Първо със записи"
+  - navigation "По буква":
+    - list:
+      - link "Всички букви":
+        - /url: /bg/catalog
+      - link "a":
+        - /url: /bg/catalog?letter=a
+      - link "b":
+        - /url: /bg/catalog?letter=b
+      - link "c":
+        - /url: /bg/catalog?letter=c
+      - link "d":
+        - /url: /bg/catalog?letter=d
+      - link "e":
+        - /url: /bg/catalog?letter=e
+      - link "f":
+        - /url: /bg/catalog?letter=f
+      - link "g":
+        - /url: /bg/catalog?letter=g
+      - link "h":
+        - /url: /bg/catalog?letter=h
+      - link "i":
+        - /url: /bg/catalog?letter=i
+      - link "j":
+        - /url: /bg/catalog?letter=j
+      - link "k":
+        - /url: /bg/catalog?letter=k
+      - link "l":
+        - /url: /bg/catalog?letter=l
+      - link "m":
+        - /url: /bg/catalog?letter=m
+      - link "n":
+        - /url: /bg/catalog?letter=n
+      - link "o":
+        - /url: /bg/catalog?letter=o
+      - link "p":
+        - /url: /bg/catalog?letter=p
+      - link "q":
+        - /url: /bg/catalog?letter=q
+      - link "r":
+        - /url: /bg/catalog?letter=r
+      - link "s":
+        - /url: /bg/catalog?letter=s
+      - link "t":
+        - /url: /bg/catalog?letter=t
+      - link "u":
+        - /url: /bg/catalog?letter=u
+      - link "v":
+        - /url: /bg/catalog?letter=v
+      - link "w":
+        - /url: /bg/catalog?letter=w
+      - link "x":
+        - /url: /bg/catalog?letter=x
+      - link "y":
+        - /url: /bg/catalog?letter=y
+      - link "z":
+        - /url: /bg/catalog?letter=z
+      - link "#":
+        - /url: /bg/catalog?letter=%23
+  - heading "Организми" [level=2]
+  - paragraph: 101 619 организма
+  - list:
+    - paragraph:
+      - link "007P":
+        - /url: /bg/species/zea-mays/007p
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "01ДКД2":
+        - /url: /bg/species/zea-mays/01dkd2
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "01ДКД2ЦМС":
+        - /url: /bg/species/zea-mays/01dkd2tsms
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "01ІНЛ1":
+        - /url: /bg/species/zea-mays/01inl1
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "03сдх0247":
+        - /url: /bg/species/zea-mays/03sdkh0247
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "05сдх0054":
+        - /url: /bg/species/zea-mays/05sdkh0054
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "063491 В":
+        - /url: /bg/variety/063491-v
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "06цдх0131":
+        - /url: /bg/species/zea-mays/06tsdkh0131
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "06цдх0766":
+        - /url: /bg/species/zea-mays/06tsdkh0766
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "0911СДМС":
+        - /url: /bg/species/zea-mays/0911sdms
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "0997":
+        - /url: /bg/species/zea-mays/0997
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "0997ВХА":
+        - /url: /bg/species/zea-mays/0997vkha
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "0997СДМС":
+        - /url: /bg/species/zea-mays/0997sdms
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10":
+        - /url: /bg/species/helianthus-annuus/10
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1002Б":
+        - /url: /bg/species/helianthus-annuus/1002b
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1003Л":
+        - /url: /bg/species/helianthus-annuus/1003l
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1018Л КЛП":
+        - /url: /bg/species/helianthus-annuus/1018l-klp
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1021Л КЛП":
+        - /url: /bg/species/helianthus-annuus/1021l-klp
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10233Р":
+        - /url: /bg/species/helianthus-annuus/10233r
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1025Л":
+        - /url: /bg/species/helianthus-annuus/1025l
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10357":
+        - /url: /bg/species/helianthus-annuus/10357
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10359":
+        - /url: /bg/species/helianthus-annuus/10359
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10362":
+        - /url: /bg/species/helianthus-annuus/10362
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1043Л КЛП":
+        - /url: /bg/species/helianthus-annuus/1043l-klp
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1044Л СУ":
+        - /url: /bg/species/helianthus-annuus/1044l-su
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1046Х СУ":
+        - /url: /bg/species/helianthus-annuus/1046kh-su
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1047 Л КЛП":
+        - /url: /bg/species/helianthus-annuus/1047-l-klp
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10517 А":
+        - /url: /bg/species/helianthus-annuus/10517-a
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1058ВХА":
+        - /url: /bg/species/zea-mays/1058vkha
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "10595 Р":
+        - /url: /bg/species/helianthus-annuus/10595-r
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1064":
+        - /url: /bg/species/zea-mays/1064
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1064СДМС":
+        - /url: /bg/species/zea-mays/1064sdms
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1111 А":
+        - /url: /bg/species/helianthus-annuus/1111-a
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "113 Р":
+        - /url: /bg/species/helianthus-annuus/113-r
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "115ЖМ745":
+        - /url: /bg/species/zea-mays/115zhm745
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "118МЦ248":
+        - /url: /bg/species/zea-mays/118mts248
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "118 НС":
+        - /url: /bg/species/zea-mays/118-ns
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "11 TP 077":
+        - /url: /bg/species/helianthus-annuus/11-tp-077
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "11С0201":
+        - /url: /bg/species/zea-mays/11s0201
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "11С0201 ССР2151":
+        - /url: /bg/species/zea-mays/11s0201-ssr2151
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "120337Б":
+        - /url: /bg/variety/120337b
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "12-102 РЗ F1":
+        - /url: /bg/species/cucumis-sativus/12-102-rz-f1
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "12Ф04":
+        - /url: /bg/species/helianthus-annuus/12f04
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "12Ф06":
+        - /url: /bg/species/zea-mays/12f06
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "13013":
+        - /url: /bg/species/helianthus-annuus/13013
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "13К25":
+        - /url: /bg/species/helianthus-annuus/13k25
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "14":
+        - /url: /bg/species/helianthus-annuus/14
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "14271":
+        - /url: /bg/species/helianthus-annuus/14271
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "15036":
+        - /url: /bg/species/helianthus-annuus/15036
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "15048":
+        - /url: /bg/species/helianthus-annuus/15048
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "15049":
+        - /url: /bg/species/helianthus-annuus/15049
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "15538М":
+        - /url: /bg/species/helianthus-annuus/15538m
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "156ЛА337":
+        - /url: /bg/species/zea-mays/156la337
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "156ЛА337Х 14Б001":
+        - /url: /bg/species/zea-mays/156la337kh-14b001
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "15718":
+        - /url: /bg/species/helianthus-annuus/15718
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "15Р":
+        - /url: /bg/species/helianthus-annuus/15r
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "162М00":
+        - /url: /bg/species/zea-mays/162m00
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "16З09А":
+        - /url: /bg/species/helianthus-annuus/16z09a
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "1710ГС3149":
+        - /url: /bg/species/sorghum-bicolor/1710hs3149
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+    - paragraph:
+      - link "172Ф00":
+        - /url: /bg/species/zea-mays/172f00
+    - paragraph:
+      - generic: Сорт
+      - generic: Регистър на Украйна
+  - navigation "Организми":
+    - button "Предишна страница" [disabled]:
+      - text: Предишна страница
+    - paragraph: Страница 1 от 1694
+    - link "Следваща страница":
+      - /url: /bg/catalog?page=2
+      - text: Следваща страница
+  - region "Сортове в държавните регистри":
+    - heading "Сортове в държавните регистри" [level=2]
+    - list:
+      - link "Zea mays 4108":
+        - /url: /bg/species/zea-mays/register
+        - text: Zea mays
+        - generic: "4108"
+      - link "Helianthus annuus L. 2437":
+        - /url: /bg/species/helianthus-annuus/register
+        - text: Helianthus annuus L.
+        - generic: "2437"
+      - link "Triticum aestivum 915":
+        - /url: /bg/species/triticum-aestivum/register
+        - text: Triticum aestivum
+        - generic: "915"
+      - link "Brassica napus 700":
+        - /url: /bg/species/brassica-napus/register
+        - text: Brassica napus
+        - generic: "700"
+      - link "Solanum lycopersicum L. 621":
+        - /url: /bg/species/solanum-lycopersicum/register
+        - text: Solanum lycopersicum L.
+        - generic: "621"
+      - link "Brassica oleracea 483":
+        - /url: /bg/species/brassica-oleracea/register
+        - text: Brassica oleracea
+        - generic: "483"
+      - link "Beta vulgaris 419":
+        - /url: /bg/species/beta-vulgaris/register
+        - text: Beta vulgaris
+        - generic: "419"
+      - link "Glycine max 373":
+        - /url: /bg/species/glycine-max/register
+        - text: Glycine max
+        - generic: "373"
+      - link "Hordeum vulgare 358":
+        - /url: /bg/species/hordeum-vulgare/register
+        - text: Hordeum vulgare
+        - generic: "358"
+      - link "Solanum tuberosum 268":
+        - /url: /bg/species/solanum-tuberosum/register
+        - text: Solanum tuberosum
+        - generic: "268"
+      - link "Cucumis sativus L. 265":
+        - /url: /bg/species/cucumis-sativus/register
+        - text: Cucumis sativus L.
+        - generic: "265"
+      - link "Capsicum annuum 256":
+        - /url: /bg/species/capsicum-annuum/register
+        - text: Capsicum annuum
+        - generic: "256"
+      - link "Allium cepa 251":
+        - /url: /bg/species/allium-cepa/register
+        - text: Allium cepa
+        - generic: "251"
+      - link "Lactuca sativa 214":
+        - /url: /bg/species/lactuca-sativa/register
+        - text: Lactuca sativa
+        - generic: "214"
+      - link "Citrullus lanatus 171":
+        - /url: /bg/species/citrullus-lanatus/register
+        - text: Citrullus lanatus
+        - generic: "171"
+      - link "Pisum sativum 163":
+        - /url: /bg/species/pisum-sativum/register
+        - text: Pisum sativum
+        - generic: "163"
+      - link "Daucus carota 148":
+        - /url: /bg/species/daucus-carota/register
+        - text: Daucus carota
+        - generic: "148"
+      - link "Cucurbita pepo 122":
+        - /url: /bg/species/cucurbita-pepo/register
+        - text: Cucurbita pepo
+        - generic: "122"
+      - link "Sorghum bicolor 117":
+        - /url: /bg/species/sorghum-bicolor/register
+        - text: Sorghum bicolor
+        - generic: "117"
+      - link "Raphanus sativus 110":
+        - /url: /bg/species/raphanus-sativus/register
+        - text: Raphanus sativus
+        - generic: "110"
+      - link "Cucumis melo 97":
+        - /url: /bg/species/cucumis-melo/register
+        - text: Cucumis melo
+        - generic: "97"
+      - link "Malus domestica 96":
+        - /url: /bg/species/malus-domestica/register
+        - text: Malus domestica
+        - generic: "96"
+      - link "Phaseolus vulgaris 85":
+        - /url: /bg/species/phaseolus-vulgaris/register
+        - text: Phaseolus vulgaris
+        - generic: "85"
+      - link "Triticum durum 76":
+        - /url: /bg/species/triticum-durum/register
+        - text: Triticum durum
+        - generic: "76"
+- contentinfo:
+  - paragraph: "Публичен дневник за градинарство: всеки запис е отворен и се вижда в търсачките."
+  - navigation "Избор на език на интерфейса":
+    - generic "Смяна на езика":
+      - generic: BG
+  - navigation "Навигация в долния колонтитул":
+    - list:
+      - link "Каталог":
+        - /url: /bg/catalog
+      - link "Поверителност":
+        - /url: /bg/privacy
+      - link "Поддръжка":
+        - /url: /support
+      - link "Разкриване на първата публикация":
+        - /url: /bg/first-publication-disclosure
+  - paragraph: Източници на данни
+  - paragraph: Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.
+- complementary "Допълнителен контекст":
+  - heading "По царства" [level=2]
+  - list:
+    - link "Растения 65811":
+      - /url: /bg/catalog?kingdom=plantae
+      - generic: Растения
+      - generic: "65811"
+    - link "Животни 27640":
+      - /url: /bg/catalog?kingdom=animalia
+      - generic: Животни
+      - generic: "27640"
+    - link "Гъби 6250":
+      - /url: /bg/catalog?kingdom=fungi
+      - generic: Гъби
+      - generic: "6250"
+    - link "Бактерии 979":
+      - /url: /bg/catalog?kingdom=bacteria
+      - generic: Бактерии
+      - generic: "979"
+    - link "Хромисти 498":
+      - /url: /bg/catalog?kingdom=chromista
+      - generic: Хромисти
+      - generic: "498"
+    - link "Вируси 339":
+      - /url: /bg/catalog?kingdom=viruses
+      - generic: Вируси
+      - generic: "339"
+    - link "Протозои 89":
+      - /url: /bg/catalog?kingdom=protozoa
+      - generic: Протозои
+      - generic: "89"
+    - link "Археи 13":
+      - /url: /bg/catalog?kingdom=archaea
+      - generic: Археи
+      - generic: "13"
+  - heading "Сортове в държавните регистри" [level=2]
+  - list:
+    - link "Zea mays 4108":
+      - /url: /bg/species/zea-mays/register
+      - generic: Zea mays
+      - generic: "4108"
+    - link "Helianthus annuus L. 2437":
+      - /url: /bg/species/helianthus-annuus/register
+      - generic: Helianthus annuus L.
+      - generic: "2437"
+    - link "Triticum aestivum 915":
+      - /url: /bg/species/triticum-aestivum/register
+      - generic: Triticum aestivum
+      - generic: "915"
+    - link "Brassica napus 700":
+      - /url: /bg/species/brassica-napus/register
+      - generic: Brassica napus
+      - generic: "700"
+    - link "Solanum lycopersicum L. 621":
+      - /url: /bg/species/solanum-lycopersicum/register
+      - generic: Solanum lycopersicum L.
+      - generic: "621"
+    - link "Brassica oleracea 483":
+      - /url: /bg/species/brassica-oleracea/register
+      - generic: Brassica oleracea
+      - generic: "483"
+- alert
