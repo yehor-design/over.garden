@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { connection } from "next/server";
 import { notFound } from "next/navigation";
 
 import {
@@ -26,6 +25,8 @@ import {
 } from "@/server/public-cache";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
+  resolvePublicSurfacePayload,
+  type PublicSurfaceDiscoverySource,
   resolveUnresolvedPublicSurfaceDiscovery,
   type PublicSurfaceDiscoveryResult,
 } from "@/server/public-surface-discovery";
@@ -36,13 +37,19 @@ import type {
   CatalogBrowsePage,
 } from "@/server/public-catalog-browse-repository";
 
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
+
 type SearchParams = Record<string, string | string[] | undefined>;
 
 type RegisterHubSpecies = { slug: string; name: string; total: number };
 
 interface PublicCatalogRouteProps {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<SearchParams>;
 }
 
 /**
@@ -64,24 +71,6 @@ export function generateStaticParams() {
   return PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
-/**
- * The catalogue is read at request time, and a read that failed is an empty
- * catalogue rather than a broken page.
- *
- * `connection()` first: it marks the scope as needing a request, so the build
- * never reaches the database. Without it `next build` runs these queries, and
- * a preview deployment — which has no `DATABASE_URL` at all — fails outright.
- * `Promise.allSettled` alone does not save it; the prerender aborts on the
- * rejection however it is handled.
- */
-async function settled<T>(work: () => Promise<T>, fallback: T): Promise<T> {
-  // A thunk, not a promise: an argument is evaluated before the call, so
-  // passing `read()` starts the query before `connection()` can postpone it.
-  await connection();
-  const [result] = await Promise.allSettled([work()]);
-  return result.status === "fulfilled" ? result.value : fallback;
-}
-
 export async function generateMetadata({
   params,
 }: PublicCatalogRouteProps): Promise<Metadata> {
@@ -89,42 +78,63 @@ export async function generateMetadata({
   if (!isPublicLocale(localeParam)) {
     return {
       title: "OverGarden",
-      robots: resolveUnresolvedPublicSurfaceDiscovery("localized_catalog_browse")
-        .decision.robots,
+      robots: resolveUnresolvedPublicSurfaceDiscovery(
+        "localized_catalog_browse",
+      ).decision.robots,
     };
   }
-  const kingdoms = await settled<CatalogBrowseKingdomSummary[]>(
-    readCatalogBrowseKingdoms,
-    [],
-  );
-  return buildCatalogSurface(localeParam, kingdoms).metadata;
+  const loaded = await resolvePublicSurfacePayload<
+    CatalogBrowseKingdomSummary[]
+  >({
+    consumerId: "localized_catalog_browse",
+    document: "static",
+    load: async () => {
+      const kingdoms = await readCatalogBrowseKingdoms();
+      return {
+        source: buildCatalogDiscoverySource(localeParam, kingdoms),
+        payload: kingdoms,
+      };
+    },
+  });
+  return buildCatalogSurface(
+    localeParam,
+    loaded.payload ?? [],
+    undefined,
+    null,
+    loaded,
+  ).metadata;
 }
 
 export async function renderPublicCatalogPage(
   locale: PublicLocale,
   searchParams: SearchParams = {},
+  phase: PublicRenderPhase = "request",
 ) {
+  await deferStaticRenderWithoutDatabase(phase);
   const request = normalizePublicCatalogBrowseRequest(searchParams);
   const unfiltered = isUnfilteredCatalogBrowseRequest(request);
-  const [kingdoms, registerHubs, page, facets] = await Promise.all([
-    settled<CatalogBrowseKingdomSummary[]>(readCatalogBrowseKingdoms, []),
-    // The register hubs are the catalogue's own substantive pages, and they
-    // belong on the door rather than inside one of its filtered views.
-    unfiltered
-      ? settled<RegisterHubSpecies[]>(
-          async () => [...(await readCatalogRegisterHubSpecies())].slice(0, 24),
-          [],
-        )
-      : Promise.resolve<RegisterHubSpecies[]>([]),
-    settled<CatalogBrowsePage | null>(
-      () => readCatalogBrowsePage(request, locale),
-      null,
-    ),
-    settled<CatalogBrowseFacetCounts | null>(
-      () => readCatalogBrowseFacets(request),
-      null,
-    ),
-  ]);
+  const [kingdomsResult, registerHubsResult, pageResult, facetsResult] =
+    await Promise.allSettled([
+      readCatalogBrowseKingdoms(),
+      unfiltered
+        ? readCatalogRegisterHubSpecies().then((rows) => [...rows].slice(0, 24))
+        : Promise.resolve<RegisterHubSpecies[]>([]),
+      readCatalogBrowsePage(request, locale),
+      readCatalogBrowseFacets(request),
+    ]);
+  if (
+    [kingdomsResult, registerHubsResult, pageResult, facetsResult].some(
+      (result) => result.status === "rejected",
+    )
+  )
+    deferStaticRenderAfterFailure(phase);
+  const kingdoms =
+    kingdomsResult.status === "fulfilled" ? kingdomsResult.value : [];
+  const registerHubs =
+    registerHubsResult.status === "fulfilled" ? registerHubsResult.value : [];
+  const page = pageResult.status === "fulfilled" ? pageResult.value : null;
+  const facets =
+    facetsResult.status === "fulfilled" ? facetsResult.value : null;
 
   // Past the last page is not a page (ADR-0029 D3).
   if (page && request.page > page.pageCount && request.page > 1) notFound();
@@ -165,22 +175,34 @@ const EMPTY_FACETS: CatalogBrowseFacetCounts = {
 
 export default async function PublicCatalogRoute({
   params,
-  searchParams,
 }: PublicCatalogRouteProps) {
-  const [{ locale: localeParam }, query] = await Promise.all([
-    params,
-    searchParams ?? Promise.resolve({} as SearchParams),
-  ]);
-  if (!isPublicLocale(localeParam)) notFound();
-  return renderPublicCatalogPage(localeParam, query);
+  const { locale } = await params;
+  if (!isPublicLocale(locale)) notFound();
+  return renderStaticPublicCatalogPage(locale);
 }
 
-function buildCatalogSurface(
+export function renderStaticPublicCatalogPage(locale: PublicLocale) {
+  return renderStaticPublicPage({
+    render: (phase) => renderPublicCatalogPage(locale, {}, phase),
+    fallback: (
+      <PublicCatalogBrowse
+        locale={locale}
+        copy={getPublicCatalogBrowseCopy(locale)}
+        request={normalizePublicCatalogBrowseRequest()}
+        page={{ cards: [], total: 0, pageCount: 1 }}
+        facets={EMPTY_FACETS}
+        kingdomTotals={{}}
+        state="loading"
+      />
+    ),
+  });
+}
+
+function buildCatalogDiscoverySource(
   locale: PublicLocale,
   kingdoms: readonly CatalogBrowseKingdomSummary[],
-  request: PublicCatalogBrowseRequest = normalizePublicCatalogBrowseRequest(),
   page: CatalogBrowsePage | null = null,
-) {
+): PublicSurfaceDiscoverySource {
   const copy = getPublicCatalogBrowseCopy(locale);
   // What the page actually lists, which is not the same thing in every view:
   // an empty listing is `noindex` (ADR-0022 D3), and describing the root's
@@ -195,17 +217,31 @@ function buildCatalogSurface(
         text: kingdoms.map((summary) => copy.kingdom[summary.kingdom]),
         ids: kingdoms.map((summary) => `kingdom:${summary.kingdom}`),
       };
-  const discovery: PublicSurfaceDiscoveryResult =
-    resolvePublicSurfaceDiscoveryForRequest({
-      consumerId: "localized_catalog_browse",
-      candidateState: "candidate",
-      visibleText: listed.text,
-      distinctPublicEntityIds: listed.ids,
-      // One canonical for every filtered view (ADR-0029 D10).
-      canonicalPath: buildPublicCatalogBrowseHref(locale),
-      servedLocale: locale,
-      equivalentLocales: [...PUBLIC_LOCALES],
-    });
+  return {
+    consumerId: "localized_catalog_browse",
+    candidateState: "candidate",
+    visibleText: listed.text,
+    distinctPublicEntityIds: listed.ids,
+    // One canonical for every filtered view (ADR-0029 D10).
+    canonicalPath: buildPublicCatalogBrowseHref(locale),
+    servedLocale: locale,
+    equivalentLocales: [...PUBLIC_LOCALES],
+  };
+}
+
+function buildCatalogSurface(
+  locale: PublicLocale,
+  kingdoms: readonly CatalogBrowseKingdomSummary[],
+  request: PublicCatalogBrowseRequest = normalizePublicCatalogBrowseRequest(),
+  page: CatalogBrowsePage | null = null,
+  discoveryOverride?: PublicSurfaceDiscoveryResult,
+) {
+  const copy = getPublicCatalogBrowseCopy(locale);
+  const discovery =
+    discoveryOverride ??
+    resolvePublicSurfaceDiscoveryForRequest(
+      buildCatalogDiscoverySource(locale, kingdoms, page),
+    );
 
   const kingdomTitle =
     request.kingdoms.length === 1

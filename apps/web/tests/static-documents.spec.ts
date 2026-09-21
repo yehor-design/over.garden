@@ -494,6 +494,62 @@ test.describe("a public page is a static document", () => {
     }
   });
 
+  test("catalog directories serve every result and control outside hidden segments", async ({
+    request,
+  }) => {
+    for (const address of [
+      "/catalog",
+      "/bg/catalog",
+      "/ru/catalog",
+      "/catalog?utm_source=proof",
+    ]) {
+      const { status, html } = await getDocument(request, address);
+      expect(status, address).toBe(200);
+      const served = readStaticDocument(html);
+      expect(served.titleInHead, address).toBe(true);
+      expect(served.heading?.hidden, address).toBe(false);
+      expect(html, address).not.toContain(
+        'data-public-catalog-state="loading"',
+      );
+      const ranges = hiddenSegments(html);
+      for (const marker of [
+        'data-public-catalog-state="',
+        'data-filter-bar-form="true"',
+        'data-catalog-card="',
+      ]) {
+        const occurrences = [...html.matchAll(new RegExp(marker, "g"))];
+        expect(occurrences.length, `${address}: ${marker}`).toBeGreaterThan(0);
+        for (const occurrence of occurrences) {
+          expect(
+            ranges.some(
+              ([start, end]) =>
+                occurrence.index! >= start && occurrence.index! < end,
+            ),
+            `${address}: ${marker}`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  test("catalog query twins honor repeated facets and are never public addresses", async ({
+    request,
+  }) => {
+    for (const address of [
+      "/catalog?kingdom=plantae",
+      "/bg/catalog?kingdom=&kingdom=plantae",
+    ]) {
+      const filtered = await getDocument(request, address);
+      expect(filtered.status, address).toBe(200);
+      expect(filtered.html, address).toMatch(
+        /<option[^>]*(?:value="plantae"[^>]*selected=""|selected=""[^>]*value="plantae")/,
+      );
+    }
+    for (const address of ["/q/catalog", "/bg/q/catalog", "/ru/q/catalog"]) {
+      expect((await getDocument(request, address)).status, address).toBe(404);
+    }
+  });
+
   test("an organism card is in the served bytes", async ({ request }) => {
     const path = `/species/${fixture.organism.speciesSlug}`;
     for (const attempt of [1, 2]) {
@@ -597,6 +653,9 @@ test.describe("a public page is a static document", () => {
         "/journals",
         "/bg/journals",
         "/ru/journals",
+        "/catalog",
+        "/bg/catalog",
+        "/ru/catalog",
         fixture.entryPath,
         `/species/${fixture.organism.speciesSlug}`,
       ]) {
@@ -693,6 +752,9 @@ test.describe("a public page is a static document", () => {
       "/bg/journals",
       "/ru/journals",
       "/catalog",
+      "/catalog?kingdom=plantae",
+      "/bg/catalog",
+      "/ru/catalog",
       "/knowledge",
       "/communities",
       `/@${fixture.handle}`,

@@ -39,6 +39,10 @@ export const PUBLIC_QUERY_TWINS: ReadonlyMap<string, readonly string[]> =
   new Map([
     ["/", ["kind", "topic", "cursor"]],
     [
+      "/catalog",
+      ["kingdom", "rank", "register", "grown", "letter", "q", "sort", "page"],
+    ],
+    [
       "/journals",
       ["q", "kind", "catalog", "topic", "season", "region", "sort", "page"],
     ],
@@ -50,7 +54,7 @@ export const PUBLIC_QUERY_TWINS: ReadonlyMap<string, readonly string[]> =
  */
 export function publicQueryTwinPath(
   pathname: string,
-  search: Pick<URLSearchParams, "get"> | string | null | undefined,
+  search: Pick<URLSearchParams, "getAll"> | string | null | undefined,
 ): string | null {
   const basePath = stripLocalePrefix(pathname).path;
   const keys = PUBLIC_QUERY_TWINS.get(basePath);
@@ -59,8 +63,10 @@ export function publicQueryTwinPath(
   const params =
     typeof search === "string" ? new URLSearchParams(search) : search;
   // A parameter that is present and empty says nothing (`/?kind=`), and the
-  // listing's own normalizer reads it as unset.
-  if (!keys.some((key) => (params.get(key) ?? "").length > 0)) return null;
+  // listing's own normalizer reads it as unset. Repeated facets must inspect
+  // every value: `?kingdom=&kingdom=plantae` is still a filtered request.
+  if (!keys.some((key) => params.getAll(key).some((value) => value.length > 0)))
+    return null;
 
   return basePath === "/"
     ? `/${PUBLIC_QUERY_TWIN_SEGMENT}`

@@ -1,0 +1,1580 @@
+{
+  "beforeMain": "18f1a4e9b91eb12e6e7a01ffda04702ade84d0d3",
+  "afterMain": "d10c002ead8962b543da3c8807185a1277430c25",
+  "deployment": "dpl_8opJcEmqnvYzFiHvDX4ZzEwm6qd9",
+  "note": "Production, real entries, fresh browser with consent unanswered. Same URL, machine and methods; three samples each. No concurrent build/test work during measurements. Numeric reports retained without screenshot payloads. Budget remains unmet.",
+  "samples": [
+    {
+      "report": "production-before-devtools-1.json.gz",
+      "stage": "before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T18:15:51.464Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4072.5,
+        "credits": {}
+      },
+      "lcpMs": 5308.702,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 149.42400006103514
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 633.7519999389649
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 4520.308
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 5.218
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-3-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,5,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "1d3cd9a50be03646a84b752a53b9139415fb75eb52313f913302f2c6b6bfaf02",
+      "storedReportSha256": "4a48a37e7f234570cad49e8826d2932b144601237945193694108699fa42dc01"
+    },
+    {
+      "report": "production-before-devtools-2.json.gz",
+      "stage": "before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T18:16:22.206Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4050.5,
+        "credits": {}
+      },
+      "lcpMs": 5348.175,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 181.63899993896484
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 630.0830000610351
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 4531.222
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 5.231
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-3-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,5,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "02a2ba08c6578ff59e403afd1cd94293715ea4edad01ddb9e27bf4a40cb82123",
+      "storedReportSha256": "88031dabe1b6c44d73b4eb796f1457c6c1e3d4dc66ebad715be591839471c8a4"
+    },
+    {
+      "report": "production-before-devtools-3.json.gz",
+      "stage": "before",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T18:16:52.964Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4097.5,
+        "credits": {}
+      },
+      "lcpMs": 5318.479,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 158.78
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 626.531
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 4528.486
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 4.682
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-3-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,5,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "662e695f49ce020b5add9c4e41f940f9c23023fb9dac3413a6248a29c9b735a4",
+      "storedReportSha256": "884c9bb5db98b69ccac5a2bcf45e3a982ffc3338a5bd833743fbda1664d8182a"
+    },
+    {
+      "report": "production-before-simulate-1.json.gz",
+      "stage": "before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T18:17:23.765Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4053,
+        "credits": {}
+      },
+      "lcpMs": 5835.895,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 149.301
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 237.039
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 111.861
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1846.538
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-4-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,5,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "76dc5d0d312759eb29e6f3fde408e637185468129cd6cc2901e5741748dbea4f",
+      "storedReportSha256": "b1e4f212afb320ff247808d184bce7afd7492cedd6ec656ebdfec55360cb026a"
+    },
+    {
+      "report": "production-before-simulate-2.json.gz",
+      "stage": "before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T18:17:37.278Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4086.5,
+        "credits": {}
+      },
+      "lcpMs": 5834.62,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 148.688
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 158.974
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 120.327
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1889.688
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-4-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,5,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "b70b90c14aea713bf3b4e0ef2a3783e1911c51d9e53ebaa2b8dd1cffb4950184",
+      "storedReportSha256": "a6ed2d08b98bbedafcb6186dc416dd63f916b61daf8ed89011aad0eacc140578"
+    },
+    {
+      "report": "production-before-simulate-3.json.gz",
+      "stage": "before",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T18:17:50.067Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4055.5,
+        "credits": {}
+      },
+      "lcpMs": 4561.425,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 145.18300006103516
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 141.97699993896484
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 123.894
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 182.047
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-4-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,5,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "40a57aee3639a0880af6b3dde9bf25ce9d21a0915c94841225eb329c0e8e37e8",
+      "storedReportSha256": "7c55111f5d3d69382e022513be65d6698dbe0aa62cd1351a23c5b0973004b442"
+    },
+    {
+      "report": "production-after-devtools-1.json.gz",
+      "stage": "after",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:00:38.800Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4077,
+        "credits": {}
+      },
+      "lcpMs": 5551.102,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 151.38900006103515
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 550.7099999389649
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 4841.726
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 7.277
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-3-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,4,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "670a567952024c71d31d2ec86ef41efebd7100e807d216078e1db9dc2926f67e",
+      "storedReportSha256": "8a13da75b6d0a42710e53776ab92cd7feab3e47d762a1a15c894c94a524341dd"
+    },
+    {
+      "report": "production-after-devtools-2.json.gz",
+      "stage": "after",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:01:09.878Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4074,
+        "credits": {}
+      },
+      "lcpMs": 5526.23,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 142.247
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 538.406
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 4838.104
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 7.473
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-3-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,4,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "fccef2a9c3647df47414e4a9b8c1776cf8a0c778220daeb6eac853e6541a49e1",
+      "storedReportSha256": "ea5784e564c2e58aaa34de7c08722235edefa9b4db9ab23be46959640d15cceb"
+    },
+    {
+      "report": "production-after-devtools-3.json.gz",
+      "stage": "after",
+      "method": "devtools",
+      "fetchTime": "2026-09-21T19:01:40.924Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 5250,
+        "pauseAfterLoadMs": 5250,
+        "networkQuietThresholdMs": 5250,
+        "cpuQuietThresholdMs": 5250,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "devtools",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4071.5,
+        "credits": {}
+      },
+      "lcpMs": 5546.079,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 167.665
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 535.281
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 4836.743
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 6.39
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-3-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,4,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "2a8fd7f496c9c4e2cb876817a86068533f2dce03d51719a17ba48251804fe41c",
+      "storedReportSha256": "e18b9eeafb3ef76c498e3f9dde5847b0c545668464f35518cc1319752afe9d2a"
+    },
+    {
+      "report": "production-after-simulate-1.json.gz",
+      "stage": "after",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:02:12.046Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4074.5,
+        "credits": {}
+      },
+      "lcpMs": 5985.134,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 148.26199993896483
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 41.89700006103516
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 145.746
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1976.439
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-4-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,4,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "949090a94b32cad2e6470108812b7151abaa071a8b6d88d07f0d07f03caabe20",
+      "storedReportSha256": "90e055027c0ed15016842320fe86a7ee132dfea935f685e964d0adb5c310fb4d"
+    },
+    {
+      "report": "production-after-simulate-2.json.gz",
+      "stage": "after",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:02:25.105Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4086.5,
+        "credits": {}
+      },
+      "lcpMs": 5386.557,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 149.012
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 34.441
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 121.307
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 1011.823
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-4-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,4,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "4faa4b30c31c6345d5a399976b88b747978a4cf09de3ac3582bb8bed55ef6e96",
+      "storedReportSha256": "7e432500e25552b136c78ea6852881b38db23f6fa7a76a2dc50208bf85549c26"
+    },
+    {
+      "report": "production-after-simulate-3.json.gz",
+      "stage": "after",
+      "method": "simulate",
+      "fetchTime": "2026-09-21T19:02:37.861Z",
+      "requestedUrl": "https://over.garden/journals",
+      "lighthouseVersion": "13.5.0",
+      "config": {
+        "output": [
+          "json"
+        ],
+        "maxWaitForFcp": 30000,
+        "maxWaitForLoad": 45000,
+        "pauseAfterFcpMs": 1000,
+        "pauseAfterLoadMs": 1000,
+        "networkQuietThresholdMs": 1000,
+        "cpuQuietThresholdMs": 1000,
+        "formFactor": "mobile",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1638.4,
+          "requestLatencyMs": 562.5,
+          "downloadThroughputKbps": 1474.5600000000002,
+          "uploadThroughputKbps": 675,
+          "cpuSlowdownMultiplier": 4
+        },
+        "throttlingMethod": "simulate",
+        "screenEmulation": {
+          "mobile": true,
+          "width": 412,
+          "height": 823,
+          "deviceScaleFactor": 1.75,
+          "disabled": false
+        },
+        "emulatedUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Mobile Safari/537.36",
+        "auditMode": false,
+        "gatherMode": false,
+        "clearStorageTypes": [
+          "file_systems",
+          "shader_cache",
+          "service_workers",
+          "cache_storage"
+        ],
+        "disableStorageReset": false,
+        "debugNavigation": false,
+        "channel": "cli",
+        "usePassiveGathering": false,
+        "disableFullPageScreenshot": false,
+        "skipAboutBlank": false,
+        "blankPage": "about:blank",
+        "ignoreStatusCode": false,
+        "locale": "en-US",
+        "blockedUrlPatterns": null,
+        "additionalTraceCategories": null,
+        "extraHeaders": null,
+        "precomputedLanternData": null,
+        "onlyAudits": null,
+        "onlyCategories": [
+          "performance"
+        ],
+        "skipAudits": null
+      },
+      "environment": {
+        "networkUserAgent": "Mozilla/5.0 (Linux; Android 11; moto g power (2022)) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36",
+        "hostUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.0.0 Safari/537.36",
+        "benchmarkIndex": 4042,
+        "credits": {}
+      },
+      "lcpMs": 4420.9235,
+      "cls": 0,
+      "lcpElement": {
+        "type": "list",
+        "items": [
+          {
+            "type": "table",
+            "headings": [
+              {
+                "key": "label",
+                "valueType": "text",
+                "label": "Subpart"
+              },
+              {
+                "key": "duration",
+                "valueType": "ms",
+                "label": "Duration"
+              }
+            ],
+            "items": [
+              {
+                "subpart": "timeToFirstByte",
+                "label": "Time to first byte",
+                "duration": 152.446
+              },
+              {
+                "subpart": "resourceLoadDelay",
+                "label": "Resource load delay",
+                "duration": 62.418
+              },
+              {
+                "subpart": "resourceLoadDuration",
+                "label": "Resource load duration",
+                "duration": 126.63
+              },
+              {
+                "subpart": "elementRenderDelay",
+                "label": "Element render delay",
+                "duration": 969.319
+              }
+            ]
+          },
+          {
+            "type": "node",
+            "lhId": "page-4-IMG",
+            "path": "1,HTML,1,BODY,3,DIV,2,DIV,1,DIV,1,DIV,0,DIV,4,MAIN,4,OL,0,LI,0,ARTICLE,2,DIV,0,IMG",
+            "selector": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+            "boundingRect": {
+              "top": 650,
+              "bottom": 934,
+              "left": 17,
+              "right": 395,
+              "width": 378,
+              "height": 284
+            },
+            "snippet": "<img sizes=\"(max-width: 767px) 100vw, 704px\" src=\"https://media.over.garden/derivatives/541cf37b-c6a3-4884-8965-dccdda391c82…\" alt=\"Томат - Sep 1\" loading=\"eager\" decoding=\"async\" fetchpriority=\"high\" class=\"object-cover absolute inset-0 h-full w-full\" style=\"object-position:50% 50%\" data-media-presentation=\"cover\" data-media-object-position=\"50% 50%\" data-media-serve-class=\"exact\">",
+            "nodeLabel": "Томат - Sep 1"
+          }
+        ]
+      },
+      "originalReportSha256": "5de6e234bca66db4eec0b6232f2f9b55ad28ccdc9b9a4383c8796181cd0f6b93",
+      "storedReportSha256": "72b315060869ce4261862956fbf706564f4834e4497db7c91d59dcf33d314aa7"
+    }
+  ]
+}

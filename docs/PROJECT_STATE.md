@@ -61,6 +61,11 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**Static catalog directory (second OVE-467 family, in progress):** the default
+catalog uses the shared static document renderer; its own filter keys select an
+internal query twin, including repeated facet values. The delivery proof and
+remaining release checks are in `docs/redesign/2026-09-21/OVE-467-CATALOG-PROOF.md`.
+
 **Static journal directory (first OVE-467 family):** the plain `/journals`
 document includes its title, controls, first photograph and cards in the visible
 served HTML. Recognized filters render through an internal `/q/journals` twin;

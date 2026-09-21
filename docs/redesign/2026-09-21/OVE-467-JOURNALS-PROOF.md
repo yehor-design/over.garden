@@ -6,7 +6,8 @@ remaining page families or the production performance work.
 ## Behavior
 
 The plain journal directory renders its content as a static document, including
-its title, first photograph preload, filter controls and entry cards. The old
+its title, filter controls and entry cards. A photograph eligible for first-screen
+priority carries its preload in the head. The old
 localized layout boundary and unprefixed loading file are removed. A failed or
 unavailable database defers through the existing `renderStaticPublicPage`
 mechanism instead of caching an error/empty response for every reader.
@@ -98,3 +99,29 @@ and diagnostics but omit redundant embedded screenshot images.
   cannot invalidate it.
 
 No production data, account settings or consent choices are changed by this work.
+
+## Production release
+
+PR #439 merged after CI run `35640381821` passed at tested head
+`dd5109474feba1811680a8d86b551ece986e2b5f`: browser shards 103 + 102 passed,
+one existing skip, no retries; web checks and Python passed. Local `main`
+and `origin/main` were synchronized to `d10c002ead8962b543da3c8807185a1277430c25`.
+Vercel `dpl_8opJcEmqnvYzFiHvDX4ZzEwm6qd9` reached READY on that exact SHA.
+
+Production `/journals` serves all eight entry cards outside hidden segments,
+with the title in head and 4,747 visible text characters, through PRERENDER/HIT.
+The first photograph is eager with high fetch priority; Vercel carries its
+preload in the HTTP `Link` header rather than an HTML link element. The sorted 18 SEO tags, title and JSON-LD are byte-identical to the
+previous production release. UK/BG/RU and `?kind=plant` return 200; the held-reveal
+probe adopts all 25 segments with no dropped segment, leftover hidden segment,
+page error or hydration error. These are read-only guest production checks;
+signed-in publication and held-reveal scenarios use isolated local/CI fixtures.
+
+Production Lighthouse CLI medians (same real data, URL and methods): applied
+LCP **5,318.48 → 5,546.08 ms**, simulated **5,834.62 → 5,386.56 ms**; CLS 0.
+The applied result worsened by 227.60 ms (4.3%); there is no production speedup
+claim and the 2 s budget remains unmet. The document-content gate passes,
+while the production performance acceptance remains open with the existing
+bundle/media work. `ove-467-journals/production-performance.json` records all
+samples and adjacent compressed reports; the HTTP and browser evidence are
+saved alongside it.
