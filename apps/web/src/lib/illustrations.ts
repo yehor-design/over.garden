@@ -39,6 +39,9 @@ export const ILLUSTRATION_KEYS = [
   "empty-wishlist",
   "empty-notifications",
   "first-entry",
+  "space-setup",
+  "object-setup",
+  "no-results",
 ] as const;
 
 export type IllustrationKey = (typeof ILLUSTRATION_KEYS)[number];
@@ -89,7 +92,26 @@ export const ILLUSTRATION_SUBJECTS: Readonly<Record<IllustrationKey, string>> =
     "empty-wishlist": "Wishlist",
     "empty-notifications": "Mailbox",
     "first-entry": "Sprout",
+    "space-setup": "Garden",
+    "object-setup": "Terracotta Pot",
+    "no-results": "Bird Watching Binoculars",
   };
+
+/** Purpose names remain stable when the selected artwork changes. */
+export const ILLUSTRATION_ROLES = {
+  "first-garden": "empty-garden",
+  "space-setup": "space-setup",
+  "object-setup": "object-setup",
+  "no-entries": "empty-journal",
+  "no-results": "no-results",
+  "setup-success": "first-entry",
+} as const satisfies Record<string, IllustrationKey>;
+
+export type IllustrationRole = keyof typeof ILLUSTRATION_ROLES;
+
+export function resolveIllustrationRole(role: IllustrationRole): Illustration {
+  return resolveIllustration(ILLUSTRATION_ROLES[role]);
+}
 
 /** The picture for a key, at its intrinsic size. */
 export function resolveIllustration(key: IllustrationKey): Illustration {

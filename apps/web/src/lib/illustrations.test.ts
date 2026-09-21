@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
@@ -30,6 +31,40 @@ function walk(directory: string, out: string[] = []): string[] {
 }
 
 describe("the illustration manifest", () => {
+  it("matches the recorded provenance and a bounded download for every shipped file", () => {
+    const manifest = JSON.parse(
+      readFileSync(
+        join(
+          APP_ROOT,
+          "../../docs/redesign/2026-09-21/ove-479/asset-manifest.json",
+        ),
+        "utf8",
+      ),
+    ) as {
+      assets: Array<{
+        key: string;
+        sha256: string;
+        bytes: number;
+        itemUrl: string;
+        sourceDownloadedAt: string;
+      }>;
+    };
+    expect(manifest.assets.map((asset) => asset.key).sort()).toEqual(
+      [...ILLUSTRATION_KEYS].sort(),
+    );
+    for (const asset of manifest.assets) {
+      const bytes = readFileSync(
+        join(APP_ROOT, "public/illustrations", `${asset.key}.webp`),
+      );
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(
+        asset.sha256,
+      );
+      expect(bytes.length).toBe(asset.bytes);
+      expect(bytes.length).toBeLessThan(40_000);
+      expect(asset.itemUrl).toMatch(/^https:\/\/www\.thiings\.co\/things\//);
+      expect(Number.isFinite(Date.parse(asset.sourceDownloadedAt))).toBe(true);
+    }
+  });
   it("is the only module that names an illustration file", () => {
     // ADR-0031 D10: the swap stays cheap only while no component knows where
     // the files live. A path anywhere else is the defect.

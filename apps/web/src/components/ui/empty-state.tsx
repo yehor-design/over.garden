@@ -1,9 +1,6 @@
 import { cn } from "@/lib/utils";
-import {
-  ILLUSTRATION_SIZES,
-  type Illustration,
-  type IllustrationSize,
-} from "@/lib/illustrations";
+import { type Illustration, type IllustrationSize } from "@/lib/illustrations";
+import { Illustration as DecorativeIllustration } from "@/components/ui/illustration";
 
 /**
  * Nothing here — and the two ways that happens are not the same state
@@ -43,7 +40,6 @@ function EmptyState({
   filters?: React.ReactNode;
   headingId?: string;
 }) {
-  const size = ILLUSTRATION_SIZES[illustrationSize];
   const showIllustration = variant === "first-run" && illustration;
   return (
     <div
@@ -58,18 +54,7 @@ function EmptyState({
       {...props}
     >
       {showIllustration ? (
-        // The heading beside it carries the meaning, so the picture is
-        // decorative and its box is reserved (DESIGN.md §2.9, §2.10).
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={illustration.src}
-          alt=""
-          width={size}
-          height={size}
-          loading="lazy"
-          decoding="async"
-          className={cn(illustrationSize === "card" ? "size-24" : "size-36")}
-        />
+        <DecorativeIllustration asset={illustration} size={illustrationSize} />
       ) : null}
       <h3
         id={headingId}

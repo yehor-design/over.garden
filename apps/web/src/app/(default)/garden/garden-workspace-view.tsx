@@ -16,7 +16,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ListRow } from "@/components/ui/list-row";
 import { Pagination } from "@/components/ui/pagination";
 import { Section } from "@/components/ui/section";
-import { resolveIllustration } from "@/lib/illustrations";
 import {
   formatGardenCount,
   formatGardenWorkspaceDate,
@@ -241,8 +240,6 @@ function AttentionSection({
         </ul>
       ) : (
         <EmptyState
-          illustration={resolveIllustration("empty-garden")}
-          illustrationSize="card"
           title={copy.workspace.attention.emptyTitle}
           description={copy.workspace.attention.emptyDescription}
         />
@@ -297,8 +294,6 @@ function RecentSection({
         </ul>
       ) : (
         <EmptyState
-          illustration={resolveIllustration("empty-journal")}
-          illustrationSize="card"
           title={copy.workspace.recent.title}
           description={copy.workspace.recent.empty}
         />
@@ -406,7 +401,6 @@ function InventorySection({
         </>
       ) : (
         <EmptyState
-          illustration={resolveIllustration("empty-garden")}
           title={copy.workspace.inventory.emptyTitle}
           description={copy.workspace.inventory.emptyDescription}
           action={
@@ -567,8 +561,6 @@ function SpacesSection({
         </ul>
       ) : (
         <EmptyState
-          illustration={resolveIllustration("empty-garden")}
-          illustrationSize="card"
           title={copy.workspace.spaces.title}
           description={copy.workspace.spaces.empty}
         />
