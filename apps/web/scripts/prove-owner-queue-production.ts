@@ -38,13 +38,20 @@ export interface OwnerQueueWalk {
   issue: "OVE-459";
   host: string;
   database: string;
-  openItems: number;
+  /** Open rows the owner is asked to decide. `source_unmatched` is not one. */
+  openDecisions: number;
+  /** Open rows that are coverage: a source record the graph could not place. */
+  unplacedRecords: number;
   byType: Record<string, number>;
   /**
-   * How many open items the apply function would accept. A `source_link`
-   * needs a subject, a `source_slug` and a `source_snapshot_id`; an item
-   * missing one of those raises rather than applying, and a queue of them is
-   * a queue nobody can work through.
+   * How many open **decisions** the apply function would accept. A
+   * `source_link` needs a subject, a `source_slug` and a `source_snapshot_id`;
+   * an item missing one of those raises rather than applying, and a queue of
+   * them is a queue nobody can work through. Since `0078` a `CHECK` makes the
+   * two numbers equal, and this is what watches that it stays so.
+   *
+   * `source_unmatched` is absent on purpose: it has no apply branch, so
+   * "appliable" is not a question about it.
    */
   appliable: Record<string, number>;
   walked: {
@@ -107,23 +114,33 @@ export async function walkOwnerQueue(options: {
       counts.rows.map((row) => [row.item_type, Number(row.n)]),
     );
     const appliable = Object.fromEntries(
-      counts.rows.map((row) => [row.item_type, Number(row.appliable)]),
+      counts.rows
+        .filter((row) => row.item_type !== "source_unmatched")
+        .map((row) => [row.item_type, Number(row.appliable)]),
     );
-    const openItems = Object.values(byType).reduce((sum, n) => sum + n, 0);
+    const unplacedRecords = byType.source_unmatched ?? 0;
+    const openDecisions = Object.entries(byType)
+      .filter(([itemType]) => itemType !== "source_unmatched")
+      .reduce((sum, [, n]) => sum + n, 0);
 
-    if (options.apply && openItems > 0) {
+    if (options.apply && openDecisions > 0) {
       /**
        * The lowest-impact open item, so a walk never spends the decision the
        * owner would most want to make by hand — and never a `node_merge`,
        * which moves gardeners' objects between cards. The revert is exact,
        * but a proof should not be the thing that moves somebody's tomatoes
        * and puts them back.
+       *
+       * `source_unmatched` is excluded because it is not a decision at all:
+       * there is no node to attach an unplaced record to, which is why 13,450
+       * of them were refused by the apply function on 2026-09-20 (`0078`).
        */
       const candidate = await client.query<QueueRow>(
         `select id::text as id, item_type, impact_score,
                 subject_catalog_item_id::text as subject_catalog_item_id
          from catalog_curation_queue
-         where state = 'open' and item_type <> 'node_merge'
+         where state = 'open'
+           and item_type not in ('node_merge', 'source_unmatched')
          order by impact_score asc, created_at asc
          limit 1`,
       );
@@ -166,7 +183,8 @@ export async function walkOwnerQueue(options: {
       issue: "OVE-459",
       host: url.hostname,
       database: url.pathname.replace(/^\//u, ""),
-      openItems,
+      openDecisions,
+      unplacedRecords,
       byType,
       appliable,
       walked,

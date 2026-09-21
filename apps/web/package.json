@@ -152,7 +152,8 @@
     "gates": "pnpm lint && pnpm check:design-tokens && pnpm check:component-tests && pnpm check:browser-specs && pnpm check:workspace-settled-reads && vitest run src/app/globals.test.ts scripts/check-design-gates.test.ts && pnpm gates:browser",
     "gates:browser": "pnpm build && ../../infra/run-with-local-infra-env pnpm exec tsx scripts/run-browser-gate.ts",
     "interface:locale:probe": "tsx scripts/probe-interface-locale-production.ts",
-    "prove:owner-queue": "tsx scripts/prove-owner-queue-production.ts"
+    "prove:owner-queue": "tsx scripts/prove-owner-queue-production.ts",
+    "prove:queue-answerable": "tsx scripts/prove-queue-answerable.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

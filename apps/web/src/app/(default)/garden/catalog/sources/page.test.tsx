@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   readTopCatalogSearchMisses: vi.fn(),
   readCatalogAutoAcceptPrecision: vi.fn(),
   readOldestOpenQueueItemAgeDays: vi.fn(),
+  readUnplacedRecords: vi.fn(),
 }));
 
 vi.mock("@/server/interface-localization", () => ({
@@ -34,6 +35,7 @@ vi.mock("@/server/catalog-health-repository", () => ({
   readTopCatalogSearchMisses: mocks.readTopCatalogSearchMisses,
   readCatalogAutoAcceptPrecision: mocks.readCatalogAutoAcceptPrecision,
   readOldestOpenQueueItemAgeDays: mocks.readOldestOpenQueueItemAgeDays,
+  readUnplacedRecords: mocks.readUnplacedRecords,
 }));
 vi.mock("./actions", () => ({
   refreshCatalogSourceAction: vi.fn(),
@@ -82,6 +84,7 @@ describe("owner catalog sources (ADR-0026 D10)", () => {
     mocks.readTopCatalogSearchMisses.mockResolvedValue([]);
     mocks.readCatalogAutoAcceptPrecision.mockResolvedValue([]);
     mocks.readOldestOpenQueueItemAgeDays.mockResolvedValue(null);
+    mocks.readUnplacedRecords.mockResolvedValue([]);
   });
 
   it("shows one card per source with its version, licence, counts and a refresh button", async () => {
@@ -160,6 +163,7 @@ describe("the catalog health figures (OVE-398, ADR-0026 D12)", () => {
     mocks.listCatalogSourceCards.mockResolvedValue([EPPO]);
     mocks.readCatalogAutoAcceptPrecision.mockResolvedValue([]);
     mocks.readOldestOpenQueueItemAgeDays.mockResolvedValue(null);
+    mocks.readUnplacedRecords.mockResolvedValue([]);
   });
 
   it("shows five of six picks successful, the P95, and the miss with a button", async () => {
@@ -254,5 +258,24 @@ describe("the catalog health figures (OVE-398, ADR-0026 D12)", () => {
 
     expect(html).toContain('data-catalog-health-miss="поiмдор"');
     expect(html).not.toContain("data-catalog-health-miss-queue");
+  });
+
+  it("counts what each source holds that the graph could not place", async () => {
+    // Coverage, where the other measurements are. 13,450 of these were in the
+    // owner's decision stream until `0078`, and the apply function refused
+    // every one — an unplaced record has no node to attach anything to.
+    mocks.readUnplacedRecords.mockResolvedValue([
+      { sourceSlug: "eppo", records: 13007, oldestAgeDays: 14 },
+    ]);
+    const html = await render();
+
+    expect(html).toContain('data-catalog-unplaced-source="eppo"');
+    expect(html).toContain('data-catalog-unplaced-records="13007"');
+    expect(html).not.toContain("data-catalog-unplaced-empty");
+  });
+
+  it("says so plainly when every record is placed", async () => {
+    const html = await render();
+    expect(html).toContain('data-catalog-unplaced-empty="true"');
   });
 });

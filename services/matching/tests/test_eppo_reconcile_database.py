@@ -845,7 +845,7 @@ def test_a_virus_eppo_has_and_the_backbone_lacks_becomes_its_own_node(conn):
     )
 
 
-def test_a_genus_the_backbone_lacks_is_queued_rather_than_invented(conn):
+def test_a_genus_the_backbone_lacks_is_counted_rather_than_queued(conn):
     first, _second, first_snapshot, _ = seed_two_captures(conn)
     seed_unit(
         conn,
@@ -869,9 +869,21 @@ def test_a_genus_the_backbone_lacks_is_queued_rather_than_invented(conn):
     receipt = reconcile.reconcile_eppo(conn)
 
     # 17,630 of EPPO's active identifiers are genera. Creating a node for each
-    # would put a second authority's copy of the backbone beside it.
+    # would put a second authority's copy of the backbone beside it — and
+    # *queueing* each one asks the owner a question with one answer, which
+    # `catalog_apply_queue_item` cannot carry out anyway: there is no node to
+    # attach an unplaced record to. 13,007 of these were on the owner's desk
+    # on 2026-09-20. It is coverage, and coverage is counted.
     assert receipt.nodes_created == 0
-    assert receipt.queued_for_curation == 1
+    assert receipt.queued_for_curation == 0
+    assert receipt.out_of_scope_rank == 1
+    assert receipt.source_record_too_thin == 0
+    assert (
+        conn.execute(
+            "select count(*)::int as n from catalog_curation_queue"
+        ).fetchone()["n"]
+        == 0
+    )
 
 
 def test_an_ambiguous_name_goes_to_the_queue_and_links_nothing(conn):
@@ -909,6 +921,47 @@ def test_an_ambiguous_name_goes_to_the_queue_and_links_nothing(conn):
     assert item["state"] == "open"
     assert item["reasons"] == ["eppo_ambiguous"]
     assert len(item["proposal"]["candidates"]) == 2
+    # Appliable, which is the whole point of putting it in front of a person:
+    # `catalog_apply_queue_item` needs a subject, a slug and a snapshot, and
+    # reads identifiers as an array. Production's queue carried none of these
+    # and refused every row it held (`0078`).
+    assert item["proposal"]["source_snapshot_id"]
+    assert item["proposal"]["identifiers"] == [
+        {"scheme": "eppo", "value": "PRNDO"}
+    ]
+    subject = conn.execute(
+        """
+        select subject_catalog_item_id is not null as has_subject
+        from catalog_curation_queue
+        where proposal->>'source_record_key' = 'PRNDO'
+        """
+    ).fetchone()
+    assert subject["has_subject"] is True
+
+
+def test_a_taxon_eppo_describes_too_thinly_is_counted_not_queued(conn):
+    """No kingdom means no way to tell it from a homonym in another one."""
+    first, _second, first_snapshot, _ = seed_two_captures(conn)
+    seed_unit(
+        conn,
+        capture_id=first,
+        code="THINX",
+        endpoint_class="taxon_overview",
+        payload=overview("THINX", "Thinus obscurus"),
+    )
+    seed_record(conn, first_snapshot, "THINX")
+
+    receipt = reconcile.reconcile_eppo(conn)
+
+    assert receipt.nodes_created == 0
+    assert receipt.queued_for_curation == 0
+    assert receipt.source_record_too_thin == 1
+    assert (
+        conn.execute(
+            "select count(*)::int as n from catalog_curation_queue"
+        ).fetchone()["n"]
+        == 0
+    )
 
 
 def test_one_identifier_is_the_unit_of_work(conn, monkeypatch):

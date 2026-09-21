@@ -220,13 +220,64 @@ export async function readCatalogAutoAcceptPrecision(
   }));
 }
 
-/** The age of the oldest open queue item, in days; null when the queue is empty. */
+/**
+ * The age of the oldest open **decision**, in days; null when there is none.
+ *
+ * `source_unmatched` is excluded: it is coverage rather than a decision, and a
+ * fortnight-old unplaced genus is not the queue going stale — it is EPPO being
+ * wider than the catalogue, which is the design. Counting it here reported a
+ * backlog nobody could work off.
+ */
 export function buildOldestOpenQueueItemStatement() {
   return sql<{ ageDays: number | null }>`
     select extract(day from now() - min(item.created_at))::int as "ageDays"
     from catalog_curation_queue as item
     where item.state = 'open'
+      and item.item_type <> 'source_unmatched'
   `;
+}
+
+export interface CatalogUnplacedRecordRow {
+  sourceSlug: string;
+  records: number;
+  oldestAgeDays: number | null;
+}
+
+/**
+ * How many records each source holds that the graph could not place
+ * (`source_unmatched`).
+ *
+ * This is a measurement, and it lives beside the other measurements rather
+ * than in the owner's stream. It is the number to watch when a matcher
+ * improves, and it is what 13,450 rows on production were doing in a queue
+ * that could not decide any of them.
+ */
+export function buildUnplacedRecordStatement() {
+  return sql<{
+    sourceSlug: string | null;
+    records: number;
+    oldestAgeDays: number | null;
+  }>`
+    select item.proposal->>'source_slug' as "sourceSlug",
+           count(*)::int as "records",
+           extract(day from now() - min(item.created_at))::int as "oldestAgeDays"
+    from catalog_curation_queue as item
+    where item.state = 'open'
+      and item.item_type = 'source_unmatched'
+    group by 1
+    order by 2 desc, 1 asc
+  `;
+}
+
+export async function readUnplacedRecords(
+  executor: QueryExecutor = db,
+): Promise<CatalogUnplacedRecordRow[]> {
+  const result = await buildUnplacedRecordStatement().execute(executor);
+  return result.rows.map((row) => ({
+    sourceSlug: row.sourceSlug ?? "—",
+    records: Number(row.records),
+    oldestAgeDays: row.oldestAgeDays === null ? null : Number(row.oldestAgeDays),
+  }));
 }
 
 export async function readOldestOpenQueueItemAgeDays(

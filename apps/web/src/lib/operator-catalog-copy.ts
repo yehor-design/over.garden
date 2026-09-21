@@ -103,6 +103,16 @@ export interface OperatorCatalogCopy {
     queueAge: string;
     queueAgeEmpty: string;
     days: string;
+    /**
+     * Records a source holds that the graph could not place. Coverage, not a
+     * decision — the owner cannot answer "EPPO knows the genus *Abies*" one
+     * row at a time, and 13,450 of those were in the stream until `0078`.
+     */
+    unplaced: string;
+    unplacedHint: string;
+    unplacedEmpty: string;
+    unplacedRecords: string;
+    unplacedOldest: string;
   };
   card: {
     ownerTools: string;
@@ -226,6 +236,12 @@ const UK: OperatorCatalogCopy = {
     queueAge: "Вік найстарішого відкритого рішення",
     queueAgeEmpty: "Черга порожня.",
     days: "дн.",
+    unplaced: "Записи джерел, яким немає місця в графі",
+    unplacedHint:
+      "Джерело знає організм, для якого каталог не створює картку: рід, родина, або запис без царства. Це покриття, а не рішення — каталог моделює вид і нижче.",
+    unplacedEmpty: "Усі записи джерел розміщено.",
+    unplacedRecords: "записів",
+    unplacedOldest: "найстарішому",
   },
   card: {
     ownerTools: "Інструменти власника",
@@ -349,6 +365,12 @@ const BG: OperatorCatalogCopy = {
     reverted: "отменени",
     queueAge: "Възраст на най-старото отворено решение",
     queueAgeEmpty: "Опашката е празна.",
+    unplaced: "Записи на източници без място в графа",
+    unplacedHint:
+      "Източникът познава организъм, за който каталогът не прави карта: род, семейство или запис без царство. Това е покритие, а не решение — каталогът моделира вид и по-долу.",
+    unplacedEmpty: "Всички записи на източници са разположени.",
+    unplacedRecords: "записа",
+    unplacedOldest: "най-старият",
     days: "дни",
   },
   card: {
@@ -473,6 +495,12 @@ const RU: OperatorCatalogCopy = {
     reverted: "отменено",
     queueAge: "Возраст самого старого открытого решения",
     queueAgeEmpty: "Очередь пуста.",
+    unplaced: "Записи источников, которым нет места в графе",
+    unplacedHint:
+      "Источник знает организм, для которого каталог не создаёт карточку: род, семейство или запись без царства. Это покрытие, а не решение — каталог моделирует вид и ниже.",
+    unplacedEmpty: "Все записи источников размещены.",
+    unplacedRecords: "записей",
+    unplacedOldest: "самой старой",
     days: "дн.",
   },
   card: {

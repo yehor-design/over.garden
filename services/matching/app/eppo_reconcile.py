@@ -172,6 +172,16 @@ class EppoReconcileReceipt:
     linked_by_col_usage: int = 0
     nodes_created: int = 0
     queued_for_curation: int = 0
+    # EPPO is wider than the catalogue by design: it identifies genera,
+    # families and orders, and the graph models species and below
+    # (`CREATABLE_RANKS`). A taxon above that rank is not a decision anybody
+    # can make — it is coverage, and it is counted here rather than queued.
+    # 10,730 of them were in the owner's stream on 2026-09-20.
+    out_of_scope_rank: int = 0
+    # EPPO named the taxon but not its kingdom or its rank, so the graph
+    # cannot tell it from a homonym in another kingdom. Also not a decision:
+    # no amount of looking at the row adds what the source did not say.
+    source_record_too_thin: int = 0
     identifiers_written: int = 0
     names_written: int = 0
     relations_written: int = 0
@@ -1081,14 +1091,29 @@ def _create_node_from_eppo(
 ) -> str | None:
     """A node for a taxon EPPO has and Catalogue of Life does not.
 
-    Only when EPPO is unambiguous about what it is: a scientific name and a
-    kingdom the graph models. Anything less becomes a queue item, because a
-    node without a kingdom cannot be told apart from a homonym in another one.
+    Only when EPPO is unambiguous about what it is: a scientific name, a
+    kingdom, and a rank the graph models. A node without a kingdom cannot be
+    told apart from a homonym in another one, and the catalogue holds species
+    and below because a gardener grows a species, not a family.
+
+    Anything less is **counted, not queued**. It used to become a queue item,
+    and 13,007 of them were on the owner's desk on 2026-09-20 — every one
+    refused by `catalog_apply_queue_item`, because an unplaced record has no
+    node to attach anything to.
     """
     name = taxon.preferred_name
     kingdom = taxon.kingdom
     if not name or not kingdom or taxon.rank not in CREATABLE_RANKS:
-        _queue_for_curation(conn, taxon, LinkOutcome(None, None), receipt)
+        # Not a queue item. Both of these are measurements: a rank the
+        # catalogue does not model, and a record too thin to place. Queueing
+        # them put 13,007 questions on the owner's desk that
+        # `catalog_apply_queue_item` refused every one of — there is no node
+        # to attach an unplaced record to. `0078` moved the rows out of the
+        # stream; this stops writing more.
+        if name and kingdom and taxon.rank not in CREATABLE_RANKS:
+            receipt.out_of_scope_rank += 1
+        else:
+            receipt.source_record_too_thin += 1
         return None
     row = conn.execute(
         INSERT_NODE_SQL,
@@ -1244,16 +1269,28 @@ def _queue_for_curation(
     outcome: LinkOutcome,
     receipt: EppoReconcileReceipt,
 ) -> None:
-    """The residue, ordered by impact.
+    """The one question a person can answer, ordered by impact.
 
-    Impact is how many EPPO hosts the identifier touches: an unlinked pest with
-    six hundred hosts costs a card far more than one with none.
+    The ladder found several candidate nodes and cannot choose between them.
+    That is a decision, and it is the only thing this writes: a taxon the
+    catalogue does not model, or one EPPO described too thinly to place, is
+    coverage and is counted on the receipt instead.
+
+    Impact is how many EPPO hosts the identifier touches: an ambiguous pest
+    with six hundred hosts costs a card far more than one with none.
     """
     impact = max(QUEUE_IMPACT_FLOOR, len(taxon.hosts))
     reasons = ["eppo_ambiguous"] if outcome.ambiguous_ids else ["eppo_unmatched"]
+    # What `catalog_apply_queue_item` reads, in the shape it reads it:
+    # `identifiers` is an array of `{scheme, value}`, and `source_snapshot_id`
+    # is required because `catalog_source_assertions.source_snapshot_id` is
+    # `not null`. A snapshot is *which import said so*; resolving one at apply
+    # time would be fabricating provenance, so it travels with the question.
     proposal = {
         "source_slug": EPPO_SOURCE_SLUG,
+        "source_snapshot_id": taxon.source_snapshot_id,
         "source_record_key": taxon.eppo_code,
+        "identifiers": [{"scheme": "eppo", "value": taxon.eppo_code}],
         "scheme": "eppo",
         "value": taxon.eppo_code,
         "preferred_name": taxon.preferred_name,

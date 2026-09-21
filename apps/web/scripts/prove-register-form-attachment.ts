@@ -30,9 +30,9 @@ import { applyMigrationsBefore } from "./prove-organism-graph-foundation";
  *   * a row whose species is written as a crop line ("Beta vulgaris L. -
  *     Sugar beet") resolves through the Latin half;
  *   * a withdrawn EU row records `withdrawn` and deletes nothing;
- *   * a row whose species nothing knows becomes exactly one `source_link`
- *     queue item and no relation — the acceptance criterion is "one or the
- *     other, never both and never neither";
+ *   * a row whose species nothing knows becomes exactly one
+ *     `source_unmatched` queue item and no relation — the acceptance criterion
+ *     is "one or the other, never both and never neither";
  *   * a second run writes nothing new, and a form already waiting in the queue
  *     is not read again;
  *   * `catalog_item_relations_enforce_kinds` refuses a `form_of` between two
@@ -355,10 +355,20 @@ async function registrationFact(pool: Pool, formId: string) {
   return result.rows[0]!;
 }
 
+/**
+ * `source_unmatched` since `0078`, not `source_link`.
+ *
+ * The subject here is the **form**, and what the owner would be deciding is
+ * which species it belongs under — a `form_of` relation, which
+ * `catalog_apply_queue_item`'s `source_link` branch does not write. Filed as a
+ * link decision it was a question with no answer: 443 of these were among the
+ * 13,456 rows production's queue held and the apply function refused.
+ */
 async function openQueueItems(pool: Pool, formId: string): Promise<number> {
   const result = await pool.query<{ count: string }>(
     `select count(*)::text as count from catalog_curation_queue
-      where subject_catalog_item_id = $1 and item_type = 'source_link' and state = 'open'`,
+      where subject_catalog_item_id = $1
+        and item_type = 'source_unmatched' and state = 'open'`,
     [formId],
   );
   return Number(result.rows[0]?.count ?? 0);

@@ -727,7 +727,9 @@ def _project_item(
         "id",
     )
 
-    _write_identifiers(conn, node, item, assertion_id, receipt)
+    _write_identifiers(
+        conn, node, item, assertion_id, receipt, snapshot_id, record_id
+    )
     _write_aliases(conn, node, item, record_id, assertion_id, receipt)
 
 
@@ -737,6 +739,8 @@ def _write_identifiers(
     item: WikidataItem,
     assertion_id: str,
     receipt: WikidataCrosswalkReceipt,
+    snapshot_id: str,
+    record_id: str,
 ) -> None:
     wanted: list[tuple[str, str]] = [("wikidata", item.qid)]
     wanted.extend(
@@ -751,6 +755,13 @@ def _write_identifiers(
         if owner and owner != node["id"]:
             # An identifier already on another node is a decision, never an
             # overwrite: the graph's uniqueness is what makes rung one work.
+            # What `catalog_apply_queue_item` reads, in the shape it reads
+            # it: `identifiers` is an array of `{scheme, value}`, and the
+            # snapshot is required because
+            # `catalog_source_assertions.source_snapshot_id` is `not null`.
+            # A snapshot is *which import said so*; resolving one at apply
+            # time would be fabricating provenance, so it travels with the
+            # question. Without it this row could not be decided at all.
             queued = conn.execute(
                 QUEUE_SOURCE_LINK_SQL,
                 (
@@ -758,6 +769,9 @@ def _write_identifiers(
                     json.dumps(
                         {
                             "source_slug": WIKIDATA_SOURCE_SLUG,
+                            "source_snapshot_id": snapshot_id,
+                            "source_record_id": record_id,
+                            "identifiers": [{"scheme": scheme, "value": value}],
                             "scheme": scheme,
                             "value": value,
                             "held_by_catalog_item_id": owner,
