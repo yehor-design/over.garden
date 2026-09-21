@@ -61,12 +61,15 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. Current production still has the older layout;
 accepted documents/prototype do not imply that runtime migration is complete.
 
-**OVE-477 implementation, 2026-09-21 (release pending):** shared neutral Threads
-foundations and the Phosphor-only interface migration are implemented. Local
-unit/design gates, production build and 177 browser cases pass (one external
-full-catalogue fixture skips). `docs/redesign/2026-09-21/OVE-477-PROOF.md` records
-the local specimen, icon inventory and measured bundle delta. Production is not
-claimed until the PR/Linear release receipt identifies the merge and deployment.
+**OVE-477 shipped, 2026-09-21 (PR #433):** neutral Threads foundations and
+Phosphor-only interface icons are live at `6b5a70402282adf021cae354ffc7c23b70496e2e`.
+Both browser CI shards, web checks and Python passed; production deployment
+`dpl_A1u2UX6QpcAU5efqcx4fanTYAyVd` is READY on that SHA. Live support documents
+in UK/BG/RU return 200 with visible static headings and server-rendered Phosphor
+icons. `docs/redesign/2026-09-21/OVE-477-PROOF.md` records specimens and inventory;
+the Linear release receipt records final verification. Initial public-document
+JS measured 383,659 gzip bytes versus 366,332 baseline (+4.73%); this is not a
+performance improvement claim. The broader shell/page migration remains pending.
 
 **OVE-476 shipped, 2026-09-21 (PR #432):** public-only journal
 copy is aligned across UK/BG/RU. Notice v6 distinguishes public publication,

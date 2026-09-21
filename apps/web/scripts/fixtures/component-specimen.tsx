@@ -191,7 +191,12 @@ function Specimen() {
         {chosen && <p role="status">{copy.choose}</p>}
       </section>
       <Toast title={copy.status} dismissLabel={copy.close} />
-      <div aria-label="Loading" aria-busy="true" className="grid gap-3">
+      <div
+        role="status"
+        aria-label="Loading"
+        aria-busy="true"
+        className="grid gap-3"
+      >
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="h-4 w-full" />
       </div>

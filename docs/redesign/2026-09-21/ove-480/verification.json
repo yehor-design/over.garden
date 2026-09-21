@@ -1,0 +1,12 @@
+{
+  "applicationBuild": "6b5a70402282adf021cae354ffc7c23b70496e2e",
+  "date": "2026-09-21",
+  "unit": { "filesPassed": 559, "testsPassed": 4274, "testsSkipped": 29, "mediaWorkerPassed": 14 },
+  "addedSigninRegressionTests": { "passed": 2, "cases": ["429 then 200 retries without another signup", "401 fails without retry and cleans unreturned account"] },
+  "localFullBrowserBeforeSigninFix": { "passed": 195, "failed": 1, "skipped": 1, "minutes": 5.5, "failure": "publication-notice setup signin rate limited (429)" },
+  "publicationNoticeAfterSigninFix": { "passed": 2, "seconds": 1.8 },
+  "componentSpecimens": { "passed": 15, "locales": ["uk", "bg", "ru"], "widths": [320, 390, 768, 1280, 1920], "axeVersion": "4.12.1", "violations": 0, "incomplete": 0 },
+  "enforcedBaseline": { "expectedFailures": 3, "globalWrite": "/garden#first-entry-composer", "implicitSpace": "nonempty synthetic space UUID", "filterDismissName": "Скинути все" },
+  "manualScreenReader": "not performed; protocol documented",
+  "mergeGate": "fresh-checkout CI must pass; exact SHA/run/production identity recorded in Linear release receipt"
+}

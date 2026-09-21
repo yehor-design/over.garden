@@ -3,6 +3,15 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test } from "playwright/test";
 
+import {
+  REDESIGN_WIDTHS,
+  scanAccessibility,
+  expectPending,
+  expectFieldError,
+  expectDialogReturn,
+  expectLiveMessage,
+} from "./helpers/redesign-accessibility";
+
 test.describe.configure({ mode: "serial" });
 test.beforeAll(() => {
   execFileSync(
@@ -12,7 +21,7 @@ test.beforeAll(() => {
   );
 });
 for (const locale of ["uk", "bg", "ru"])
-  for (const width of [320, 1440]) {
+  for (const width of REDESIGN_WIDTHS) {
     test(`${locale} component states and keyboard at ${width}px`, async ({
       page,
     }, testInfo) => {
@@ -38,6 +47,12 @@ for (const locale of ["uk", "bg", "ru"])
         ),
       ).toBe(true);
       await expect(page.locator('button[aria-busy="true"]')).toHaveCount(5);
+      await expectPending(page.locator('button[aria-busy="true"]').first());
+      await expectFieldError(
+        page.locator('input[aria-invalid="true"]').first(),
+      );
+      await expectLiveMessage(page.locator('[data-slot="toast"]'), /\S/);
+      await scanAccessibility(page, testInfo, `${locale}-${width}`);
       await expect(page.locator("button:disabled")).toHaveCount(5);
       await expect(page.locator('input[aria-invalid="true"]')).toHaveAttribute(
         "aria-describedby",
@@ -87,11 +102,7 @@ for (const locale of ["uk", "bg", "ru"])
       await expect(dialog).not.toBeVisible();
       await expect(dialogTrigger).toBeFocused();
       const sheetTrigger = page.getByTestId("sheet-trigger");
-      await sheetTrigger.focus();
-      await page.keyboard.press("Enter");
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expect(sheetTrigger).toBeFocused();
+      await expectDialogReturn(page, sheetTrigger);
       await page.getByTestId("menu-trigger").focus();
       await page.keyboard.press("ArrowDown");
       await expect(page.getByRole("menu")).toBeVisible();
