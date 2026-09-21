@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import {
   ANALYTICS_CONSENT_ATTRIBUTE,
   ANALYTICS_CONSENT_STORAGE_KEY,
-  ANALYTICS_ROUTE_ATTRIBUTE,
   isAnalyticsRoute,
 } from "@/lib/analytics-routes";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -55,29 +54,21 @@ export interface MicrosoftClarityPublicConfig {
 let initializedMicrosoftClarityProjectId: string | null = null;
 let initializingMicrosoftClarityProjectId: string | null = null;
 
-export function GoogleAnalytics({
-  locale = "uk",
-  notice = "inline",
-}: {
-  locale?: InterfaceLocale;
-  /**
-   * Where the consent notice is drawn. `"inline"` — by this component, which
-   * is right for a request-time document. `"document"` — by
-   * `AnalyticsConsentNotice`, which a static document renders outside this
-   * component's boundary (ADR-0032 D7); this component then loads the tags and
-   * keeps `<html>`'s two attributes true across client-side navigations.
-   */
-  notice?: "inline" | "document";
-}) {
+/**
+ * The measurement tags, on the measured paths, once the reader has accepted.
+ *
+ * It draws nothing a reader sees: the notice is `AnalyticsConsentNotice`,
+ * which every document renders outside this component (ADR-0032 D7). A reader
+ * who accepts on a path that is not measured has answered for the whole site;
+ * the tags start on the first measured path they open.
+ */
+export function GoogleAnalytics() {
   const pathname = usePathname();
-  const storedConsent = useSyncExternalStore(
+  const consent = useSyncExternalStore(
     subscribeToGoogleAnalyticsConsent,
     readStoredGoogleAnalyticsConsent,
     getServerGoogleAnalyticsConsent,
   );
-  const [sessionConsent, setSessionConsent] =
-    useState<GoogleAnalyticsConsent | null>(null);
-  const consent = sessionConsent ?? storedConsent;
   const isAllowedRoute = isGoogleAnalyticsRoute(pathname);
 
   useEffect(() => {
@@ -86,66 +77,79 @@ export function GoogleAnalytics({
     }
   }, [isAllowedRoute, consent]);
 
-  // The inline script answered these once, for the address the document was
-  // loaded at. A client-side navigation changes the address without loading a
-  // document, so from hydration on the answers are kept here.
+  // The notice is drawn from `<html>`'s attribute, and an answer given in
+  // another tab reaches this one only as a `storage` event — so the answer is
+  // carried there. Only an answer: "undecided" is what the inline script
+  // already wrote, and a hydrating render starts from the server's
+  // "undecided", which must not draw the notice for a reader who answered.
   useEffect(() => {
-    const root = document.documentElement;
-    if (isAllowedRoute) root.setAttribute(ANALYTICS_ROUTE_ATTRIBUTE, "true");
-    else root.removeAttribute(ANALYTICS_ROUTE_ATTRIBUTE);
-    root.setAttribute(ANALYTICS_CONSENT_ATTRIBUTE, consent);
-  }, [isAllowedRoute, consent]);
+    if (consent === "undecided") return;
+    document.documentElement.setAttribute(ANALYTICS_CONSENT_ATTRIBUTE, consent);
+  }, [consent]);
 
-  const setStoredConsent = (nextConsent: GoogleAnalyticsConsent) => {
-    if (nextConsent !== "undecided") {
-      writeStoredGoogleAnalyticsConsent(nextConsent);
-    }
-    setSessionConsent(nextConsent);
-  };
-
-  if (!isAllowedRoute) return null;
-
-  if (consent === "accepted") {
-    return (
-      <>
-        <GoogleTagManagerScripts />
-        <MicrosoftClarityAnalytics />
-      </>
-    );
-  }
-  if (consent === "declined" || notice === "document") return null;
+  if (!isAllowedRoute || consent !== "accepted") return null;
 
   return (
-    <AnalyticsConsentBanner
-      locale={locale}
-      onAccept={() => setStoredConsent("accepted")}
-      onDecline={() => setStoredConsent("declined")}
-    />
+    <>
+      <GoogleTagManagerScripts />
+      <MicrosoftClarityAnalytics />
+    </>
   );
 }
 
 /**
- * The consent notice of a static document (ADR-0032 D7).
+ * The consent notice, owed on every page until the reader answers
+ * (ADR-0032 D7; the owner, 2026-09-21).
  *
- * It is in the served bytes of every static document and reads neither the
- * address nor the stored answer: both are on `<html>` before first paint
- * (`analyticsDocumentBootScript`), and `globals.css` draws the notice only for
- * a measured path with no answer yet. So it paints with the page when it is
- * owed, never flashes for a reader who answered, and is never a late LCP
- * candidate — on a text page it *is* the largest thing on a phone's screen.
+ * It is in the served bytes of every document and reads neither the address
+ * nor the stored answer: the answer is on `<html>` before first paint
+ * (`analyticsDocumentBootScript`), and `globals.css` draws the notice while
+ * there is none. So it paints with the page when it is owed, stays through
+ * every client-side navigation, never flashes for a reader who answered, and
+ * is never a late LCP candidate — on a text page it *is* the largest thing on
+ * a phone's screen.
  */
 export function AnalyticsConsentNotice({
   locale = "uk",
 }: {
   locale?: InterfaceLocale;
 }) {
+  const copy = getPublicSurfaceCopy(locale).analyticsConsent;
+
   return (
-    <AnalyticsConsentBanner
-      locale={locale}
-      documentNotice
-      onAccept={() => writeStoredGoogleAnalyticsConsent("accepted")}
-      onDecline={() => writeStoredGoogleAnalyticsConsent("declined")}
-    />
+    <div
+      aria-label={copy.label}
+      data-analytics-consent-banner="true"
+      // The system's tokens, not the palette before it: since ADR-0032 D7 this
+      // element is in the bytes of every public document, and "nothing on the
+      // page reaches for the old palette" is asserted against those bytes.
+      className="analytics-consent-banner fixed inset-x-3 z-toast mx-auto max-w-3xl rounded-md border border-border bg-surface/95 p-4 text-text shadow-overlay backdrop-blur sm:flex sm:items-center sm:gap-4"
+      role="dialog"
+    >
+      <p className="text-body-sm text-text-secondary">{copy.message}</p>
+      <div
+        data-analytics-consent-actions="true"
+        className="mt-3 grid min-w-0 gap-2 sm:mt-0 sm:flex sm:shrink-0 sm:flex-wrap"
+      >
+        <Button
+          className="w-full min-w-0 sm:w-auto"
+          onClick={() => writeStoredGoogleAnalyticsConsent("accepted")}
+          size="sm"
+          type="button"
+        >
+          {copy.accept}
+        </Button>
+        <Button
+          className="w-full min-w-0 sm:w-auto"
+          onClick={() => writeStoredGoogleAnalyticsConsent("declined")}
+          size="sm"
+          type="button"
+          variant="secondary"
+        >
+          {copy.decline}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -288,58 +292,6 @@ export function isGoogleAnalyticsRoute(pathname: string | null): boolean {
   return isAnalyticsRoute(pathname);
 }
 
-function AnalyticsConsentBanner({
-  locale,
-  documentNotice = false,
-  onAccept,
-  onDecline,
-}: {
-  locale: InterfaceLocale;
-  /** Drawn by CSS from `<html>`'s attributes rather than by React's state. */
-  documentNotice?: boolean;
-  onAccept: () => void;
-  onDecline: () => void;
-}) {
-  const copy = getPublicSurfaceCopy(locale).analyticsConsent;
-
-  return (
-    <div
-      aria-label={copy.label}
-      data-analytics-consent-banner="true"
-      data-analytics-consent-notice={documentNotice ? "document" : undefined}
-      // The system's tokens, not the palette before it: since ADR-0032 D7 this
-      // element is in the bytes of every public document, and "nothing on the
-      // page reaches for the old palette" is asserted against those bytes.
-      className="analytics-consent-banner fixed inset-x-3 z-toast mx-auto max-w-3xl rounded-md border border-border bg-surface/95 p-4 text-text shadow-overlay backdrop-blur sm:flex sm:items-center sm:gap-4"
-      role="dialog"
-    >
-      <p className="text-body-sm text-text-secondary">{copy.message}</p>
-      <div
-        data-analytics-consent-actions="true"
-        className="mt-3 grid min-w-0 gap-2 sm:mt-0 sm:flex sm:shrink-0 sm:flex-wrap"
-      >
-        <Button
-          className="w-full min-w-0 sm:w-auto"
-          onClick={onAccept}
-          size="sm"
-          type="button"
-        >
-          {copy.accept}
-        </Button>
-        <Button
-          className="w-full min-w-0 sm:w-auto"
-          onClick={onDecline}
-          size="sm"
-          type="button"
-          variant="secondary"
-        >
-          {copy.decline}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export function readStoredGoogleAnalyticsConsent(): GoogleAnalyticsConsent {
   if (typeof window === "undefined") return "undecided";
 
@@ -370,7 +322,7 @@ export function writeStoredGoogleAnalyticsConsent(
   } else {
     revokeMicrosoftClarityAnalyticsConsent();
   }
-  // The notice of a static document is drawn by CSS from this (ADR-0032 D7).
+  // The notice is drawn by CSS from this, on every page (ADR-0032 D7).
   window.document?.documentElement.setAttribute(
     ANALYTICS_CONSENT_ATTRIBUTE,
     consent,

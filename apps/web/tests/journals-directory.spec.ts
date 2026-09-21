@@ -250,7 +250,9 @@ test.describe("the journals directory applies its filters on change", () => {
     ).toBeHidden();
 
     await open.click();
-    const sheet = page.getByRole("dialog");
+    // The sheet by name of its slot: the consent notice is a dialog too, and
+    // on every page for a reader who has not answered it (`OVE-473`).
+    const sheet = page.locator('[role="dialog"][data-slot="sheet-content"]');
     await expect(sheet).toBeVisible();
     // A sheet hides the results it is filtering, which is the one place Apply
     // earns its keep (DESIGN.md §5.1).

@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   ANALYTICS_CONSENT_ATTRIBUTE,
   ANALYTICS_CONSENT_STORAGE_KEY,
-  ANALYTICS_ROUTE_ATTRIBUTE,
   analyticsDocumentBootScript,
   isAnalyticsRoute,
 } from "./analytics-routes";
@@ -36,7 +35,10 @@ function boot(pathname: string, stored: string | null | "throws") {
 }
 
 describe("what a document says about analytics before it paints (ADR-0032 D7)", () => {
-  it("agrees with the component's own rule about which paths are measured", () => {
+  it("owes the notice on every page, measured or not, until the reader answers", () => {
+    // The owner, 2026-09-21: the notice used to be owed only on the measured
+    // paths, so it vanished the moment a reader left `/`. The script says one
+    // thing now — the answer — and says it identically on every address.
     for (const pathname of [
       "/",
       "/bg",
@@ -46,15 +48,22 @@ describe("what a document says about analytics before it paints (ADR-0032 D7)", 
       "/markets/ukraine",
       "/journals",
       "/garden",
+      "/garden/entries/new",
+      "/auth/sign-in",
       "/@yehor/post/3",
       "/species/solanum-lycopersicum",
       "/blogger",
     ]) {
-      expect(
-        boot(pathname, null).get(ANALYTICS_ROUTE_ATTRIBUTE) === "true",
-        pathname,
-      ).toBe(isAnalyticsRoute(pathname));
+      expect(Object.fromEntries(boot(pathname, null)), pathname).toEqual({
+        [ANALYTICS_CONSENT_ATTRIBUTE]: "undecided",
+      });
+      expect(Object.fromEntries(boot(pathname, "declined")), pathname).toEqual({
+        [ANALYTICS_CONSENT_ATTRIBUTE]: "declined",
+      });
     }
+    // The measured paths are still a closed set — for the tags, not the notice.
+    expect(isAnalyticsRoute("/journals")).toBe(false);
+    expect(isAnalyticsRoute("/blog")).toBe(true);
   });
 
   it("reads the stored answer, and owes nothing to a value it does not know", () => {
@@ -71,8 +80,7 @@ describe("what a document says about analytics before it paints (ADR-0032 D7)", 
   });
 
   it("survives a browser that refuses storage", () => {
-    const attributes = boot("/blog", "throws");
+    const attributes = boot("/journals", "throws");
     expect(attributes.get(ANALYTICS_CONSENT_ATTRIBUTE)).toBe("undecided");
-    expect(attributes.get(ANALYTICS_ROUTE_ATTRIBUTE)).toBe("true");
   });
 });

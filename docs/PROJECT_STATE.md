@@ -180,6 +180,22 @@ four pixels of it is the difference between "Дневници" on one line and o
 axe at 375 px on the home page, the journals directory, an organism card and the
 workspace.
 
+**The consent notice stays until it is answered** (`OVE-473`, 2026-09-21). The
+owner reported that the cookie notice showed on the home page and disappeared as
+soon as a reader went to any other page, and ruled that until the reader
+presses accept or decline it is on every page, without exception. It had been
+drawn only on the nine paths the tags measure: in a static document one CSS
+rule read `<html data-analytics-route>`, which the tags component took away on
+the first client-side navigation off those paths, and a request-time document —
+the workspace, the account, sign-in — drew nothing off them at all. The rule
+now reads the stored answer and nothing else, and both documents draw the same
+notice (ADR-0032 D7, amended). The tags did not move: they still load on the
+nine measured paths and only after acceptance; an answer given anywhere is the
+whole site's. The same proof found that on `/support`, a request-time page, a
+reader who had already accepted saw the old React-drawn banner for four frames
+on every hard load; it is CSS-drawn there now too. `tests/analytics-consent.spec.ts`
+holds all of it and failed four of its five cases on the build before the fix.
+
 **A language, once chosen, stays chosen** (`OVE-472`, 2026-09-21). The owner
 reported that the language control on their profile page did nothing. It had
 done nothing on any workspace page since the control became a form (OVE-379,
@@ -517,7 +533,8 @@ That rewired how the measured paths mount their tags, so the contract is asked
 of a browser now rather than only of a unit test: `tests/analytics-consent.spec.ts`
 intercepts the tag hosts and confirms that, with consent, each instrumented path
 asks for its tag in every language and no other path does; that the notice is
-drawn only where an answer is owed; and that accepting or declining is kept.
+drawn only where an answer is owed (every page since `OVE-473`); and that
+accepting or declining is kept.
 Seventeen cases, run against production (the old document) and against the
 static one on 2026-09-20: identical.
 

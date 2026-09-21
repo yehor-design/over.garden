@@ -2,7 +2,9 @@
 
 - **Status:** Accepted (2026-09-20). Delivered for the document, the shell,
   the home feed, the journal entry and the organism card by `OVE-461`; the
-  remaining page families follow the same recipe (D8).
+  remaining page families follow the same recipe (D8). D7 amended 2026-09-21:
+  the consent notice is owed on every page, not only the measured ones
+  (`OVE-473`).
 - **Date:** 2026-09-20
 - **Decision owner:** founder/owner — "not the simplest, the fastest or the
   cheapest: the best, whatever the size of the change" (2026-09-19).
@@ -210,6 +212,31 @@ never flashes for a reader who answered, is never a late LCP candidate — on a
 text page it is the largest thing on a phone's screen — and a reader without
 JavaScript, whom nothing measures, never sees it. The tags themselves mount
 after hydration.
+
+**Amended 2026-09-21 (`OVE-473`).** The owner reported that the notice showed
+on the home page and disappeared as soon as the reader went anywhere else, and
+ruled that until the reader presses accept or decline it is drawn on every page,
+without exception. "Only for a measured path" was the defect: after a
+client-side navigation the tags component took `data-analytics-route` off
+`<html>` and the notice vanished under the reader, and a request-time document
+drew nothing at all off the measured paths. Now:
+
+- **The notice is owed wherever there is no answer.** The inline script writes
+  `data-analytics-consent` alone; `data-analytics-route` is gone, and the one
+  rule reads the answer and nothing else. Nothing a navigation does can change
+  it; only an answer can.
+- **Both documents draw the same notice.** A request-time document renders
+  `AnalyticsConsentNotice` beside its shell, drawn by the same rule. It used to
+  render a banner from React's reading of the stored answer — which the server
+  reads as "no answer", so on `/support` a reader who had accepted saw the
+  banner for four frames on every hard load before hydration took it away.
+- **Only the notice moved.** The tags still load on the nine measured paths
+  and only after acceptance. An answer given on a page that is not measured is
+  the whole site's: the tags start on the first measured page the reader opens.
+
+`tests/analytics-consent.spec.ts` holds it: the notice on measured and
+unmeasured, static and request-time pages; through client-side navigations
+until it is answered; and not one frame of it for a reader who answered.
 
 ### D8. The recipe, and the gate that keeps it
 

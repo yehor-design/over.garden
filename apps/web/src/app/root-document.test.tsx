@@ -65,21 +65,15 @@ vi.mock("@/components/site-shell/site-shell", () => ({
   },
 }));
 vi.mock("@/app/google-analytics", () => ({
-  // The consent banner is this component's only visible output. Standing in
-  // for it with a marker is what lets the placement be asserted without
-  // pulling `next/script` and a client store into a server render.
-  GoogleAnalytics: () => (
+  // The tags draw nothing a reader sees; the notice is drawn beside them, by
+  // every document (ADR-0032 D7). Standing in for both with markers is what
+  // lets the placement be asserted without pulling `next/script` and a client
+  // store into a server render.
+  GoogleAnalytics: () => <span data-testid="analytics-tags" />,
+  AnalyticsConsentNotice: ({ locale }: { locale: string }) => (
     <div
       data-analytics-consent-banner="true"
-      className="analytics-consent-banner"
-    />
-  ),
-  // A static document draws the notice itself, outside the tags' boundary
-  // (ADR-0032 D7); the tags mount after hydration and render nothing here.
-  AnalyticsConsentNotice: () => (
-    <div
-      data-analytics-consent-banner="true"
-      data-analytics-consent-notice="document"
+      data-locale={locale}
       className="analytics-consent-banner"
     />
   ),
@@ -228,5 +222,38 @@ describe("the request-time document", () => {
     expect(html).not.toContain("data-owner-user-id");
     expect(html).toContain('data-authenticated="false"');
     expect(html).toContain('data-communities="false"');
+  });
+
+  it("draws the same consent notice a static document does, in the reader's language", async () => {
+    // The owner, 2026-09-21: the notice is owed on every page until the reader
+    // answers, the workspace and sign-in included. It used to be a banner the
+    // tags component rendered from the stored answer — so the server rendered
+    // it as if nobody had answered, off the measured paths it rendered
+    // nothing, and a reader who had answered watched it flash on `/support`.
+    mocks.getRequestInterfaceLocalization.mockResolvedValue({
+      locale: "ru",
+      market: "bulgaria",
+    });
+    mocks.getSiteShellSessionState.mockResolvedValue({
+      isAuthenticated: true,
+      ownerUserId: null,
+      hasOperatorAccess: false,
+      sessionStore: "reachable",
+    });
+    mocks.hasReadyCommunityNavigation.mockResolvedValue(true);
+
+    const html = renderToStaticMarkup(
+      await RequestDocumentShell({ children: <main>OverGarden</main> }),
+    );
+
+    const shellAt = html.indexOf('data-testid="site-shell"');
+    const noticeAt = html.indexOf('data-analytics-consent-banner="true"');
+    expect(noticeAt).toBeGreaterThan(shellAt);
+    expect(html.slice(shellAt, noticeAt)).toContain("</div>");
+    expect(html).toContain(
+      'data-analytics-consent-banner="true" data-locale="ru"',
+    );
+    expect(html).toContain('data-testid="analytics-tags"');
+    expect(html.match(/data-analytics-consent-banner/gu)).toHaveLength(1);
   });
 });
