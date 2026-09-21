@@ -310,7 +310,7 @@ function FramedSiteShell({
                       href={guestNavigation.publicItems[0]?.href ?? "/"}
                       className="flex min-h-11 min-w-0 shrink-0 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring lg:mb-4 lg:px-2"
                     >
-                      <OverGardenLogo className="h-7 w-auto shrink-0 lg:h-8" />
+                      <OverGardenLogo className="h-7 w-auto shrink-0 lg:h-12" />
                       <span className="sr-only">OverGarden</span>
                     </Link>
 
