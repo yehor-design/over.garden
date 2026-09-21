@@ -393,7 +393,9 @@ test.describe("a public page is a static document", () => {
       }
       if (served.image) {
         expect(served.image.hidden, address).toBe(false);
-        expect(served.imagePreloadInHead, address).toBe(true);
+        // The newest entry may be text-only. A later card's photograph can be
+        // below the initial viewport and correctly have no preload; the
+        // first-screen photograph scenario below checks loading priority.
       }
     }
   });
