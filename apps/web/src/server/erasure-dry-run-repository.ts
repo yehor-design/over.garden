@@ -40,6 +40,7 @@ export async function collectErasureDryRunCounts(
     authUserPresent,
     authSessions,
     authAccounts,
+    publicationDisclosures,
     publicIdentityProfiles,
     currentHandleClaims,
     retiredHandleClaims,
@@ -88,6 +89,12 @@ export async function collectErasureDryRunCounts(
     countAuthUserPresent(executor, requesterUserId),
     countAuthSessions(executor, requesterUserId),
     countAuthAccounts(executor, requesterUserId),
+    executor
+      .selectFrom("publication_disclosure_acceptances")
+      .select(sql<number>`count(*)::int`.as("count"))
+      .where("owner_user_id", "=", requesterUserId)
+      .executeTakeFirstOrThrow()
+      .then((row) => row.count),
     countPublicIdentityProfiles(executor, requesterUserId),
     countHandleClaims(executor, requesterUserId, "current"),
     countHandleClaims(executor, requesterUserId, "retired"),
@@ -154,6 +161,7 @@ export async function collectErasureDryRunCounts(
     authUserPresent,
     authSessions,
     authAccounts,
+    publicationDisclosures,
     publicIdentityProfiles,
     currentHandleClaims,
     retiredHandleClaims,

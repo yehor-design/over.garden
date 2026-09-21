@@ -14,9 +14,9 @@ describe("/first-publication-disclosure", () => {
 
     expect(metadata.description).toContain("Затверджене засновником");
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
-    expect(html).toContain("маловмістовні або небезпечні сторінки");
-    expect(html).toContain("7 днів невдалої обробки");
-    expect(html).toContain("чергу на вилучення з публічного пошуку");
+    expect(html).toContain("Опубліковані записи відкриті для всіх");
+    expect(html).toContain("не зберігає вибрані оригінали");
+    expect(html).toContain("Видалення запису остаточне");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).not.toContain("410 Gone");
     expect(html).not.toMatch(/placeholder|public launch still needs/i);

@@ -239,7 +239,12 @@ export const INTERFACE_ROUTE_POLICIES = [
   {
     id: "public-legal-and-editorial-index",
     mode: "localized-link",
-    exactPaths: ["/privacy", "/first-publication-disclosure", "/blog"],
+    exactPaths: [
+      "/privacy",
+      "/first-publication-disclosure",
+      "/support",
+      "/blog",
+    ],
     safeQueryKeys: NO_QUERY_KEYS,
     preserveClientFragment: true,
   },
@@ -569,9 +574,7 @@ function sanitizeInterfaceRouteQueryValue(
     case "sort": {
       // A listing's orders are its own. The catalogue sorts by name or by
       // what has been written about; the journals directory does not.
-      const sorts = normalizeBasePath(pathname).startsWith(
-        CATALOG_BROWSE_PATH,
-      )
+      const sorts = normalizeBasePath(pathname).startsWith(CATALOG_BROWSE_PATH)
         ? PUBLIC_CATALOG_SORTS
         : PUBLIC_JOURNAL_SORTS;
       return sorts.has(value) ? value : null;

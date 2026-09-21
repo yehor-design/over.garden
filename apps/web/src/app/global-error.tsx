@@ -16,6 +16,7 @@ import {
 } from "@/lib/interface-market";
 import { INTERFACE_CONTEXT_ENDPOINT } from "@/lib/interface-route-policy";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { googleSans } from "./fonts";
 
 interface GlobalErrorProps {
@@ -54,6 +55,7 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
   const interfaceContext =
     remoteContext ?? parseGlobalErrorContextKey(documentContextKey);
   const copy = getInterfaceCopy(interfaceContext.locale);
+  const trustCopy = getTrustSurfaceCopy(interfaceContext.locale);
 
   useEffect(() => {
     let active = true;
@@ -138,6 +140,25 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
               {copy.shell.retry}
             </button>
           </div>
+          <nav
+            aria-label={trustCopy.support.title}
+            className="flex flex-wrap gap-4"
+          >
+            {/* A root failure must recover through a new document, independently of the failed router. */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a
+              href="/support"
+              className="text-link inline-flex min-h-11 items-center underline"
+            >
+              {trustCopy.support.title}
+            </a>
+            <a
+              href={localizedPath(interfaceContext.locale, "/privacy")}
+              className="text-link inline-flex min-h-11 items-center underline"
+            >
+              {trustCopy.privacy.title}
+            </a>
+          </nav>
         </main>
       </body>
     </html>

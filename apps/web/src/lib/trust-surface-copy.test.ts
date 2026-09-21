@@ -55,13 +55,13 @@ describe("trust-sensitive interface copy", () => {
       expect("dismissError" in signOutCopy).toBe(false);
     }
     expect(getTrustSurfaceCopy("uk").signOut.confirmationDescription).toContain(
-      "збережено",
+      "не зберігаються",
     );
     expect(getTrustSurfaceCopy("bg").signOut.confirmationDescription).toContain(
-      "запазени",
+      "не се запазват",
     );
     expect(getTrustSurfaceCopy("ru").signOut.confirmationDescription).toContain(
-      "сохранены",
+      "не сохраняются",
     );
   });
 
@@ -136,7 +136,7 @@ describe("trust-sensitive interface copy", () => {
         .replaceAll("Meta Pixel", "")
         .replaceAll("Meta Conversions API", "")
         .replaceAll("support.overgarden@gmail.com", "")
-        .replaceAll("first-publication-v5", "")
+        .replaceAll("first-publication-v6", "")
         .replaceAll("erasure-request-mvp-v1", "");
 
       expect(authoredCopy).not.toMatch(forbidden);

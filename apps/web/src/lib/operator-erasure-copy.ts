@@ -111,6 +111,7 @@ const UK_COPY = {
     user_row: "рядок користувача",
     sessions: "сесії",
     accounts: "облікові записи",
+    publication_disclosures: "підтвердження публікації",
     profiles: "публічні профілі",
     current_handle_claims: "чинні ніки",
     retired_handle_claims: "колишні ніки",
@@ -270,6 +271,7 @@ const BG_COPY: OperatorErasureCopy = {
   },
   countLabels: {
     ...UK_COPY.countLabels,
+    publication_disclosures: "потвърждения за публикуване",
     cover_only: "само корица",
     explicit_cover_refs: "явни корици",
     profile_follows: "профилни follows",
@@ -399,6 +401,7 @@ const RU_COPY: OperatorErasureCopy = {
   },
   countLabels: {
     ...UK_COPY.countLabels,
+    publication_disclosures: "подтверждения публикации",
     cover_only: "только обложка",
     explicit_cover_refs: "явные обложки",
     profile_follows: "подписки профилей",

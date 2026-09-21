@@ -33,9 +33,21 @@ export interface ErasureCoverageEntry {
 // nobody can walk is not a path the manifest should keep classifying. v13 adds
 // the per-author entry counter (OVE-464): one row that says how many entries a
 // gardener has published, which is a fact about a person.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove464.erasure-schema.v13";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove476.erasure-schema.v14";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
+  // Versioned notice receipts contain no journal content and leave with the account.
+  {
+    id: "publication_disclosure_acceptances.owner_user_id",
+    table: "publication_disclosure_acceptances",
+    columnOrPath: "owner_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "Counted with account data; ON DELETE CASCADE removes all versions when the account is erased.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
   // Auth / Better Auth
   {
     id: "user.id",
@@ -760,7 +772,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "decided_by_user_id",
     kind: "soft_column",
     disposition: "anonymize",
-    rationale: "Curator decision attribution on a graph assertion nulled (ADR-0026).",
+    rationale:
+      "Curator decision attribution on a graph assertion nulled (ADR-0026).",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -770,7 +783,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "decided_by_user_id",
     kind: "soft_column",
     disposition: "anonymize",
-    rationale: "Curator decision attribution on a queue item nulled (ADR-0026).",
+    rationale:
+      "Curator decision attribution on a queue item nulled (ADR-0026).",
     dryRunOwned: true,
     executionOwned: true,
   },

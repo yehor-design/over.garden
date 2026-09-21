@@ -18,12 +18,12 @@ import {
 
 describe("MVP privacy disclosure constants", () => {
   it("keeps first-publication disclosure version explicit and copy bounded", () => {
-    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v5");
+    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v6");
     expect(MVP_LEGAL_COPY_STATUS).toBe(
       "founder_approved_mvp_lawyer_review_deferred",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
-      "thin or unsafe user-generated surfaces stay out of sitemaps",
+      "public and eligible for search-engine indexing",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
       "short-lived private staging",
@@ -87,6 +87,7 @@ describe("MVP privacy disclosure constants", () => {
     expect(MVP_RETENTION_RULES.map((rule) => rule.title)).toEqual([
       "Final photo staging",
       "Public final WebPs",
+      "Publication acceptance",
       "Operator audit logs",
       "Erasure handling evidence",
       "Analytics events",
@@ -100,9 +101,7 @@ describe("MVP privacy disclosure constants", () => {
     expect(MVP_RETENTION_RULES.map((rule) => rule.summary).join(" ")).toContain(
       "1 year",
     );
-    expect(MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS).toContain(
-      "journal text",
-    );
+    expect(MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS).toContain("journal text");
   });
 
   it("describes erasure request status without raw internal ids", () => {
@@ -143,6 +142,8 @@ describe("MVP privacy disclosure constants", () => {
 
     expect(allCopy).not.toMatch(/placeholder/i);
     expect(allCopy).not.toContain("public release remains blocked");
-    expect(allCopy).not.toContain("closed_pilot_reviewed_public_release_blocked");
+    expect(allCopy).not.toContain(
+      "closed_pilot_reviewed_public_release_blocked",
+    );
   });
 });

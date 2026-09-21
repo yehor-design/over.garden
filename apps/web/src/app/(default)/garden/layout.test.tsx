@@ -16,7 +16,7 @@ describe("garden locale metadata", () => {
     await expect(generateMetadata()).resolves.toMatchObject({
       title: "Градинско пространство | OverGarden",
       description:
-        "Лично пространство за живи обекти, датирани записи и следващи действия в градината.",
+        "Управлявайте своите пространства и обекти и публикувайте наблюдения за всички.",
       robots: {
         index: false,
         follow: false,

@@ -109,7 +109,7 @@ async function runIntegrationFaultProof() {
     const first = atomicPublication();
     trackedEntryIds.push(first.publishId);
     const firstResult = await repository.createFirstPlantEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       plantName: "OVE-347 first-flow plant",
       objectKind: "plant",
@@ -127,7 +127,7 @@ async function runIntegrationFaultProof() {
     });
 
     const replay = await repository.createFirstPlantEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       plantName: "OVE-347 first-flow plant",
       objectKind: "plant",
@@ -153,7 +153,7 @@ async function runIntegrationFaultProof() {
     const followUpResult = await repository.createPlantObjectJournalEntry(
       scope,
       {
-    sourceLanguage: "uk",
+        sourceLanguage: "uk",
         plantObjectId,
         title: "Atomic follow-up entry",
         contentDocument: imageDocument(
@@ -183,7 +183,7 @@ async function runIntegrationFaultProof() {
     const spaceEntry = atomicPublication();
     trackedEntryIds.push(spaceEntry.publishId);
     const spaceResult = await repository.createSpaceJournalEntry(scope, {
-    sourceLanguage: "uk",
+      sourceLanguage: "uk",
       spaceId,
       mentionedPlantObjectIds: [plantObjectId],
       title: "Atomic space entry",
@@ -220,7 +220,7 @@ async function runIntegrationFaultProof() {
     };
     try {
       await repository.createFirstPlantEntry(scope, {
-    sourceLanguage: "uk",
+        sourceLanguage: "uk",
         spaceId,
         plantName: "OVE-347 first-flow plant",
         objectKind: "plant",
@@ -271,7 +271,7 @@ async function runIntegrationFaultProof() {
     let injectedDbFaultClass = "not_rejected";
     try {
       await repository.createPlantObjectJournalEntry(scope, {
-    sourceLanguage: "uk",
+        sourceLanguage: "uk",
         plantObjectId,
         title: "Atomic rollback fault",
         contentDocument: imageDocument(fault.mediaAssetId),
@@ -471,6 +471,7 @@ function atomicPublicationWithMedia() {
       publishId,
       requestDigest: digest43(publishId),
       disclosureAccepted: true,
+      disclosureVersion: "first-publication-v6",
       coverMediaAssetId: mediaAssetId,
       handoff: {
         stagingSessionId,
@@ -497,6 +498,7 @@ function atomicPublication() {
     publishId,
     requestDigest: digest43(publishId),
     disclosureAccepted: true,
+    disclosureVersion: "first-publication-v6",
     coverMediaAssetId: null,
     handoff: null,
   };
@@ -512,6 +514,7 @@ function atomicPublicationWithInvalidMedia() {
       publishId,
       requestDigest: digest43(publishId),
       disclosureAccepted: true,
+      disclosureVersion: "first-publication-v6",
       coverMediaAssetId: null,
       handoff: {
         stagingSessionId,

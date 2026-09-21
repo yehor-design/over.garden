@@ -31,5 +31,6 @@ export function buildAtomicTextJournalCreateRequest(input: {
     mediaClaimReceipts: [],
     returnTo: input.returnTo ?? "/garden",
     disclosureAccepted: true,
+    disclosureVersion: "first-publication-v6",
   };
 }

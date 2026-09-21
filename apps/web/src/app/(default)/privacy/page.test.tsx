@@ -15,14 +15,14 @@ describe("/privacy MVP notice", () => {
     expect(metadata.description).toContain("Затверджене засновником");
     expect(html).toContain("затверджено засновником");
     expect(html).toContain("Строки зберігання даних");
-    expect(html).toContain("7 днів невдалої обробки");
+    expect(html).toContain("після двох годин");
     expect(html).toContain("13 місяців");
     expect(html).toContain("Google Tag Manager / Google Analytics");
     expect(html).toContain("дані сесій Microsoft Clarity");
     expect(html).toContain("Публічна аналітика");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
-    expect(html).toContain("чергу на вилучення з публічного пошуку");
+    expect(html).toContain("Видалення запису остаточне");
     expect(html).toContain('lang="uk"');
     expect(html).toContain("Повідомлення про приватність для MVP");
     expect(html).not.toContain("Русский");

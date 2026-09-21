@@ -23,7 +23,7 @@ describe("/{locale}/privacy", () => {
     expect(html).toContain("Уведомление за поверителност за MVP");
     expect(html).toContain("одобрен от основателя");
     expect(html).toContain(SUPPORT_EMAIL);
-    expect(html).toContain("7 дни неуспешна обработка");
+    expect(html).toContain("след два часа");
     expect(html).toContain("Google Tag Manager / Google Analytics");
     expect(html).toContain("данните за сесии от Microsoft Clarity");
     expect(html).toContain("Публични анализи");

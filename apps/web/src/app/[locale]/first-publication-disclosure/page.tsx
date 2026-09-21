@@ -2,10 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PublicArticle } from "@/components/public/public-article";
-import {
-  isPublicLocale,
-  PUBLIC_LOCALES,
-} from "@/lib/public-localization";
+import { isPublicLocale, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import {
@@ -52,8 +49,7 @@ export default async function LocalizedFirstPublicationDisclosurePage({
   const copy = getTrustSurfaceCopy(localeParam).firstPublication;
 
   return (
-    // The wording is a legal disclosure and is unchanged (`OVE-453`
-    // criterion 5). The shape is the product's one article shape.
+    // Public-first processing and deletion notice, versioned with the API.
     <PublicArticle
       locale={localeParam}
       dataset={{ "data-trust-surface": "first-publication" }}

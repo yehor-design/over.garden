@@ -256,12 +256,12 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('"owner_user_id" = $1');
-    expect(compiled.sql).toContain(
-      '"first_publication_disclosed_at" is not null',
-    );
-    expect(compiled.sql).toContain("limit $2");
+    expect(compiled.sql).toContain('from "publication_disclosure_acceptances"');
+    expect(compiled.sql).toContain('"disclosure_version" = $2');
+    expect(compiled.sql).toContain("limit $3");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
+      "first-publication-v6",
       1,
     ]);
   });
@@ -286,7 +286,7 @@ describe("journal repository query contracts", () => {
     // INV-04: both timestamps come from one PostgreSQL `now()`, never from
     // application time, so the seven-day horizon cannot drift across a
     // daylight-saving boundary and trip the retention check constraint.
-    expect(compiled.sql).toContain("\"deleted_at\" = now()");
+    expect(compiled.sql).toContain('"deleted_at" = now()');
     expect(compiled.sql).toContain(
       "\"purge_after\" = now() + interval '7 days'",
     );
@@ -353,7 +353,7 @@ describe("journal repository query contracts", () => {
       "active",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
-       20,
+      20,
       0,
     ]);
   });
@@ -828,7 +828,9 @@ describe("journal repository query contracts", () => {
       // The registry's *current* handle: an address under a handle the
       // gardener no longer holds finds nothing here.
       expect(compiled.sql).toContain("handle_registry.normalized_handle");
-      expect(compiled.sql).toContain("handle_registry.lifecycle_state = 'current'");
+      expect(compiled.sql).toContain(
+        "handle_registry.lifecycle_state = 'current'",
+      );
       expect(compiled.sql).not.toContain('"journal_entries"."public_slug" = ');
       expect(compiled.parameters).toContain(12);
       expect(compiled.parameters).toContain("yehor");
@@ -991,9 +993,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"mentioned_handles"."user_id" = "person_mentions"."source_owner_user_id"',
     );
-    expect(compiled.sql).toContain(
-      '"mentioned_handles"."lifecycle_state" = ',
-    );
+    expect(compiled.sql).toContain('"mentioned_handles"."lifecycle_state" = ');
     expect(compiled.sql).toContain(
       '"mentioned_profiles"."normalized_handle" = "mentioned_handles"."normalized_handle"',
     );
@@ -1142,9 +1142,7 @@ describe("journal repository query contracts", () => {
       newer: null,
       older: { publicPath: "/@olena/post/7" },
     });
-    expect(page.relatedEntries[0]?.publicPath).toBe(
-      "/@olena/post/7",
-    );
+    expect(page.relatedEntries[0]?.publicPath).toBe("/@olena/post/7");
     expect(JSON.stringify(page)).not.toMatch(
       /ownerUserId|owner_user_id|email|quarantine|coordinates|latitude|longitude/i,
     );

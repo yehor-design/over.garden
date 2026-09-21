@@ -67,6 +67,7 @@ describe("erasure dry-run preview assembly", () => {
         authUserPresent: 1,
         authSessions: 2,
         authAccounts: 1,
+        publicationDisclosures: 1,
         publicIdentityProfiles: 1,
         currentHandleClaims: 1,
         retiredHandleClaims: 2,

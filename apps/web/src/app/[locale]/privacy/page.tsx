@@ -57,11 +57,7 @@ export default async function LocalizedPrivacyNoticePage({
   const copy = getTrustSurfaceCopy(localeParam).privacy;
 
   return (
-    // The legal wording is unchanged, and changing it would be a legal
-    // decision rather than a design one (`OVE-453` criterion 5). What changes
-    // is that it is now the product's one article shape: real headings with
-    // real ids, a contents list that is the rail above `xl` and a list at the
-    // foot below it, and the reading column's measure instead of a wall.
+    // Public-first processing and deletion notice, versioned with the API.
     <PublicArticle
       locale={localeParam}
       dataset={{ "data-trust-surface": "privacy" }}

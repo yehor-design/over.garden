@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` applied 2026-09-21. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -1197,3 +1197,22 @@ types only.
 Rollback `sql/rollback/0078_….down.sql` drops the constraint and the index and
 **does not** move the rows back: putting 13,450 questions that cannot be
 answered in front of the owner is not a rollback.
+
+## `0079`, account-level publication notice receipts — applied 2026-09-21
+
+`0079_ove476_publication_disclosure_receipts.sql` was applied through
+`scripts/apply-reviewed-migration.ts` with the current Vercel production
+configuration: one transaction, `digitalocean_managed`, `defaultdb`, four
+statements, 482 ms. SQL SHA-256:
+`43f05083beaade04bd6e566c44ff8611f685c38e7d98001b7b34cf4285040872`.
+
+The additive table `publication_disclosure_acceptances` records account,
+notice version and acceptance time, with a composite primary key and account
+FK `ON DELETE CASCADE`. It retains no journal content. Surviving historical
+entry receipts are copied under their original version and earliest time;
+old versions are not promoted to `first-publication-v6`. It survives entry
+retention purge and is erased with the account. The previous application
+release remains compatible. Code rollback retains the table and evidence.
+
+Post-apply production inventory returned `status: applied`, `absent: []` for
+0079. No historical migrations were replayed by this change.

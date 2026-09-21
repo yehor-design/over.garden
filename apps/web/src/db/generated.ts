@@ -966,6 +966,12 @@ export interface ProfileReports {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PublicationDisclosureAcceptances {
+  accepted_at: Timestamp;
+  disclosure_version: string;
+  owner_user_id: string;
+}
+
 export interface PublicProjectionIntents {
   applied_at: Timestamp | null;
   applied_generation: Generated<Int8>;
@@ -1185,6 +1191,7 @@ export interface DB {
   profile_follows: ProfileFollows;
   profile_reports: ProfileReports;
   public_projection_intents: PublicProjectionIntents;
+  publication_disclosure_acceptances: PublicationDisclosureAcceptances;
   session: Session;
   spaces: Spaces;
   stable_registry_public_eppo_records: StableRegistryPublicEppoRecords;

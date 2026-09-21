@@ -233,19 +233,19 @@ describe("/garden/objects/[objectId]", () => {
   it.each([
     [
       "uk",
-      "Публічна сторінка доступна",
+      "Опубліковані записи відкриті для всіх",
       "/journal/first-public-flowers",
       "/lineage/objects/object-1",
     ],
     [
       "bg",
-      "Публичната страница е достъпна",
+      "Публикуваните записи са достъпни за всички",
       "/journal/first-public-flowers",
       "/bg/lineage/objects/object-1",
     ],
     [
       "ru",
-      "Публичная страница доступна",
+      "Опубликованные записи доступны всем",
       "/journal/first-public-flowers",
       "/ru/lineage/objects/object-1",
     ],

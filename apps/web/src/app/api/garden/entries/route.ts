@@ -1,3 +1,5 @@
+import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
+
 import { randomUUID } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
@@ -200,6 +202,7 @@ async function createEntry(request: Request, scope: RequestScope) {
       publishId: body.publishId,
       requestDigest,
       disclosureAccepted: body.disclosureAccepted,
+      disclosureVersion: body.disclosureVersion,
       coverMediaAssetId: body.coverMediaAssetId,
       handoff: handoff
         ? {
@@ -222,7 +225,7 @@ async function createEntry(request: Request, scope: RequestScope) {
     const result =
       body.context.target === "space_entry"
         ? await createSpaceJournalEntry(scope, {
-              sourceLanguage,
+            sourceLanguage,
             ...body.context,
             title: body.title,
             contentDocument: document,
@@ -340,6 +343,7 @@ function parseAtomicJournalCreateRequest(
     "mediaPlaceholders",
     "returnTo",
     "disclosureAccepted",
+    "disclosureVersion",
   ]);
   if (Object.keys(value).some((key) => !allowed.has(key))) {
     throw new AtomicJournalCreateError("atomic_request_invalid", 400);
@@ -366,6 +370,9 @@ function parseAtomicJournalCreateRequest(
     typeof value.disclosureAccepted !== "boolean"
   ) {
     throw new AtomicJournalCreateError("atomic_request_invalid", 400);
+  }
+  if (value.disclosureVersion !== FIRST_PUBLICATION_DISCLOSURE_VERSION) {
+    throw new AtomicJournalCreateError("disclosure_version_changed", 409);
   }
   return value as unknown as AtomicJournalCreateRequest;
 }
@@ -547,6 +554,7 @@ async function atomicRequestDigest(
         coverMediaAssetId: input.coverMediaAssetId,
         receiptSetDigest: input.receiptSetDigest,
         disclosureAccepted: input.disclosureAccepted,
+        disclosureVersion: input.disclosureVersion,
       }),
     ),
   );

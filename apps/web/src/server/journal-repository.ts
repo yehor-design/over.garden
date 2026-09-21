@@ -145,6 +145,7 @@ export interface AtomicCreatePublicationInput {
   publishId: string;
   requestDigest: string;
   disclosureAccepted: boolean;
+  disclosureVersion: string;
   coverMediaAssetId: string | null;
   handoff: {
     stagingSessionId: string;
@@ -1500,9 +1501,7 @@ export async function createFirstPlantEntry(
         // ADR-0026 D6: the own name is a label on the object, never a card.
         catalog_item_id: selectedCatalogItem?.id ?? null,
         variety_text:
-          selectedCatalogItem?.canonicalName ??
-          normalized.catalogLabel ??
-          null,
+          selectedCatalogItem?.canonicalName ?? normalized.catalogLabel ?? null,
         variety_state: selectedCatalogItem
           ? "selected"
           : normalized.catalogLabel
@@ -2535,7 +2534,9 @@ export async function resolvePlantObjectCatalog(
     }
 
     if (!isResolvableVarietyState(target.varietyState)) {
-      throw new Error("Only objects without a catalog identity can be resolved.");
+      throw new Error(
+        "Only objects without a catalog identity can be resolved.",
+      );
     }
 
     const selectedCatalogItem = normalized.catalogItemId
@@ -3411,10 +3412,10 @@ export function buildPriorPublicationDisclosureQuery(
   scope: RequestScope,
 ) {
   return executor
-    .selectFrom("journal_entries")
-    .select("id")
+    .selectFrom("publication_disclosure_acceptances")
+    .select("owner_user_id as id")
     .where("owner_user_id", "=", scope.userId)
-    .where("first_publication_disclosed_at", "is not", null)
+    .where("disclosure_version", "=", FIRST_PUBLICATION_DISCLOSURE_VERSION)
     .limit(1);
 }
 
@@ -3569,7 +3570,9 @@ export function buildPublicEntrySlugsForObjectQuery(
       "journal_entries.id as entryId",
       "journal_entries.public_slug as publicSlug",
       "journal_entries.author_entry_number as entryNumber",
-      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
     ])
     .where("journal_entries.owner_user_id", "=", scope.userId)
     .where((eb) =>
@@ -3997,7 +4000,9 @@ export function buildPublicJournalEntryLookupQuery(
       "plant_objects.location_visibility as objectLocationVisibility",
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "user_public_profiles.handle as authorHandle",
-      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
     ])
@@ -4043,7 +4048,9 @@ export function buildRelatedPublicJournalEntriesQuery(
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as publicSlug",
       "journal_entries.author_entry_number as entryNumber",
-      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
     ])
     .where("journal_entries.plant_object_id", "=", plantObjectId)
     .where("journal_entries.id", "!=", currentEntryId)
@@ -4119,7 +4126,9 @@ export function buildAdjacentPublicJournalEntryQuery(
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as publicSlug",
       "journal_entries.author_entry_number as entryNumber",
-      publicAuthorHandleSql("journal_entries.owner_user_id").as("addressHandle"),
+      publicAuthorHandleSql("journal_entries.owner_user_id").as(
+        "addressHandle",
+      ),
     ])
     .where("journal_entries.id", "!=", input.currentEntryId)
     .where("journal_entries.visibility", "=", "public")
@@ -4552,10 +4561,27 @@ async function atomicJournalEntryValues(
     scope,
   ).executeTakeFirst();
   const disclosureLogged = !priorDisclosure;
-  if (disclosureLogged && !atomic.disclosureAccepted) {
+  if (
+    disclosureLogged &&
+    (!atomic.disclosureAccepted ||
+      atomic.disclosureVersion !== FIRST_PUBLICATION_DISCLOSURE_VERSION)
+  ) {
     throw new Error("First-publication disclosure must be accepted.");
   }
   const now = new Date();
+  if (disclosureLogged) {
+    await executor
+      .insertInto("publication_disclosure_acceptances")
+      .values({
+        owner_user_id: scope.userId,
+        disclosure_version: FIRST_PUBLICATION_DISCLOSURE_VERSION,
+        accepted_at: now,
+      })
+      .onConflict((oc) =>
+        oc.columns(["owner_user_id", "disclosure_version"]).doNothing(),
+      )
+      .execute();
+  }
   return {
     id: atomic.publishId,
     visibility: "public",
