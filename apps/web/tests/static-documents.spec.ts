@@ -2,6 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { expect, test, type APIRequestContext } from "playwright/test";
 import { Pool } from "pg";
+import { buildAtomicTextJournalCreateRequest } from "../scripts/atomic-journal-text-request";
+import {
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 
 import {
   cleanupOrganismFixture,
@@ -147,8 +152,9 @@ interface SegmentOutcome {
 
 function installSegmentProbe(holdMs: number) {
   const outcomes: SegmentOutcome[] = [];
-  (window as unknown as { __segmentOutcomes: SegmentOutcome[] }).__segmentOutcomes =
-    outcomes;
+  (
+    window as unknown as { __segmentOutcomes: SegmentOutcome[] }
+  ).__segmentOutcomes = outcomes;
   const describe = (segment: Element | null) =>
     (segment?.innerHTML ?? "").replace(/\s+/gu, " ").slice(0, 120);
 
@@ -160,7 +166,11 @@ function installSegmentProbe(holdMs: number) {
       complete = function (this: unknown, boundary, segment) {
         const node = document.getElementById(segment);
         if (node && !document.getElementById(boundary)) {
-          outcomes.push({ boundary, outcome: "dropped", holds: describe(node) });
+          outcomes.push({
+            boundary,
+            outcome: "dropped",
+            holds: describe(node),
+          });
         }
         return original.call(this, boundary, segment);
       };
@@ -222,7 +232,10 @@ async function seedStaticFixture(pool: Pool): Promise<StaticFixture> {
  * is what puts the `<img>` in the document; no file answers behind it, and the
  * box is reserved either way (DESIGN.md §2.10).
  */
-async function photographTheSpeciesEntry(pool: Pool, organism: OrganismFixture) {
+async function photographTheSpeciesEntry(
+  pool: Pool,
+  organism: OrganismFixture,
+) {
   const photographed = await pool.query(
     `insert into media_assets (id, owner_user_id, journal_entry_id, derivative_key, alt_text, caption,
        document_position, usage_role, intrinsic_width, intrinsic_height, focal_x, focal_y,
@@ -259,11 +272,13 @@ async function photographTheSpeciesEntry(pool: Pool, organism: OrganismFixture) 
 function largestPhotographOnTheFirstScreen() {
   const candidates = [...document.querySelectorAll("img")].flatMap((image) => {
     const box = image.getBoundingClientRect();
-    const width = Math.min(box.right, window.innerWidth) - Math.max(box.left, 0);
+    const width =
+      Math.min(box.right, window.innerWidth) - Math.max(box.left, 0);
     const height =
       Math.min(box.bottom, window.innerHeight) - Math.max(box.top, 0);
     // An avatar is not what a page's LCP waits for.
-    if (box.width < 96 || box.height < 96 || width <= 0 || height <= 0) return [];
+    if (box.width < 96 || box.height < 96 || width <= 0 || height <= 0)
+      return [];
     // Neither is an empty state's illustration. It is decorative app art —
     // `alt=""`, 144 px, shipped with the code (DESIGN.md §2.9) — and it is
     // lazy on purpose. On a listing with nothing in it, it is nevertheless the
@@ -290,10 +305,70 @@ test.describe("a public page is a static document", () => {
 
   let pool: Pool;
   let fixture: StaticFixture;
+  let directoryWriterId: string | null = null;
+  let directoryEntryPath: string;
 
-  test.beforeAll(async () => {
+  test.beforeAll(async ({ browser, baseURL }) => {
+    test.setTimeout(60_000);
+    if (
+      !baseURL ||
+      !["localhost", "127.0.0.1"].includes(new URL(baseURL).hostname)
+    ) {
+      throw new Error(
+        "Static-document publication proof requires a loopback server",
+      );
+    }
     pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
     fixture = await seedStaticFixture(pool);
+    const writer = await browser.newContext();
+    try {
+      // A CI build prerenders an empty directory. Raw SQL fixtures do not
+      // invalidate that snapshot. Publish through the real ingress so this
+      // also proves that a new entry reaches the cached static document.
+      await writer.request.get(`${baseURL}/journals`);
+      const gardener = await signInSyntheticGardener({
+        baseURL,
+        context: writer,
+        pool,
+        prefix: "ove467directory",
+      });
+      directoryWriterId = gardener.id;
+      const spaceId = randomUUID();
+      await pool.query(
+        "insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)",
+        [spaceId, gardener.id, "Static directory publication proof"],
+      );
+      const objectId = randomUUID();
+      await pool.query(
+        `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, variety_state)
+         values ($1, $2, $3, 'Static directory tomato', 'plant', 'unknown')`,
+        [objectId, gardener.id, spaceId],
+      );
+      const response = await writer.request.post(
+        `${baseURL}/api/garden/entries`,
+        {
+          headers: {
+            origin: baseURL,
+            [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
+              ATOMIC_JOURNAL_CREATE_PROTOCOL,
+          },
+          data: buildAtomicTextJournalCreateRequest({
+            publishId: randomUUID(),
+            context: {
+              target: "plant_object_entry",
+              plantObjectId: objectId,
+              entryDate: new Date().toISOString().slice(0, 10),
+            },
+            title: "Новий запис у статичному списку",
+            text: fixture.entry.body,
+          }),
+        },
+      );
+      expect(response.status(), await response.text()).toBe(200);
+      directoryEntryPath = (await response.json()).card.publicPath;
+    } finally {
+      await writer.close();
+    }
   });
 
   test.afterAll(async () => {
@@ -301,7 +376,19 @@ test.describe("a public page is a static document", () => {
       await cleanupPublishedEntryFixture(pool, fixture.entry);
       await cleanupOrganismFixture(pool, fixture.organism);
     }
-    await pool.end();
+    if (directoryWriterId) {
+      await pool.query("delete from journal_entries where owner_user_id = $1", [
+        directoryWriterId,
+      ]);
+      await pool.query("delete from plant_objects where owner_user_id = $1", [
+        directoryWriterId,
+      ]);
+      await pool.query("delete from spaces where owner_user_id = $1", [
+        directoryWriterId,
+      ]);
+      await removeSyntheticGardener(pool, directoryWriterId);
+    }
+    if (pool) await pool.end();
   });
 
   test("the home feed is in the served bytes", async ({ request }) => {
@@ -343,6 +430,67 @@ test.describe("a public page is a static document", () => {
       ).toBe(true);
       expect(served.visibleText).toContain("Статичний документ: перший запис");
       expect(served.visibleText).toContain("Новий приріст рівний");
+    }
+  });
+
+  test("journal directories serve their content and controls outside every hidden segment", async ({
+    request,
+  }) => {
+    for (const address of [
+      "/journals",
+      "/bg/journals",
+      "/ru/journals",
+      "/journals?utm_source=proof",
+    ]) {
+      const { status, html } = await getDocument(request, address);
+      expect(status, address).toBe(200);
+      const served = readStaticDocument(html);
+      expect(served.titleInHead, address).toBe(true);
+      expect(served.heading?.hidden, address).toBe(false);
+      expect(html, address).not.toContain(
+        'data-public-journal-directory-state="loading"',
+      );
+      expect(
+        html,
+        `${address}: the publication invalidated the static snapshot`,
+      ).toContain(`data-entry-card="${directoryEntryPath}"`);
+      const ranges = hiddenSegments(html);
+      for (const marker of [
+        'data-public-journal-directory-state="',
+        'data-filter-bar-form="true"',
+        'data-entry-card="',
+      ]) {
+        const occurrences = [...html.matchAll(new RegExp(marker, "g"))];
+        expect(occurrences.length, `${address}: ${marker}`).toBeGreaterThan(0);
+        for (const occurrence of occurrences) {
+          expect(
+            ranges.some(
+              ([start, end]) =>
+                occurrence.index! >= start && occurrence.index! < end,
+            ),
+            `${address}: ${marker}`,
+          ).toBe(false);
+        }
+      }
+      if (served.image) {
+        expect(served.image.hidden, address).toBe(false);
+        // The newest entry may be text-only. A later card's photograph can be
+        // below the initial viewport and correctly have no preload; the
+        // first-screen photograph scenario below checks loading priority.
+      }
+    }
+  });
+
+  test("journal filters use their query twin while direct twin addresses stay unavailable", async ({
+    request,
+  }) => {
+    const filtered = await getDocument(request, "/journals?kind=animal");
+    expect(filtered.status).toBe(200);
+    expect(filtered.html).toMatch(
+      /<option[^>]*(?:value="animal"[^>]*selected=""|selected=""[^>]*value="animal")/,
+    );
+    for (const address of ["/q/journals", "/bg/q/journals", "/ru/q/journals"]) {
+      expect((await getDocument(request, address)).status, address).toBe(404);
     }
   });
 
@@ -389,7 +537,10 @@ test.describe("a public page is a static document", () => {
         // The entry and the card are this file's own rows, so their photograph
         // is known to be there; a listing shows whatever the database holds.
         if (address === fixture.entryPath || address === card) {
-          expect(largest, `${where}: a photograph on the first screen`).not.toBeNull();
+          expect(
+            largest,
+            `${where}: a photograph on the first screen`,
+          ).not.toBeNull();
         }
         expect(
           largest?.loading ?? "eager",
@@ -407,7 +558,11 @@ test.describe("a public page is a static document", () => {
     // served — the twin renders at request time, so a chip's *label* arrives in
     // a later segment and is not in the bytes beside its button.
     const chips = (html: string) =>
-      [...html.matchAll(/data-slot="toggle-chip" aria-pressed="(true|false)"/gu)]
+      [
+        ...html.matchAll(
+          /data-slot="toggle-chip" aria-pressed="(true|false)"/gu,
+        ),
+      ]
         .slice(0, 3)
         .map((match) => match[1]);
     const plain = await getDocument(request, "/");
@@ -439,6 +594,9 @@ test.describe("a public page is a static document", () => {
     try {
       for (const address of [
         "/",
+        "/journals",
+        "/bg/journals",
+        "/ru/journals",
         fixture.entryPath,
         `/species/${fixture.organism.speciesSlug}`,
       ]) {
@@ -474,6 +632,9 @@ test.describe("a public page is a static document", () => {
       "/",
       "/?kind=plant",
       "/journals",
+      "/journals?kind=plant",
+      "/bg/journals",
+      "/ru/journals",
       "/catalog",
       fixture.entryPath,
       `/@${fixture.handle}`,
@@ -528,6 +689,9 @@ test.describe("a public page is a static document", () => {
       fixture.entryPath,
       `/species/${fixture.organism.speciesSlug}`,
       "/journals",
+      "/journals?kind=plant",
+      "/bg/journals",
+      "/ru/journals",
       "/catalog",
       "/knowledge",
       "/communities",

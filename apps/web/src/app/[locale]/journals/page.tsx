@@ -36,10 +36,15 @@ import {
   readPublicJournalDirectoryFacets,
   readPublicJournalDirectoryPage,
 } from "@/server/public-cache";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 
 interface PublicJournalsRouteProps {
   params: Promise<{ locale: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export function generateStaticParams() {
@@ -68,6 +73,7 @@ export async function generateMetadata({
   const request = normalizePublicJournalDirectoryRequest({});
   const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_journals_directory",
+    document: "static",
     loadSource: async () => {
       const [page, facets] = await Promise.all([
         readPublicJournalDirectoryPage(request, localeParam),
@@ -86,7 +92,9 @@ export async function generateMetadata({
 export async function renderPublicJournalsPage(
   locale: PublicLocale,
   searchParams: Record<string, string | string[] | undefined> = {},
+  phase: PublicRenderPhase = "request",
 ) {
+  await deferStaticRenderWithoutDatabase(phase);
   const request = normalizePublicJournalDirectoryRequest(searchParams);
   const searchScopePromise = resolvePublicJournalDirectorySearchScope(request, {
     restrictToEntryIds: null,
@@ -110,6 +118,7 @@ export async function renderPublicJournalsPage(
   ]);
   const failed =
     pageResult.status === "rejected" || facetsResult.status === "rejected";
+  if (failed) deferStaticRenderAfterFailure(phase);
   const page =
     pageResult.status === "fulfilled"
       ? pageResult.value
@@ -152,12 +161,28 @@ export async function renderPublicJournalsPage(
 
 export default async function PublicJournalsRoute({
   params,
-  searchParams,
 }: PublicJournalsRouteProps) {
   const { locale: localeParam } = await params;
   if (!isPublicLocale(localeParam)) notFound();
 
-  return renderPublicJournalsPage(localeParam, (await searchParams) ?? {});
+  return renderStaticPublicJournalsPage(localeParam);
+}
+
+export function renderStaticPublicJournalsPage(locale: PublicLocale) {
+  return renderStaticPublicPage({
+    render: (phase) => renderPublicJournalsPage(locale, {}, phase),
+    fallback: (
+      <PublicJournalDirectory
+        locale={locale}
+        copy={getPublicJournalDirectoryCopy(locale)}
+        page={emptyPublicJournalDirectoryPage(
+          normalizePublicJournalDirectoryRequest({}),
+        )}
+        facets={emptyPublicJournalDirectoryFacets()}
+        state="loading"
+      />
+    ),
+  });
 }
 
 export function emptyPublicJournalDirectoryPage(

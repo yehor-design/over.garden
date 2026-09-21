@@ -1,0 +1,58 @@
+{
+  "before": {
+    "metadata": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"http://127.0.0.1:3000/bg/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"http://127.0.0.1:3000/ru/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"http://127.0.0.1:3000/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"http://127.0.0.1:3000/journals\"/>",
+      "<link rel=\"canonical\" href=\"http://127.0.0.1:3000/journals\"/>",
+      "<meta name=\"description\" content=\"Публічні журнали про рослини, тварин і бджолосім&#x27;ї з безпечними фільтрами за темою, сезоном та регіоном.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Публічні журнали про рослини, тварин і бджолосім&#x27;ї з безпечними фільтрами за темою, сезоном та регіоном.\"/>",
+      "<meta name=\"twitter:title\" content=\"Журнали | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Публічні журнали про рослини, тварин і бджолосім&#x27;ї з безпечними фільтрами за темою, сезоном та регіоном.\"/>",
+      "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Журнали | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"http://127.0.0.1:3000/journals\"/>"
+    ],
+    "structured": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"http://127.0.0.1:3000/journals\",\"url\":\"http://127.0.0.1:3000/journals\",\"name\":\"Журнали\",\"description\":\"Датовані спостереження з реальним контекстом живих об'єктів.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"http://127.0.0.1:3000/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"http://127.0.0.1:3000/journals#collection\",\"name\":\"Журнали\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 8\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 7\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 6\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 5\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 4\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 3\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 2\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 1\"}]},{\"@type\":\"Organization\",\"@id\":\"http://127.0.0.1:3000/#organization\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\"},{\"@type\":\"WebSite\",\"@id\":\"http://127.0.0.1:3000/#website\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\",\"publisher\":{\"@id\":\"http://127.0.0.1:3000/#organization\"}}]}"
+    ],
+    "title": [
+      "Журнали | OverGarden"
+    ]
+  },
+  "after": {
+    "metadata": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"http://127.0.0.1:3000/bg/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"http://127.0.0.1:3000/ru/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"http://127.0.0.1:3000/journals\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"http://127.0.0.1:3000/journals\"/>",
+      "<link rel=\"canonical\" href=\"http://127.0.0.1:3000/journals\"/>",
+      "<meta name=\"description\" content=\"Публічні журнали про рослини, тварин і бджолосім&#x27;ї з безпечними фільтрами за темою, сезоном та регіоном.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Публічні журнали про рослини, тварин і бджолосім&#x27;ї з безпечними фільтрами за темою, сезоном та регіоном.\"/>",
+      "<meta name=\"twitter:title\" content=\"Журнали | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Публічні журнали про рослини, тварин і бджолосім&#x27;ї з безпечними фільтрами за темою, сезоном та регіоном.\"/>",
+      "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Журнали | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"http://127.0.0.1:3000/journals\"/>"
+    ],
+    "structured": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"http://127.0.0.1:3000/journals\",\"url\":\"http://127.0.0.1:3000/journals\",\"name\":\"Журнали\",\"description\":\"Датовані спостереження з реальним контекстом живих об'єктів.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"http://127.0.0.1:3000/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"http://127.0.0.1:3000/journals#collection\",\"name\":\"Журнали\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 8\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 7\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 6\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 5\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 4\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 3\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 2\"},{\"@type\":\"Thing\",\"name\":\"Перший тиждень спостережень за томатом — 1\"}]},{\"@type\":\"Organization\",\"@id\":\"http://127.0.0.1:3000/#organization\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\"},{\"@type\":\"WebSite\",\"@id\":\"http://127.0.0.1:3000/#website\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3000/\",\"publisher\":{\"@id\":\"http://127.0.0.1:3000/#organization\"}}]}"
+    ],
+    "title": [
+      "Журнали | OverGarden"
+    ]
+  }
+}

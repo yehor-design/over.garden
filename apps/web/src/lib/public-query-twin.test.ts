@@ -32,8 +32,29 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
   });
 
   it("leaves a route without a mounted twin to read its own query string", () => {
-    expect(publicQueryTwinPath("/journals", "?topic=tomaty")).toBeNull();
+    expect(publicQueryTwinPath("/catalog", "?kind=plant")).toBeNull();
     expect(publicQueryTwinPath("/garden", "?kind=plant")).toBeNull();
+  });
+
+  it("reads every journal filter only through its mounted twin", () => {
+    for (const key of [
+      "q",
+      "kind",
+      "catalog",
+      "topic",
+      "season",
+      "region",
+      "sort",
+      "page",
+    ]) {
+      for (const prefix of ["", "/uk", "/bg", "/ru"]) {
+        expect(publicQueryTwinPath(`${prefix}/journals`, `?${key}=value`)).toBe(
+          "/q/journals",
+        );
+      }
+    }
+    expect(publicQueryTwinPath("/journals", "?utm_source=mail")).toBeNull();
+    expect(publicQueryTwinPath("/journals", "?q=&kind=")).toBeNull();
   });
 
   it("recognises the reserved segment with and without a locale", () => {
