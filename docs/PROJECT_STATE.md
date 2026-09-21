@@ -49,6 +49,24 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
+**Accepted 2026-09-21: complete product redesign, not yet shipped.** The new
+program is OVE-474 (coordination), 32 executable tasks with OVE-475 first and
+OVE-478 integration/release last. Threads leads visual design; vc.ru supplies
+centered columns and content interactions; Airbnb informs progressive creation;
+Phosphor replaces mixed interface icons; Thiings illustrates relevant setup and
+empty states. The primary job is fast writing to any of many owned spaces or
+objects. The owner authorizes radical page/functional regrouping and end-to-end
+implementation, PRs, green-CI merges and verification without repeated routine
+approval. The dated audit and execution program are in `docs/audits/2026-09-21-product-design/`
+and `docs/redesign/2026-09-21/`. Current production still has the older layout;
+accepted documents/prototype do not imply that runtime migration is complete.
+
+The older September 17 paragraphs below are historical implementation receipts;
+where they describe future design direction, the September 21 amendment to
+ADR-0031 and the new IA now govern. Existing OVE-467/468/469 technical work is
+reused rather than duplicated. Do not claim production performance is solved by
+this decision-only step.
+
 **Decided 2026-09-18, being delivered: every address is ASCII, and an entry has
 a number.** The owner copied an entry's address to share it and got 181
 characters of `%D0%BA%D1%80…`: a browser hands the clipboard the percent-encoded

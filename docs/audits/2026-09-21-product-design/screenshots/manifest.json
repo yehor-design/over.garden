@@ -1,0 +1,322 @@
+[
+  {
+    "file": "01-feed-desktop.png",
+    "bytes": 99764,
+    "width": 1360,
+    "height": 953,
+    "sha256": "7fa27052878b5fe27798595adf6e4c19c4b8294e3feb81ecacbb65de8ce13760",
+    "format": "jpeg"
+  },
+  {
+    "file": "02-search-tomato.png",
+    "bytes": 84919,
+    "width": 1375,
+    "height": 964,
+    "sha256": "23957995a9a4fd0f8978f167797110c70a0f987ab3d8114d5e20e5325d9e29b5",
+    "format": "jpeg"
+  },
+  {
+    "file": "03-journals-desktop.png",
+    "bytes": 88547,
+    "width": 1360,
+    "height": 953,
+    "sha256": "e75f97f252729a1dd82a1938a22363ae7c7dd55a084282f75bbc32b90823d2b6",
+    "format": "jpeg"
+  },
+  {
+    "file": "04-catalog-desktop.png",
+    "bytes": 81620,
+    "width": 1360,
+    "height": 953,
+    "sha256": "77c824f356a0f873ffed86a52754f5141e4f988df6b223e6850eb20ed4874179",
+    "format": "jpeg"
+  },
+  {
+    "file": "05-species-desktop.png",
+    "bytes": 110855,
+    "width": 1360,
+    "height": 953,
+    "sha256": "dc64d0001a99dc15b0347e36b4120f5441c42639246e7797d0390b23b7fa2187",
+    "format": "jpeg"
+  },
+  {
+    "file": "06-entry-desktop.png",
+    "bytes": 103764,
+    "width": 1360,
+    "height": 953,
+    "sha256": "97ee2f5753904eadd13808f1efaed590d5b3eb400284de08c97e768430681f55",
+    "format": "jpeg"
+  },
+  {
+    "file": "07-entry-actions.png",
+    "bytes": 75958,
+    "width": 1360,
+    "height": 953,
+    "sha256": "e9443987513664f7b04cda6875f098796b331ad52dc0b6d1210542021fc8b8a5",
+    "format": "jpeg"
+  },
+  {
+    "file": "08-vc-reference-desktop.png",
+    "bytes": 113498,
+    "width": 1265,
+    "height": 712,
+    "sha256": "482aff0bd62713a3d8ff7d7663cfa9eb9cf66471e32b0fe50edcd967fea50ec8",
+    "format": "jpeg"
+  },
+  {
+    "file": "09-signed-in-navigation.png",
+    "bytes": 109098,
+    "width": 1905,
+    "height": 866,
+    "sha256": "160ae17d2594d16ee3a768830bbf61aa3c1e1067c3adebc3f58f249f1a02e7ed",
+    "format": "jpeg"
+  },
+  {
+    "file": "10-garden-desktop.png",
+    "bytes": 114803,
+    "width": 1905,
+    "height": 866,
+    "sha256": "8952884d517d748a7d79f8706e02e5e774686ba7256ebf19c9bfa5f15f73a1ac",
+    "format": "jpeg"
+  },
+  {
+    "file": "11-new-entry-destination.png",
+    "bytes": 109803,
+    "width": 1905,
+    "height": 866,
+    "sha256": "f459779ba0297055897abc34aa0a0efbe1f2b3fa2d7a4f6922b7bbfcb28915e7",
+    "format": "jpeg"
+  },
+  {
+    "file": "12-object-workspace.png",
+    "bytes": 107576,
+    "width": 1905,
+    "height": 866,
+    "sha256": "5ba50181e06814eb7a36497458db9441e0c05e01d703f34c93f0927ee3804fe1",
+    "format": "jpeg"
+  },
+  {
+    "file": "13-follow-up-composer.png",
+    "bytes": 99643,
+    "width": 1905,
+    "height": 866,
+    "sha256": "2796b3ef6da9dba9c5d906efd170e9c4632d3cf55448f71942bd9fe520e0f935",
+    "format": "jpeg"
+  },
+  {
+    "file": "14-composer-help.png",
+    "bytes": 111247,
+    "width": 1905,
+    "height": 866,
+    "sha256": "0359b9158137066186d6b614f1b6c91e6e76f9c7de34907f661001ca912a843c",
+    "format": "jpeg"
+  },
+  {
+    "file": "15-account-menu.png",
+    "bytes": 124632,
+    "width": 1920,
+    "height": 873,
+    "sha256": "ff322a4cdabb3c3a8d81a2afc9e39f5de52de587e8f3c2eaa1c5a134db5b72a5",
+    "format": "jpeg"
+  },
+  {
+    "file": "16-vc-centered-1920.png",
+    "bytes": 181531,
+    "width": 1905,
+    "height": 1072,
+    "sha256": "873007c833b856d2830890ca59c77fbccaeb6db324204890e8da0392ef6b5601",
+    "format": "jpeg"
+  },
+  {
+    "file": "17-profile-settings.png",
+    "bytes": 101963,
+    "width": 1905,
+    "height": 866,
+    "sha256": "b3f4fa19ddc9fcf50d80adb7a452fe0412a8b6993d1201933f16a8a95d74828c",
+    "format": "jpeg"
+  },
+  {
+    "file": "18-public-profile.png",
+    "bytes": 122825,
+    "width": 1360,
+    "height": 953,
+    "sha256": "a881a367a4a116caef5f1f4b24283eb1aa2e1259513b48e0d597b4f0b7b03c0e",
+    "format": "jpeg"
+  },
+  {
+    "file": "19-public-object.png",
+    "bytes": 132452,
+    "width": 1360,
+    "height": 953,
+    "sha256": "139e34896944d45c83da9c44776e0c73bf7ffdf456177253571c1842df190541",
+    "format": "jpeg"
+  },
+  {
+    "file": "20-bookmarks.png",
+    "bytes": 80631,
+    "width": 1905,
+    "height": 866,
+    "sha256": "d8745db6f18277c4fc7e4c7dbb8dd7909a8154f47c4de6f56c324d02d54ba9d5",
+    "format": "jpeg"
+  },
+  {
+    "file": "21-wishlist.png",
+    "bytes": 81103,
+    "width": 1905,
+    "height": 866,
+    "sha256": "82dab2e6783cd6ebc6d7dc7a5be9a3542f844bb2e1ab5b991b9a81208369fb71",
+    "format": "jpeg"
+  },
+  {
+    "file": "22-knowledge.png",
+    "bytes": 88751,
+    "width": 1360,
+    "height": 953,
+    "sha256": "7ed76cc4e262e68002151cfcbe44fbe8e1ee73b04038754a640e823e94cd8468",
+    "format": "jpeg"
+  },
+  {
+    "file": "23-notifications.png",
+    "bytes": 96654,
+    "width": 1905,
+    "height": 866,
+    "sha256": "fd1433331aabed2d7365369b7a2d383211b9708de33f4c24aaa115899ff7ecf4",
+    "format": "jpeg"
+  },
+  {
+    "file": "24-communities.png",
+    "bytes": 68199,
+    "width": 1375,
+    "height": 964,
+    "sha256": "ca0c9d6948d90621637bd1bfb401c46bdd8c413e2dcbba6ec34548ffae678eb3",
+    "format": "jpeg"
+  },
+  {
+    "file": "25-community-detail.png",
+    "bytes": 72080,
+    "width": 1360,
+    "height": 953,
+    "sha256": "fe19073fcbaf913e51da0932cc5646386305d2e41ddcbc44099751300848e56d",
+    "format": "jpeg"
+  },
+  {
+    "file": "28-owner-catalog-queue.png",
+    "bytes": 106417,
+    "width": 1920,
+    "height": 873,
+    "sha256": "5c8d2e0bf6b3310a1246b234cf9c6f954cc7a03e0d739a2e3a52aa216222ce27",
+    "format": "jpeg"
+  },
+  {
+    "file": "31-owner-sources.png",
+    "bytes": 96386,
+    "width": 1905,
+    "height": 866,
+    "sha256": "a9adc779df391fc14e4168f93748e0f789290e4534364dee255ff8d36ec792bf",
+    "format": "jpeg"
+  },
+  {
+    "file": "32-auth-redirect-to-garden.png",
+    "bytes": 114866,
+    "width": 1905,
+    "height": 866,
+    "sha256": "f1d8b5012c659e6f4035b33ee7f2a57f8663a2032677660c6b0e18abc7bf8a76",
+    "format": "jpeg"
+  },
+  {
+    "file": "33-guide.png",
+    "bytes": 115162,
+    "width": 1360,
+    "height": 953,
+    "sha256": "c3bc763929209606f344803259add1989bf1160f20cdedc4e33952948788a922",
+    "format": "jpeg"
+  },
+  {
+    "file": "34-support.png",
+    "bytes": 116038,
+    "width": 1920,
+    "height": 873,
+    "sha256": "23373d09f30c1302e0a166270d7df49c2b72ef7328a9ddf90d1e571620f95e0a",
+    "format": "jpeg"
+  },
+  {
+    "file": "35-erasure.png",
+    "bytes": 95114,
+    "width": 1905,
+    "height": 866,
+    "sha256": "e796e65e6590650153dcce63531aae28cbd46f4cc6718fedc90e621849e05d39",
+    "format": "jpeg"
+  },
+  {
+    "file": "36-answer.png",
+    "bytes": 115618,
+    "width": 1360,
+    "height": 953,
+    "sha256": "96fd0f60fe05f310eda65899cf7d5c65a76cec13147efce534b7e52198a3caae",
+    "format": "jpeg"
+  },
+  {
+    "file": "37-blog.png",
+    "bytes": 100186,
+    "width": 1375,
+    "height": 964,
+    "sha256": "694f25dc5d37bd0c85f48a9854020cc40f3511861c5b317ef1bd683e5c2724b4",
+    "format": "jpeg"
+  },
+  {
+    "file": "38-privacy.png",
+    "bytes": 123739,
+    "width": 1905,
+    "height": 866,
+    "sha256": "5ed36ebaad00267d6ce7bc7d256c62d009f3a1373c9c523bbc652f6ef31d79b1",
+    "format": "jpeg"
+  },
+  {
+    "file": "39-topic.png",
+    "bytes": 111915,
+    "width": 1360,
+    "height": 953,
+    "sha256": "f3507ee163bf78a68494d940485e1d9ba9453f830e858595b25b01cd99068d5c",
+    "format": "jpeg"
+  },
+  {
+    "file": "40-publication-disclosure.png",
+    "bytes": 135381,
+    "width": 1905,
+    "height": 866,
+    "sha256": "6a9ceffdc0d002954eeda8e015fa8e77dcff98ab3cacce5db3bc0b1dff012041",
+    "format": "jpeg"
+  },
+  {
+    "file": "41-answer-privacy-contradiction.png",
+    "bytes": 71737,
+    "width": 1360,
+    "height": 953,
+    "sha256": "c50e2d591399e984301cea53294f50c69cf527d3d3c09f89b9feee8305f02045",
+    "format": "jpeg"
+  },
+  {
+    "file": "42-owner-communities.png",
+    "bytes": 91958,
+    "width": 1920,
+    "height": 873,
+    "sha256": "0c5d181aa9e2279a48e0715781bb3c68c1a73021bee5e3dfc098f3f3137f06ca",
+    "format": "jpeg"
+  },
+  {
+    "file": "43-register.png",
+    "bytes": 93719,
+    "width": 1360,
+    "height": 953,
+    "sha256": "484f556417c8251028110f9fd79cce215547e04d6eb866efc9a6b1c811a501b4",
+    "format": "jpeg"
+  },
+  {
+    "file": "44-cultivar.png",
+    "bytes": 81605,
+    "width": 1360,
+    "height": 953,
+    "sha256": "984598a9e3f9b85a8f3defebc495f3b1da5a7709b80eadf954405c9e6af2ca2b",
+    "format": "jpeg"
+  }
+]

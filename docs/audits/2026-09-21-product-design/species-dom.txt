@@ -1,0 +1,3143 @@
+- link "Към основното съдържание":
+  - /url: "#main-content"
+- banner:
+  - link "OverGarden":
+    - /url: /bg
+    - generic: OverGarden
+  - button "Търсене":
+    - generic: Търсене
+    - generic: ⌘K
+  - navigation "Основна навигация":
+    - list:
+      - link "Поток":
+        - /url: /bg
+        - generic: Поток
+      - link "Каталог":
+        - /url: /bg/catalog
+        - generic: Каталог
+      - link "Дневници":
+        - /url: /bg/journals
+        - generic: Дневници
+      - link "Знания":
+        - /url: /bg/knowledge
+        - generic: Знания
+  - link "Нов запис":
+    - /url: /auth/sign-in?next=%2Fgarden%3FauthIntent%3Dcreate_entry%23first-entry-composer&intent=create_entry
+    - generic: Нов запис
+  - separator
+  - link "Вход":
+    - /url: /auth/sign-in?next=%2Fspecies%2Fsolanum-lycopersicum
+    - text: Вход
+- main:
+  - paragraph: Публичен вид
+  - heading "Solanum lycopersicum L." [level=1]
+  - paragraph: Solanum lycopersicum L. — вид. В каталога има 621 форми на този вид. Публични дневници водят 1 градинар.
+  - generic: 9 записа
+  - generic: 13 снимки
+  - link "Запишете този вид":
+    - /url: /garden?catalog=solanum-lycopersicum&source=public-catalog
+    - text: Запишете този вид
+  - link "Към каталога":
+    - /url: /bg/catalog
+  - region "Опит на градинарите":
+    - heading "Опит на градинарите" [level=2]
+    - list:
+      - article "Томат - Sep 1":
+        - time: 1.09.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Томат - Sep 1" [level=3]
+        - paragraph
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/11
+        - figure:
+          - img "Томат - Sep 1 · публична снимка"
+      - article "Избрана корица, която не зависи от реда":
+        - time: 17.06.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Избрана корица, която не зависи от реда" [level=3]
+        - paragraph: Редакционна бележка на OverGarden. Корица трябва да показва ясно предмета на записа, а не задължително да бъде първата добавена снимка. След пренареждане на илюстрациите избраният кадър остава корица. Това пази разпознаваемостта в списъците и позволява вътре да се подреди по-смислен визуален разказ.
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/10
+        - figure:
+          - img "Избрана корица, която не зависи от реда · публична снимка"
+      - article "Обкладинка як сталий орієнтир сезону":
+        - time: 16.06.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Обкладинка як сталий орієнтир сезону" [level=3]
+        - paragraph: Редакційна нотатка OverGarden. Для довгого запису краще обрати обкладинкою кадр, що найточніше показує предмет спостереження, а не просто перше фото. Порядок ілюстрацій можна змінити, зберігши обрану обкладинку. Це робить стрічку зрозумілою, а всередині запису залишає природну послідовність розвитку рослини.
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/5
+        - figure:
+          - img "Обкладинка як сталий орієнтир сезону · публична снимка"
+      - article "Наблюдение, действие и следваща проверка":
+        - time: 4.06.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Наблюдение, действие и следваща проверка" [level=3]
+        - paragraph: "Редакционна бележка на OverGarden. Добрата поредица разделя трите момента: какво се вижда сега, каква малка грижа е направена и кога ще се оцени резултатът. Няколко илюстрации могат да покажат поливане и засаждане, но текстът не твърди, че снимките документират реален потребител или конкретна градина."
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/8
+        - figure:
+          - img "Наблюдение, действие и следваща проверка · публична снимка"
+      - article "Три сигнали перед зав’язуванням плодів":
+        - time: 3.06.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Три сигнали перед зав’язуванням плодів" [level=3]
+        - paragraph: "Редакційна нотатка OverGarden. Перед появою зав’язі корисно окремо відстежити нові квітки, стан опори та рівномірність поливу. Один запис із трьома послідовними ілюстраціями допомагає відділити спостереження від дії: спочатку зафіксувати зміни, потім підв’язати стебло або скоригувати воду, а результат оцінити в наступному записі."
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/3
+        - figure:
+          - img "Три сигнали перед зав’язуванням плодів · публична снимка"
+      - article "Поливане според почвата, не според календара":
+        - time: 27.05.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Поливане според почвата, не според календара" [level=3]
+        - paragraph: Редакционна бележка на OverGarden. Един и същ график не отчита жегата, вятъра и размера на съда. По-надеждно е първо да се провери влагата под повърхността и видът на листата сутрин. Записът трябва да пази и причината за поливането, за да покаже с времето кой ритъм работи за растението.
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/7
+        - figure:
+          - img "Поливане според почвата, не според календара · публична снимка"
+      - article "Полив без календарної пастки":
+        - time: 25.05.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Полив без календарної пастки" [level=3]
+        - paragraph: "Редакційна нотатка OverGarden. Фіксований календар поливу не враховує спеку, вітер і розмір контейнера. Практичніший сигнал — перевірити вологість ґрунту нижче сухої поверхні та стан листя вранці. Записуйте не лише факт поливу, а й причину: так журнал поступово показує, який ритм справді підходить рослині."
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/2
+        - figure:
+          - img "Полив без календарної пастки · публична снимка"
+      - article "Полезна бележка за домат без снимка":
+        - time: 19.05.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Полезна бележка за домат без снимка" [level=3]
+        - paragraph: "Редакционна бележка на OverGarden. Един запис остава полезен и без снимка, когато описва проверими промени: нов растеж, брой цветни китки, състояние на листата и влага под сухия повърхностен слой. Така следващото наблюдение може да се сравни с предишното, вместо дневникът да събира общи оценки без контекст."
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/6
+      - article "Як читати стан томата без фото":
+        - time: 18.05.2026 г.
+        - generic: Solanum lycopersicum L.
+        - heading "Як читати стан томата без фото" [level=3]
+        - paragraph: "Редакційна нотатка OverGarden. Стан рослини варто описувати через зміни, які можна порівняти пізніше: висоту нового приросту, кількість квіткових китиць, пружність листя та вологість верхнього шару ґрунту. Такий запис корисніший за загальне «все добре», бо допомагає побачити тенденцію й обрати наступну дію без вигаданих висновків."
+        - link "Отворете изходния запис":
+          - /url: /@yehor/post/1
+  - region "Връзки":
+    - heading "Връзки" [level=2]
+    - heading "Форми на този вид" [level=3]
+    - list:
+      - link "6 пунто 7 F1":
+        - /url: /bg/species/solanum-lycopersicum/6-punto-7-f1
+        - generic: 6 пунто 7 F1
+      - link "Actimino":
+        - /url: /bg/species/solanum-lycopersicum/actimino
+        - generic: Actimino
+      - link "Akuga":
+        - /url: /bg/species/solanum-lycopersicum/akuga
+        - generic: Akuga
+      - link "Axtar XR":
+        - /url: /bg/species/solanum-lycopersicum/axtar-xr
+        - generic: Axtar XR
+      - link "Chumbito XR":
+        - /url: /bg/species/solanum-lycopersicum/chumbito-xr
+        - generic: Chumbito XR
+      - link "Climono":
+        - /url: /bg/species/solanum-lycopersicum/climono
+        - generic: Climono
+      - link "Climstar":
+        - /url: /bg/species/solanum-lycopersicum/climstar
+        - generic: Climstar
+      - link "Dobido":
+        - /url: /bg/species/solanum-lycopersicum/dobido
+        - generic: Dobido
+      - link "Ebrando":
+        - /url: /bg/species/solanum-lycopersicum/ebrando
+        - generic: Ebrando
+      - link "Epundo":
+        - /url: /bg/species/solanum-lycopersicum/epundo
+        - generic: Epundo
+      - link "Funtelle":
+        - /url: /bg/species/solanum-lycopersicum/funtelle
+        - generic: Funtelle
+      - link "Ganges":
+        - /url: /bg/species/solanum-lycopersicum/ganges
+        - generic: Ganges
+      - link "Iulo":
+        - /url: /bg/species/solanum-lycopersicum/iulo
+        - generic: Iulo
+      - link "IНХ 1577":
+        - /url: /bg/species/solanum-lycopersicum/inkh-1577
+        - generic: IНХ 1577
+      - link "IНХ 1624":
+        - /url: /bg/species/solanum-lycopersicum/inkh-1624
+        - generic: IНХ 1624
+      - link "Jawara":
+        - /url: /bg/species/solanum-lycopersicum/jawara
+        - generic: Jawara
+      - link "Losna":
+        - /url: /bg/species/solanum-lycopersicum/losna
+        - generic: Losna
+      - link "Mozia XR":
+        - /url: /bg/species/solanum-lycopersicum/mozia-xr
+        - generic: Mozia XR
+      - link "Riogral":
+        - /url: /bg/species/solanum-lycopersicum/riogral
+        - generic: Riogral
+      - link "Starvine":
+        - /url: /bg/species/solanum-lycopersicum/starvine
+        - generic: Starvine
+      - link "Trinaxio XR":
+        - /url: /bg/species/solanum-lycopersicum/trinaxio-xr
+        - generic: Trinaxio XR
+      - link "Trioset":
+        - /url: /bg/species/solanum-lycopersicum/trioset
+        - generic: Trioset
+      - link "Vipon":
+        - /url: /bg/species/solanum-lycopersicum/vipon
+        - generic: Vipon
+      - link "АБ 0311":
+        - /url: /bg/species/solanum-lycopersicum/ab-0311
+        - generic: АБ 0311
+      - link "Абелюс F1":
+        - /url: /bg/species/solanum-lycopersicum/abelius-f1
+        - generic: Абелюс F1
+      - link "Авалантіно":
+        - /url: /bg/species/solanum-lycopersicum/avalantino
+        - generic: Авалантіно
+      - link "Аватар":
+        - /url: /bg/species/solanum-lycopersicum/avatar
+        - generic: Аватар
+      - link "Агіліс":
+        - /url: /bg/species/solanum-lycopersicum/ahilis
+        - generic: Агіліс
+      - link "Адванс":
+        - /url: /bg/species/solanum-lycopersicum/advans
+        - generic: Адванс
+      - link "Адель":
+        - /url: /bg/species/solanum-lycopersicum/adel-2
+        - generic: Адель
+      - link "Адміро":
+        - /url: /bg/species/solanum-lycopersicum/admiro
+        - generic: Адміро
+      - link "Азія":
+        - /url: /bg/species/solanum-lycopersicum/aziia
+        - generic: Азія
+      - link "Айдар":
+        - /url: /bg/species/solanum-lycopersicum/aidar-2
+        - generic: Айдар
+      - link "Айсан":
+        - /url: /bg/species/solanum-lycopersicum/aisan
+        - generic: Айсан
+      - link "Аканто F1":
+        - /url: /bg/species/solanum-lycopersicum/akanto-f1
+        - generic: Аканто F1
+      - link "Акела":
+        - /url: /bg/species/solanum-lycopersicum/akela
+        - generic: Акела
+      - link "Аксіома":
+        - /url: /bg/species/solanum-lycopersicum/aksioma
+        - generic: Аксіома
+      - link "Алазія":
+        - /url: /bg/species/solanum-lycopersicum/alaziia
+        - generic: Алазія
+      - link "Аламіна":
+        - /url: /bg/species/solanum-lycopersicum/alamina
+        - generic: Аламіна
+      - link "Албаросса":
+        - /url: /bg/species/solanum-lycopersicum/albarossa
+        - generic: Албаросса
+      - link "АЛБРІС":
+        - /url: /bg/species/solanum-lycopersicum/albris
+        - generic: АЛБРІС
+      - link "Алтей":
+        - /url: /bg/species/solanum-lycopersicum/altei
+        - generic: Алтей
+      - link "АЛЬТАДЕНА":
+        - /url: /bg/species/solanum-lycopersicum/altadena
+        - generic: АЛЬТАДЕНА
+      - link "Аля":
+        - /url: /bg/species/solanum-lycopersicum/alia
+        - generic: Аля
+      - link "Анаконда":
+        - /url: /bg/species/solanum-lycopersicum/anakonda
+        - generic: Анаконда
+      - link "АНГЕЛЛЕ":
+        - /url: /bg/species/solanum-lycopersicum/anhelle
+        - generic: АНГЕЛЛЕ
+      - link "Аніта":
+        - /url: /bg/species/solanum-lycopersicum/anita-2
+        - generic: Аніта
+      - link "Аннаіса":
+        - /url: /bg/species/solanum-lycopersicum/annaisa
+        - generic: Аннаіса
+      - link "Анненфельд":
+        - /url: /bg/species/solanum-lycopersicum/annenfeld
+        - generic: Анненфельд
+      - link "Анталія F1":
+        - /url: /bg/species/solanum-lycopersicum/antaliia-f1
+        - generic: Анталія F1
+      - link "АНТЕЛАІСІ":
+        - /url: /bg/species/solanum-lycopersicum/antelaisi
+        - generic: АНТЕЛАІСІ
+      - link "Апгрейд":
+        - /url: /bg/species/solanum-lycopersicum/aphreid
+        - generic: Апгрейд
+      - link "Арабат":
+        - /url: /bg/species/solanum-lycopersicum/arabat-2
+        - generic: Арабат
+      - link "Арділес":
+        - /url: /bg/species/solanum-lycopersicum/ardiles
+        - generic: Арділес
+      - link "Аріозо":
+        - /url: /bg/species/solanum-lycopersicum/ariozo
+        - generic: Аріозо
+      - link "Армаро":
+        - /url: /bg/species/solanum-lycopersicum/armaro
+        - generic: Армаро
+      - link "Арнольд F1":
+        - /url: /bg/species/solanum-lycopersicum/arnold-f1
+        - generic: Арнольд F1
+      - link "Арома":
+        - /url: /bg/species/solanum-lycopersicum/aroma
+        - generic: Арома
+      - link "Арон":
+        - /url: /bg/species/solanum-lycopersicum/aron
+        - generic: Арон
+      - link "Арте F1":
+        - /url: /bg/species/solanum-lycopersicum/arte-f1
+        - generic: Арте F1
+      - link "Асано":
+        - /url: /bg/species/solanum-lycopersicum/asano
+        - generic: Асано
+      - link "Асвон F1":
+        - /url: /bg/species/solanum-lycopersicum/asvon-f1
+        - generic: Асвон F1
+      - link "Астерікс F1":
+        - /url: /bg/species/solanum-lycopersicum/asteriks-f1-2
+        - generic: Астерікс F1
+      - link "Астероїд":
+        - /url: /bg/species/solanum-lycopersicum/asteroid-3
+        - generic: Астероїд
+      - link "Атласний":
+        - /url: /bg/species/solanum-lycopersicum/atlasnyi
+        - generic: Атласний
+      - link "Аттія":
+        - /url: /bg/species/solanum-lycopersicum/attiia
+        - generic: Аттія
+      - link "Аудаз":
+        - /url: /bg/species/solanum-lycopersicum/audaz
+        - generic: Аудаз
+      - link "Афен":
+        - /url: /bg/species/solanum-lycopersicum/afen
+        - generic: Афен
+      - link "Ахтіар F1":
+        - /url: /bg/species/solanum-lycopersicum/akhtiar-f1
+        - generic: Ахтіар F1
+      - link "Багіра F1":
+        - /url: /bg/species/solanum-lycopersicum/bahira-f1
+        - generic: Багіра F1
+      - link "Багліор":
+        - /url: /bg/species/solanum-lycopersicum/bahlior
+        - generic: Багліор
+      - link "Баджіо":
+        - /url: /bg/species/solanum-lycopersicum/badzhio
+        - generic: Баджіо
+      - link "Базилевс":
+        - /url: /bg/species/solanum-lycopersicum/bazylevs
+        - generic: Базилевс
+      - link "Байконур":
+        - /url: /bg/species/solanum-lycopersicum/baikonur
+        - generic: Байконур
+      - link "БАКАЛАР":
+        - /url: /bg/species/solanum-lycopersicum/bakalar
+        - generic: БАКАЛАР
+      - link "Баллада":
+        - /url: /bg/species/solanum-lycopersicum/ballada
+        - generic: Баллада
+      - link "БАМАНО":
+        - /url: /bg/species/solanum-lycopersicum/bamano
+        - generic: БАМАНО
+      - link "Бандерас":
+        - /url: /bg/species/solanum-lycopersicum/banderas
+        - generic: Бандерас
+      - link "Банті":
+        - /url: /bg/species/solanum-lycopersicum/banti
+        - generic: Банті
+      - link "Барбадос F1":
+        - /url: /bg/species/solanum-lycopersicum/barbados-f1
+        - generic: Барбадос F1
+      - link "БАРІБІН":
+        - /url: /bg/species/solanum-lycopersicum/baribin
+        - generic: БАРІБІН
+      - link "Баріто":
+        - /url: /bg/species/solanum-lycopersicum/barito
+        - generic: Баріто
+      - link "Бармалєй F1":
+        - /url: /bg/species/solanum-lycopersicum/barmaliei-f1
+        - generic: Бармалєй F1
+      - link "Бартеза":
+        - /url: /bg/species/solanum-lycopersicum/barteza
+        - generic: Бартеза
+      - link "Баста":
+        - /url: /bg/species/solanum-lycopersicum/basta
+        - generic: Баста
+      - link "Батлер КС":
+        - /url: /bg/species/solanum-lycopersicum/batler-ks
+        - generic: Батлер КС
+      - link "Бейбіно F1":
+        - /url: /bg/species/solanum-lycopersicum/beibino-f1
+        - generic: Бейбіно F1
+      - link "БЕЛІДО":
+        - /url: /bg/species/solanum-lycopersicum/belido
+        - generic: БЕЛІДО
+      - link "Беллавіза F1":
+        - /url: /bg/species/solanum-lycopersicum/bellaviza-f1
+        - generic: Беллавіза F1
+      - link "Белларіва":
+        - /url: /bg/species/solanum-lycopersicum/bellariva
+        - generic: Белларіва
+      - link "Белла Роса":
+        - /url: /bg/species/solanum-lycopersicum/bella-rosa
+        - generic: Белла Роса
+      - link "Беллє":
+        - /url: /bg/species/solanum-lycopersicum/bellie
+        - generic: Беллє
+      - link "Беллфорт":
+        - /url: /bg/species/solanum-lycopersicum/bellfort
+        - generic: Беллфорт
+      - link "Бенефіс":
+        - /url: /bg/species/solanum-lycopersicum/benefis
+        - generic: Бенефіс
+      - link "Бенігара":
+        - /url: /bg/species/solanum-lycopersicum/benihara
+        - generic: Бенігара
+      - link "Беніто F1":
+        - /url: /bg/species/solanum-lycopersicum/benito-f1
+        - generic: Беніто F1
+      - link "Берберана":
+        - /url: /bg/species/solanum-lycopersicum/berberana
+        - generic: Берберана
+      - link "Бесуто":
+        - /url: /bg/species/solanum-lycopersicum/besuto
+        - generic: Бесуто
+      - link "Бехрам":
+        - /url: /bg/species/solanum-lycopersicum/bekhram
+        - generic: Бехрам
+      - link "БІГ БІФ":
+        - /url: /bg/species/solanum-lycopersicum/bih-bif
+        - generic: БІГ БІФ
+      - link "Біг Сашер":
+        - /url: /bg/species/solanum-lycopersicum/bih-sasher
+        - generic: Біг Сашер
+      - link "БІЛЬБАО":
+        - /url: /bg/species/solanum-lycopersicum/bilbao
+        - generic: БІЛЬБАО
+      - link "Бінго":
+        - /url: /bg/species/solanum-lycopersicum/binho-2
+        - generic: Бінго
+      - link "Біоранж":
+        - /url: /bg/species/solanum-lycopersicum/bioranzh
+        - generic: Біоранж
+      - link "Бірікіно":
+        - /url: /bg/species/solanum-lycopersicum/birikino
+        - generic: Бірікіно
+      - link "БКУ403":
+        - /url: /bg/species/solanum-lycopersicum/bku403
+        - generic: БКУ403
+      - link "Блейз":
+        - /url: /bg/species/solanum-lycopersicum/bleiz
+        - generic: Блейз
+      - link "Бобкат F1":
+        - /url: /bg/species/solanum-lycopersicum/bobkat-f1
+        - generic: Бобкат F1
+      - link "Бодерін F1":
+        - /url: /bg/species/solanum-lycopersicum/boderin-f1
+        - generic: Бодерін F1
+      - link "БОЛЕНА":
+        - /url: /bg/species/solanum-lycopersicum/bolena
+        - generic: БОЛЕНА
+      - link "БОЛЗАНО":
+        - /url: /bg/species/solanum-lycopersicum/bolzano
+        - generic: БОЛЗАНО
+      - link "БОМФАН":
+        - /url: /bg/species/solanum-lycopersicum/bomfan
+        - generic: БОМФАН
+      - link "Бостіна F1":
+        - /url: /bg/species/solanum-lycopersicum/bostina-f1
+        - generic: Бостіна F1
+      - link "Боярин":
+        - /url: /bg/species/solanum-lycopersicum/boiaryn
+        - generic: Боярин
+      - link "Браун Кой":
+        - /url: /bg/species/solanum-lycopersicum/braun-koi
+        - generic: Браун Кой
+      - link "Бріксол F1":
+        - /url: /bg/species/solanum-lycopersicum/briksol-f1
+        - generic: Бріксол F1
+      - link "БРІКСТОН":
+        - /url: /bg/species/solanum-lycopersicum/brikston
+        - generic: БРІКСТОН
+      - link "Бріозо":
+        - /url: /bg/species/solanum-lycopersicum/briozo
+        - generic: Бріозо
+      - link "Брісколіно":
+        - /url: /bg/species/solanum-lycopersicum/briskolino
+        - generic: Брісколіно
+      - link "БРОНСОН":
+        - /url: /bg/species/solanum-lycopersicum/bronson
+        - generic: БРОНСОН
+      - link "Брутус":
+        - /url: /bg/species/solanum-lycopersicum/brutus-2
+        - generic: Брутус
+      - link "БТ БАЛАБАН":
+        - /url: /bg/species/solanum-lycopersicum/bt-balaban
+        - generic: БТ БАЛАБАН
+      - link "Буллз":
+        - /url: /bg/species/solanum-lycopersicum/bullz
+        - generic: Буллз
+      - link "БУЛЛСАЙ":
+        - /url: /bg/species/solanum-lycopersicum/bullsai
+        - generic: БУЛЛСАЙ
+      - link "Валеріозо":
+        - /url: /bg/species/solanum-lycopersicum/valeriozo
+        - generic: Валеріозо
+      - link "Васанта":
+        - /url: /bg/species/solanum-lycopersicum/vasanta
+        - generic: Васанта
+      - link "Васмія":
+        - /url: /bg/species/solanum-lycopersicum/vasmiia
+        - generic: Васмія
+      - link "Вегас176":
+        - /url: /bg/species/solanum-lycopersicum/vehas176
+        - generic: Вегас176
+      - link "Велоз F1":
+        - /url: /bg/species/solanum-lycopersicum/veloz-f1
+        - generic: Велоз F1
+      - link "Венус":
+        - /url: /bg/species/solanum-lycopersicum/venus
+        - generic: Венус
+      - link "Весполіно":
+        - /url: /bg/species/solanum-lycopersicum/vespolino
+        - generic: Весполіно
+      - link "Вілма":
+        - /url: /bg/species/solanum-lycopersicum/vilma
+        - generic: Вілма
+      - link "Вірта F1":
+        - /url: /bg/species/solanum-lycopersicum/virta-f1
+        - generic: Вірта F1
+      - link "Волантіс":
+        - /url: /bg/species/solanum-lycopersicum/volantis
+        - generic: Волантіс
+      - link "Волна":
+        - /url: /bg/species/solanum-lycopersicum/volna
+        - generic: Волна
+      - link "ВП 1":
+        - /url: /bg/species/solanum-lycopersicum/vp-1
+        - generic: ВП 1
+      - link "ВП 2":
+        - /url: /bg/species/solanum-lycopersicum/vp-2
+        - generic: ВП 2
+      - link "Вулкан":
+        - /url: /bg/species/solanum-lycopersicum/vulkan-2
+        - generic: Вулкан
+      - link "Галера":
+        - /url: /bg/species/solanum-lycopersicum/halera
+        - generic: Галера
+      - link "Галілея":
+        - /url: /bg/species/solanum-lycopersicum/halileia
+        - generic: Галілея
+      - link "Галіцено":
+        - /url: /bg/species/solanum-lycopersicum/halitseno
+        - generic: Галіцено
+      - link "Ганія":
+        - /url: /bg/species/solanum-lycopersicum/haniia
+        - generic: Ганія
+      - link "Гвадалетте F1":
+        - /url: /bg/species/solanum-lycopersicum/hvadalette-f1
+        - generic: Гвадалетте F1
+      - link "Гейзер":
+        - /url: /bg/species/solanum-lycopersicum/heizer-2
+        - generic: Гейзер
+      - link "Геліказ":
+        - /url: /bg/species/solanum-lycopersicum/helikaz
+        - generic: Геліказ
+      - link "ГЕМЛЕКС":
+        - /url: /bg/species/solanum-lycopersicum/hemleks
+        - generic: ГЕМЛЕКС
+      - link "Геродес":
+        - /url: /bg/species/solanum-lycopersicum/herodes
+        - generic: Геродес
+      - link "Глоріанс":
+        - /url: /bg/species/solanum-lycopersicum/hlorians
+        - generic: Глоріанс
+      - link "Голдвін":
+        - /url: /bg/species/solanum-lycopersicum/holdvin
+        - generic: Голдвін
+      - link "Голтянський":
+        - /url: /bg/species/solanum-lycopersicum/holtianskyi
+        - generic: Голтянський
+      - link "Гонг":
+        - /url: /bg/species/solanum-lycopersicum/honh
+        - generic: Гонг
+      - link "Горисвіт":
+        - /url: /bg/species/solanum-lycopersicum/horysvit
+        - generic: Горисвіт
+      - link "Господар":
+        - /url: /bg/species/solanum-lycopersicum/hospodar
+        - generic: Господар
+      - link "Гравітет F1":
+        - /url: /bg/species/solanum-lycopersicum/hravitet-f1
+        - generic: Гравітет F1
+      - link "Гранадеро":
+        - /url: /bg/species/solanum-lycopersicum/hranadero
+        - generic: Гранадеро
+      - link "Граціозо":
+        - /url: /bg/species/solanum-lycopersicum/hratsiozo
+        - generic: Граціозо
+      - link "Грифон":
+        - /url: /bg/species/solanum-lycopersicum/hryfon-2
+        - generic: Грифон
+      - link "Гродена F1":
+        - /url: /bg/species/solanum-lycopersicum/hrodena-f1
+        - generic: Гродена F1
+      - link "Дайсон":
+        - /url: /bg/species/solanum-lycopersicum/daison
+        - generic: Дайсон
+      - link "Даліміл":
+        - /url: /bg/species/solanum-lycopersicum/dalimil
+        - generic: Даліміл
+      - link "Дама":
+        - /url: /bg/species/solanum-lycopersicum/dama
+        - generic: Дама
+      - link "Данило F1":
+        - /url: /bg/species/solanum-lycopersicum/danylo-f1
+        - generic: Данило F1
+      - link "ДАРКМІКО":
+        - /url: /bg/species/solanum-lycopersicum/darkmiko
+        - generic: ДАРКМІКО
+      - link "Даруна":
+        - /url: /bg/species/solanum-lycopersicum/daruna
+        - generic: Даруна
+      - link "Дафне":
+        - /url: /bg/species/solanum-lycopersicum/dafne
+        - generic: Дафне
+      - link "Дебют F1":
+        - /url: /bg/species/solanum-lycopersicum/debiut-f1
+        - generic: Дебют F1
+      - link "ДЕВОНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/devonet
+        - generic: ДЕВОНЕТ
+      - link "Дейзі":
+        - /url: /bg/species/solanum-lycopersicum/deizi
+        - generic: Дейзі
+      - link "Делічіо":
+        - /url: /bg/species/solanum-lycopersicum/delichio
+        - generic: Делічіо
+      - link "Дельфо":
+        - /url: /bg/species/solanum-lycopersicum/delfo
+        - generic: Дельфо
+      - link "Денар":
+        - /url: /bg/species/solanum-lycopersicum/denar
+        - generic: Денар
+      - link "ДЕПОНА":
+        - /url: /bg/species/solanum-lycopersicum/depona
+        - generic: ДЕПОНА
+      - link "Деріка":
+        - /url: /bg/species/solanum-lycopersicum/derika
+        - generic: Деріка
+      - link "Джагернаут":
+        - /url: /bg/species/solanum-lycopersicum/dzhahernaut
+        - generic: Джагернаут
+      - link "Джайро":
+        - /url: /bg/species/solanum-lycopersicum/dzhairo
+        - generic: Джайро
+      - link "Джампакт":
+        - /url: /bg/species/solanum-lycopersicum/dzhampakt
+        - generic: Джампакт
+      - link "Джангсі":
+        - /url: /bg/species/solanum-lycopersicum/dzhanhsi
+        - generic: Джангсі
+      - link "Джем":
+        - /url: /bg/species/solanum-lycopersicum/dzhem
+        - generic: Джем
+      - link "ДЖЕРАЛДІНА":
+        - /url: /bg/species/solanum-lycopersicum/dzheraldina
+        - generic: ДЖЕРАЛДІНА
+      - link "Джеронімо":
+        - /url: /bg/species/solanum-lycopersicum/dzheronimo-2
+        - generic: Джеронімо
+      - link "Джокер":
+        - /url: /bg/species/solanum-lycopersicum/dzhoker
+        - generic: Джокер
+      - link "Джолі":
+        - /url: /bg/species/solanum-lycopersicum/dzholi-2
+        - generic: Джолі
+      - link "Джордано":
+        - /url: /bg/species/solanum-lycopersicum/dzhordano
+        - generic: Джордано
+      - link "Джорней":
+        - /url: /bg/species/solanum-lycopersicum/dzhornei
+        - generic: Джорней
+      - link "Діаграмма":
+        - /url: /bg/species/solanum-lycopersicum/diahramma
+        - generic: Діаграмма
+      - link "Діафант F1":
+        - /url: /bg/species/solanum-lycopersicum/diafant-f1
+        - generic: Діафант F1
+      - link "Дімероза":
+        - /url: /bg/species/solanum-lycopersicum/dimeroza
+        - generic: Дімероза
+      - link "Дінеро082":
+        - /url: /bg/species/solanum-lycopersicum/dinero082
+        - generic: Дінеро082
+      - link "Діно":
+        - /url: /bg/species/solanum-lycopersicum/dino
+        - generic: Діно
+      - link "Дольчесіо":
+        - /url: /bg/species/solanum-lycopersicum/dolchesio
+        - generic: Дольчесіо
+      - link "ДОМІНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/dominet
+        - generic: ДОМІНЕТ
+      - link "Дональд":
+        - /url: /bg/species/solanum-lycopersicum/donald
+        - generic: Дональд
+      - link "Дофу":
+        - /url: /bg/species/solanum-lycopersicum/dofu
+        - generic: Дофу
+      - link "Дочет F1":
+        - /url: /bg/species/solanum-lycopersicum/dochet-f1
+        - generic: Дочет F1
+      - link "ДР0141ТХ":
+        - /url: /bg/species/solanum-lycopersicum/dr0141tkh
+        - generic: ДР0141ТХ
+      - link "Дрімболл":
+        - /url: /bg/species/solanum-lycopersicum/drimboll
+        - generic: Дрімболл
+      - link "ДРК 936":
+        - /url: /bg/species/solanum-lycopersicum/drk-936
+        - generic: ДРК 936
+      - link "ДРЦ 564":
+        - /url: /bg/species/solanum-lycopersicum/drts-564
+        - generic: ДРЦ 564
+      - link "Дуал Лардж":
+        - /url: /bg/species/solanum-lycopersicum/dual-lardzh
+        - generic: Дуал Лардж
+      - link "Дуєл Єрли F1":
+        - /url: /bg/species/solanum-lycopersicum/duiel-yerly-f1
+        - generic: Дуєл Єрли F1
+      - link "ЕДАМСО":
+        - /url: /bg/species/solanum-lycopersicum/edamso
+        - generic: ЕДАМСО
+      - link "Едвайзор":
+        - /url: /bg/species/solanum-lycopersicum/edvaizor
+        - generic: Едвайзор
+      - link "Едімар":
+        - /url: /bg/species/solanum-lycopersicum/edimar
+        - generic: Едімар
+      - link "ЕЗАНЗО":
+        - /url: /bg/species/solanum-lycopersicum/ezanzo
+        - generic: ЕЗАНЗО
+      - link "ЕКСТРАДЕНА":
+        - /url: /bg/species/solanum-lycopersicum/ekstradena
+        - generic: ЕКСТРАДЕНА
+      - link "Елва":
+        - /url: /bg/species/solanum-lycopersicum/elva
+        - generic: Елва
+      - link "Елегро F1":
+        - /url: /bg/species/solanum-lycopersicum/elehro-f1
+        - generic: Елегро F1
+      - link "Елеонора":
+        - /url: /bg/species/solanum-lycopersicum/eleonora-2
+        - generic: Елеонора
+      - link "Ельза":
+        - /url: /bg/species/solanum-lycopersicum/elza-2
+        - generic: Ельза
+      - link "Емперадор":
+        - /url: /bg/species/solanum-lycopersicum/emperador
+        - generic: Емперадор
+      - link "Ендевор":
+        - /url: /bg/species/solanum-lycopersicum/endevor
+        - generic: Ендевор
+      - link "Еней F1":
+        - /url: /bg/species/solanum-lycopersicum/enei-f1
+        - generic: Еней F1
+      - link "ЕНОТРІО":
+        - /url: /bg/species/solanum-lycopersicum/enotrio
+        - generic: ЕНОТРІО
+      - link "Есміра F1":
+        - /url: /bg/species/solanum-lycopersicum/esmira-f1
+        - generic: Есміра F1
+      - link "Еспада":
+        - /url: /bg/species/solanum-lycopersicum/espada
+        - generic: Еспада
+      - link "ЕСТЕТ":
+        - /url: /bg/species/solanum-lycopersicum/estet
+        - generic: ЕСТЕТ
+      - link "Етерей":
+        - /url: /bg/species/solanum-lycopersicum/eterei
+        - generic: Етерей
+      - link "Єллоу Пешен":
+        - /url: /bg/species/solanum-lycopersicum/yellou-peshen
+        - generic: Єллоу Пешен
+      - link "Єлоу Рівер":
+        - /url: /bg/species/solanum-lycopersicum/yelou-river
+        - generic: Єлоу Рівер
+      - link "Жаміля":
+        - /url: /bg/species/solanum-lycopersicum/zhamilia
+        - generic: Жаміля
+      - link "Желані":
+        - /url: /bg/species/solanum-lycopersicum/zhelani
+        - generic: Желані
+      - link "Женарос F1":
+        - /url: /bg/species/solanum-lycopersicum/zhenaros-f1
+        - generic: Женарос F1
+      - link "Золота осінь":
+        - /url: /bg/species/solanum-lycopersicum/zolota-osin
+        - generic: Золота осінь
+      - link "Золота хвиля":
+        - /url: /bg/species/solanum-lycopersicum/zolota-khvylia
+        - generic: Золота хвиля
+      - link "Золотой поток":
+        - /url: /bg/species/solanum-lycopersicum/zolotoi-potok
+        - generic: Золотой поток
+      - link "Зореслав":
+        - /url: /bg/species/solanum-lycopersicum/zoreslav
+        - generic: Зореслав
+      - link "Зульфія":
+        - /url: /bg/species/solanum-lycopersicum/zulfiia
+        - generic: Зульфія
+      - link "Зута":
+        - /url: /bg/species/solanum-lycopersicum/zuta
+        - generic: Зута
+      - link "Зухраза":
+        - /url: /bg/species/solanum-lycopersicum/zukhraza
+        - generic: Зухраза
+      - link "ИНСІПІТ":
+        - /url: /bg/species/solanum-lycopersicum/ynsipit
+        - generic: ИНСІПІТ
+      - link "Ігідо":
+        - /url: /bg/species/solanum-lycopersicum/ihido
+        - generic: Ігідо
+      - link "Ігранда":
+        - /url: /bg/species/solanum-lycopersicum/ihranda
+        - generic: Ігранда
+      - link "Імпакт":
+        - /url: /bg/species/solanum-lycopersicum/impakt-2
+        - generic: Імпакт
+      - link "Інгулецький":
+        - /url: /bg/species/solanum-lycopersicum/inhuletskyi
+        - generic: Інгулецький
+      - link "Інкас":
+        - /url: /bg/species/solanum-lycopersicum/inkas
+        - generic: Інкас
+      - link "Інтерленд":
+        - /url: /bg/species/solanum-lycopersicum/interlend
+        - generic: Інтерленд
+      - link "Іришка":
+        - /url: /bg/species/solanum-lycopersicum/iryshka
+        - generic: Іришка
+      - link "ІС 1510":
+        - /url: /bg/species/solanum-lycopersicum/is-1510
+        - generic: ІС 1510
+      - link "Ітіро":
+        - /url: /bg/species/solanum-lycopersicum/itiro
+        - generic: Ітіро
+      - link "ЙЕЛОРІТА":
+        - /url: /bg/species/solanum-lycopersicum/yelorita
+        - generic: ЙЕЛОРІТА
+      - link "Йолнар":
+        - /url: /bg/species/solanum-lycopersicum/yolnar
+        - generic: Йолнар
+      - link "Кавальере Россо":
+        - /url: /bg/species/solanum-lycopersicum/kavalere-rosso
+        - generic: Кавальере Россо
+      - link "Казумі":
+        - /url: /bg/species/solanum-lycopersicum/kazumi
+        - generic: Казумі
+      - link "Кайзер":
+        - /url: /bg/species/solanum-lycopersicum/kaizer
+        - generic: Кайзер
+      - link "Камелот":
+        - /url: /bg/species/solanum-lycopersicum/kamelot-2
+        - generic: Камелот
+      - link "Камі":
+        - /url: /bg/species/solanum-lycopersicum/kami
+        - generic: Камі
+      - link "Кампарі":
+        - /url: /bg/species/solanum-lycopersicum/kampari
+        - generic: Кампарі
+      - link "Канна 218":
+        - /url: /bg/species/solanum-lycopersicum/kanna-218
+        - generic: Канна 218
+      - link "КАПОНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/kaponet
+        - generic: КАПОНЕТ
+      - link "Карась":
+        - /url: /bg/species/solanum-lycopersicum/karas
+        - generic: Карась
+      - link "Касаморі F1":
+        - /url: /bg/species/solanum-lycopersicum/kasamori-f1
+        - generic: Касаморі F1
+      - link "Каста":
+        - /url: /bg/species/solanum-lycopersicum/kasta
+        - generic: Каста
+      - link "КАФА":
+        - /url: /bg/species/solanum-lycopersicum/kafa
+        - generic: КАФА
+      - link "Квікфаєр":
+        - /url: /bg/species/solanum-lycopersicum/kvikfaier
+        - generic: Квікфаєр
+      - link "КДС-5 F1":
+        - /url: /bg/species/solanum-lycopersicum/kds-5-f1
+        - generic: КДС-5 F1
+      - link "Кендрас":
+        - /url: /bg/species/solanum-lycopersicum/kendras
+        - generic: Кендрас
+      - link "Керо":
+        - /url: /bg/species/solanum-lycopersicum/kero
+        - generic: Керо
+      - link "Кібо":
+        - /url: /bg/species/solanum-lycopersicum/kibo
+        - generic: Кібо
+      - link "Кіммерієць":
+        - /url: /bg/species/solanum-lycopersicum/kimmeriiets
+        - generic: Кіммерієць
+      - link "Кінг":
+        - /url: /bg/species/solanum-lycopersicum/kinh
+        - generic: Кінг
+      - link "Кітару":
+        - /url: /bg/species/solanum-lycopersicum/kitaru
+        - generic: Кітару
+      - link "КЛАДРІЗ":
+        - /url: /bg/species/solanum-lycopersicum/kladriz
+        - generic: КЛАДРІЗ
+      - link "КЛІМОНО":
+        - /url: /bg/species/solanum-lycopersicum/klimono
+        - generic: КЛІМОНО
+      - link "КЛІМСТАР":
+        - /url: /bg/species/solanum-lycopersicum/klimstar
+        - generic: КЛІМСТАР
+      - link "КЛОБОГО":
+        - /url: /bg/species/solanum-lycopersicum/kloboho
+        - generic: КЛОБОГО
+      - link "Клондайк":
+        - /url: /bg/species/solanum-lycopersicum/klondaik-2
+        - generic: Клондайк
+      - link "КМ5512":
+        - /url: /bg/species/solanum-lycopersicum/km5512
+        - generic: КМ5512
+      - link "Колеос":
+        - /url: /bg/species/solanum-lycopersicum/koleos
+        - generic: Колеос
+      - link "Колібрі F1":
+        - /url: /bg/species/solanum-lycopersicum/kolibri-f1
+        - generic: Колібрі F1
+      - link "Комітт F1":
+        - /url: /bg/species/solanum-lycopersicum/komitt-f1
+        - generic: Комітт F1
+      - link "Компак":
+        - /url: /bg/species/solanum-lycopersicum/kompak
+        - generic: Компак
+      - link "Комплімент":
+        - /url: /bg/species/solanum-lycopersicum/kompliment
+        - generic: Комплімент
+      - link "Компліс":
+        - /url: /bg/species/solanum-lycopersicum/komplis
+        - generic: Компліс
+      - link "Конго":
+        - /url: /bg/species/solanum-lycopersicum/konho
+        - generic: Конго
+      - link "Конорі":
+        - /url: /bg/species/solanum-lycopersicum/konori
+        - generic: Конорі
+      - link "Конфетто":
+        - /url: /bg/species/solanum-lycopersicum/konfetto
+        - generic: Конфетто
+      - link "Корвінус":
+        - /url: /bg/species/solanum-lycopersicum/korvinus
+        - generic: Корвінус
+      - link "Корнабел":
+        - /url: /bg/species/solanum-lycopersicum/kornabel
+        - generic: Корнабел
+      - link "Корольок":
+        - /url: /bg/species/solanum-lycopersicum/korolok
+        - generic: Корольок
+      - link "Костаред":
+        - /url: /bg/species/solanum-lycopersicum/kostared
+        - generic: Костаред
+      - link "Котіто":
+        - /url: /bg/species/solanum-lycopersicum/kotito
+        - generic: Котіто
+      - link "Крисс":
+        - /url: /bg/species/solanum-lycopersicum/kryss
+        - generic: Крисс
+      - link "Кристал F1":
+        - /url: /bg/species/solanum-lycopersicum/krystal-f1
+        - generic: Кристал F1
+      - link "Ксілад Но1":
+        - /url: /bg/species/solanum-lycopersicum/ksilad-no1
+        - generic: Ксілад Но1
+      - link "Кумач":
+        - /url: /bg/species/solanum-lycopersicum/kumach
+        - generic: Кумач
+      - link "Кумбулу":
+        - /url: /bg/species/solanum-lycopersicum/kumbulu
+        - generic: Кумбулу
+      - link "Куртіно":
+        - /url: /bg/species/solanum-lycopersicum/kurtino
+        - generic: Куртіно
+      - link "Лабадо":
+        - /url: /bg/species/solanum-lycopersicum/labado
+        - generic: Лабадо
+      - link "Лагідний":
+        - /url: /bg/species/solanum-lycopersicum/lahidnyi-2
+        - generic: Лагідний
+      - link "ЛАДЖЕНДА":
+        - /url: /bg/species/solanum-lycopersicum/ladzhenda
+        - generic: ЛАДЖЕНДА
+      - link "Ламантин":
+        - /url: /bg/species/solanum-lycopersicum/lamantyn
+        - generic: Ламантин
+      - link "Лампо":
+        - /url: /bg/species/solanum-lycopersicum/lampo
+        - generic: Лампо
+      - link "Ланканг":
+        - /url: /bg/species/solanum-lycopersicum/lankanh
+        - generic: Ланканг
+      - link "Легінь":
+        - /url: /bg/species/solanum-lycopersicum/lehin-4
+        - generic: Легінь
+      - link "Лезафорта":
+        - /url: /bg/species/solanum-lycopersicum/lezaforta
+        - generic: Лезафорта
+      - link "Леонероссо":
+        - /url: /bg/species/solanum-lycopersicum/leonerosso
+        - generic: Леонероссо
+      - link "Лілос F1":
+        - /url: /bg/species/solanum-lycopersicum/lilos-f1
+        - generic: Лілос F1
+      - link "Лінда":
+        - /url: /bg/species/solanum-lycopersicum/linda
+        - generic: Лінда
+      - link "Лоджейн":
+        - /url: /bg/species/solanum-lycopersicum/lodzhein
+        - generic: Лоджейн
+      - link "ЛОРЕНЗО":
+        - /url: /bg/species/solanum-lycopersicum/lorenzo
+        - generic: ЛОРЕНЗО
+      - link "Луізет":
+        - /url: /bg/species/solanum-lycopersicum/luizet
+        - generic: Луізет
+      - link "Лусіозо":
+        - /url: /bg/species/solanum-lycopersicum/lusiozo
+        - generic: Лусіозо
+      - link "Любимий":
+        - /url: /bg/species/solanum-lycopersicum/liubymyi
+        - generic: Любимий
+      - link "Люсіплюс":
+        - /url: /bg/species/solanum-lycopersicum/liusiplius
+        - generic: Люсіплюс
+      - link "Магали F1":
+        - /url: /bg/species/solanum-lycopersicum/mahaly-f1
+        - generic: Магали F1
+      - link "Магнус":
+        - /url: /bg/species/solanum-lycopersicum/mahnus-3
+        - generic: Магнус
+      - link "МАДРИД":
+        - /url: /bg/species/solanum-lycopersicum/madryd
+        - generic: МАДРИД
+      - link "Майсалун":
+        - /url: /bg/species/solanum-lycopersicum/maisalun
+        - generic: Майсалун
+      - link "МАКАН":
+        - /url: /bg/species/solanum-lycopersicum/makan
+        - generic: МАКАН
+      - link "Максеза":
+        - /url: /bg/species/solanum-lycopersicum/makseza
+        - generic: Максеза
+      - link "МАКСІН":
+        - /url: /bg/species/solanum-lycopersicum/maksin
+        - generic: МАКСІН
+      - link "Максіфорт":
+        - /url: /bg/species/solanum-lycopersicum/maksifort
+        - generic: Максіфорт
+      - link "МАЛДУО":
+        - /url: /bg/species/solanum-lycopersicum/malduo
+        - generic: МАЛДУО
+      - link "Малинка Стар":
+        - /url: /bg/species/solanum-lycopersicum/malynka-star
+        - generic: Малинка Стар
+      - link "Малинове Віканте":
+        - /url: /bg/species/solanum-lycopersicum/malynove-vikante
+        - generic: Малинове Віканте
+      - link "Малиновий дзвін":
+        - /url: /bg/species/solanum-lycopersicum/malynovyi-dzvin
+        - generic: Малиновий дзвін
+      - link "МАЛУНО":
+        - /url: /bg/species/solanum-lycopersicum/maluno
+        - generic: МАЛУНО
+      - link "МАМАКО":
+        - /url: /bg/species/solanum-lycopersicum/mamako
+        - generic: МАМАКО
+      - link "МАМСТОН":
+        - /url: /bg/species/solanum-lycopersicum/mamston
+        - generic: МАМСТОН
+      - link "Манамі":
+        - /url: /bg/species/solanum-lycopersicum/manami
+        - generic: Манамі
+      - link "Мандат":
+        - /url: /bg/species/solanum-lycopersicum/mandat
+        - generic: Мандат
+      - link "МАНЕКРО":
+        - /url: /bg/species/solanum-lycopersicum/manekro
+        - generic: МАНЕКРО
+      - link "Маністелла":
+        - /url: /bg/species/solanum-lycopersicum/manistella
+        - generic: Маністелла
+      - link "Мануса":
+        - /url: /bg/species/solanum-lycopersicum/manusa
+        - generic: Мануса
+      - link "Марсалато":
+        - /url: /bg/species/solanum-lycopersicum/marsalato
+        - generic: Марсалато
+      - link "Марті":
+        - /url: /bg/species/solanum-lycopersicum/marti
+        - generic: Марті
+      - link "МАСКО":
+        - /url: /bg/species/solanum-lycopersicum/masko
+        - generic: МАСКО
+      - link "МАССОН":
+        - /url: /bg/species/solanum-lycopersicum/masson
+        - generic: МАССОН
+      - link "Масумі":
+        - /url: /bg/species/solanum-lycopersicum/masumi
+        - generic: Масумі
+      - link "Матіас":
+        - /url: /bg/species/solanum-lycopersicum/matias
+        - generic: Матіас
+      - link "Матіссімо":
+        - /url: /bg/species/solanum-lycopersicum/matissimo
+        - generic: Матіссімо
+      - link "МАТУРБО":
+        - /url: /bg/species/solanum-lycopersicum/maturbo
+        - generic: МАТУРБО
+      - link "Махітос":
+        - /url: /bg/species/solanum-lycopersicum/makhitos
+        - generic: Махітос
+      - link "Мегрез":
+        - /url: /bg/species/solanum-lycopersicum/mehrez
+        - generic: Мегрез
+      - link "Мейс F1":
+        - /url: /bg/species/solanum-lycopersicum/meis-f1
+        - generic: Мейс F1
+      - link "Мей Шуаі":
+        - /url: /bg/species/solanum-lycopersicum/mei-shuai
+        - generic: Мей Шуаі
+      - link "МЕЛАНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/melanet
+        - generic: МЕЛАНЕТ
+      - link "Мелман":
+        - /url: /bg/species/solanum-lycopersicum/melman
+        - generic: Мелман
+      - link "Мелодія F1":
+        - /url: /bg/species/solanum-lycopersicum/melodiia-f1
+        - generic: Мелодія F1
+      - link "Мерліс":
+        - /url: /bg/species/solanum-lycopersicum/merlis
+        - generic: Мерліс
+      - link "Метро":
+        - /url: /bg/species/solanum-lycopersicum/metro-2
+        - generic: Метро
+      - link "Миколка F1":
+        - /url: /bg/species/solanum-lycopersicum/mykolka-f1
+        - generic: Миколка F1
+      - link "Миролюбівський":
+        - /url: /bg/species/solanum-lycopersicum/myroliubivskyi
+        - generic: Миролюбівський
+      - link "Мірсіні F1":
+        - /url: /bg/species/solanum-lycopersicum/mirsini-f1
+        - generic: Мірсіні F1
+      - link "Міхіто":
+        - /url: /bg/species/solanum-lycopersicum/mikhito
+        - generic: Міхіто
+      - link "МІЦЕНО":
+        - /url: /bg/species/solanum-lycopersicum/mitseno
+        - generic: МІЦЕНО
+      - link "Монті F1":
+        - /url: /bg/species/solanum-lycopersicum/monti-f1
+        - generic: Монті F1
+      - link "Морелія":
+        - /url: /bg/species/solanum-lycopersicum/moreliia
+        - generic: Морелія
+      - link "Муна F1":
+        - /url: /bg/species/solanum-lycopersicum/muna-f1
+        - generic: Муна F1
+      - link "Н 0283":
+        - /url: /bg/species/solanum-lycopersicum/n-0283
+        - generic: Н 0283
+      - link "Н 0296":
+        - /url: /bg/species/solanum-lycopersicum/n-0296
+        - generic: Н 0296
+      - link "Н 0507":
+        - /url: /bg/species/solanum-lycopersicum/n-0507
+        - generic: Н 0507
+      - link "Н 4510":
+        - /url: /bg/species/solanum-lycopersicum/n-4510
+        - generic: Н 4510
+      - link "Н 4523":
+        - /url: /bg/species/solanum-lycopersicum/n-4523
+        - generic: Н 4523
+      - link "Н 6416":
+        - /url: /bg/species/solanum-lycopersicum/n-6416
+        - generic: Н 6416
+      - link "Н 6438":
+        - /url: /bg/species/solanum-lycopersicum/n-6438
+        - generic: Н 6438
+      - link "Наддніпрянський 1":
+        - /url: /bg/species/solanum-lycopersicum/naddniprianskyi-1
+        - generic: Наддніпрянський 1
+      - link "Накаумі":
+        - /url: /bg/species/solanum-lycopersicum/nakaumi
+        - generic: Накаумі
+      - link "НАМІБ":
+        - /url: /bg/species/solanum-lycopersicum/namib
+        - generic: НАМІБ
+      - link "Наргіза":
+        - /url: /bg/species/solanum-lycopersicum/narhiza
+        - generic: Наргіза
+      - link "НЕБУЛА":
+        - /url: /bg/species/solanum-lycopersicum/nebula
+        - generic: НЕБУЛА
+      - link "Нессі":
+        - /url: /bg/species/solanum-lycopersicum/nessi
+        - generic: Нессі
+      - link "Нуксі":
+        - /url: /bg/species/solanum-lycopersicum/nuksi
+        - generic: Нуксі
+      - link "Нун 03560":
+        - /url: /bg/species/solanum-lycopersicum/nun-03560
+        - generic: Нун 03560
+      - link "НУНЕМС 1718":
+        - /url: /bg/species/solanum-lycopersicum/nunems-1718
+        - generic: НУНЕМС 1718
+      - link "Нюта":
+        - /url: /bg/species/solanum-lycopersicum/niuta
+        - generic: Нюта
+      - link "Оберіг":
+        - /url: /bg/species/solanum-lycopersicum/oberih-3
+        - generic: Оберіг
+      - link "ОЛІВЕНЗА":
+        - /url: /bg/species/solanum-lycopersicum/olivenza
+        - generic: ОЛІВЕНЗА
+      - link "ОЛМЕКА":
+        - /url: /bg/species/solanum-lycopersicum/olmeka
+        - generic: ОЛМЕКА
+      - link "Ольга":
+        - /url: /bg/species/solanum-lycopersicum/olha-3
+        - generic: Ольга
+      - link "Оранж Плам":
+        - /url: /bg/species/solanum-lycopersicum/oranzh-plam
+        - generic: Оранж Плам
+      - link "Органза":
+        - /url: /bg/species/solanum-lycopersicum/orhanza
+        - generic: Органза
+      - link "Палава":
+        - /url: /bg/species/solanum-lycopersicum/palava
+        - generic: Палава
+      - link "Панамера":
+        - /url: /bg/species/solanum-lycopersicum/panamera
+        - generic: Панамера
+      - link "Пандароза":
+        - /url: /bg/species/solanum-lycopersicum/pandaroza
+        - generic: Пандароза
+      - link "Панекра F1":
+        - /url: /bg/species/solanum-lycopersicum/panekra-f1
+        - generic: Панекра F1
+      - link "Парто F1":
+        - /url: /bg/species/solanum-lycopersicum/parto-f1
+        - generic: Парто F1
+      - link "Партова":
+        - /url: /bg/species/solanum-lycopersicum/partova
+        - generic: Партова
+      - link "Паті Пінк":
+        - /url: /bg/species/solanum-lycopersicum/pati-pink
+        - generic: Паті Пінк
+      - link "Педро F1":
+        - /url: /bg/species/solanum-lycopersicum/pedro-f1
+        - generic: Педро F1
+      - link "ПЕКОНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/pekonet
+        - generic: ПЕКОНЕТ
+      - link "Періус F1":
+        - /url: /bg/species/solanum-lycopersicum/perius-f1
+        - generic: Періус F1
+      - link "Перугіно":
+        - /url: /bg/species/solanum-lycopersicum/peruhino
+        - generic: Перугіно
+      - link "Перфектпил F1":
+        - /url: /bg/species/solanum-lycopersicum/perfektpyl-f1
+        - generic: Перфектпил F1
+      - link "П'єтра Росса":
+        - /url: /bg/species/solanum-lycopersicum/pietra-rossa
+        - generic: П'єтра Росса
+      - link "ПІККОДОНА":
+        - /url: /bg/species/solanum-lycopersicum/pikkodona
+        - generic: ПІККОДОНА
+      - link "Пінк Буш F1":
+        - /url: /bg/species/solanum-lycopersicum/pink-bush-f1
+        - generic: Пінк Буш F1
+      - link "Пінк Делайт":
+        - /url: /bg/species/solanum-lycopersicum/pink-delait
+        - generic: Пінк Делайт
+      - link "Пінк Джаз":
+        - /url: /bg/species/solanum-lycopersicum/pink-dzhaz
+        - generic: Пінк Джаз
+      - link "Пінкджейн":
+        - /url: /bg/species/solanum-lycopersicum/pinkdzhein
+        - generic: Пінкджейн
+      - link "Пінк Енжел":
+        - /url: /bg/species/solanum-lycopersicum/pink-enzhel
+        - generic: Пінк Енжел
+      - link "ПІНКІД":
+        - /url: /bg/species/solanum-lycopersicum/pinkid
+        - generic: ПІНКІД
+      - link "ПІНК ІМПРЕШН":
+        - /url: /bg/species/solanum-lycopersicum/pink-impreshn
+        - generic: ПІНК ІМПРЕШН
+      - link "Пінк Клер":
+        - /url: /bg/species/solanum-lycopersicum/pink-kler
+        - generic: Пінк Клер
+      - link "Пінк Кой":
+        - /url: /bg/species/solanum-lycopersicum/pink-koi
+        - generic: Пінк Кой
+      - link "ПІНК КРИСТАЛ":
+        - /url: /bg/species/solanum-lycopersicum/pink-krystal
+        - generic: ПІНК КРИСТАЛ
+      - link "Пінк Нагетс":
+        - /url: /bg/species/solanum-lycopersicum/pink-nahets
+        - generic: Пінк Нагетс
+      - link "Пінк Пантер":
+        - /url: /bg/species/solanum-lycopersicum/pink-panter
+        - generic: Пінк Пантер
+      - link "Пінк Парадайз":
+        - /url: /bg/species/solanum-lycopersicum/pink-paradaiz
+        - generic: Пінк Парадайз
+      - link "Пінк Піонєр":
+        - /url: /bg/species/solanum-lycopersicum/pink-pionier
+        - generic: Пінк Піонєр
+      - link "Пінк Райз":
+        - /url: /bg/species/solanum-lycopersicum/pink-raiz
+        - generic: Пінк Райз
+      - link "Пінк Роуз":
+        - /url: /bg/species/solanum-lycopersicum/pink-rouz
+        - generic: Пінк Роуз
+      - link "ПІНК СВІТНЕС":
+        - /url: /bg/species/solanum-lycopersicum/pink-svitnes
+        - generic: ПІНК СВІТНЕС
+      - link "Пінк Унікум F1":
+        - /url: /bg/species/solanum-lycopersicum/pink-unikum-f1
+        - generic: Пінк Унікум F1
+      - link "Пінк Хіт":
+        - /url: /bg/species/solanum-lycopersicum/pink-khit
+        - generic: Пінк Хіт
+      - link "Платон F1":
+        - /url: /bg/species/solanum-lycopersicum/platon-f1
+        - generic: Платон F1
+      - link "Плумола":
+        - /url: /bg/species/solanum-lycopersicum/plumola
+        - generic: Плумола
+      - link "Побратим F1":
+        - /url: /bg/species/solanum-lycopersicum/pobratym-f1
+        - generic: Побратим F1
+      - link "Поззано":
+        - /url: /bg/species/solanum-lycopersicum/pozzano
+        - generic: Поззано
+      - link "Покуса":
+        - /url: /bg/species/solanum-lycopersicum/pokusa-2
+        - generic: Покуса
+      - link "Полбіг F1":
+        - /url: /bg/species/solanum-lycopersicum/polbih-f1
+        - generic: Полбіг F1
+      - link "Полфаст F1":
+        - /url: /bg/species/solanum-lycopersicum/polfast-f1
+        - generic: Полфаст F1
+      - link "Пончо":
+        - /url: /bg/species/solanum-lycopersicum/poncho
+        - generic: Пончо
+      - link "Попільнянський":
+        - /url: /bg/species/solanum-lycopersicum/popilnianskyi
+        - generic: Попільнянський
+      - link "Порпора":
+        - /url: /bg/species/solanum-lycopersicum/porpora
+        - generic: Порпора
+      - link "ПРАЙД":
+        - /url: /bg/species/solanum-lycopersicum/praid
+        - generic: ПРАЙД
+      - link "Презент херсонський":
+        - /url: /bg/species/solanum-lycopersicum/prezent-khersonskyi
+        - generic: Презент херсонський
+      - link "Президент ІІ F1":
+        - /url: /bg/species/solanum-lycopersicum/prezydent-ii-f1
+        - generic: Президент ІІ F1
+      - link "ПРЕЗІОСО":
+        - /url: /bg/species/solanum-lycopersicum/prezioso
+        - generic: ПРЕЗІОСО
+      - link "Према":
+        - /url: /bg/species/solanum-lycopersicum/prema
+        - generic: Према
+      - link "Прерія":
+        - /url: /bg/species/solanum-lycopersicum/preriia
+        - generic: Прерія
+      - link "ПРІМОНА":
+        - /url: /bg/species/solanum-lycopersicum/primona
+        - generic: ПРІМОНА
+      - link "Пріос":
+        - /url: /bg/species/solanum-lycopersicum/prios
+        - generic: Пріос
+      - link "Прогресс F1":
+        - /url: /bg/species/solanum-lycopersicum/prohress-f1
+        - generic: Прогресс F1
+      - link "Продезо":
+        - /url: /bg/species/solanum-lycopersicum/prodezo
+        - generic: Продезо
+      - link "Просідон F1":
+        - /url: /bg/species/solanum-lycopersicum/prosidon-f1
+        - generic: Просідон F1
+      - link "Прунус":
+        - /url: /bg/species/solanum-lycopersicum/prunus
+        - generic: Прунус
+      - link "Пулрекс F1":
+        - /url: /bg/species/solanum-lycopersicum/pulreks-f1
+        - generic: Пулрекс F1
+      - link "Раїса F1":
+        - /url: /bg/species/solanum-lycopersicum/raisa-f1
+        - generic: Раїса F1
+      - link "Раллі":
+        - /url: /bg/species/solanum-lycopersicum/ralli
+        - generic: Раллі
+      - link "Рані":
+        - /url: /bg/species/solanum-lycopersicum/rani-2
+        - generic: Рані
+      - link "Рапіт F1":
+        - /url: /bg/species/solanum-lycopersicum/rapit-f1
+        - generic: Рапіт F1
+      - link "Редбері":
+        - /url: /bg/species/solanum-lycopersicum/redberi
+        - generic: Редбері
+      - link "Ред Кой":
+        - /url: /bg/species/solanum-lycopersicum/red-koi
+        - generic: Ред Кой
+      - link "Ред скай":
+        - /url: /bg/species/solanum-lycopersicum/red-skai
+        - generic: Ред скай
+      - link "Редсонні":
+        - /url: /bg/species/solanum-lycopersicum/redsonni
+        - generic: Редсонні
+      - link "Ред Флеш":
+        - /url: /bg/species/solanum-lycopersicum/red-flesh
+        - generic: Ред Флеш
+      - link "Рексозо":
+        - /url: /bg/species/solanum-lycopersicum/reksozo
+        - generic: Рексозо
+      - link "Ремембе":
+        - /url: /bg/species/solanum-lycopersicum/remembe
+        - generic: Ремембе
+      - link "Рестлер":
+        - /url: /bg/species/solanum-lycopersicum/restler
+        - generic: Рестлер
+      - link "РІЗОТТА":
+        - /url: /bg/species/solanum-lycopersicum/rizotta
+        - generic: РІЗОТТА
+      - link "Ріко":
+        - /url: /bg/species/solanum-lycopersicum/riko
+        - generic: Ріко
+      - link "Ріо Грапо":
+        - /url: /bg/species/solanum-lycopersicum/rio-hrapo
+        - generic: Ріо Грапо
+      - link "Ріхам":
+        - /url: /bg/species/solanum-lycopersicum/rikham
+        - generic: Ріхам
+      - link "Родіон":
+        - /url: /bg/species/solanum-lycopersicum/rodion
+        - generic: Родіон
+      - link "Рожеве серце":
+        - /url: /bg/species/solanum-lycopersicum/rozheve-sertse
+        - generic: Рожеве серце
+      - link "Рожевий велетень":
+        - /url: /bg/species/solanum-lycopersicum/rozhevyi-veleten
+        - generic: Рожевий велетень
+      - link "Розалба":
+        - /url: /bg/species/solanum-lycopersicum/rozalba
+        - generic: Розалба
+      - link "Розаліса F1":
+        - /url: /bg/species/solanum-lycopersicum/rozalisa-f1
+        - generic: Розаліса F1
+      - link "Розетт":
+        - /url: /bg/species/solanum-lycopersicum/rozett
+        - generic: Розетт
+      - link "Розі Пінк":
+        - /url: /bg/species/solanum-lycopersicum/rozi-pink
+        - generic: Розі Пінк
+      - link "РОЗОНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/rozonet
+        - generic: РОЗОНЕТ
+      - link "Рок":
+        - /url: /bg/species/solanum-lycopersicum/rok
+        - generic: Рок
+      - link "РОМАНЕЛЛА":
+        - /url: /bg/species/solanum-lycopersicum/romanella
+        - generic: РОМАНЕЛЛА
+      - link "РОМІНДО":
+        - /url: /bg/species/solanum-lycopersicum/romindo
+        - generic: РОМІНДО
+      - link "Ронда":
+        - /url: /bg/species/solanum-lycopersicum/ronda
+        - generic: Ронда
+      - link "Роса":
+        - /url: /bg/species/solanum-lycopersicum/rosa
+        - generic: Роса
+      - link "Рочча":
+        - /url: /bg/species/solanum-lycopersicum/rochcha
+        - generic: Рочча
+      - link "Роялпінк":
+        - /url: /bg/species/solanum-lycopersicum/roialpink
+        - generic: Роялпінк
+      - link "Ругантіно":
+        - /url: /bg/species/solanum-lycopersicum/ruhantino
+        - generic: Ругантіно
+      - link "Руфус":
+        - /url: /bg/species/solanum-lycopersicum/rufus-3
+        - generic: Руфус
+      - link "САГАТАН":
+        - /url: /bg/species/solanum-lycopersicum/sahatan
+        - generic: САГАТАН
+      - link "Сакура":
+        - /url: /bg/species/solanum-lycopersicum/sakura
+        - generic: Сакура
+      - link "Салерно":
+        - /url: /bg/species/solanum-lycopersicum/salerno
+        - generic: Салерно
+      - link "Саммер Сан":
+        - /url: /bg/species/solanum-lycopersicum/sammer-san
+        - generic: Саммер Сан
+      - link "Сандра F1":
+        - /url: /bg/species/solanum-lycopersicum/sandra-f1
+        - generic: Сандра F1
+      - link "САНМІНО":
+        - /url: /bg/species/solanum-lycopersicum/sanmino
+        - generic: САНМІНО
+      - link "САННЕРІН":
+        - /url: /bg/species/solanum-lycopersicum/sannerin
+        - generic: САННЕРІН
+      - link "Сан Парадайз":
+        - /url: /bg/species/solanum-lycopersicum/san-paradaiz
+        - generic: Сан Парадайз
+      - link "Санрайз F1":
+        - /url: /bg/species/solanum-lycopersicum/sanraiz-f1
+        - generic: Санрайз F1
+      - link "Санстрім":
+        - /url: /bg/species/solanum-lycopersicum/sanstrim
+        - generic: Санстрім
+      - link "Саргон F1":
+        - /url: /bg/species/solanum-lycopersicum/sarhon-f1
+        - generic: Саргон F1
+      - link "Сармат":
+        - /url: /bg/species/solanum-lycopersicum/sarmat
+        - generic: Сармат
+      - link "Сарра":
+        - /url: /bg/species/solanum-lycopersicum/sarra
+        - generic: Сарра
+      - link "Сассарі":
+        - /url: /bg/species/solanum-lycopersicum/sassari
+        - generic: Сассарі
+      - link "Сашер":
+        - /url: /bg/species/solanum-lycopersicum/sasher
+        - generic: Сашер
+      - link "СВ1491ТМ":
+        - /url: /bg/species/solanum-lycopersicum/sv1491tm
+        - generic: СВ1491ТМ
+      - link "СВ3725ТЧ":
+        - /url: /bg/species/solanum-lycopersicum/sv3725tch
+        - generic: СВ3725ТЧ
+      - link "СВ8320ТД":
+        - /url: /bg/species/solanum-lycopersicum/sv8320td
+        - generic: СВ8320ТД
+      - link "СВ8840ТМ":
+        - /url: /bg/species/solanum-lycopersicum/sv8840tm
+        - generic: СВ8840ТМ
+      - link "Світ Мусон":
+        - /url: /bg/species/solanum-lycopersicum/svit-muson
+        - generic: Світ Мусон
+      - link "Севанс":
+        - /url: /bg/species/solanum-lycopersicum/sevans
+        - generic: Севанс
+      - link "Севен":
+        - /url: /bg/species/solanum-lycopersicum/seven
+        - generic: Севен
+      - link "Сейлор":
+        - /url: /bg/species/solanum-lycopersicum/seilor-3
+        - generic: Сейлор
+      - link "СЕЛА":
+        - /url: /bg/species/solanum-lycopersicum/sela
+        - generic: СЕЛА
+      - link "Селестін":
+        - /url: /bg/species/solanum-lycopersicum/selestin
+        - generic: Селестін
+      - link "Семапрім F1":
+        - /url: /bg/species/solanum-lycopersicum/semaprim-f1
+        - generic: Семапрім F1
+      - link "Сентоса":
+        - /url: /bg/species/solanum-lycopersicum/sentosa
+        - generic: Сентоса
+      - link "Серпневий подарунок":
+        - /url: /bg/species/solanum-lycopersicum/serpnevyi-podarunok
+        - generic: Серпневий подарунок
+      - link "Сігнора":
+        - /url: /bg/species/solanum-lycopersicum/sihnora
+        - generic: Сігнора
+      - link "СІК1504":
+        - /url: /bg/species/solanum-lycopersicum/sik1504
+        - generic: СІК1504
+      - link "Сілует F1":
+        - /url: /bg/species/solanum-lycopersicum/siluet-f1
+        - generic: Сілует F1
+      - link "Смаколик":
+        - /url: /bg/species/solanum-lycopersicum/smakolyk
+        - generic: Смаколик
+      - link "Солероссо":
+        - /url: /bg/species/solanum-lycopersicum/solerosso
+        - generic: Солероссо
+      - link "Солідо Спарк":
+        - /url: /bg/species/solanum-lycopersicum/solido-spark
+        - generic: Солідо Спарк
+      - link "Сонет":
+        - /url: /bg/species/solanum-lycopersicum/sonet-2
+        - generic: Сонет
+      - link "Сонцедар":
+        - /url: /bg/species/solanum-lycopersicum/sontsedar-2
+        - generic: Сонцедар
+      - link "Спалах":
+        - /url: /bg/species/solanum-lycopersicum/spalakh-2
+        - generic: Спалах
+      - link "Спенсер":
+        - /url: /bg/species/solanum-lycopersicum/spenser
+        - generic: Спенсер
+      - link "Старбак":
+        - /url: /bg/species/solanum-lycopersicum/starbak
+        - generic: Старбак
+      - link "Стар Голд":
+        - /url: /bg/species/solanum-lycopersicum/star-hold
+        - generic: Стар Голд
+      - link "Страбена":
+        - /url: /bg/species/solanum-lycopersicum/strabena
+        - generic: Страбена
+      - link "Стромболіно":
+        - /url: /bg/species/solanum-lycopersicum/strombolino
+        - generic: Стромболіно
+      - link "СУОМІ":
+        - /url: /bg/species/solanum-lycopersicum/suomi
+        - generic: СУОМІ
+      - link "Сурія":
+        - /url: /bg/species/solanum-lycopersicum/suriia
+        - generic: Сурія
+      - link "Т 47110 F1":
+        - /url: /bg/species/solanum-lycopersicum/t-47110-f1
+        - generic: Т 47110 F1
+      - link "Т 97082 F1":
+        - /url: /bg/species/solanum-lycopersicum/t-97082-f1
+        - generic: Т 97082 F1
+      - link "Тайгер":
+        - /url: /bg/species/solanum-lycopersicum/taiher-3
+        - generic: Тайгер
+      - link "Тайлер":
+        - /url: /bg/species/solanum-lycopersicum/tailer
+        - generic: Тайлер
+      - link "Тайм":
+        - /url: /bg/species/solanum-lycopersicum/taim
+        - generic: Тайм
+      - link "Тайпінк":
+        - /url: /bg/species/solanum-lycopersicum/taipink
+        - generic: Тайпінк
+      - link "Талан":
+        - /url: /bg/species/solanum-lycopersicum/talan-2
+        - generic: Талан
+      - link "ТАЛЕНТ":
+        - /url: /bg/species/solanum-lycopersicum/talent-3
+        - generic: ТАЛЕНТ
+      - link "Танок":
+        - /url: /bg/species/solanum-lycopersicum/tanok
+        - generic: Танок
+      - link "Таня F1":
+        - /url: /bg/species/solanum-lycopersicum/tania-f1
+        - generic: Таня F1
+      - link "Тапер":
+        - /url: /bg/species/solanum-lycopersicum/taper
+        - generic: Тапер
+      - link "Таркюто":
+        - /url: /bg/species/solanum-lycopersicum/tarkiuto
+        - generic: Таркюто
+      - link "Тарпан":
+        - /url: /bg/species/solanum-lycopersicum/tarpan
+        - generic: Тарпан
+      - link "Тастієр":
+        - /url: /bg/species/solanum-lycopersicum/tastiier
+        - generic: Тастієр
+      - link "Татамі":
+        - /url: /bg/species/solanum-lycopersicum/tatami
+        - generic: Татамі
+      - link "ТАТЕМАРУ МУЧО":
+        - /url: /bg/species/solanum-lycopersicum/tatemaru-mucho
+        - generic: ТАТЕМАРУ МУЧО
+      - link "ТЕЙЛОР":
+        - /url: /bg/species/solanum-lycopersicum/teilor
+        - generic: ТЕЙЛОР
+      - link "Темис F1":
+        - /url: /bg/species/solanum-lycopersicum/temys-f1
+        - generic: Темис F1
+      - link "Теріон":
+        - /url: /bg/species/solanum-lycopersicum/terion
+        - generic: Теріон
+      - link "Терра Кота F1":
+        - /url: /bg/species/solanum-lycopersicum/terra-kota-f1
+        - generic: Терра Кота F1
+      - link "ТЕХ2721":
+        - /url: /bg/species/solanum-lycopersicum/tekh2721
+        - generic: ТЕХ2721
+      - link "Техас":
+        - /url: /bg/species/solanum-lycopersicum/tekhas
+        - generic: Техас
+      - link "Тісато":
+        - /url: /bg/species/solanum-lycopersicum/tisato
+        - generic: Тісато
+      - link "Тобольськ":
+        - /url: /bg/species/solanum-lycopersicum/tobolsk
+        - generic: Тобольськ
+      - link "Тойво":
+        - /url: /bg/species/solanum-lycopersicum/toivo
+        - generic: Тойво
+      - link "Толстой F1":
+        - /url: /bg/species/solanum-lycopersicum/tolstoi-f1
+        - generic: Толстой F1
+      - link "Томаджіно":
+        - /url: /bg/species/solanum-lycopersicum/tomadzhino
+        - generic: Томаджіно
+      - link "Томатіна":
+        - /url: /bg/species/solanum-lycopersicum/tomatina
+        - generic: Томатіна
+      - link "Томімару Мучоо":
+        - /url: /bg/species/solanum-lycopersicum/tomimaru-muchoo
+        - generic: Томімару Мучоо
+      - link "Томоко":
+        - /url: /bg/species/solanum-lycopersicum/tomoko
+        - generic: Томоко
+      - link "Томск":
+        - /url: /bg/species/solanum-lycopersicum/tomsk
+        - generic: Томск
+      - link "Топкапі":
+        - /url: /bg/species/solanum-lycopersicum/topkapi
+        - generic: Топкапі
+      - link "Топспорт F1":
+        - /url: /bg/species/solanum-lycopersicum/topsport-f1
+        - generic: Топспорт F1
+      - link "Торбей F1":
+        - /url: /bg/species/solanum-lycopersicum/torbei-f1
+        - generic: Торбей F1
+      - link "ТОРЕЛІНО":
+        - /url: /bg/species/solanum-lycopersicum/torelino
+        - generic: ТОРЕЛІНО
+      - link "Тореро":
+        - /url: /bg/species/solanum-lycopersicum/torero
+        - generic: Тореро
+      - link "Торонжіна":
+        - /url: /bg/species/solanum-lycopersicum/toronzhina
+        - generic: Торонжіна
+      - link "Торрос F1":
+        - /url: /bg/species/solanum-lycopersicum/torros-f1
+        - generic: Торрос F1
+      - link "ТРЕДІСІ":
+        - /url: /bg/species/solanum-lycopersicum/tredisi
+        - generic: ТРЕДІСІ
+      - link "Трібека":
+        - /url: /bg/species/solanum-lycopersicum/tribeka
+        - generic: Трібека
+      - link "Тропікал Джем F1":
+        - /url: /bg/species/solanum-lycopersicum/tropikal-dzhem-f1
+        - generic: Тропікал Джем F1
+      - link "Туті Фруті":
+        - /url: /bg/species/solanum-lycopersicum/tuti-fruti
+        - generic: Туті Фруті
+      - link "Удавчик":
+        - /url: /bg/species/solanum-lycopersicum/udavchyk
+        - generic: Удавчик
+      - link "Українець":
+        - /url: /bg/species/solanum-lycopersicum/ukrainets
+        - generic: Українець
+      - link "Український":
+        - /url: /bg/species/solanum-lycopersicum/ukrainskyi
+        - generic: Український
+      - link "Уліссе F1":
+        - /url: /bg/species/solanum-lycopersicum/ulisse-f1
+        - generic: Уліссе F1
+      - link "УМЕКС":
+        - /url: /bg/species/solanum-lycopersicum/umeks
+        - generic: УМЕКС
+      - link "Уно Россо F1":
+        - /url: /bg/species/solanum-lycopersicum/uno-rosso-f1
+        - generic: Уно Россо F1
+      - link "Уракан F1":
+        - /url: /bg/species/solanum-lycopersicum/urakan-f1
+        - generic: Уракан F1
+      - link "Уссар":
+        - /url: /bg/species/solanum-lycopersicum/ussar
+        - generic: Уссар
+      - link "Фабер":
+        - /url: /bg/species/solanum-lycopersicum/faber
+        - generic: Фабер
+      - link "ФАНТАСТІНА":
+        - /url: /bg/species/solanum-lycopersicum/fantastina
+        - generic: ФАНТАСТІНА
+      - link "Фастівський 1":
+        - /url: /bg/species/solanum-lycopersicum/fastivskyi-1
+        - generic: Фастівський 1
+      - link "Фаундейшн":
+        - /url: /bg/species/solanum-lycopersicum/faundeishn-2
+        - generic: Фаундейшн
+      - link "Фенда F1":
+        - /url: /bg/species/solanum-lycopersicum/fenda-f1
+        - generic: Фенда F1
+      - link "Ферст":
+        - /url: /bg/species/solanum-lycopersicum/ferst
+        - generic: Ферст
+      - link "Філікса":
+        - /url: /bg/species/solanum-lycopersicum/filiksa
+        - generic: Філікса
+      - link "Філовіта":
+        - /url: /bg/species/solanum-lycopersicum/filovita
+        - generic: Філовіта
+      - link "Фінлі":
+        - /url: /bg/species/solanum-lycopersicum/finli
+        - generic: Фінлі
+      - link "Флагман":
+        - /url: /bg/species/solanum-lycopersicum/flahman-2
+        - generic: Флагман
+      - link "Флора":
+        - /url: /bg/species/solanum-lycopersicum/flora-2
+        - generic: Флора
+      - link "Флорида 47 Р F1":
+        - /url: /bg/species/solanum-lycopersicum/floryda-47-r-f1
+        - generic: Флорида 47 Р F1
+      - link "Фоккер":
+        - /url: /bg/species/solanum-lycopersicum/fokker
+        - generic: Фоккер
+      - link "Форонті":
+        - /url: /bg/species/solanum-lycopersicum/foronti
+        - generic: Форонті
+      - link "Фуджімару":
+        - /url: /bg/species/solanum-lycopersicum/fudzhimaru
+        - generic: Фуджімару
+      - link "Фузер":
+        - /url: /bg/species/solanum-lycopersicum/fuzer
+        - generic: Фузер
+      - link "Хаєт":
+        - /url: /bg/species/solanum-lycopersicum/khaiet
+        - generic: Хаєт
+      - link "Хайд":
+        - /url: /bg/species/solanum-lycopersicum/khaid
+        - generic: Хайд
+      - link "Хайку":
+        - /url: /bg/species/solanum-lycopersicum/khaiku
+        - generic: Хайку
+      - link "Хайнц 1015":
+        - /url: /bg/species/solanum-lycopersicum/khaints-1015
+        - generic: Хайнц 1015
+      - link "Хайнц1301":
+        - /url: /bg/species/solanum-lycopersicum/khaints1301
+        - generic: Хайнц1301
+      - link "Хайнц1648":
+        - /url: /bg/species/solanum-lycopersicum/khaints1648
+        - generic: Хайнц1648
+      - link "Хайнц2123":
+        - /url: /bg/species/solanum-lycopersicum/khaints2123
+        - generic: Хайнц2123
+      - link "Хайнц 2206":
+        - /url: /bg/species/solanum-lycopersicum/khaints-2206
+        - generic: Хайнц 2206
+      - link "ХАЙНЦ 3402":
+        - /url: /bg/species/solanum-lycopersicum/khaints-3402
+        - generic: ХАЙНЦ 3402
+      - link "Хайнц5108":
+        - /url: /bg/species/solanum-lycopersicum/khaints5108
+        - generic: Хайнц5108
+      - link "Хайпил 108 F1":
+        - /url: /bg/species/solanum-lycopersicum/khaipyl-108-f1
+        - generic: Хайпил 108 F1
+      - link "Хайрул":
+        - /url: /bg/species/solanum-lycopersicum/khairul
+        - generic: Хайрул
+      - link "ХАКІМАРУ":
+        - /url: /bg/species/solanum-lycopersicum/khakimaru
+        - generic: ХАКІМАРУ
+      - link "Халлар F1":
+        - /url: /bg/species/solanum-lycopersicum/khallar-f1
+        - generic: Халлар F1
+      - link "Ханні Мун":
+        - /url: /bg/species/solanum-lycopersicum/khanni-mun
+        - generic: Ханні Мун
+      - link "Хастлер":
+        - /url: /bg/species/solanum-lycopersicum/khastler
+        - generic: Хастлер
+      - link "ХЕПІНЕТ":
+        - /url: /bg/species/solanum-lycopersicum/khepinet
+        - generic: ХЕПІНЕТ
+      - link "Хердон F1":
+        - /url: /bg/species/solanum-lycopersicum/kherdon-f1
+        - generic: Хердон F1
+      - link "Хиларио F1":
+        - /url: /bg/species/solanum-lycopersicum/khylaryo-f1
+        - generic: Хиларио F1
+      - link "Хібачі":
+        - /url: /bg/species/solanum-lycopersicum/khibachi
+        - generic: Хібачі
+      - link "Хітомакс":
+        - /url: /bg/species/solanum-lycopersicum/khitomaks
+        - generic: Хітомакс
+      - link "ХМ 5900":
+        - /url: /bg/species/solanum-lycopersicum/khm-5900
+        - generic: ХМ 5900
+      - link "ХМ 9903":
+        - /url: /bg/species/solanum-lycopersicum/khm-9903
+        - generic: ХМ 9903
+      - link "ХН5003":
+        - /url: /bg/species/solanum-lycopersicum/khn5003
+        - generic: ХН5003
+      - link "Хроміс":
+        - /url: /bg/species/solanum-lycopersicum/khromis
+        - generic: Хроміс
+      - link "Хуаніта":
+        - /url: /bg/species/solanum-lycopersicum/khuanita
+        - generic: Хуаніта
+      - link "Цуккеріно":
+        - /url: /bg/species/solanum-lycopersicum/tsukkerino
+        - generic: Цуккеріно
+      - link "Чайка":
+        - /url: /bg/species/solanum-lycopersicum/chaika-4
+        - generic: Чайка
+      - link "Чезена":
+        - /url: /bg/species/solanum-lycopersicum/chezena
+        - generic: Чезена
+      - link "ЧЕРЕЗА":
+        - /url: /bg/species/solanum-lycopersicum/chereza
+        - generic: ЧЕРЕЗА
+      - link "Черокі":
+        - /url: /bg/species/solanum-lycopersicum/cheroki
+        - generic: Черокі
+      - link "Чимган":
+        - /url: /bg/species/solanum-lycopersicum/chymhan
+        - generic: Чимган
+      - link "Чіблі F1":
+        - /url: /bg/species/solanum-lycopersicum/chibli-f1
+        - generic: Чіблі F1
+      - link "Чінто F1":
+        - /url: /bg/species/solanum-lycopersicum/chinto-f1
+        - generic: Чінто F1
+      - link "Чудо":
+        - /url: /bg/species/solanum-lycopersicum/chudo
+        - generic: Чудо
+      - link "Шармант":
+        - /url: /bg/species/solanum-lycopersicum/sharmant
+        - generic: Шармант
+      - link "Шаста":
+        - /url: /bg/species/solanum-lycopersicum/shasta
+        - generic: Шаста
+      - link "Шейк":
+        - /url: /bg/species/solanum-lycopersicum/sheik
+        - generic: Шейк
+      - link "Шкіпер F1":
+        - /url: /bg/species/solanum-lycopersicum/shkiper-f1
+        - generic: Шкіпер F1
+      - link "Щедрик F1":
+        - /url: /bg/species/solanum-lycopersicum/shchedryk-f1
+        - generic: Щедрик F1
+      - link "Ювілейний":
+        - /url: /bg/species/solanum-lycopersicum/yuvileinyi-2
+        - generic: Ювілейний
+      - link "Юджі 8168 F1":
+        - /url: /bg/species/solanum-lycopersicum/yudzhi-8168-f1
+        - generic: Юджі 8168 F1
+      - link "Юджі Ред F1":
+        - /url: /bg/species/solanum-lycopersicum/yudzhi-red-f1
+        - generic: Юджі Ред F1
+      - link "Юнірекс F1":
+        - /url: /bg/species/solanum-lycopersicum/yunireks-f1
+        - generic: Юнірекс F1
+      - link "ЯГ 8810":
+        - /url: /bg/species/solanum-lycopersicum/yah-8810
+        - generic: ЯГ 8810
+      - link "Ядвіга":
+        - /url: /bg/species/solanum-lycopersicum/yadviha
+        - generic: Ядвіга
+      - link "Яки F1":
+        - /url: /bg/species/solanum-lycopersicum/yaky-f1
+        - generic: Яки F1
+      - link "Ямамото":
+        - /url: /bg/species/solanum-lycopersicum/yamamoto
+        - generic: Ямамото
+      - link "Янтарний богатир":
+        - /url: /bg/species/solanum-lycopersicum/yantarnyi-bohatyr
+        - generic: Янтарний богатир
+      - link "Ярина F1":
+        - /url: /bg/species/solanum-lycopersicum/yaryna-f1
+        - generic: Ярина F1
+    - heading "Вредители и болести" [level=3]
+    - list:
+      - link "Acidovorax citrulli · гостоприемник":
+        - /url: /bg/species/acidovorax-citrulli
+        - generic: Acidovorax citrulli
+        - generic: · гостоприемник
+      - link "Aculops lycopersici · основен гостоприемник":
+        - /url: /bg/species/aculops-lycopersici
+        - generic: Aculops lycopersici
+        - generic: · основен гостоприемник
+      - link "Agrotis segetum · гостоприемник":
+        - /url: /bg/species/agrotis-segetum
+        - generic: Agrotis segetum
+        - generic: · гостоприемник
+      - link "Aleurodicus dispersus · гостоприемник":
+        - /url: /bg/species/aleurodicus-dispersus
+        - generic: Aleurodicus dispersus
+        - generic: · гостоприемник
+      - link "Aleurothrixus trachoides · основен гостоприемник":
+        - /url: /bg/species/aleurothrixus-trachoides
+        - generic: Aleurothrixus trachoides
+        - generic: · основен гостоприемник
+      - link "Amrasca biguttula · гостоприемник":
+        - /url: /bg/species/amrasca-biguttula
+        - generic: Amrasca biguttula
+        - generic: · гостоприемник
+      - link "Anastrepha ludens · експериментален гостоприемник":
+        - /url: /bg/species/anastrepha-ludens
+        - generic: Anastrepha ludens
+        - generic: · експериментален гостоприемник
+      - link "Anastrepha suspensa · гостоприемник":
+        - /url: /bg/species/anastrepha-suspensa
+        - generic: Anastrepha suspensa
+        - generic: · гостоприемник
+      - link "Anomis flava · гостоприемник":
+        - /url: /bg/species/anomis-flava
+        - generic: Anomis flava
+        - generic: · гостоприемник
+      - link "Atherigona orientalis · основен гостоприемник":
+        - /url: /bg/species/atherigona-orientalis
+        - generic: Atherigona orientalis
+        - generic: · основен гостоприемник
+      - link "Bactericera cockerelli · основен гостоприемник":
+        - /url: /bg/species/bactericera-cockerelli
+        - generic: Bactericera cockerelli
+        - generic: · основен гостоприемник
+      - link "Bactrocera carambolae · гостоприемник":
+        - /url: /bg/species/bactrocera-carambolae
+        - generic: Bactrocera carambolae
+        - generic: · гостоприемник
+      - link "Bactrocera correcta · гостоприемник":
+        - /url: /bg/species/bactrocera-correcta
+        - generic: Bactrocera correcta
+        - generic: · гостоприемник
+      - link "Bactrocera curvipennis · гостоприемник":
+        - /url: /bg/species/bactrocera-curvipennis
+        - generic: Bactrocera curvipennis
+        - generic: · гостоприемник
+      - link "Bactrocera dorsalis · гостоприемник":
+        - /url: /bg/species/bactrocera-dorsalis
+        - generic: Bactrocera dorsalis
+        - generic: · гостоприемник
+      - link "Bactrocera latifrons · основен гостоприемник":
+        - /url: /bg/species/bactrocera-latifrons
+        - generic: Bactrocera latifrons
+        - generic: · основен гостоприемник
+      - link "Bactrocera tryoni · основен гостоприемник":
+        - /url: /bg/species/bactrocera-tryoni
+        - generic: Bactrocera tryoni
+        - generic: · основен гостоприемник
+      - link "Begomovirus capsicummusivi · основен гостоприемник":
+        - /url: /bg/species/begomovirus-capsicummusivi
+        - generic: Begomovirus capsicummusivi
+        - generic: · основен гостоприемник
+      - link "Begomovirus chillicapsici · основен гостоприемник":
+        - /url: /bg/species/begomovirus-chillicapsici
+        - generic: Begomovirus chillicapsici
+        - generic: · основен гостоприемник
+      - link "Begomovirus gossypigeziraense · гостоприемник":
+        - /url: /bg/species/begomovirus-gossypigeziraense
+        - generic: Begomovirus gossypigeziraense
+        - generic: · гостоприемник
+      - link "Begomovirus solanumdelhiense · основен гостоприемник":
+        - /url: /bg/species/begomovirus-solanumdelhiense
+        - generic: Begomovirus solanumdelhiense
+        - generic: · основен гостоприемник
+      - link "Begomovirus solanumflavusardiniaense · основен гостоприемник":
+        - /url: /bg/species/begomovirus-solanumflavusardiniaense
+        - generic: Begomovirus solanumflavusardiniaense
+        - generic: · основен гостоприемник
+      - link "Begomovirus solanumflavusvenae · основен гостоприемник":
+        - /url: /bg/species/begomovirus-solanumflavusvenae
+        - generic: Begomovirus solanumflavusvenae
+        - generic: · основен гостоприемник
+      - link "Begomovirus solanumsinaloaense · основен гостоприемник":
+        - /url: /bg/species/begomovirus-solanumsinaloaense
+        - generic: Begomovirus solanumsinaloaense
+        - generic: · основен гостоприемник
+      - link "Begomovirus solanumtainoense · основен гостоприемник":
+        - /url: /bg/species/begomovirus-solanumtainoense
+        - generic: Begomovirus solanumtainoense
+        - generic: · основен гостоприемник
+      - link "Bemisia tabaci · основен гостоприемник":
+        - /url: /bg/species/bemisia-tabaci
+        - generic: Bemisia tabaci
+        - generic: · основен гостоприемник
+      - link "Cacoecimorpha pronubana · гостоприемник":
+        - /url: /bg/species/cacoecimorpha-pronubana
+        - generic: Cacoecimorpha pronubana
+        - generic: · гостоприемник
+      - link "'Candidatus Liberibacter asiaticus' · експериментален гостоприемник":
+        - /url: /bg/species/candidatus-liberibacter-asiaticus
+        - generic: "'Candidatus Liberibacter asiaticus'"
+        - generic: · експериментален гостоприемник
+      - link "'Candidatus Liberibacter solanacearum' · основен гостоприемник":
+        - /url: /bg/species/candidatus-liberibacter-solanacearum
+        - generic: "'Candidatus Liberibacter solanacearum'"
+        - generic: · основен гостоприемник
+      - link "'Candidatus Phytoplasma mali' · експериментален гостоприемник":
+        - /url: /bg/species/candidatus-phytoplasma-mali
+        - generic: "'Candidatus Phytoplasma mali'"
+        - generic: · експериментален гостоприемник
+      - link "'Candidatus Phytoplasma solani' · основен гостоприемник":
+        - /url: /bg/species/candidatus-phytoplasma-solani
+        - generic: "'Candidatus Phytoplasma solani'"
+        - generic: · основен гостоприемник
+      - link "'Candidatus Phytoplasma trifolii' · гостоприемник":
+        - /url: /bg/species/candidatus-phytoplasma-trifolii
+        - generic: "'Candidatus Phytoplasma trifolii'"
+        - generic: · гостоприемник
+      - link "Ceratitis capitata · гостоприемник":
+        - /url: /bg/species/ceratitis-capitata
+        - generic: Ceratitis capitata
+        - generic: · гостоприемник
+      - link "Ceratitis cosyra · гостоприемник":
+        - /url: /bg/species/ceratitis-cosyra
+        - generic: Ceratitis cosyra
+        - generic: · гостоприемник
+      - link "Ceratitis rosa · неизвестен клас гостоприемник":
+        - /url: /bg/species/ceratitis-rosa
+        - generic: Ceratitis rosa
+        - generic: · неизвестен клас гостоприемник
+      - link "Ceratothripoides brunneus · основен гостоприемник":
+        - /url: /bg/species/ceratothripoides-brunneus
+        - generic: Ceratothripoides brunneus
+        - generic: · основен гостоприемник
+      - link "Ceratothripoides claratris · основен гостоприемник":
+        - /url: /bg/species/ceratothripoides-claratris
+        - generic: Ceratothripoides claratris
+        - generic: · основен гостоприемник
+      - link "Chloridea virescens · основен гостоприемник":
+        - /url: /bg/species/chloridea-virescens
+        - generic: Chloridea virescens
+        - generic: · основен гостоприемник
+      - link "Chrysodeixis eriosoma · гостоприемник":
+        - /url: /bg/species/chrysodeixis-eriosoma
+        - generic: Chrysodeixis eriosoma
+        - generic: · гостоприемник
+      - link "Circulifer tenellus · гостоприемник":
+        - /url: /bg/species/circulifer-tenellus
+        - generic: Circulifer tenellus
+        - generic: · гостоприемник
+      - link "Clavibacter michiganensis · основен гостоприемник":
+        - /url: /bg/species/clavibacter-michiganensis
+        - generic: Clavibacter michiganensis
+        - generic: · основен гостоприемник
+      - link "Clavibacter sepedonicus · гостоприемник":
+        - /url: /bg/species/clavibacter-sepedonicus
+        - generic: Clavibacter sepedonicus
+        - generic: · гостоприемник
+      - link "Colletotrichum acutatum · гостоприемник":
+        - /url: /bg/species/colletotrichum-acutatum
+        - generic: Colletotrichum acutatum
+        - generic: · гостоприемник
+      - link "Colletotrichum fructicola · гостоприемник":
+        - /url: /bg/species/colletotrichum-fructicola
+        - generic: Colletotrichum fructicola
+        - generic: · гостоприемник
+      - link "Colletotrichum gossypii · гостоприемник":
+        - /url: /bg/species/colletotrichum-gossypii
+        - generic: Colletotrichum gossypii
+        - generic: · гостоприемник
+      - link "Dacus ciliatus · гостоприемник":
+        - /url: /bg/species/dacus-ciliatus
+        - generic: Dacus ciliatus
+        - generic: · гостоприемник
+      - link "Diabrotica speciosa · гостоприемник":
+        - /url: /bg/species/diabrotica-speciosa
+        - generic: Diabrotica speciosa
+        - generic: · гостоприемник
+      - link "Diabrotica undecimpunctata howardi · гостоприемник":
+        - /url: /bg/species/diabrotica-undecimpunctata-howardi
+        - generic: Diabrotica undecimpunctata howardi
+        - generic: · гостоприемник
+      - link "Diabrotica undecimpunctata undecimpunctata · гостоприемник":
+        - /url: /bg/species/diabrotica-undecimpunctata-undecimpunctata
+        - generic: Diabrotica undecimpunctata undecimpunctata
+        - generic: · гостоприемник
+      - link "Dickeya dianthicola · гостоприемник":
+        - /url: /bg/species/dickeya-dianthicola
+        - generic: Dickeya dianthicola
+        - generic: · гостоприемник
+      - link "Ditylenchus dipsaci · гостоприемник":
+        - /url: /bg/species/ditylenchus-dipsaci
+        - generic: Ditylenchus dipsaci
+        - generic: · гостоприемник
+      - link "Drosophila suzukii · гостоприемник":
+        - /url: /bg/species/drosophila-suzukii
+        - generic: Drosophila suzukii
+        - generic: · гостоприемник
+      - link "Elasmopalpus lignosellus · гостоприемник":
+        - /url: /bg/species/elasmopalpus-lignosellus
+        - generic: Elasmopalpus lignosellus
+        - generic: · гостоприемник
+      - link "Epitrix cucumeris · гостоприемник":
+        - /url: /bg/species/epitrix-cucumeris
+        - generic: Epitrix cucumeris
+        - generic: · гостоприемник
+      - link "Epitrix hirtipennis · гостоприемник":
+        - /url: /bg/species/epitrix-hirtipennis
+        - generic: Epitrix hirtipennis
+        - generic: · гостоприемник
+      - link "Epitrix papa · гостоприемник":
+        - /url: /bg/species/epitrix-papa
+        - generic: Epitrix papa
+        - generic: · гостоприемник
+      - link "Epitrix similaris · основен гостоприемник":
+        - /url: /bg/species/epitrix-similaris
+        - generic: Epitrix similaris
+        - generic: · основен гостоприемник
+      - link "Epitrix subcrinita · гостоприемник":
+        - /url: /bg/species/epitrix-subcrinita
+        - generic: Epitrix subcrinita
+        - generic: · гостоприемник
+      - link "Epitrix tuberis · гостоприемник":
+        - /url: /bg/species/epitrix-tuberis
+        - generic: Epitrix tuberis
+        - generic: · гостоприемник
+      - link "Erwinia chrysanthemi · гостоприемник":
+        - /url: /bg/species/erwinia-chrysanthemi
+        - generic: Erwinia chrysanthemi
+        - generic: · гостоприемник
+      - link "Erwinia rhapontici · гостоприемник":
+        - /url: /bg/species/erwinia-rhapontici
+        - generic: Erwinia rhapontici
+        - generic: · гостоприемник
+      - link "Frankliniella occidentalis · гостоприемник":
+        - /url: /bg/species/frankliniella-occidentalis
+        - generic: Frankliniella occidentalis
+        - generic: · гостоприемник
+      - link "Fusarium foetens · експериментален гостоприемник":
+        - /url: /bg/species/fusarium-foetens
+        - generic: Fusarium foetens
+        - generic: · експериментален гостоприемник
+      - link "Fusarium oxysporum · основен гостоприемник":
+        - /url: /bg/species/fusarium-oxysporum
+        - generic: Fusarium oxysporum
+        - generic: · основен гостоприемник
+      - link "Globodera pallida · гостоприемник":
+        - /url: /bg/species/globodera-pallida
+        - generic: Globodera pallida
+        - generic: · гостоприемник
+      - link "Globodera rostochiensis · гостоприемник":
+        - /url: /bg/species/globodera-rostochiensis
+        - generic: Globodera rostochiensis
+        - generic: · гостоприемник
+      - link "Halyomorpha halys · гостоприемник":
+        - /url: /bg/species/halyomorpha-halys
+        - generic: Halyomorpha halys
+        - generic: · гостоприемник
+      - link "Helicoverpa armigera · гостоприемник":
+        - /url: /bg/species/helicoverpa-armigera
+        - generic: Helicoverpa armigera
+        - generic: · гостоприемник
+      - link "Helicoverpa zea · основен гостоприемник":
+        - /url: /bg/species/helicoverpa-zea
+        - generic: Helicoverpa zea
+        - generic: · основен гостоприемник
+      - link "Heteronychus arator · гостоприемник":
+        - /url: /bg/species/heteronychus-arator
+        - generic: Heteronychus arator
+        - generic: · гостоприемник
+      - link "Hirschmanniella oryzae · експериментален гостоприемник":
+        - /url: /bg/species/hirschmanniella-oryzae
+        - generic: Hirschmanniella oryzae
+        - generic: · експериментален гостоприемник
+      - link "Hishimonus phycitis · гостоприемник":
+        - /url: /bg/species/hishimonus-phycitis
+        - generic: Hishimonus phycitis
+        - generic: · гостоприемник
+      - link "Ipomovirus lycopersici · основен гостоприемник":
+        - /url: /bg/species/ipomovirus-lycopersici
+        - generic: Ipomovirus lycopersici
+        - generic: · основен гостоприемник
+      - link "Jacobiasca lybica · гостоприемник":
+        - /url: /bg/species/jacobiasca-lybica
+        - generic: Jacobiasca lybica
+        - generic: · гостоприемник
+      - link "Keiferia lycopersicella · основен гостоприемник":
+        - /url: /bg/species/keiferia-lycopersicella
+        - generic: Keiferia lycopersicella
+        - generic: · основен гостоприемник
+      - link "Lagria villosa · гостоприемник":
+        - /url: /bg/species/lagria-villosa
+        - generic: Lagria villosa
+        - generic: · гостоприемник
+      - link "Leptinotarsa decemlineata · гостоприемник":
+        - /url: /bg/species/leptinotarsa-decemlineata
+        - generic: Leptinotarsa decemlineata
+        - generic: · гостоприемник
+      - link "Leucinodes africensis · основен гостоприемник":
+        - /url: /bg/species/leucinodes-africensis
+        - generic: Leucinodes africensis
+        - generic: · основен гостоприемник
+      - link "Leucinodes laisalis · гостоприемник":
+        - /url: /bg/species/leucinodes-laisalis
+        - generic: Leucinodes laisalis
+        - generic: · гостоприемник
+      - link "Leucinodes orbonalis · гостоприемник":
+        - /url: /bg/species/leucinodes-orbonalis
+        - generic: Leucinodes orbonalis
+        - generic: · гостоприемник
+      - link "Liriomyza bryoniae · основен гостоприемник":
+        - /url: /bg/species/liriomyza-bryoniae
+        - generic: Liriomyza bryoniae
+        - generic: · основен гостоприемник
+      - link "Liriomyza huidobrensis · гостоприемник":
+        - /url: /bg/species/liriomyza-huidobrensis
+        - generic: Liriomyza huidobrensis
+        - generic: · гостоприемник
+      - link "Liriomyza sativae · основен гостоприемник":
+        - /url: /bg/species/liriomyza-sativae
+        - generic: Liriomyza sativae
+        - generic: · основен гостоприемник
+      - link "Liriomyza trifolii · гостоприемник":
+        - /url: /bg/species/liriomyza-trifolii
+        - generic: Liriomyza trifolii
+        - generic: · гостоприемник
+      - link "Lissachatina fulica · гостоприемник":
+        - /url: /bg/species/lissachatina-fulica
+        - generic: Lissachatina fulica
+        - generic: · гостоприемник
+      - link "Maconellicoccus hirsutus · гостоприемник":
+        - /url: /bg/species/maconellicoccus-hirsutus
+        - generic: Maconellicoccus hirsutus
+        - generic: · гостоприемник
+      - link "Meloidogyne chitwoodi · основен гостоприемник":
+        - /url: /bg/species/meloidogyne-chitwoodi
+        - generic: Meloidogyne chitwoodi
+        - generic: · основен гостоприемник
+      - link "Meloidogyne enterolobii · основен гостоприемник":
+        - /url: /bg/species/meloidogyne-enterolobii
+        - generic: Meloidogyne enterolobii
+        - generic: · основен гостоприемник
+      - link "Meloidogyne ethiopica · основен гостоприемник":
+        - /url: /bg/species/meloidogyne-ethiopica
+        - generic: Meloidogyne ethiopica
+        - generic: · основен гостоприемник
+      - link "Meloidogyne exigua · гостоприемник":
+        - /url: /bg/species/meloidogyne-exigua
+        - generic: Meloidogyne exigua
+        - generic: · гостоприемник
+      - link "Meloidogyne fallax · основен гостоприемник":
+        - /url: /bg/species/meloidogyne-fallax
+        - generic: Meloidogyne fallax
+        - generic: · основен гостоприемник
+      - link "Meloidogyne floridensis · гостоприемник":
+        - /url: /bg/species/meloidogyne-floridensis
+        - generic: Meloidogyne floridensis
+        - generic: · гостоприемник
+      - link "Meloidogyne graminicola · гостоприемник":
+        - /url: /bg/species/meloidogyne-graminicola
+        - generic: Meloidogyne graminicola
+        - generic: · гостоприемник
+      - link "Meloidogyne luci · гостоприемник":
+        - /url: /bg/species/meloidogyne-luci
+        - generic: Meloidogyne luci
+        - generic: · гостоприемник
+      - link "Meloidogyne mali · гостоприемник":
+        - /url: /bg/species/meloidogyne-mali
+        - generic: Meloidogyne mali
+        - generic: · гостоприемник
+      - link "Moniliophthora perniciosa · гостоприемник":
+        - /url: /bg/species/moniliophthora-perniciosa
+        - generic: Moniliophthora perniciosa
+        - generic: · гостоприемник
+      - link "Nacobbus aberrans sensu lato · основен гостоприемник":
+        - /url: /bg/species/nacobbus-aberrans-sensu-lato
+        - generic: Nacobbus aberrans sensu lato
+        - generic: · основен гостоприемник
+      - link "Naupactus leucoloma · гостоприемник":
+        - /url: /bg/species/naupactus-leucoloma
+        - generic: Naupactus leucoloma
+        - generic: · гостоприемник
+      - link "Naupactus xanthographus · гостоприемник":
+        - /url: /bg/species/naupactus-xanthographus
+        - generic: Naupactus xanthographus
+        - generic: · гостоприемник
+      - link "Neoceratitis cyanescens · основен гостоприемник":
+        - /url: /bg/species/neoceratitis-cyanescens
+        - generic: Neoceratitis cyanescens
+        - generic: · основен гостоприемник
+      - link "Neoleucinodes elegantalis · основен гостоприемник":
+        - /url: /bg/species/neoleucinodes-elegantalis
+        - generic: Neoleucinodes elegantalis
+        - generic: · основен гостоприемник
+      - link "Opogona sacchari · експериментален гостоприемник":
+        - /url: /bg/species/opogona-sacchari
+        - generic: Opogona sacchari
+        - generic: · експериментален гостоприемник
+      - link "Orthotospovirus citrullomaculosi · гостоприемник":
+        - /url: /bg/species/orthotospovirus-citrullomaculosi
+        - generic: Orthotospovirus citrullomaculosi
+        - generic: · гостоприемник
+      - link "Pantoea stewartii subsp. stewartii · експериментален гостоприемник":
+        - /url: /bg/species/pantoea-stewartii-subsp-stewartii
+        - generic: Pantoea stewartii subsp. stewartii
+        - generic: · експериментален гостоприемник
+      - link "Pepper mild tigré virus · експериментален гостоприемник":
+        - /url: /bg/species/pepper-mild-tigre-virus
+        - generic: Pepper mild tigré virus
+        - generic: · експериментален гостоприемник
+      - link "Phenacoccus miruku · гостоприемник":
+        - /url: /bg/species/phenacoccus-miruku
+        - generic: Phenacoccus miruku
+        - generic: · гостоприемник
+      - link "Phenacoccus solenopsis · основен гостоприемник":
+        - /url: /bg/species/phenacoccus-solenopsis
+        - generic: Phenacoccus solenopsis
+        - generic: · основен гостоприемник
+      - link "Phthorimaea absoluta · основен гостоприемник":
+        - /url: /bg/species/phthorimaea-absoluta
+        - generic: Phthorimaea absoluta
+        - generic: · основен гостоприемник
+      - link "Phthorimaea operculella · гостоприемник":
+        - /url: /bg/species/phthorimaea-operculella
+        - generic: Phthorimaea operculella
+        - generic: · гостоприемник
+      - link "Phymatotrichopsis omnivora · гостоприемник":
+        - /url: /bg/species/phymatotrichopsis-omnivora
+        - generic: Phymatotrichopsis omnivora
+        - generic: · гостоприемник
+      - link "Phyrdenus muriceus · гостоприемник":
+        - /url: /bg/species/phyrdenus-muriceus
+        - generic: Phyrdenus muriceus
+        - generic: · гостоприемник
+      - link "Phytophthora capsici · гостоприемник":
+        - /url: /bg/species/phytophthora-capsici
+        - generic: Phytophthora capsici
+        - generic: · гостоприемник
+      - link "Phytophthora cryptogea · гостоприемник":
+        - /url: /bg/species/phytophthora-cryptogea
+        - generic: Phytophthora cryptogea
+        - generic: · гостоприемник
+      - link "Phytophthora nicotianae · гостоприемник":
+        - /url: /bg/species/phytophthora-nicotianae
+        - generic: Phytophthora nicotianae
+        - generic: · гостоприемник
+      - link "Platynota stultana · гостоприемник":
+        - /url: /bg/species/platynota-stultana
+        - generic: Platynota stultana
+        - generic: · гостоприемник
+      - link "Popillia japonica · гостоприемник":
+        - /url: /bg/species/popillia-japonica
+        - generic: Popillia japonica
+        - generic: · гостоприемник
+      - link "Potyvirus capsivenamaculae · гостоприемник":
+        - /url: /bg/species/potyvirus-capsivenamaculae
+        - generic: Potyvirus capsivenamaculae
+        - generic: · гостоприемник
+      - link "Prodiplosis longifila · основен гостоприемник":
+        - /url: /bg/species/prodiplosis-longifila
+        - generic: Prodiplosis longifila
+        - generic: · основен гостоприемник
+      - link "Pseudococcus viburni · основен гостоприемник":
+        - /url: /bg/species/pseudococcus-viburni
+        - generic: Pseudococcus viburni
+        - generic: · основен гостоприемник
+      - link "Pseudomonas cichorii · гостоприемник":
+        - /url: /bg/species/pseudomonas-cichorii
+        - generic: Pseudomonas cichorii
+        - generic: · гостоприемник
+      - link "Puccinia pittieriana · гостоприемник":
+        - /url: /bg/species/puccinia-pittieriana
+        - generic: Puccinia pittieriana
+        - generic: · гостоприемник
+      - link "Radopholus similis · експериментален гостоприемник":
+        - /url: /bg/species/radopholus-similis
+        - generic: Radopholus similis
+        - generic: · експериментален гостоприемник
+      - link "Ralstonia pseudosolanacearum · основен гостоприемник":
+        - /url: /bg/species/ralstonia-pseudosolanacearum
+        - generic: Ralstonia pseudosolanacearum
+        - generic: · основен гостоприемник
+      - link "Ralstonia solanacearum · основен гостоприемник":
+        - /url: /bg/species/ralstonia-solanacearum
+        - generic: Ralstonia solanacearum
+        - generic: · основен гостоприемник
+      - link "Ralstonia solanacearum species complex · основен гостоприемник":
+        - /url: /bg/species/ralstonia-solanacearum-species-complex
+        - generic: Ralstonia solanacearum species complex
+        - generic: · основен гостоприемник
+      - link "Ralstonia syzygii · основен гостоприемник":
+        - /url: /bg/species/ralstonia-syzygii
+        - generic: Ralstonia syzygii
+        - generic: · основен гостоприемник
+      - link "Ralstonia syzygii subsp. indonesiensis · основен гостоприемник":
+        - /url: /bg/species/ralstonia-syzygii-subsp-indonesiensis
+        - generic: Ralstonia syzygii subsp. indonesiensis
+        - generic: · основен гостоприемник
+      - link "Rhynchophorus palmarum · експериментален гостоприемник":
+        - /url: /bg/species/rhynchophorus-palmarum
+        - generic: Rhynchophorus palmarum
+        - generic: · експериментален гостоприемник
+      - link "Rotylenchulus reniformis · гостоприемник":
+        - /url: /bg/species/rotylenchulus-reniformis
+        - generic: Rotylenchulus reniformis
+        - generic: · гостоприемник
+      - link "Rotylenchus buxophilus · гостоприемник":
+        - /url: /bg/species/rotylenchus-buxophilus
+        - generic: Rotylenchus buxophilus
+        - generic: · гостоприемник
+      - link "Scirtothrips dorsalis · гостоприемник":
+        - /url: /bg/species/scirtothrips-dorsalis
+        - generic: Scirtothrips dorsalis
+        - generic: · гостоприемник
+      - link "Septoria malagutii · експериментален гостоприемник":
+        - /url: /bg/species/septoria-malagutii
+        - generic: Septoria malagutii
+        - generic: · експериментален гостоприемник
+      - link "Serratia marcescens · гостоприемник":
+        - /url: /bg/species/serratia-marcescens
+        - generic: Serratia marcescens
+        - generic: · гостоприемник
+      - link "Spodoptera eridania · гостоприемник":
+        - /url: /bg/species/spodoptera-eridania
+        - generic: Spodoptera eridania
+        - generic: · гостоприемник
+      - link "Spodoptera frugiperda · гостоприемник":
+        - /url: /bg/species/spodoptera-frugiperda
+        - generic: Spodoptera frugiperda
+        - generic: · гостоприемник
+      - link "Spodoptera littoralis · основен гостоприемник":
+        - /url: /bg/species/spodoptera-littoralis
+        - generic: Spodoptera littoralis
+        - generic: · основен гостоприемник
+      - link "Spodoptera litura · гостоприемник":
+        - /url: /bg/species/spodoptera-litura
+        - generic: Spodoptera litura
+        - generic: · гостоприемник
+      - link "Spodoptera ornithogalli · гостоприемник":
+        - /url: /bg/species/spodoptera-ornithogalli
+        - generic: Spodoptera ornithogalli
+        - generic: · гостоприемник
+      - link "Spodoptera praefica · гостоприемник":
+        - /url: /bg/species/spodoptera-praefica
+        - generic: Spodoptera praefica
+        - generic: · гостоприемник
+      - link "Stagonosporopsis andigena · неизвестен клас гостоприемник":
+        - /url: /bg/species/stagonosporopsis-andigena
+        - generic: Stagonosporopsis andigena
+        - generic: · неизвестен клас гостоприемник
+      - link "Stagonosporopsis crystalliniformis · гостоприемник":
+        - /url: /bg/species/stagonosporopsis-crystalliniformis
+        - generic: Stagonosporopsis crystalliniformis
+        - generic: · гостоприемник
+      - link "Synchytrium endobioticum · експериментален гостоприемник":
+        - /url: /bg/species/synchytrium-endobioticum
+        - generic: Synchytrium endobioticum
+        - generic: · експериментален гостоприемник
+      - link "Tetranychus evansi · основен гостоприемник":
+        - /url: /bg/species/tetranychus-evansi
+        - generic: Tetranychus evansi
+        - generic: · основен гостоприемник
+      - link "Thaumatotibia leucotreta · гостоприемник":
+        - /url: /bg/species/thaumatotibia-leucotreta
+        - generic: Thaumatotibia leucotreta
+        - generic: · гостоприемник
+      - link "Thrips palmi · гостоприемник":
+        - /url: /bg/species/thrips-palmi
+        - generic: Thrips palmi
+        - generic: · гостоприемник
+      - link "Thrips parvispinus · гостоприемник":
+        - /url: /bg/species/thrips-parvispinus
+        - generic: Thrips parvispinus
+        - generic: · гостоприемник
+      - link "Thrips setosus · гостоприемник":
+        - /url: /bg/species/thrips-setosus
+        - generic: Thrips setosus
+        - generic: · гостоприемник
+      - link "Tobamovirus fructirugosum · основен гостоприемник":
+        - /url: /bg/species/tobamovirus-fructirugosum
+        - generic: Tobamovirus fructirugosum
+        - generic: · основен гостоприемник
+      - link "Tobravirus capsici · гостоприемник":
+        - /url: /bg/species/tobravirus-capsici
+        - generic: Tobravirus capsici
+        - generic: · гостоприемник
+      - link "Tomato dwarf leaf curl virus · основен гостоприемник":
+        - /url: /bg/species/tomato-dwarf-leaf-curl-virus
+        - generic: Tomato dwarf leaf curl virus
+        - generic: · основен гостоприемник
+      - link "Torradovirus nanorugosum · експериментален гостоприемник":
+        - /url: /bg/species/torradovirus-nanorugosum
+        - generic: Torradovirus nanorugosum
+        - generic: · експериментален гостоприемник
+      - link "Trialeurodes ricini · гостоприемник":
+        - /url: /bg/species/trialeurodes-ricini
+        - generic: Trialeurodes ricini
+        - generic: · гостоприемник
+      - link "Verticillium alboatrum · гостоприемник":
+        - /url: /bg/species/verticillium-alboatrum
+        - generic: Verticillium alboatrum
+        - generic: · гостоприемник
+      - link "Verticillium nonalfalfae · гостоприемник":
+        - /url: /bg/species/verticillium-nonalfalfae
+        - generic: Verticillium nonalfalfae
+        - generic: · гостоприемник
+      - link "Xanthomonas axonopodis pv. vesicatoria (no longer in use) · основен гостоприемник":
+        - /url: /bg/species/xanthomonas-axonopodis-pv-vesicatoria-no-longer-in-use
+        - generic: Xanthomonas axonopodis pv. vesicatoria (no longer in use)
+        - generic: · основен гостоприемник
+      - link "Xanthomonas euvesicatoria pv. euvesicatoria · основен гостоприемник":
+        - /url: /bg/species/xanthomonas-euvesicatoria-pv-euvesicatoria
+        - generic: Xanthomonas euvesicatoria pv. euvesicatoria
+        - generic: · основен гостоприемник
+      - link "Xanthomonas euvesicatoria pv. perforans · основен гостоприемник":
+        - /url: /bg/species/xanthomonas-euvesicatoria-pv-perforans
+        - generic: Xanthomonas euvesicatoria pv. perforans
+        - generic: · основен гостоприемник
+      - link "Xanthomonas hortorum pv. gardneri · основен гостоприемник":
+        - /url: /bg/species/xanthomonas-hortorum-pv-gardneri
+        - generic: Xanthomonas hortorum pv. gardneri
+        - generic: · основен гостоприемник
+      - link "Xanthomonas vesicatoria · основен гостоприемник":
+        - /url: /bg/species/xanthomonas-vesicatoria
+        - generic: Xanthomonas vesicatoria
+        - generic: · основен гостоприемник
+      - link "Zaprionus indianus · гостоприемник":
+        - /url: /bg/species/zaprionus-indianus
+        - generic: Zaprionus indianus
+        - generic: · гостоприемник
+      - link "Zeugodacus cucumis · гостоприемник":
+        - /url: /bg/species/zeugodacus-cucumis
+        - generic: Zeugodacus cucumis
+        - generic: · гостоприемник
+      - link "Zeugodacus cucurbitae · гостоприемник":
+        - /url: /bg/species/zeugodacus-cucurbitae
+        - generic: Zeugodacus cucurbitae
+        - generic: · гостоприемник
+      - link "Zonosemata electa · гостоприемник":
+        - /url: /bg/species/zonosemata-electa
+        - generic: Zonosemata electa
+        - generic: · гостоприемник
+    - link "621 сорта Solanum lycopersicum L. в регистрите":
+      - /url: /bg/species/solanum-lycopersicum/register
+  - region "Имена и източници":
+    - heading "Имена и източници" [level=2]
+    - paragraph: Какво твърди всеки източник, с версия и дата на наблюдение.
+    - paragraph: "Източниците се разминават относно приетото име:"
+    - list:
+      - listitem: "species_backbone: Solanum lycopersicum L."
+      - listitem: "species_backbone: Solanum lycopersicum"
+    - heading "Идентификатори в източниците" [level=3]
+    - list:
+      - generic: COL
+      - link "4Y369":
+        - /url: https://www.catalogueoflife.org/data/taxon/4Y369
+        - text: 4Y369
+      - generic: EPPO
+      - link "LYPEC":
+        - /url: https://gd.eppo.int/taxon/LYPEC
+        - text: LYPEC
+      - generic: EPPO
+      - link "LYPES":
+        - /url: https://gd.eppo.int/taxon/LYPES
+        - text: LYPES
+      - generic: EPPO
+      - link "SOLLH":
+        - /url: https://gd.eppo.int/taxon/SOLLH
+        - text: SOLLH
+      - generic: EPPO
+      - link "SOLLT":
+        - /url: https://gd.eppo.int/taxon/SOLLT
+        - text: SOLLT
+      - generic: GBIF
+      - link "2930137":
+        - /url: https://www.gbif.org/species/2930137
+        - text: "2930137"
+      - generic: WFO
+      - link "wfo-0001029216":
+        - /url: https://www.worldfloraonline.org/taxon/wfo-0001029216
+        - text: wfo-0001029216
+      - generic: Wikidata
+      - link "Q23501":
+        - /url: https://www.wikidata.org/wiki/Q23501
+        - text: Q23501
+    - 'heading "Catalogue of LifeВерсия: COL26.7, key 315777, doi 10.48580/dgyhw, kingdoms Chromista+Fungi+PlantaeНаблюдавано: 6 септември 2026 г." [level=3]':
+      - text: Catalogue of Life
+      - generic: "Версия: COL26.7, key 315777, doi 10.48580/dgyhw, kingdoms Chromista+Fungi+Plantae"
+      - generic: "Наблюдавано: 6 септември 2026 г."
+    - list:
+      - generic: "Научен синоним:"
+      - generic: Amatula flava Medik.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Amatula rubra Medik.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon cerasiforme Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon cerasiforme var. cognitum Mazk.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon cerasiforme var. leptophyllum Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon cerasiforme var. rotundilobum Mazk.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum f. pyriforme (Alef.) C.H.Müll.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum subsp. galenii (Mill.) Luckwill
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum subsp. humboldtii (Dunal) Luckwill
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. bukasovii Mazk.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. cerasiforme (Dunal) A.Gray
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. colombianum Mazk.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. cydonicum Alef.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. grandifolium L.H.Bailey
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. humboldtii (Dunal) Alef.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. leptophyllum (Dunal) D'Arcy
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. luteum Alef.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. macrocalyx Mazk.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. myrobalaneum Alef.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. pruniforme Voss
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. pyriforme Alef.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. umbertianum Mazk.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum var. validum L.H.Bailey
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon galenii Mill.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon humboldtii (Willd.) Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon lycopersicum (L.) H.Karst.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon lycopersicum var. cerasiforme (Alef.) M.R.Almeida
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon lycopersicum var. commune (L.H.Bailey) Farw.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon macrophyllum Guss.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon philippinarum Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon pomum-amoris Moench
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon pyriforme Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon solanum Medik.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon solanum-lycopersicum Hill
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon spurium Link
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Scubulon humboldti (Willd.) Raf.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum humboldtii Willd.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum luridum Salisb.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum lycopersicum var. cerasiforme (Alef.) Fosberg
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum lycopersicum var. esculentum (Mill.) Voss
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum lycopersicum var. piriforme (Alef.) Voss
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum lycopersicum var. pomiferum (Cav.) B.P.R.Chéron
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum lycopersicum var. ribisiodes Voss
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum plukenetii Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum pomiferum Cav.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum pruniforme Voss
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum pseudolycopersicum Jacq.
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum pyriforme Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum pyriforme var. uniflorum Dunal
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum racemigerum K.Koch
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Solanum spurium Balb.
+      - generic: (la)
+    - 'heading "Catalogue of Life / ChecklistBankВерсия: COL26.6 dataset 3LR key 315448Наблюдавано: 1 юли 2026 г." [level=3]':
+      - text: Catalogue of Life / ChecklistBank
+      - generic: "Версия: COL26.6 dataset 3LR key 315448"
+      - generic: "Наблюдавано: 1 юли 2026 г."
+    - list:
+      - generic: "Идентификатор eppo:"
+      - generic: LYPES
+    - 'heading "EPPO Codes observed API captureВерсия: observed-capture-df3852ea-3233-4883-8886-92d9e68f5193Наблюдавано: 7 септември 2026 г." [level=3]':
+      - text: EPPO Codes observed API capture
+      - generic: "Версия: observed-capture-df3852ea-3233-4883-8886-92d9e68f5193"
+      - generic: "Наблюдавано: 7 септември 2026 г."
+    - list:
+      - generic: "Народно име:"
+      - generic: cherry tomato
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: ketchup and chips
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: pomato
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: tomtato
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: помидор съедобный
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат культурный
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат настоящий
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат обыкновенный
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат съедобный
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат черри
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: помідор їстивний
+      - generic: (uk)
+      - generic: "Идентификатор eppo:"
+      - generic: LYPEC
+      - generic: "Идентификатор eppo:"
+      - generic: SOLLH
+      - generic: "Идентификатор eppo:"
+      - generic: SOLLT
+    - 'heading "GBIF Backbone TaxonomyВерсия: Backbone pubDate 2023-08-28 modified 2023-11-17Наблюдавано: 2 юли 2026 г." [level=3]':
+      - text: GBIF Backbone Taxonomy
+      - generic: "Версия: Backbone pubDate 2023-08-28 modified 2023-11-17"
+      - generic: "Наблюдавано: 2 юли 2026 г."
+    - list:
+      - generic: "Идентификатор col:"
+      - generic: 4Y369
+      - generic: "Идентификатор wikidata:"
+      - generic: Q23501
+    - heading "species_backbone" [level=3]
+    - list:
+      - generic: "Прието научно име:"
+      - generic: Solanum lycopersicum L.
+      - generic: (la)
+      - generic: "Прието научно име:"
+      - generic: Solanum lycopersicum
+      - generic: (la)
+      - generic: "Научен синоним:"
+      - generic: Lycopersicon esculentum
+      - generic: (la)
+      - generic: "Народно име:"
+      - generic: домат
+      - generic: (bg)
+      - generic: "Народно име:"
+      - generic: домати
+      - generic: (bg)
+      - generic: "Народно име:"
+      - generic: Tomato
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: помідор
+      - generic: (uk)
+      - generic: "Народно име:"
+      - generic: помідори
+      - generic: (uk)
+      - generic: "Народно име:"
+      - generic: томати
+      - generic: (uk)
+    - 'heading "WikidataВерсия: crosswalk 2026-09-06Наблюдавано: 6 септември 2026 г." [level=3]':
+      - text: Wikidata
+      - generic: "Версия: crosswalk 2026-09-06"
+      - generic: "Наблюдавано: 6 септември 2026 г."
+    - list:
+      - generic: "Народно име:"
+      - generic: garden tomato
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: love apple
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: tomato plant
+      - generic: (en)
+      - generic: "Народно име:"
+      - generic: помидор
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: помидоры
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томаты
+      - generic: (ru)
+      - generic: "Народно име:"
+      - generic: томат
+      - generic: (uk)
+    - 'heading "Wikidata EntityDataВерсия: Q23501 live EntityData verified 2026-06-29Наблюдавано: 1 юли 2026 г." [level=3]':
+      - text: Wikidata EntityData
+      - generic: "Версия: Q23501 live EntityData verified 2026-06-29"
+      - generic: "Наблюдавано: 1 юли 2026 г."
+    - list:
+      - generic: "Идентификатор gbif:"
+      - generic: "2930137"
+      - generic: "Идентификатор wfo:"
+      - generic: wfo-0001029216
+    - list:
+      - listitem: "Catalogue of Life (COL26.7 Base Release), CC BY 4.0, doi:10.48580/dgyhw · Изтеглено: 6 септември 2026 г."
+      - listitem: "Catalogue of Life / ChecklistBank, Creative Commons Attribution 4.0 International. · Изтеглено: 29 юни 2026 г."
+      - listitem: "EPPO Codes, EPPO Codes Open Data Licence. · Изтеглено: 6 септември 2026 г."
+      - listitem: "EPPO Codes, EPPO Codes Open Data Licence. · Изтеглено: 3 септември 2026 г."
+      - listitem: "European Union, Official Journal of the European Union / EUR-Lex, Common Catalogue. source-backed row normalized by OverGarden; the EU Plant Variety Portal has no legal value. · Изтеглено: 2 юли 2026 г."
+      - listitem: "GBIF Backbone Taxonomy, Creative Commons Attribution 4.0 International. · Изтеглено: 1 юли 2026 г."
+      - listitem: "GBIF Backbone Taxonomy, Creative Commons Attribution 4.0 International. · Изтеглено: 29 юни 2026 г."
+      - listitem: "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International. · Изтеглено: 2 юли 2026 г."
+      - listitem: "Wikidata contributors, CC0 1.0 · Изтеглено: 6 септември 2026 г."
+  - generic "Източници и признание":
+    - paragraph: Източници на данни
+    - heading "Източници и признание" [level=2]
+    - paragraph:
+      - text: "Обновено:"
+      - time: 13 септември 2026 г.
+    - list:
+      - link "Catalogue of Life":
+        - /url: https://download.checklistbank.org/col/monthly/2026-07-14_coldp.zip
+        - generic: Catalogue of Life
+      - generic: "Версия: COL26.7, key 315777, doi 10.48580/dgyhw, kingdoms Chromista+Fungi+Plantae"
+      - text: "Изтеглено:"
+      - time: 6 септември 2026 г.
+      - text: "Наблюдавано:"
+      - time: 6 септември 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "CC BY 4.0":
+          - /url: https://creativecommons.org/licenses/by/4.0/
+      - paragraph: Catalogue of Life (COL26.7 Base Release), CC BY 4.0, doi:10.48580/dgyhw
+      - link "Catalogue of Life / ChecklistBank":
+        - /url: https://api.catalogueoflife.org/dataset/3LR/nameusage/search?q=Solanum%20lycopersicum&limit=3
+        - generic: Catalogue of Life / ChecklistBank
+      - generic: "Версия: COL26.6 dataset 3LR key 315448"
+      - text: "Изтеглено:"
+      - time: 29 юни 2026 г.
+      - text: "Наблюдавано:"
+      - time: 1 юли 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "Creative Commons Attribution 4.0 International":
+          - /url: https://creativecommons.org/licenses/by/4.0/
+      - paragraph: Catalogue of Life / ChecklistBank, Creative Commons Attribution 4.0 International.
+      - link "EPPO Codes":
+        - /url: https://gd.eppo.int/taxon/LYPES
+        - generic: EPPO Codes
+      - generic: "Версия: LYPES taxon page verified 2026-06-29"
+      - text: "Изтеглено:"
+      - time: 1 юли 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "EPPO Codes Open Data Licence":
+          - /url: https://data.eppo.int/documentation/opendata
+      - paragraph: EPPO Codes, EPPO Codes Open Data Licence.
+      - link "EPPO Codes observed API capture":
+        - /url: https://data.eppo.int/
+        - generic: EPPO Codes observed API capture
+      - generic: "Версия: observed-capture-03cb6ee2-0a87-4ea5-a151-627eaf2b260d"
+      - text: "Изтеглено:"
+      - time: 6 септември 2026 г.
+      - text: "Наблюдавано:"
+      - time: 7 септември 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "EPPO Codes Open Data Licence":
+          - /url: https://data.eppo.int/data/Open_Licence.pdf
+      - paragraph: EPPO Codes, EPPO Codes Open Data Licence.
+      - link "EPPO Codes observed API capture":
+        - /url: https://data.eppo.int/
+        - generic: EPPO Codes observed API capture
+      - generic: "Версия: observed-capture-df3852ea-3233-4883-8886-92d9e68f5193"
+      - text: "Изтеглено:"
+      - time: 3 септември 2026 г.
+      - text: "Наблюдавано:"
+      - time: 7 септември 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "EPPO Codes Open Data Licence":
+          - /url: https://data.eppo.int/data/Open_Licence.pdf
+      - paragraph: EPPO Codes, EPPO Codes Open Data Licence.
+      - link "EU Official Journal / EUR-Lex Common Catalogue":
+        - /url: https://eur-lex.europa.eu/eli/C/2026/830/oj
+        - generic: EU Official Journal / EUR-Lex Common Catalogue
+      - generic: "Версия: C/2026/830:vegetable_supplement_h:2026-02-12"
+      - text: "Изтеглено:"
+      - time: 2 юли 2026 г.
+      - text: "Наблюдавано:"
+      - time: 7 септември 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "EUR-Lex legal-document reuse policy; verify document-specific conditions.":
+          - /url: https://eur-lex.europa.eu/content/legal-notice/legal-notice.html
+      - paragraph: European Union, Official Journal of the European Union / EUR-Lex, Common Catalogue. source-backed row normalized by OverGarden; the EU Plant Variety Portal has no legal value.
+      - link "GBIF Backbone Taxonomy":
+        - /url: https://api.gbif.org/v1/species/match?name=Solanum%20lycopersicum
+        - generic: GBIF Backbone Taxonomy
+      - generic: "Версия: Backbone pubDate 2023-08-28 modified 2023-11-17"
+      - text: "Изтеглено:"
+      - time: 29 юни 2026 г.
+      - text: "Наблюдавано:"
+      - time: 1 юли 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "Creative Commons Attribution 4.0 International":
+          - /url: https://creativecommons.org/licenses/by/4.0/
+      - paragraph: GBIF Backbone Taxonomy, Creative Commons Attribution 4.0 International.
+      - link "Ukraine State Register of Plant Varieties":
+        - /url: https://data.gov.ua/dataset/eabd0bd2-2dc6-47e2-b748-9bd254da4956/resource/32ea0f72-86e4-490d-9ab9-4d64976187c6/download/2025-07-15_registervarietis.csv
+        - generic: Ukraine State Register of Plant Varieties
+      - generic: "Версия: 2025-07-15"
+      - text: "Изтеглено:"
+      - time: 2 юли 2026 г.
+      - text: "Наблюдавано:"
+      - time: 7 септември 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "Creative Commons Attribution 4.0 International":
+          - /url: https://creativecommons.org/licenses/by/4.0/
+      - paragraph: Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.
+      - link "Wikidata":
+        - /url: https://query.wikidata.org/sparql
+        - generic: Wikidata
+      - generic: "Версия: crosswalk 2026-09-06"
+      - text: "Изтеглено:"
+      - time: 6 септември 2026 г.
+      - text: "Наблюдавано:"
+      - time: 6 септември 2026 г.
+      - generic: Посочването на източника е задължително
+      - paragraph:
+        - link "CC0 1.0":
+          - /url: https://creativecommons.org/publicdomain/zero/1.0/
+      - paragraph: Wikidata contributors, CC0 1.0
+      - link "Wikidata EntityData":
+        - /url: https://www.wikidata.org/wiki/Special:EntityData/Q23501.json
+        - generic: Wikidata EntityData
+      - generic: "Версия: Q23501 live EntityData verified 2026-06-29"
+      - text: "Изтеглено:"
+      - time: 29 юни 2026 г.
+      - text: "Наблюдавано:"
+      - time: 1 юли 2026 г.
+      - paragraph:
+        - link "CC0 1.0 Universal":
+          - /url: https://creativecommons.org/publicdomain/zero/1.0/
+- contentinfo:
+  - paragraph: "Публичен дневник за градинарство: всеки запис е отворен и се вижда в търсачките."
+  - navigation "Избор на език на интерфейса":
+    - generic "Смяна на езика":
+      - generic: BG
+  - navigation "Навигация в долния колонтитул":
+    - list:
+      - link "Каталог":
+        - /url: /bg/catalog
+      - link "Поверителност":
+        - /url: /bg/privacy
+      - link "Поддръжка":
+        - /url: /support
+      - link "Разкриване на първата публикация":
+        - /url: /bg/first-publication-disclosure
+  - paragraph: Източници на данни
+  - paragraph: Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.
+- complementary "Допълнителен контекст":
+  - heading "На тази страница" [level=2]
+  - list:
+    - link "Опит на градинарите":
+      - /url: "#organism-experience"
+      - generic: Опит на градинарите
+    - link "Връзки":
+      - /url: "#organism-relations"
+      - generic: Връзки
+    - link "Имена и източници":
+      - /url: "#organism-names-and-sources"
+      - generic: Имена и източници
+- alert

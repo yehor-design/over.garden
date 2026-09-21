@@ -1,12 +1,19 @@
 # DESIGN.md — the OverGarden design system
 
-Status: **authoritative**, from 2026-09-17. Supersedes the stub that used to sit
+Status: **authoritative**, amended 2026-09-21 for the complete product redesign. Supersedes the stub that used to sit
 here. Decisions behind it: `docs/adr/ADR-0031-design-system-and-redesign.md`.
 
 Read this page before changing any interface. It governs tokens, components,
 layout, patterns, accessibility and content. Where it disagrees with an older
 document, this page wins; where it disagrees with an ADR, the ADR wins and this
 page is wrong and must be corrected.
+
+The accepted target is now Threads-led, with a centered vc.ru shell, Airbnb
+progressive setup and Phosphor interface icons. The executable IA and transition
+contract is `docs/redesign/2026-09-21/INFORMATION_ARCHITECTURE.md`. The 2026-09-17
+measurements below describe their dated baseline, not current whole-product
+conformance. Foundation and surface tasks deliver this target incrementally;
+this canon amendment alone changes no production interface.
 
 This is not a mood board. Every rule here is written so that a reviewer can say
 "yes" or "no" to a diff without a discussion. If a rule cannot be checked, it
@@ -208,8 +215,8 @@ Chips, avatars and pills `full`. Media keeps `lg` and clips with
 
 ### 2.5 Elevation
 
-This is a **bordered** system, not a shadowed one — Linear, Notion and GitHub
-are the reference. Shadow marks _what floats above the page_, and nothing else.
+Threads is the principal reference for restrained light surfaces and author-first
+reading. Separation uses spacing and subtle borders; not every post is a boxed card. Shadow marks _what floats above the page_, and nothing else.
 
 | Level | Token              | Value                                                           | Used by                                              |
 | ----- | ------------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
@@ -248,8 +255,9 @@ Below `md`, `display` is 30/36 and `h1` is 26/32. Nothing else changes.
 
 - Interface text is **never** below 13 px. `--text-overline` at 12 px is
   uppercase metadata only, never a sentence.
-- **Measure.** Prose 60–75 characters. The reading column is 704 px; the
-  composer canvas stays at its Notion-derived 708 px (ADR-0028).
+- **Measure.** Prose targets 60–75 characters. Reading and composition share a responsive
+  content cap of 704 px; the historical 708 px canvas/56 px gutter is superseded
+  by ADR-0028 D3 as amended. Mobile controls must not consume a fixed text gutter.
 - **Sentence case everywhere** except `--text-overline`. No Title Case buttons.
 - **Cyrillic budget.** Ukrainian and Bulgarian run 10–15 % longer than English
   and Russian longer still. Every label must survive +40 % without truncating or
@@ -278,9 +286,15 @@ implemented in `globals.css` and it stays.
 
 ### 2.8 Icons
 
-Lucide, and only Lucide (`components.json` already fixes this). Sizes 16, 20, 24. Stroke 1.5 at 16/20, 2 at 24. An icon is `aria-hidden` when beside a label
-and carries an accessible name when alone. **An icon-only control always has a
-tooltip and an `aria-label` saying the same thing.**
+Phosphor, and only Phosphor, for interface icons (owner decision 2026-09-21).
+Use regular weight at 16/20/24 px, with fill only for a documented selected state.
+Icons beside text are decorative; icon-only controls have accessible names and
+matching supplementary tooltips. Real brand marks/favicons and author-authored
+emoji in persisted documents are content, not competing interface icon families.
+Do not rewrite persisted callout emoji or document schema to replace an editor
+control. Server-rendered icons use server-compatible narrow imports. OVE-477
+migrates existing Lucide consumers and the scaffold configuration; the old import
+inventory is a migration baseline, not permission for new mixed families.
 
 ### 2.9 Illustration
 
@@ -351,14 +365,13 @@ the arbitrary value §10's gate 2 rejects. Every image reserves its box with
 point. A photograph never has a coloured overlay; if text must sit on one, it
 sits on a `neutral-950 / 0.55` scrim, measured to clear 4.5:1.
 
-**A card's picture is 4:3 and bleeds to the card's edges**, which is the
-Substack and Digg shape. It has a measured consequence beyond taste: at 375 px
-the full-bleed 4:3 picture is 88,000 px² against the consent banner's 76,000,
-so the _photograph_ is the page's largest contentful paint rather than a cookie
-notice that arrives after hydration. A card whose picture is inset and 16:9 is
-smaller than the banner, and principle 1 stops being true of the page a reader
-actually measures. A **cover** at 16:9 is the entry page's hero, not a card's
-picture.
+**Photo size follows the reading task.** Feed authorship/context precedes media.
+Use natural or bounded aspect-ratio variants appropriate to portrait, landscape,
+and multi-image posts. Reserve dimensions, keep focal points and preserve priority
+for the true first-screen image. Do not inflate a photograph merely to make it
+larger than a consent notice in the LCP calculation. The older mandatory 4:3
+full-bleed rule is superseded; existing aspect tokens remain available for cards
+whose job genuinely needs a uniform image box.
 
 **A page shows a photograph once, where its author put it.** A cover is a crop
 for the places that need a uniform box — a card, a feed, `og:image` — and since
@@ -395,44 +408,33 @@ it covered the language menu's options (`OVE-473`).
 
 ### 3.2 The shell
 
-Three columns, the model confirmed across X, Substack, Threads, Digg, Circle and
-Whop in the Mobbin references.
+Navigation, reading and useful secondary context occupy one centered grid,
+not two rails pinned to viewport edges. Initial design geometry (OverGarden's
+choice, not measured vc.ru dimensions): max group 1280 px; left rail 208 px;
+main minmax(0,704px); right context 280 px; two 24 px gaps, 20 px outer gutters.
+The 1280px outer frame includes two 20px paddings; its inner grid is 1240px.
+Use semantic tokens for these values. At >=1280 px all three columns fit. At 1024–1279 px
+use the centered two-column group without the optional context; below 1024 px
+use one column, compact header and bottom navigation. Essential information and
+actions never live only in a rail. No horizontal page overflow at 320 CSS px.
 
-```
-< lg          [ header 56 ]  [ content ]  [ tab bar 56 ]
-lg → xl       [ rail 240 ]   [ content max 704 ]
-≥ xl          [ rail 240 ]   [ content max 704 ]   [ context 300 ]
-```
+Desktop primary destinations: Feed, Explore, My garden, Activity. New entry is
+one persistent action. Saved reading, wishlist, public profile, settings and
+sealed-owner tools belong to account utilities. Explore keeps Catalogue,
+Communities and Knowledge as understandable destinations, not extra permanent
+rail roots. `/catalog` remains a direct/crawlable destination; no URL move is
+required just to label its entrance Explore.
 
-- **Left rail** (≥ lg, 240 px): brand → primary navigation with icon + label →
-  the one primary action → account at the foot. Sticky, its own scroll. It is
-  the `<header>` element itself, in its wide shape: one `banner` landmark at
-  every width, and the primary action therefore cannot be rendered in a rail
-  _and_ a header, which is how the product came to have two.
-- **Content**: 704 px maximum for reading and feeds; a catalogue grid or a table
-  may use the full remaining width and says so explicitly.
-- **Context rail** (≥ xl, 300 px): related, secondary, discardable. **Every
-  screen must be complete without it.** It is never the only home of an action.
-- **Mobile**: a 56 px header and a 5-slot bottom tab bar. The tab bar carries
-  Feed, Catalogue, **New entry**, Journals and You. Authentication is not a tab;
-  a signed-out visitor sees "You", which leads to sign-in. The bar does not
-  render on the composer's own screen, where it would compete with the editor's
-  gutter and its `/` menu.
+Mobile has Feed, Explore, New entry, My garden, Activity; account is in the
+header. New entry may use a named 44 px icon control while all navigation
+items have short visible labels. A guest can navigate public destinations and
+gets a real sign-in intent for protected actions. Hide ordinary bottom nav only
+inside full-height composition, which supplies Close/Back and focus recovery.
+See the IA document for exact UK/BG/RU labels and active-route rules.
 
-  **New entry is the only slot with no visible label.** It is a filled circle
-  carrying its name as `aria-label`: "Новий запис" is the widest label the
-  product has and this is its narrowest column, and at 320 px it wrapped to two
-  lines and spilled past the bar in all three languages. The other four are one
-  line each at 320 px — measured, in `uk`, `bg` and `ru` — which is why the slot
-  carries no horizontal padding: four pixels of it is the difference between
-  "Дневници" on one line and on two. And it is why the five slots are not
-  equal: the action is a 40 px circle and takes 48 px, the four labelled slots
-  share the rest (68 px each at 320 px). At an even 64 px "Дневници" had 1.6 px
-  to spare where glyphs sit on fractions of a pixel and none where they do not,
-  and broke in two on a Linux engine — which nothing had measured until the
-  mobile spec ran in CI.
-
-The context rail opens from the header on mobile or not at all.
+The context rail may disappear when no useful context exists. A modal's frame
+never replaces its full-page direct-link fallback. The shell migration is
+OVE-481; preserved public address and static-document contracts take priority.
 
 **The floating circular control clipped at the right edge of every page is not
 the product's.** Measured on production on 2026-09-17: it is Vercel's toolbar
@@ -701,7 +703,7 @@ ADR-0023 is still unfixed upstream and this rule is what protects readers from i
 - **Menu** for a list of actions on one object. Never for navigation between
   pages when a rail exists.
 - **Toast** for the outcome of a completed action, `role="status"`, 5 s, never
-  carrying the only copy of anything. Destructive outcomes get an Undo.
+  carrying the only copy of anything. Offer Undo only where the actual server lifecycle supports it; deletion has no invented restore promise.
 - An overlay never opens another overlay. `base-ui` closes a controlled,
   trigger-less menu with reason `sibling-open` when a submenu opens inside it
   (found in Slice 26) — so menus are flat.
@@ -827,7 +829,8 @@ was happening.
 
 The composer is the one screen in the product where the reader's work exists
 only in the tab they are looking at. ADR-0022 D3 forbids a draft, an offline
-queue and any durable browser state; ADR-0028 fixes the canvas. Both are kept,
+queue and any durable browser state; ADR-0028 preserves the document/block model
+with the responsive geometry amended in D3. These contracts are kept,
 and the consequences belong on the screen rather than in the reader's memory.
 
 - **Say the value, never only the fill.** The cover controls used to mark the
@@ -851,10 +854,18 @@ and the consequences belong on the screen rather than in the reader's memory.
   lists every rule and every key — and **generates every row from the module
   that implements it**, because a shortcut sheet that has gone stale teaches a
   key that does nothing.
-- **708 px is a cap, not a width.** ADR-0028's column is `max-width`; inside the
-  shell's 704 px content column the canvas renders at 656, which is 70–75
-  Cyrillic characters and inside §3's measure. A proof that asserts a rendered
-  708 asserts something that is true on no screen the product has.
+- **One composer, one explicit destination.** A contextual Write opens in one
+  activation with the exact object/space. A global launch with multiple choices
+  opens the all-owned-destinations picker immediately; selection goes straight
+  to writing. Changing destination preserves in-memory text, media and date.
+- **One readable responsive canvas.** Use the main content cap and fluid inner
+  padding. Keep advanced block controls in a focusable menu on narrow screens;
+  the old fixed 56 px gutter must not steal writing space. Slash commands and
+  drag handles are enhancements, never the only accessible controls.
+- **Creation has two explicit transactions.** Standalone Create acknowledges an
+  empty entity; nested first-entry creation stages the proposed destination in
+  memory and commits destination plus first entry atomically at Publish. Failure
+  is not a saved draft or a saved object. See the IA transaction table.
 
 ### 5.12 The owner's queue
 
@@ -936,8 +947,10 @@ chrome.** The design rules that follow:
 
 ## 8. Accessibility — the gate
 
-Target: **WCAG 2.2 level AA**, on every public and workspace screen. These are
-checks, not aspirations.
+Target: **WCAG 2.2 level AA**, on every public and workspace screen. Automated
+checks cover a subset; manual keyboard, screen-reader, contrast, reflow and
+error-recovery proof are required. Passing a mechanical gate is not a claim of
+whole-product conformance. The 2026-09-21 audit explicitly records untested states.
 
 **Colour and contrast**
 
@@ -1166,8 +1179,11 @@ nobody runs is not a proof**, and `pnpm check:browser-specs` fails on a spec in
    figure, and an entry in §2.
 2. A new **component** needs two real call sites. One call site is a page-local
    component, not a system component.
-3. A new **pattern** needs a Mobbin reference to at least two products that
-   solved it the same way, cited in the Linear task.
+3. A new **pattern** needs an observed reference and an explicit transfer
+   rationale, or a labeled product hypothesis with a scenario proof. The owner
+   has accepted Threads/vc.ru/Airbnb; do not add unrelated references just to
+   satisfy an arbitrary example count. Canonical Mobbin links live in the
+   execution contract.
 4. A change that contradicts an ADR needs the ADR amended first.
 
 Research for this system was gathered through Mobbin. Patterns cited above come

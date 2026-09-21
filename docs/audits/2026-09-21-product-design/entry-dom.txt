@@ -1,0 +1,154 @@
+- link "Към основното съдържание":
+  - /url: "#main-content"
+- banner:
+  - link "OverGarden":
+    - /url: /bg
+    - generic: OverGarden
+  - button "Търсене":
+    - generic: Търсене
+    - generic: ⌘K
+  - navigation "Основна навигация":
+    - list:
+      - link "Поток":
+        - /url: /bg
+        - generic: Поток
+      - link "Каталог":
+        - /url: /bg/catalog
+        - generic: Каталог
+      - link "Дневници":
+        - /url: /bg/journals
+        - generic: Дневници
+      - link "Знания":
+        - /url: /bg/knowledge
+        - generic: Знания
+  - link "Нов запис":
+    - /url: /auth/sign-in?next=%2Fgarden%3FauthIntent%3Dcreate_entry%23first-entry-composer&intent=create_entry
+    - generic: Нов запис
+  - separator
+  - link "Вход":
+    - /url: /auth/sign-in?next=%2F%40yehor%2Fpost%2F11
+    - text: Вход
+- main:
+  - navigation "Дневник":
+    - link "Дневници":
+      - /url: /bg/journals
+      - text: Дневници
+  - article:
+    - paragraph: Дневник на обекта
+    - heading "Томат - Sep 1" [level=1]
+    - time: 1 септември 2026 г.
+    - text: Местоположението е скрито
+    - link "Е Автор Егор @yehor":
+      - /url: /bg/@yehor
+      - generic: Е
+      - text: Автор
+      - strong: Егор
+      - generic: "@yehor"
+    - paragraph
+    - figure:
+      - img "Томат - Sep 1"
+    - paragraph
+    - region "За какво е този запис":
+      - heading "За какво е този запис" [level=2]
+      - term: Жив обект
+      - definition:
+        - link "Томат":
+          - /url: /@yehor/objects/tomat
+          - text: Томат
+      - term: Идентичност
+      - definition:
+        - link "Solanum lycopersicum L.":
+          - /url: /species/solanum-lycopersicum
+      - term: Регион
+      - definition: Местоположението е скрито
+      - term: Теми
+      - definition:
+        - list:
+          - link "#Растения":
+            - /url: /bg/topics/plants
+      - link "Отваряне на паспорта":
+        - /url: /@yehor/objects/tomat
+        - text: Отваряне на паспорта
+  - group "Действия със записа":
+    - button "Харесвам, 3 харесвания":
+      - text: Харесвам
+    - paragraph: 3 харесвания
+    - button "Запази":
+      - generic: Запази
+  - button "Коментар":
+    - generic: Коментар
+  - paragraph: Все още няма коментари.
+  - navigation "Продължение на дневника":
+    - link "Предишен запис · 16 юни 2026 г. Обкладинка як сталий орієнтир сезону":
+      - /url: /@yehor/post/5
+      - generic: Предишен запис · 16 юни 2026 г.
+      - strong: Обкладинка як сталий орієнтир сезону
+  - region "Още от този дневник":
+    - heading "Още от този дневник" [level=2]
+    - list:
+      - time: 16 юни 2026 г.
+      - heading "Обкладинка як сталий орієнтир сезону" [level=3]:
+        - link "Обкладинка як сталий орієнтир сезону":
+          - /url: /@yehor/post/5
+      - paragraph: Редакційна нотатка OverGarden. Для довгого запису краще обрати обкладинкою кадр, що найточніше показує предмет спостереження, а не просто перше фот...
+      - time: 3 юни 2026 г.
+      - heading "Три сигнали перед зав’язуванням плодів" [level=3]:
+        - link "Три сигнали перед зав’язуванням плодів":
+          - /url: /@yehor/post/3
+      - paragraph: Редакційна нотатка OverGarden. Перед появою зав’язі корисно окремо відстежити нові квітки, стан опори та рівномірність поливу. Один запис із трьома...
+      - time: 25 май 2026 г.
+      - heading "Полив без календарної пастки" [level=3]:
+        - link "Полив без календарної пастки":
+          - /url: /@yehor/post/2
+      - paragraph: Редакційна нотатка OverGarden. Фіксований календар поливу не враховує спеку, вітер і розмір контейнера. Практичніший сигнал — перевірити вологість...
+- contentinfo:
+  - paragraph: "Публичен дневник за градинарство: всеки запис е отворен и се вижда в търсачките."
+  - navigation "Избор на език на интерфейса":
+    - generic "Смяна на езика":
+      - generic: BG
+  - navigation "Навигация в долния колонтитул":
+    - list:
+      - link "Каталог":
+        - /url: /bg/catalog
+      - link "Поверителност":
+        - /url: /bg/privacy
+      - link "Поддръжка":
+        - /url: /support
+      - link "Разкриване на първата публикация":
+        - /url: /bg/first-publication-disclosure
+  - paragraph: Източници на данни
+  - paragraph: Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.
+- complementary "Допълнителен контекст":
+  - heading "Жив обект" [level=2]
+  - list:
+    - link "Томат Solanum lycopersicum L.":
+      - /url: /@yehor/objects/tomat
+      - generic: Томат
+      - generic: Solanum lycopersicum L.
+    - link "Solanum lycopersicum L. Идентичност":
+      - /url: /species/solanum-lycopersicum
+      - generic: Solanum lycopersicum L.
+      - generic: Идентичност
+  - heading "Продължение на дневника" [level=2]
+  - list:
+    - link "Обкладинка як сталий орієнтир сезону":
+      - /url: /@yehor/post/5
+      - generic: Обкладинка як сталий орієнтир сезону
+    - link "Три сигнали перед зав’язуванням плодів":
+      - /url: /@yehor/post/3
+      - generic: Три сигнали перед зав’язуванням плодів
+    - link "Полив без календарної пастки":
+      - /url: /@yehor/post/2
+      - generic: Полив без календарної пастки
+  - heading "Теми на записа" [level=2]
+  - list:
+    - link "Растения":
+      - /url: /bg/topics/plants
+      - generic: Растения
+  - heading "Автор" [level=2]
+  - list:
+    - link "Егор @yehor":
+      - /url: /bg/@yehor
+      - generic: Егор
+      - generic: "@yehor"
+- alert
