@@ -58,8 +58,16 @@ empty states. The primary job is fast writing to any of many owned spaces or
 objects. The owner authorizes radical page/functional regrouping and end-to-end
 implementation, PRs, green-CI merges and verification without repeated routine
 approval. The dated audit and execution program are in `docs/audits/2026-09-21-product-design/`
-and `docs/redesign/2026-09-21/`. Current production still has the older layout;
-accepted documents/prototype do not imply that runtime migration is complete.
+and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
+documents/prototypes do not imply that the full runtime migration is complete.
+
+**Centered shell delivery (OVE-481):** navigation and reading share a centered
+1280 px desktop frame, a 976 px two-column frame and compact mobile navigation.
+The four destinations are Feed, Explore, My garden and Activity; account
+utilities are separate. Empty context rails disappear. Until the routed composer
+ships, global writing selects an existing object through `/garden#inventory`.
+The shell's evidence and limits are in `docs/redesign/2026-09-21/OVE-481-PROOF.md`;
+Linear records the exact tested, merged and production release identities.
 
 **Illustration delivery (OVE-479):** a shared decorative renderer and semantic
 setup/empty-state roles extend the existing Thiings library with three assets.

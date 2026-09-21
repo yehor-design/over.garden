@@ -619,9 +619,18 @@ test.describe("a public page is a static document", () => {
       await page.goto("/journals", { waitUntil: "domcontentloaded" });
       await expect(page.locator("html")).toHaveAttribute(
         "data-shell-section",
-        "journals",
+        "feed",
       );
-      const item = page.locator('[data-site-shell-nav-item="journals"]');
+      await expect(
+        page.locator('[data-site-shell-secondary="feed"]'),
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-site-shell-secondary="catalogue"]'),
+      ).not.toBeVisible();
+      await expect(
+        page.locator('[data-command-palette-trigger="field"]'),
+      ).toHaveAttribute("href", "/journals");
+      const item = page.locator('[data-site-shell-nav-item="feed"]');
       const other = page.locator('[data-site-shell-nav-item="catalogue"]');
       const [active, inactive] = await Promise.all([
         item.evaluate((node) => getComputedStyle(node).backgroundColor),
@@ -650,7 +659,7 @@ test.describe("a public page is a static document", () => {
       await page.goto(fixture.entryPath, { waitUntil: "load" });
 
       await expect(
-        page.locator('[data-site-shell-account-menu-trigger="true"]'),
+        page.locator('[data-site-shell-account-menu-trigger="true"]:visible'),
       ).toBeVisible();
       await expect(
         page.locator('[data-site-shell-action="sign-in"]'),

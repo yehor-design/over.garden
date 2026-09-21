@@ -15,6 +15,7 @@ import {
 import {
   canonicalSiteShellPath,
   resolveSiteShellSection,
+  resolveSiteShellSecondary,
   SITE_SHELL_SECTION_ATTRIBUTE,
 } from "@/lib/site-shell-navigation";
 import {
@@ -238,6 +239,9 @@ function ShellSectionSync() {
     const section = resolveSiteShellSection(pathname);
     if (section) root.setAttribute(SITE_SHELL_SECTION_ATTRIBUTE, section);
     else root.removeAttribute(SITE_SHELL_SECTION_ATTRIBUTE);
+    const secondary = resolveSiteShellSecondary(pathname);
+    if (secondary) root.setAttribute("data-shell-secondary", secondary);
+    else root.removeAttribute("data-shell-secondary");
   }, [pathname]);
 
   return null;

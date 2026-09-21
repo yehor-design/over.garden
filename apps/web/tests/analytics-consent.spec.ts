@@ -259,7 +259,7 @@ test.describe("the measured paths and the consent that gates them", () => {
       );
 
     for (const [key, path] of [
-      ["journals", "/journals"],
+      ["feed", "/"],
       ["catalogue", "/catalog"],
       ["feed", "/"],
     ] as const) {
@@ -277,10 +277,10 @@ test.describe("the measured paths and the consent that gates them", () => {
 
     // Answered on the page the reader is on; gone for every page after.
     await page
-      .locator('[data-site-shell-nav-item="journals"]:visible')
+      .locator('[data-site-shell-nav-item="catalogue"]:visible')
       .first()
       .click();
-    await expect(page).toHaveURL((url) => url.pathname === "/journals");
+    await expect(page).toHaveURL((url) => url.pathname === "/catalog");
     await answer(notice, "declined");
     await page
       .locator('[data-site-shell-nav-item="feed"]:visible')

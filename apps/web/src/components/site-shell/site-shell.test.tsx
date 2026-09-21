@@ -170,7 +170,7 @@ describe("the shell's landmarks", () => {
     const current = [...container.querySelectorAll('[aria-current="page"]')];
     expect(current.length).toBeGreaterThan(0);
     for (const item of current) {
-      expect(item.textContent).toContain("Журнали");
+      expect(item.textContent).toContain("Стрічка");
     }
   });
 });
@@ -215,7 +215,7 @@ describe("the one primary action", () => {
     expect(actions.filter((node) => banner.contains(node))).toHaveLength(1);
     expect(actions.filter((node) => tabBar.contains(node))).toHaveLength(1);
     for (const action of actions) {
-      expect(action.getAttribute("href")).toBe("/garden#first-entry-composer");
+      expect(action.getAttribute("href")).toBe("/garden#inventory");
     }
     // The rail's copy is drawn only from `lg`; the bar carrying the other is
     // hidden from `lg`. A reader is never offered both.
@@ -240,7 +240,7 @@ describe("the one primary action", () => {
       const href = action.getAttribute("href") ?? "";
       expect(href).toContain("/auth/sign-in?next=");
       expect(href).toContain("intent=create_entry");
-      expect(decodeURIComponent(href)).toContain("first-entry-composer");
+      expect(decodeURIComponent(href)).toContain("inventory");
     }
   });
 });
@@ -269,11 +269,11 @@ describe("the tab bar", () => {
       "feed",
       "catalogue",
       "new-entry",
-      "journals",
-      "you",
+      "garden",
+      "notifications",
     ]);
     expect(bar.textContent).not.toContain("Увійти");
-    expect(bar.textContent).toContain("Ви");
+    expect(bar.textContent).toContain("Мій сад");
   });
 
   it("marks the active tab and only it", () => {
@@ -293,7 +293,7 @@ describe("the tab bar", () => {
     });
     const current = [...bar.querySelectorAll('[aria-current="page"]')];
     expect(current).toHaveLength(1);
-    expect(current[0]?.getAttribute("data-site-shell-tab")).toBe("journals");
+    expect(current[0]?.getAttribute("data-site-shell-tab")).toBe("feed");
   });
 
   it("stays off the screen the editor owns on its own", () => {
@@ -431,20 +431,8 @@ describe("the context rail is never the only home of an action", () => {
       </SiteShell>,
     );
 
-    const context = screen.getByRole("complementary");
-    const railHrefs = [...context.querySelectorAll("a[href]")].map((link) =>
-      link.getAttribute("href"),
-    );
-    const elsewhere = new Set(
-      [...document.querySelectorAll("a[href]")]
-        .filter((link) => !context.contains(link))
-        .map((link) => link.getAttribute("href")),
-    );
-    for (const href of railHrefs) {
-      expect(elsewhere.has(href), `${href} is only in the context rail`).toBe(
-        true,
-      );
-    }
+    expect(screen.queryByRole("complementary")).toBeNull();
+    expect(document.body.textContent).not.toContain("Почати журнал");
   });
 });
 
@@ -716,7 +704,7 @@ describe("every guest sign-in control reaches the form itself", () => {
 
     const signInControls = [
       ...html.matchAll(
-        /(?:data-site-shell-action="sign-in[^"]*"|data-site-shell-tab="you")[^>]*/g,
+        /(?:data-site-shell-action="sign-in[^"]*"|data-site-shell-tab="garden")[^>]*/g,
       ),
     ].map((match) => match[0]);
     expect(signInControls.length).toBeGreaterThanOrEqual(2);
@@ -749,9 +737,9 @@ describe("every guest sign-in control reaches the form itself", () => {
     );
 
     expect(html).not.toContain('data-site-shell-action="sign-in');
-    // And the fifth tab means their profile rather than a form.
-    expect(html).toContain('data-site-shell-tab="you"');
-    expect(html).toContain('href="/garden/profile"');
+    // Protected destinations remain jobs; account utilities are in the menu.
+    expect(html).toContain('data-site-shell-tab="garden"');
+    expect(html).toContain('data-site-shell-account-menu-trigger="true"');
   });
 });
 
@@ -836,9 +824,9 @@ describe("the sealed owner's links", () => {
     expect(personal).not.toBeNull();
     expect(hrefsOf(personal!)).toEqual([
       "/garden/profile",
-      "/notifications",
       "/bookmarks",
       "/wishlist",
+      "/garden/lineage/claims",
     ]);
 
     const settings = menu.querySelector<HTMLElement>(

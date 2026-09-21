@@ -562,7 +562,7 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     const field = page.locator('[data-command-palette-input="true"]');
     await expect(field).toBeFocused();
 
-    await page.keyboard.type("журнал");
+    await page.keyboard.type("стрічка");
     await expect
       .poll(
         async () =>

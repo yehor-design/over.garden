@@ -1,4 +1,9 @@
 import path from "node:path";
+import { writeFileSync } from "node:fs";
+import { Pool } from "pg";
+import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
+import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
+import { seedCollection, cleanupCollection } from "./helpers/redesign-fixtures";
 
 import { expect, test, type Page } from "playwright/test";
 
@@ -28,7 +33,8 @@ const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
 const WIDTHS = [
   { width: 1024, label: "lg", context: false },
   { width: 1280, label: "xl", context: true },
-  { width: 1440, label: "2xl", context: true },
+  { width: 1920, label: "wide", context: true },
+  { width: 2560, label: "ultrawide", context: true },
 ] as const;
 
 async function selectLocale(page: Page, baseURL: string) {
@@ -80,18 +86,29 @@ test.describe("the three-column shell", () => {
       await expect(footer).toBeAttached();
 
       const rail = (await banner.boundingBox())!;
-      expect(Math.round(rail.width)).toBe(240);
+      expect(Math.round(rail.width)).toBe(208);
       expect(
         Math.round((await content.boundingBox())!.width),
       ).toBeLessThanOrEqual(704);
 
-      // The context rail exists at `xl` and above and nowhere else.
-      expect(await contextRail.isVisible()).toBe(context);
-      if (context) {
-        expect(Math.round((await contextRail.boundingBox())!.width)).toBe(300);
+      const frame = (await page
+        .locator("[data-site-shell-grid]")
+        .boundingBox())!;
+      expect(frame.width).toBe(width >= 1280 ? 1280 : 976);
+      expect(Math.abs(frame.x - (width - frame.width) / 2)).toBeLessThan(1);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth),
+      ).toBeLessThanOrEqual(width);
+      await expect(page.getByRole("main")).toHaveCount(1);
+      await expect(page.getByRole("banner")).toHaveCount(1);
+
+      // Only meaningful page-owned context creates a rail.
+      if (!context) expect(await contextRail.isVisible()).toBe(false);
+      if (await contextRail.isVisible()) {
+        expect(Math.round((await contextRail.boundingBox())!.width)).toBe(280);
       }
 
-      // No shadow on the rail: separation is a border (DESIGN.md §3.2).
+      // Group spacing provides separation, without a viewport-spanning border.
       const railStyle = await banner.evaluate((node) => {
         const computed = getComputedStyle(node);
         return {
@@ -101,7 +118,7 @@ test.describe("the three-column shell", () => {
         };
       });
       expect(railStyle.shadow).toBe("none");
-      expect(railStyle.borderRight).not.toBe("0px");
+      expect(railStyle.borderRight).toBe("0px");
       expect(railStyle.position).toBe("sticky");
 
       await page.screenshot({
@@ -121,7 +138,7 @@ test.describe("the three-column shell", () => {
     // The rail draws it above `lg` and the tab bar below (`OVE-444`), so the
     // contract is one *visible* action per viewport — never the two the rail
     // and the header used to draw side by side at the same width.
-    for (const width of [375, 768, 1024, 1280, 1440]) {
+    for (const width of [320, 390, 768, 1024, 1280, 1920, 2560]) {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/journals", { waitUntil: "load" });
       await settleShell(page);
@@ -147,7 +164,7 @@ test.describe("the three-column shell", () => {
       // returns to the composer rather than to the workspace around it.
       const href = visible[0]!.href ?? "";
       expect(href).toContain("/auth/sign-in?next=");
-      expect(decodeURIComponent(href)).toContain("first-entry-composer");
+      expect(decodeURIComponent(href)).toContain("inventory");
       expect(visible[0]!.inBanner || visible[0]!.inTabBar).toBe(true);
       expect(visible[0]!.inBanner && visible[0]!.inTabBar).toBe(false);
       expect(visible[0]!.inBanner).toBe(width >= 1024);
@@ -165,12 +182,8 @@ test.describe("the three-column shell", () => {
       await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(address, { waitUntil: "load" });
       await settleShell(page);
-      // The rail is filled from an effect — by the page, or by the chrome once
-      // it knows the address. Read before that and it holds no link at all,
-      // and "loses nothing" would be true of an empty list.
-      await expect(
-        page.locator('[data-site-shell-region="context"] a[href]').first(),
-      ).toBeVisible();
+      // Page-owned context is optional. A page with none must not invent a
+      // generic welcome card simply to fill a column.
       const withRail = await page.evaluate(() =>
         [...document.querySelectorAll("a[href]")].map((link) =>
           link.getAttribute("href"),
@@ -302,4 +315,109 @@ test.describe("the three-column shell", () => {
       footer.locator("[data-interface-language-control]"),
     ).toHaveCount(1);
   });
+});
+
+test("guest and member shell stays centered across locales and mobile widths", async ({
+  baseURL,
+  page,
+  context,
+}) => {
+  if (!baseURL) throw new Error("Playwright baseURL is required");
+  test.setTimeout(90_000);
+  await page.addInitScript(() =>
+    localStorage.setItem("overgarden:analytics-consent", "declined"),
+  );
+  const measurements: unknown[] = [];
+  const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+  let memberId: string | undefined;
+  try {
+    for (const role of ["guest", "member"] as const) {
+      if (role === "member") {
+        const member = await signInSyntheticGardener({
+          baseURL,
+          context,
+          pool,
+          prefix: "ove481-shell",
+        });
+        memberId = member.id;
+        await seedCollection(pool, member.id, { spaces: 1, objects: 1 });
+      }
+      for (const locale of ["uk", "bg", "ru"]) {
+        await context.addCookies([
+          { name: INTERFACE_LOCALE_COOKIE, value: locale, url: baseURL },
+          {
+            name: INTERFACE_MARKET_COOKIE,
+            value: locale === "bg" ? "bulgaria" : "ukraine",
+            url: baseURL,
+          },
+        ]);
+        for (const width of [320, 390, 768, 1280, 1920, 2560]) {
+          await page.setViewportSize({ width, height: 900 });
+          await page.goto(role === "member" ? "/garden" : `/${locale}/support`);
+          await settleShell(page);
+          if (role === "member") {
+            await expect(
+              page.locator('#inventory [data-slot="list-row"]'),
+            ).toHaveCount(1);
+          }
+          const frame = (await page
+            .locator("[data-site-shell-grid]")
+            .boundingBox())!;
+          expect(frame.width).toBe(Math.min(width, 1280));
+          expect(Math.abs(frame.x - (width - frame.width) / 2)).toBeLessThan(1);
+          const overflow = await page.evaluate(() => ({
+            width: document.documentElement.scrollWidth,
+            nodes: [...document.querySelectorAll("main *")]
+              .filter(
+                (node) => node.getBoundingClientRect().right > innerWidth + 1,
+              )
+              .map((node) => ({
+                tag: node.tagName,
+                class: node.className,
+                text: node.textContent?.slice(0, 80),
+                right: node.getBoundingClientRect().right,
+              }))
+              .slice(-15),
+          }));
+          expect(
+            overflow.width,
+            JSON.stringify({ role, locale, width, nodes: overflow.nodes }),
+          ).toBeLessThanOrEqual(width);
+          await expect(page.getByRole("main")).toHaveCount(1);
+          await expect(page.getByRole("banner")).toHaveCount(1);
+          if (role === "member") {
+            await expect(
+              page.locator("[data-site-shell-account-menu-trigger]:visible"),
+            ).toHaveCount(1);
+            await expect(
+              page.locator('[data-site-shell-action="new-entry"]:visible'),
+            ).toHaveAttribute("href", "/garden#inventory");
+          }
+          await page.evaluate(async () => {
+            scrollTo(0, 0);
+            await new Promise((resolve) =>
+              requestAnimationFrame(() => requestAnimationFrame(resolve)),
+            );
+          });
+          measurements.push({
+            role,
+            locale,
+            viewportWidth: width,
+            frame,
+            scrollWidth: overflow.width,
+          });
+          await page.screenshot({
+            path: path.join(OUTPUT, `${role}-${locale}-${width}.png`),
+          });
+        }
+      }
+    }
+    writeFileSync(
+      path.join(OUTPUT, "geometry.json"),
+      JSON.stringify(measurements, null, 2) + "\n",
+    );
+  } finally {
+    if (memberId) await cleanupCollection(pool, memberId);
+    await pool.end();
+  }
 });

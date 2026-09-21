@@ -35,7 +35,7 @@ function Section({
       data-slot="section"
       id={id}
       aria-labelledby={headingId}
-      className={cn("grid gap-4", className)}
+      className={cn("grid min-w-0 gap-4", className)}
       {...props}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">

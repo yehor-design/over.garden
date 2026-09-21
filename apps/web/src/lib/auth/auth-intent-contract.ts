@@ -175,6 +175,9 @@ function buildAuthIntentResumeAnchor(
   pathname: string,
   control?: string | null,
 ) {
+  if (action === "create_entry" && pathname === "/garden" && !control)
+    return "inventory";
+
   if (
     action === "save" &&
     /^\/garden\/objects\/[0-9a-f-]{36}$/.test(pathname)
@@ -316,6 +319,7 @@ function normalizeReturnTo(value: unknown): string {
   if (
     url.hash &&
     !Object.values(ACTION_ANCHORS).includes(url.hash.slice(1)) &&
+    url.hash !== "#inventory" &&
     !/^[a-z0-9][a-z0-9-]{0,63}$/.test(url.hash.slice(1))
   ) {
     throw new AuthIntentContractError();

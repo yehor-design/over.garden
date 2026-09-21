@@ -226,7 +226,7 @@ test.describe("the command palette", () => {
 
     // And the third: the rail's own control, reached by keyboard, which is
     // what focus must come back to.
-    const trigger = page.locator('[data-command-palette-trigger]').first();
+    const trigger = page.locator("[data-command-palette-trigger]").first();
     await trigger.focus();
     await page.keyboard.press("Enter");
     await expect(page.locator('[data-command-palette="true"]')).toBeVisible();
@@ -286,7 +286,7 @@ test.describe("the command palette", () => {
     expect([...(await groupsFor("Перше суцвіття"))]).toContain("journals");
     expect([...(await groupsFor(`Садівник ${PREFIX}`))]).toContain("gardeners");
     // Actions come from the rail, so they answer whatever the corpus holds.
-    expect([...(await groupsFor("Журнали"))]).toContain("actions");
+    expect([...(await groupsFor("Стрічка"))]).toContain("actions");
   });
 
   test("a query that matches nothing shows a state, not an empty box", async ({

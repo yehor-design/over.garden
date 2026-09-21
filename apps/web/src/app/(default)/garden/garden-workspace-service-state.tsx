@@ -113,16 +113,6 @@ function buildContextModules({
         },
       ],
     },
-    {
-      key: "garden-privacy",
-      title: copy.serviceState.context.privacy,
-      items: [
-        {
-          href: localizedPath(locale, "/privacy"),
-          label: copy.serviceState.context.privacyControls,
-        },
-      ],
-    },
   ];
 }
 

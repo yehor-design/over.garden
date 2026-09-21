@@ -35,6 +35,9 @@ export interface InterfaceCopy {
   };
   navigation: {
     feed: string;
+    explore: string;
+    activity: string;
+    gardenShort: string;
     catalogue: string;
     /** The tab bar's fifth slot. Identity-neutral: signed out it means
      *  "sign in", signed in it means "your profile" (ADR-0031 D4). */
@@ -151,6 +154,9 @@ const INTERFACE_COPY = {
     },
     navigation: {
       feed: "Стрічка",
+      explore: "Огляд",
+      activity: "Події",
+      gardenShort: "Мій сад",
       catalogue: "Каталог",
       livingObjects: "Живі об'єкти",
       you: "Ви",
@@ -263,7 +269,10 @@ const INTERFACE_COPY = {
         "Управлявайте своите пространства и обекти и публикувайте наблюдения за всички.",
     },
     navigation: {
-      feed: "Поток",
+      feed: "Емисия",
+      explore: "Открий",
+      activity: "Известия",
+      gardenShort: "Градина",
       catalogue: "Каталог",
       livingObjects: "Живи обекти",
       you: "Вие",
@@ -377,6 +386,9 @@ const INTERFACE_COPY = {
     },
     navigation: {
       feed: "Лента",
+      explore: "Обзор",
+      activity: "События",
+      gardenShort: "Мой сад",
       catalogue: "Каталог",
       livingObjects: "Живые объекты",
       you: "Вы",
