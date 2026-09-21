@@ -193,8 +193,12 @@ notice (ADR-0032 D7, amended). The tags did not move: they still load on the
 nine measured paths and only after acceptance; an answer given anywhere is the
 whole site's. The same proof found that on `/support`, a request-time page, a
 reader who had already accepted saw the old React-drawn banner for four frames
-on every hard load; it is CSS-drawn there now too. `tests/analytics-consent.spec.ts`
-holds all of it and failed four of its five cases on the build before the fix.
+on every hard load; it is CSS-drawn there now too. And on every page it would
+have covered whatever a reader opened at the bottom of the screen — at
+`z-toast` it hid the workspace's language options — so it sits at `z-header`
+now, beneath every menu, sheet and dialog (DESIGN.md §2.11).
+`tests/analytics-consent.spec.ts` holds all of it and failed four of its five
+cases on the build before the fix.
 
 **A language, once chosen, stays chosen** (`OVE-472`, 2026-09-21). The owner
 reported that the language control on their profile page did nothing. It had

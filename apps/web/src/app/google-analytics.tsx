@@ -123,7 +123,13 @@ export function AnalyticsConsentNotice({
       // The system's tokens, not the palette before it: since ADR-0032 D7 this
       // element is in the bytes of every public document, and "nothing on the
       // page reaches for the old palette" is asserted against those bytes.
-      className="analytics-consent-banner fixed inset-x-3 z-toast mx-auto max-w-3xl rounded-md border border-border bg-surface/95 p-4 text-text shadow-overlay backdrop-blur sm:flex sm:items-center sm:gap-4"
+      //
+      // Chrome, not a toast: `z-header`, above the page and the tab bar and
+      // beneath everything a reader opens. It is on every page until it is
+      // answered, and at `z-toast` it covered the language menu's options on
+      // the workspace — and would have covered every menu, sheet and dialog
+      // that reaches the bottom of the screen (DESIGN.md §2.11).
+      className="analytics-consent-banner fixed inset-x-3 z-header mx-auto max-w-3xl rounded-md border border-border bg-surface/95 p-4 text-text shadow-overlay backdrop-blur sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
       <p className="text-body-sm text-text-secondary">{copy.message}</p>
