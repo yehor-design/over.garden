@@ -69,7 +69,14 @@ registered browser cases cover UK/BG/RU at 320 and 1440px:
 pressed action. White/action is 17.89:1, white/hover 9.34:1 and white/pressed
 19.75:1. Normal text clears 4.5:1 and meaningful control boundaries clear 3:1.
 Disabled controls and decorative separators are not falsely presented as normal
-text or meaningful boundaries. Automated checks supplement visual inspection.
+text or meaningful boundaries. Automated checks supplement visual inspection. The first zoom screenshots revealed
+intrinsic-width overflow in the specimen grid, PageHeader and EmptyState which
+an initial synchronous DOM check missed. The specimen uses a bounded column and
+real PageHeader. The shared header/empty state use bounded grid tracks, fields
+and tabs allow shrinking, and button/toast text can wrap. The
+browser test waits for font readiness after resizing and asserts the actual PNG
+width as well as body/document bounds. It failed at 371px before the correction;
+all three narrow screenshots now remain 320px.
 
 The screenshots in `ove-477/` show actual component states, dialogs, menus,
 forced colors and text zoom. Desktop and mobile product navigation were manually

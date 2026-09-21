@@ -95,7 +95,11 @@ function Tabs({
   };
 
   return (
-    <div data-slot="tabs" className={cn("grid gap-4", className)} {...props}>
+    <div
+      data-slot="tabs"
+      className={cn("grid min-w-0 gap-4", className)}
+      {...props}
+    >
       <div
         role="tablist"
         aria-label={label}

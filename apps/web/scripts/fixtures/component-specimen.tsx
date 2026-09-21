@@ -28,6 +28,7 @@ import {
 } from "../../src/components/ui/menu";
 import { Toast } from "../../src/components/ui/toast";
 import { Skeleton } from "../../src/components/ui/skeleton";
+import { PageHeader } from "../../src/components/ui/page-header";
 import { EmptyState } from "../../src/components/ui/empty-state";
 import {
   HeartIcon,
@@ -88,13 +89,11 @@ function Specimen() {
   const [liked, setLiked] = useState(false);
   const [chosen, setChosen] = useState(false);
   return (
-    <main className="mx-auto grid max-w-4xl gap-8 p-4 text-text sm:p-8">
-      <header>
-        <h1 className="text-h1 text-text-heading">{copy.title}</h1>
-        <p className="mt-2 text-body-sm text-text-muted">
-          Local component specimen · no publication or account mutations
-        </p>
-      </header>
+    <main className="mx-auto grid max-w-4xl grid-cols-1 gap-8 p-4 text-text sm:p-8">
+      <PageHeader
+        title={copy.title}
+        description="Local component specimen · no publication or account mutations"
+      />
       <section aria-label="Actions" className="grid gap-4">
         <h2 className="text-h2">Actions</h2>
         {(["primary", "secondary", "subtle", "ghost", "danger"] as const).map(

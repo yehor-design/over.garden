@@ -90,7 +90,10 @@ function Button({
       {...props}
     >
       <span
-        className={cn("inline-flex items-center gap-2", loading && "opacity-0")}
+        className={cn(
+          "inline-flex max-w-full min-w-0 items-center gap-2",
+          loading && "opacity-0",
+        )}
       >
         {children}
       </span>

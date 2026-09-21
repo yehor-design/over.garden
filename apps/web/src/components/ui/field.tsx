@@ -80,7 +80,11 @@ function Field({
       .join(" ") || undefined;
 
   return (
-    <div data-slot="field" className={cn("grid gap-1.5", className)} {...props}>
+    <div
+      data-slot="field"
+      className={cn("grid min-w-0 gap-1.5", className)}
+      {...props}
+    >
       <label
         htmlFor={controlId}
         className="flex items-baseline justify-between gap-2 text-body-sm font-medium text-text"

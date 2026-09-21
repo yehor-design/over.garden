@@ -52,7 +52,7 @@ function EmptyState({
         variant === "first-run" ? "empty-first-run" : "empty-no-results"
       }
       className={cn(
-        "grid justify-items-center gap-3 px-4 py-10 text-center",
+        "grid min-w-0 grid-cols-1 justify-items-center gap-3 px-4 py-10 text-center",
         className,
       )}
       {...props}
@@ -71,18 +71,21 @@ function EmptyState({
           className={cn(illustrationSize === "card" ? "size-24" : "size-36")}
         />
       ) : null}
-      <h3 id={headingId} className="text-h3 text-balance text-text-heading">
+      <h3
+        id={headingId}
+        className="max-w-full min-w-0 text-h3 text-balance break-words text-text-heading"
+      >
         {title}
       </h3>
       {description ? (
-        <p className="max-w-prose text-body-sm text-text-muted">
+        <p className="max-w-full min-w-0 text-body-sm break-words text-text-muted">
           {description}
         </p>
       ) : null}
       {variant === "no-results" && filters ? (
         <div className="flex flex-wrap justify-center gap-2">{filters}</div>
       ) : null}
-      {action ? <div className="mt-1">{action}</div> : null}
+      {action ? <div className="mt-1 max-w-full min-w-0">{action}</div> : null}
     </div>
   );
 }

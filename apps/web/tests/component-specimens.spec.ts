@@ -101,6 +101,7 @@ for (const locale of ["uk", "bg", "ru"])
       });
       await page.keyboard.press("Escape");
       await expect(page.getByTestId("menu-trigger")).toBeFocused();
+      await expect(page.getByRole("menu")).toHaveCount(0);
       await page.emulateMedia({ reducedMotion: "reduce" });
       expect(
         await page
@@ -113,17 +114,55 @@ for (const locale of ["uk", "bg", "ru"])
       await page.evaluate(() => {
         document.documentElement.style.fontSize = "200%";
       });
+      // A size change can load another font face; measure only the settled text.
+      await page.evaluate(() => document.fonts.ready);
       expect(
         await page.evaluate(
-          () => document.documentElement.scrollWidth <= window.innerWidth,
+          () =>
+            Math.max(
+              document.documentElement.scrollWidth,
+              document.body.scrollWidth,
+            ) <= window.innerWidth,
         ),
       ).toBe(true);
       await expect(primary).toBeVisible();
-      await page.screenshot({
+      const zoomImage = await page.screenshot({
         animations: "disabled",
         path: testInfo.outputPath(`${locale}-${width}-text-zoom.png`),
         fullPage: true,
       });
+      const geometry = await page.evaluate(() => ({
+        viewport: innerWidth,
+        width: Math.max(
+          document.documentElement.scrollWidth,
+          document.body.scrollWidth,
+        ),
+        overflow: [...document.querySelectorAll("main *")]
+          .filter((el) => el.getBoundingClientRect().right > innerWidth)
+          .map((el) => ({
+            tag: el.tagName,
+            slot: el.getAttribute("data-slot"),
+            cls: el.className,
+            right: el.getBoundingClientRect().right,
+          }))
+          .slice(0, 20),
+      }));
+      expect(geometry.width, JSON.stringify(geometry)).toBeLessThanOrEqual(
+        width,
+      );
+      expect(
+        await page.evaluate(
+          () =>
+            Math.max(
+              document.documentElement.scrollWidth,
+              document.body.scrollWidth,
+            ) <= window.innerWidth,
+        ),
+      ).toBe(true);
+      expect(
+        zoomImage.readUInt32BE(16),
+        "full-page PNG must not grow wider than the viewport",
+      ).toBe(width);
       await page.evaluate(() => {
         document.documentElement.style.fontSize = "";
       });

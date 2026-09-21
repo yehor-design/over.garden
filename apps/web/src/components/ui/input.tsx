@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  */
 const controlVariants = cva(
   [
-    "w-full rounded-md border border-border-control bg-surface text-text",
+    "min-w-0 w-full rounded-md border border-border-control bg-surface text-text",
     "placeholder:text-text-muted",
     "transition-colors duration-instant ease-out outline-none",
     "focus-visible:border-focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
