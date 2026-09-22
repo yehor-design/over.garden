@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   isPublicQueryTwinPath,
   PUBLIC_QUERY_TWINS,
+  PUBLIC_QUERY_TWIN_PATTERNS,
   PUBLIC_QUERY_TWIN_SEGMENT,
   publicQueryTwinPath,
 } from "./public-query-twin";
@@ -123,6 +124,35 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
     }
   });
 
+  it("sends a community's own facets to its twin and nothing else", () => {
+    for (const prefix of ["", "/bg", "/ru"]) {
+      for (const query of ["?q=томат", "?kind=plant", "?cursor=abc"]) {
+        expect(
+          publicQueryTwinPath(`${prefix}/communities/tomatoes`, query),
+        ).toBe("/q/communities/tomatoes");
+      }
+      for (const query of [
+        "?communityAction=joined",
+        "?authIntent=follow",
+        "?utm_source=mail",
+        "?kind=",
+      ]) {
+        expect(
+          publicQueryTwinPath(`${prefix}/communities/tomatoes`, query),
+        ).toBeNull();
+      }
+      expect(
+        publicQueryTwinPath(`${prefix}/communities`, "?kind=plant"),
+      ).toBeNull();
+      expect(
+        publicQueryTwinPath(
+          `${prefix}/communities/tomatoes/discussions/x`,
+          "?kind=plant",
+        ),
+      ).toBeNull();
+    }
+  });
+
   it("has a page mounted for every path it rewrites to", () => {
     // Listing a path here without mounting its twin would 404 every filtered
     // view of that listing, and nothing else in the suite would notice.
@@ -132,6 +162,16 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
         "src/app/[locale]",
         PUBLIC_QUERY_TWIN_SEGMENT,
         canonicalPath === "/" ? "" : canonicalPath,
+        "page.tsx",
+      );
+      expect(existsSync(page), page).toBe(true);
+    }
+    for (const twin of PUBLIC_QUERY_TWIN_PATTERNS) {
+      const page = path.join(
+        process.cwd(),
+        "src/app/[locale]",
+        PUBLIC_QUERY_TWIN_SEGMENT,
+        twin.route,
         "page.tsx",
       );
       expect(existsSync(page), page).toBe(true);

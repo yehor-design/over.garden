@@ -124,11 +124,17 @@ function encodeMultipart(fields: Array<[string, string]>) {
 }
 
 /** Every field of one `<form>` as the browser would submit it. */
-function readFormFields(html: string, marker: string) {
+function readFormFields(
+  html: string,
+  marker: string,
+  accept: (form: string) => boolean = () => true,
+) {
   const forms = [...html.matchAll(/<form\b[\s\S]*?<\/form>/gu)].map(
     (match) => match[0],
   );
-  const form = forms.find((candidate) => candidate.includes(marker));
+  const form = forms.find(
+    (candidate) => candidate.includes(marker) && accept(candidate),
+  );
   if (!form) return null;
   const action = /<form[^>]*\baction="([^"]*)"/u.exec(form)?.[1] ?? null;
   const fields: Array<[string, string]> = [
@@ -136,7 +142,8 @@ function readFormFields(html: string, marker: string) {
   ].map((match) => [match[1]!, decodeHtml(match[2]!)]);
   for (const match of form.matchAll(/<input[^>]*\bname="(\$ACTION_[^"]+)"/gu)) {
     const name = match[1]!;
-    if (!fields.some(([existing]) => existing === name)) fields.push([name, ""]);
+    if (!fields.some(([existing]) => existing === name))
+      fields.push([name, ""]);
   }
   return { action, fields };
 }
@@ -478,10 +485,9 @@ test.describe("the community family", () => {
     await page.goto(`/communities/${slug}?kind=plant`, { waitUntil: "load" });
     await expect(rows.first()).toBeVisible({ timeout: 15_000 });
     expect(await rows.count()).toBeLessThan(all);
-    await expect(page.locator('[data-filter-bar-active]').first()).toHaveAttribute(
-      "data-filter-bar-active",
-      "1",
-    );
+    await expect(
+      page.locator("[data-filter-bar-active]").first(),
+    ).toHaveAttribute("data-filter-bar-active", "1");
   });
 
   test("an empty community is one state, not a stack of empty sections", async ({
@@ -509,9 +515,7 @@ test.describe("the community family", () => {
     ).toBeVisible();
     await expect(page.locator('[data-slot="filter-bar"]')).toHaveCount(0);
     await expect(page.locator("[data-community-result-count]")).toHaveCount(0);
-    await expect(
-      page.locator('[data-community-facts="none"]'),
-    ).toBeVisible();
+    await expect(page.locator('[data-community-facts="none"]')).toBeVisible();
     await expect(page.locator("#community-rules")).toBeVisible();
 
     const quiet = await request.get(
@@ -596,7 +600,19 @@ test.describe("the community family", () => {
     // The fixture joined this gardener in SQL, so the rendered control says
     // "leave" — which is the same Server Action and the same proof.
     const html = await (await request.get(communityUrl)).text();
-    const form = readFormFields(html, 'data-auth-intent-control="follow"');
+    // The community is a static document (ADR-0032 D2): its first bytes carry
+    // the guest's working control, a real endpoint of its own…
+    const guest = readFormFields(html, 'data-auth-intent-control="follow"');
+    expect(guest?.action, "the guest's join has no endpoint").toBe(
+      "/auth/intent/start",
+    );
+    // …and the member's arrives in the streamed segment React's inline reveal
+    // swaps in, before any bundle has run: a server action and its reference.
+    const form = readFormFields(
+      html,
+      'data-auth-intent-control="follow"',
+      (candidate) => candidate.includes("$ACTION_"),
+    );
     expect(form, "the community rendered no membership form").not.toBeNull();
 
     // The discriminator. React writes `action=""` — the page's own address —
@@ -654,7 +670,8 @@ test.describe("the community family", () => {
       const fields = form!.fields.map(([name, value]): [string, string] =>
         name === "body" ? [name, body] : [name, value],
       );
-      if (!fields.some(([name]) => name === "body")) fields.push(["body", body]);
+      if (!fields.some(([name]) => name === "body"))
+        fields.push(["body", body]);
       const encoded = encodeMultipart(fields);
       const response = await request.post(
         new URL(form!.action || "", url).toString(),

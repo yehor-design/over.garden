@@ -30,6 +30,7 @@ import { Field } from "@/components/ui/field";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { HiddenField } from "@/components/ui/hidden-field";
 import NextLink from "next/link";
+import type { ReactNode } from "react";
 
 import { Link } from "@/components/ui/link";
 import { ListRow } from "@/components/ui/list-row";
@@ -104,6 +105,31 @@ import type {
  */
 
 export type PublicCommunityState = "ready" | "loading" | "error";
+
+/**
+ * What differs by reader, when the community is a static document (ADR-0032).
+ *
+ * The page is the same bytes for everyone, prerendered; each of these is a
+ * request-time region whose fallback is the guest's working rendering (D2).
+ * Without them — the `/q` twin, which renders at request time anyway — the view
+ * decides from `viewer` and `community.viewer` as it always has.
+ */
+export interface PublicCommunityViewerRegions {
+  /** The resumed sign-in intent's focus target. */
+  intentFocus: ReactNode;
+  /** The header's join / leave control. */
+  membership: ReactNode;
+  /** A membership or report result, from the redirect that carried it. */
+  status: ReactNode;
+  /** The contribution picker, for a member who may write here. */
+  contribute: ReactNode;
+  /** The first-run empty state's one action. */
+  firstRunAction: ReactNode;
+  /** One contribution's report and block controls. */
+  safety: (item: PublicCommunityContribution) => ReactNode;
+  /** The owner's way into moderation. */
+  moderator: ReactNode;
+}
 
 export function PublicCommunityDirectory({
   locale,
@@ -316,10 +342,13 @@ export function PublicCommunityView({
   resumeAction = null,
   resumeControl = null,
   jsonLd,
+  regions,
 }: {
   locale: PublicLocale;
   community: PublicCommunityPageModel;
   viewer: "guest" | "member";
+  /** Set by the static page; see `PublicCommunityViewerRegions`. */
+  regions?: PublicCommunityViewerRegions;
   request: PublicCommunityViewRequest;
   /** The rest of the directory, for the rail (Digg's "Discover Communities"). */
   otherCommunities?: readonly PublicCommunityDirectoryItem[];
@@ -374,7 +403,11 @@ export function PublicCommunityView({
           dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
-      <AuthIntentFocus action={resumeAction} control={resumeControl} />
+      {regions ? (
+        regions.intentFocus
+      ) : (
+        <AuthIntentFocus action={resumeAction} control={resumeControl} />
+      )}
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <PageHeader
@@ -389,7 +422,9 @@ export function PublicCommunityView({
         title={contentCopy.name}
         description={contentCopy.description}
         actions={
-          state === "ready" ? (
+          state === "ready" && regions ? (
+            regions.membership
+          ) : state === "ready" ? (
             <CommunityMembershipAction
               locale={locale}
               community={community}
@@ -424,7 +459,9 @@ export function PublicCommunityView({
 
       <CommunityFacts community={community} copy={copy} facts={facts} />
 
-      {actionMessage ? (
+      {regions ? (
+        regions.status
+      ) : actionMessage ? (
         <Callout tone="info" role="status">
           {actionMessage}
         </Callout>
@@ -442,32 +479,30 @@ export function PublicCommunityView({
             title={copy.firstRunTitle}
             description={copy.firstRunDescription}
             action={
-              <NextLink
-                // `/garden` has no locale-prefixed twin — the prefixed tree is
-                // a subset of the unprefixed one, and `/bg/garden` is a `404`
-                // the proxy decides before rendering. A gardener's own
-                // workspace is one address.
-                href={
-                  canContribute
-                    ? "#community-contribute"
-                    : "/garden#first-entry-composer"
-                }
-                className={buttonVariants()}
-              >
-                {copy.firstRunAction}
-              </NextLink>
+              regions ? (
+                regions.firstRunAction
+              ) : (
+                <CommunityFirstRunAction
+                  locale={locale}
+                  canContribute={canContribute}
+                />
+              )
             }
           />
           {/* The action, where the action's anchor points. A member who can
               write is offered the picker itself rather than an anchor to a
               section that is not on the page. */}
-          {canContribute ? (
+          {regions ? (
+            regions.contribute
+          ) : canContribute ? (
             <CommunityContributionForm locale={locale} community={community} />
           ) : null}
         </>
       ) : (
         <>
-          {canContribute ? (
+          {regions ? (
+            regions.contribute
+          ) : canContribute ? (
             <CommunityContributionForm locale={locale} community={community} />
           ) : null}
 
@@ -544,6 +579,7 @@ export function PublicCommunityView({
                     resumeAction={resumeAction}
                     resumeControl={resumeControl}
                     priority={index === 0}
+                    safety={regions?.safety(item)}
                   />
                 </li>
               ))}
@@ -621,17 +657,81 @@ export function PublicCommunityView({
 
       {/* The owner's way into moderation from the community itself. One link,
           not a second surface: `/account/communities` is `OVE-456`'s. */}
-      {state === "ready" && community.viewer.isModerator ? (
-        <Callout tone="info">
-          {/* Unprefixed for the same reason: `/account/**` is signed-in and
-              has no `[locale]` twin. */}
-          <Link href="/account/communities">{copy.moderatorQueue}</Link>
-        </Callout>
+      {state === "ready" && regions ? (
+        regions.moderator
+      ) : state === "ready" && community.viewer.isModerator ? (
+        <CommunityModeratorLink locale={locale} />
       ) : null}
 
       <div className="border-t border-border pt-6 xl:hidden">
         <SiteShellContextRailModules modules={contextModules} />
       </div>
+    </main>
+  );
+}
+
+/** The first-run empty state's action: the picker below, or the workspace. */
+export function CommunityFirstRunAction({
+  locale,
+  canContribute,
+}: {
+  locale: PublicLocale;
+  canContribute: boolean;
+}) {
+  const copy = getCommunityCopy(locale);
+  return (
+    <NextLink
+      // `/garden` has no locale-prefixed twin — the prefixed tree is a subset
+      // of the unprefixed one, and `/bg/garden` is a `404` the proxy decides
+      // before rendering. A gardener's own workspace is one address.
+      href={
+        canContribute ? "#community-contribute" : "/garden#first-entry-composer"
+      }
+      className={buttonVariants()}
+    >
+      {copy.firstRunAction}
+    </NextLink>
+  );
+}
+
+/** The owner's way into moderation from the community itself. */
+export function CommunityModeratorLink({ locale }: { locale: PublicLocale }) {
+  const copy = getCommunityCopy(locale);
+  return (
+    <Callout tone="info">
+      {/* Unprefixed for the same reason: `/account/**` is signed-in and has no
+          `[locale]` twin. */}
+      <Link href="/account/communities">{copy.moderatorQueue}</Link>
+    </Callout>
+  );
+}
+
+/**
+ * What a reader meets when the community could not be read at request time: a
+ * bounded state with the way back, never a thrown error — a throw under a
+ * postponed shell leaves the skeleton up for good on a hard load (ADR-0023).
+ */
+export function PublicCommunityUnavailable({
+  locale,
+  retryHref,
+}: {
+  locale: PublicLocale;
+  retryHref: string;
+}) {
+  const copy = getCommunityCopy(locale);
+  return (
+    <main
+      lang={locale}
+      data-public-community-state="error"
+      className="flex w-full min-w-0 flex-col items-start gap-4 px-4 py-10 sm:px-6"
+    >
+      <h1 className="text-h1 text-text-heading">{copy.directoryTitle}</h1>
+      <p className="text-body-sm text-text-muted" role="alert">
+        {copy.error}
+      </p>
+      <NextLink href={retryHref} className={buttonVariants()}>
+        {copy.retry}
+      </NextLink>
     </main>
   );
 }
@@ -848,7 +948,7 @@ function CommunityContributor({
   );
 }
 
-function CommunityMembershipAction({
+export function CommunityMembershipAction({
   locale,
   community,
   viewer,
@@ -911,7 +1011,7 @@ function CommunityMembershipAction({
   );
 }
 
-function CommunityContributionForm({
+export function CommunityContributionForm({
   locale,
   community,
 }: {
@@ -981,6 +1081,7 @@ function CommunityContributionCard({
   resumeAction,
   resumeControl,
   priority,
+  safety,
 }: {
   locale: PublicLocale;
   copy: CommunityCopy;
@@ -991,6 +1092,8 @@ function CommunityContributionCard({
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
   priority: boolean;
+  /** The static page's request-time region for the report and block controls. */
+  safety?: ReactNode;
 }) {
   const KindIcon = item.object.kind === "plant" ? Sprout : PawPrint;
 
@@ -1051,22 +1154,26 @@ function CommunityContributionCard({
               {copy.discussionClosed}
             </span>
           )}
-          <CommunitySafetyActions
-            locale={locale}
-            item={item}
-            viewer={viewer}
-            community={community}
-            communityPath={communityPath}
-            resumeAction={resumeAction}
-            resumeControl={resumeControl}
-          />
+          {safety !== undefined ? (
+            safety
+          ) : (
+            <CommunitySafetyActions
+              locale={locale}
+              item={item}
+              viewer={viewer}
+              community={community}
+              communityPath={communityPath}
+              resumeAction={resumeAction}
+              resumeControl={resumeControl}
+            />
+          )}
         </div>
       }
     />
   );
 }
 
-function CommunitySafetyActions({
+export function CommunitySafetyActions({
   locale,
   item,
   viewer,

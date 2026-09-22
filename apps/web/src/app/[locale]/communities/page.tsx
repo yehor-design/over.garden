@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { connection } from "next/server";
 
 import { PublicCommunityDirectory } from "@/components/public/public-community";
 import {
@@ -13,11 +12,7 @@ import {
   type PublicLocale,
   PUBLIC_LOCALES,
 } from "@/lib/public-localization";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import {
-  listPublicCommunities,
-  type PublicCommunityDirectoryItem,
-} from "@/server/community-repository";
+import { type PublicCommunityDirectoryItem } from "@/server/community-repository";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
   resolvePublicSurfaceDiscoveryFromLoad,
@@ -26,12 +21,18 @@ import {
   type PublicSurfaceDiscoverySource,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { scopedToUser, type RequestScope } from "@/server/request-scope";
 import { readPublicCommunityDirectory } from "@/server/public-cache";
 import {
   describeWorkspaceFailure,
   recordPublicSurfaceFailure,
 } from "@/server/workspace-failure";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 
 interface CommunityDirectoryRouteProps {
   params: Promise<{ locale: string }>;
@@ -56,6 +57,7 @@ export async function generateMetadata({
   const locale = localeParam;
   const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_community_directory",
+    document: "static",
     loadSource: async () =>
       buildCommunityDirectoryDiscoverySource(
         locale,
@@ -66,28 +68,27 @@ export async function generateMetadata({
 }
 
 /**
- * The directory is a request-time page, and says so before anything is read.
+ * The directory is a static document (ADR-0032): the same list for every
+ * reader, prerendered with its cards, photographs and title in the first bytes.
  *
- * It answered "temporarily unavailable" on production from the day the
- * `(default)` wrapper stopped redirecting until 2026-09-13, and nothing in any
- * log said why. The cause was two `catch` blocks in a row: `currentViewerScope`
- * swallowed the bail-out that `headers()` throws during a prerender — Next
- * signals "this page is dynamic" by *throwing*, and a `try/catch` around the
- * session read caught it — so the prerender walked on into the cached
- * directory read, which the aborted prerender then cancelled ("Connection
- * closed."), and the `catch` below turned that into the degraded state.
- * `connection()` first makes the page request-time in one line nobody can
- * catch; `unstable_rethrow` in both catches lets Next's own signals through;
- * and the degraded branch now writes one log line, so the next time a public
- * surface degrades, somebody reads about it.
+ * It used to read the session first and hand a gardener a list with the covers
+ * and counts of anyone they had blocked left out. A static page cannot know
+ * who is reading, and the directory now follows the home feed there: a block
+ * governs what a gardener is offered to do and whose profile they are shown
+ * (the proxy refuses it), not which communities a public list names.
+ *
+ * A failed read is never prerendered (D4): in a static attempt it defers to
+ * the request, where the degraded state is drawn for that reader only and
+ * written to the log, so the next time a public surface degrades somebody
+ * reads about it.
  */
-export async function renderCommunityDirectory(locale: PublicLocale) {
-  await connection();
-  const viewerScope = await currentViewerScope();
+export async function renderCommunityDirectory(
+  locale: PublicLocale,
+  phase: PublicRenderPhase = "request",
+) {
+  await deferStaticRenderWithoutDatabase(phase);
   try {
-    const communities = viewerScope
-      ? await listPublicCommunities(viewerScope)
-      : await readPublicCommunityDirectory();
+    const communities = await readPublicCommunityDirectory();
     const discovery = resolvePublicSurfaceDiscoveryForRequest(
       buildCommunityDirectoryDiscoverySource(locale, communities),
     );
@@ -109,6 +110,8 @@ export async function renderCommunityDirectory(locale: PublicLocale) {
     // not-found — is not a degraded directory, and swallowing it is exactly
     // the defect this branch used to hide.
     unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    deferStaticRenderAfterFailure(phase);
     recordPublicSurfaceFailure(describeWorkspaceFailure(error), {
       surface: "community_directory",
       section: "directory",
@@ -122,6 +125,19 @@ export async function renderCommunityDirectory(locale: PublicLocale) {
       />
     );
   }
+}
+
+export function renderStaticCommunityDirectory(locale: PublicLocale) {
+  return renderStaticPublicPage({
+    render: (phase) => renderCommunityDirectory(locale, phase),
+    fallback: (
+      <PublicCommunityDirectory
+        locale={locale}
+        communities={[]}
+        state="loading"
+      />
+    ),
+  });
 }
 
 function buildCommunityDirectoryDiscoverySource(
@@ -178,19 +194,5 @@ export default async function CommunityDirectoryRoute({
 }: CommunityDirectoryRouteProps) {
   const { locale: localeParam } = await params;
   if (!isPublicLocale(localeParam)) return notFound();
-  return renderCommunityDirectory(localeParam);
-}
-
-async function currentViewerScope(): Promise<RequestScope | null> {
-  try {
-    const session = await getCurrentSession();
-    return session?.user?.id
-      ? scopedToUser(session.user.id, getSessionId(session))
-      : null;
-  } catch (error) {
-    // A guest is a guest whatever the session store said — but a prerender
-    // bail-out is not a session failure, and it must reach Next.
-    unstable_rethrow(error);
-    return null;
-  }
+  return renderStaticCommunityDirectory(localeParam);
 }

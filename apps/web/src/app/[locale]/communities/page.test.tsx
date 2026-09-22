@@ -7,10 +7,7 @@ const mocks = vi.hoisted(() => ({
   listPublicCommunities: vi.fn(),
   publicCommunityDirectory: vi.fn(
     (props: { state: string; communities: readonly { slug: string }[] }) => (
-      <div
-        data-state={props.state}
-        data-count={props.communities.length}
-      />
+      <div data-state={props.state} data-count={props.communities.length} />
     ),
   ),
 }));
@@ -56,11 +53,12 @@ function prerenderBailout() {
   });
 }
 
-describe("the community directory under a prerender", () => {
+describe("the community directory as a static document", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("PUBLIC_SITE_URL", "https://over.garden");
     vi.stubEnv("BETTER_AUTH_URL", "https://over.garden");
+    vi.stubEnv("DATABASE_URL", "postgresql://unit.test/x");
     mocks.getCurrentSession.mockResolvedValue(null);
     mocks.readPublicCommunityDirectory.mockResolvedValue([community]);
   });
@@ -70,21 +68,15 @@ describe("the community directory under a prerender", () => {
     vi.restoreAllMocks();
   });
 
-  /**
-   * The defect: `currentViewerScope` caught the bail-out `headers()` throws
-   * during a prerender, the render walked on into the cached directory read,
-   * the aborted prerender cancelled it, and the page's own `catch` rendered
-   * "temporarily unavailable" — on production, for weeks, with nothing in any
-   * log. Both catches let Next's signal through now.
-   */
-  it("lets a prerender bail-out from the session read reach Next", async () => {
-    const { renderCommunityDirectory } = await import("./page");
-    mocks.getCurrentSession.mockRejectedValueOnce(prerenderBailout());
-
-    await expect(renderCommunityDirectory("uk")).rejects.toMatchObject({
-      digest: "DYNAMIC_SERVER_USAGE",
-    });
-    expect(mocks.readPublicCommunityDirectory).not.toHaveBeenCalled();
+  it("never reads who is reading: every reader gets the same list", async () => {
+    const { default: Directory } = await import("./page");
+    const html = renderToStaticMarkup(
+      await Directory({ params: Promise.resolve({ locale: "uk" }) }),
+    );
+    expect(html).toContain('data-state="ready"');
+    expect(html).toContain('data-count="1"');
+    expect(mocks.getCurrentSession).not.toHaveBeenCalled();
+    expect(mocks.listPublicCommunities).not.toHaveBeenCalled();
   });
 
   it("lets a prerender bail-out from the directory read reach Next", async () => {
@@ -98,28 +90,33 @@ describe("the community directory under a prerender", () => {
     });
   });
 
-  it("treats a failed session read as a guest and renders the directory", async () => {
-    const { renderCommunityDirectory } = await import("./page");
-    mocks.getCurrentSession.mockRejectedValueOnce(new Error("session store"));
-
-    const html = renderToStaticMarkup(await renderCommunityDirectory("uk"));
-    expect(html).toContain('data-state="ready"');
-    expect(html).toContain('data-count="1"');
-    expect(mocks.readPublicCommunityDirectory).toHaveBeenCalledTimes(1);
-  });
-
-  it("degrades on a real read failure, and says so in one log line", async () => {
+  it("defers a failed read in a static attempt instead of caching it", async () => {
     const { renderCommunityDirectory } = await import("./page");
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     mocks.readPublicCommunityDirectory.mockRejectedValueOnce(
-      Object.assign(new Error("connect ECONNREFUSED"), { code: "ECONNREFUSED" }),
+      new Error("database away"),
+    );
+
+    await expect(renderCommunityDirectory("uk", "static")).rejects.toThrow(
+      "read_failed",
+    );
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("degrades on a real read failure at request time, and says so in one log line", async () => {
+    const { renderCommunityDirectory } = await import("./page");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.readPublicCommunityDirectory.mockRejectedValueOnce(
+      Object.assign(new Error("connect ECONNREFUSED"), {
+        code: "ECONNREFUSED",
+      }),
     );
 
     const html = renderToStaticMarkup(await renderCommunityDirectory("bg"));
     expect(html).toContain('data-state="error"');
-    const line = error.mock.calls.map(([value]) => String(value)).find((v) =>
-      v.includes("public_surface_degraded"),
-    );
+    const line = error.mock.calls
+      .map(([value]) => String(value))
+      .find((v) => v.includes("public_surface_degraded"));
     expect(line).toBeDefined();
     const event = JSON.parse(line!);
     expect(event).toMatchObject({

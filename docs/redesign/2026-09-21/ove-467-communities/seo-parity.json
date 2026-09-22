@@ -1,0 +1,84 @@
+{
+  "directory": {
+    "equal": true,
+    "before": {
+      "title": [
+        "<title>Спільноти | OverGarden</title>"
+      ],
+      "tags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"http://127.0.0.1:3179/bg/communities\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"http://127.0.0.1:3179/ru/communities\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"http://127.0.0.1:3179/communities\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"http://127.0.0.1:3179/communities\"/>",
+        "<link rel=\"canonical\" href=\"http://127.0.0.1:3179/communities\"/>",
+        "<meta name=\"description\" content=\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\"/>",
+        "<meta name=\"twitter:title\" content=\"Спільноти | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Спільноти | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"http://127.0.0.1:3179/communities\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"http://127.0.0.1:3179/communities\",\"url\":\"http://127.0.0.1:3179/communities\",\"name\":\"Спільноти\",\"description\":\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"http://127.0.0.1:3179/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"http://127.0.0.1:3179/communities#collection\",\"name\":\"Спільноти\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Спостереження і догляд\"}]},{\"@type\":\"Organization\",\"@id\":\"http://127.0.0.1:3179/#organization\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3179/\"},{\"@type\":\"WebSite\",\"@id\":\"http://127.0.0.1:3179/#website\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3179/\",\"publisher\":{\"@id\":\"http://127.0.0.1:3179/#organization\"}}]}"
+      ]
+    },
+    "after": {
+      "title": [
+        "<title>Спільноти | OverGarden</title>"
+      ],
+      "tags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"http://127.0.0.1:3179/bg/communities\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"http://127.0.0.1:3179/ru/communities\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"http://127.0.0.1:3179/communities\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"http://127.0.0.1:3179/communities\"/>",
+        "<link rel=\"canonical\" href=\"http://127.0.0.1:3179/communities\"/>",
+        "<meta name=\"description\" content=\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\"/>",
+        "<meta name=\"twitter:title\" content=\"Спільноти | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Спільноти | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"http://127.0.0.1:3179/communities\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"http://127.0.0.1:3179/communities\",\"url\":\"http://127.0.0.1:3179/communities\",\"name\":\"Спільноти\",\"description\":\"Тематичні групи з реальними спостереженнями, журналами догляду та зрозумілими правилами участі.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"http://127.0.0.1:3179/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"http://127.0.0.1:3179/communities#collection\",\"name\":\"Спільноти\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Спостереження і догляд\"}]},{\"@type\":\"Organization\",\"@id\":\"http://127.0.0.1:3179/#organization\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3179/\"},{\"@type\":\"WebSite\",\"@id\":\"http://127.0.0.1:3179/#website\",\"name\":\"OverGarden\",\"url\":\"http://127.0.0.1:3179/\",\"publisher\":{\"@id\":\"http://127.0.0.1:3179/#organization\"}}]}"
+      ]
+    }
+  },
+  "community": {
+    "equal": true,
+    "before": {
+      "title": [
+        "<title>Спостереження і догляд | OverGarden</title>"
+      ],
+      "tags": [
+        "<meta name=\"description\" content=\"Практичні записи про зміни стану рослин, тварин і бджолиних сімей, перевірені власним досвідом.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    "after": {
+      "title": [
+        "<title>Спостереження і догляд | OverGarden</title>"
+      ],
+      "tags": [
+        "<meta name=\"description\" content=\"Практичні записи про зміни стану рослин, тварин і бджолиних сімей, перевірені власним досвідом.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    }
+  }
+}

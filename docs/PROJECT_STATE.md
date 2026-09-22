@@ -61,6 +61,15 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**Static community list and community page (fourth OVE-467 family):**
+`/communities` and `/communities/{slug}` are static documents; join, the
+contribution picker, report, block and the moderation link arrive in
+request-time regions with the guest's controls as their fallback. The list is
+the same for every reader — a block no longer removes a community's covers and
+counts from a signed-in gardener's list. `q`, `kind` and `cursor` render from an
+internal `/q/communities/{slug}` twin. See
+`docs/redesign/2026-09-21/OVE-467-COMMUNITIES-PROOF.md`.
+
 **Static public profile and object passport (third OVE-467 family):** `/@{handle}`
 and `/@{handle}/objects/{slug}` are static documents; follow/report/block, the
 passport's likes, comments and lineage forms arrive in request-time regions with
