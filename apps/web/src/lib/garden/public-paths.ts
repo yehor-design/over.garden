@@ -124,7 +124,9 @@ export interface PublicCatalogAddress {
   speciesSlug?: string | null;
 }
 
-export function publicCatalogEvidencePath(address: PublicCatalogAddress): string {
+export function publicCatalogEvidencePath(
+  address: PublicCatalogAddress,
+): string {
   const slug = encodeURIComponent(address.publicSlug);
   if (address.catalogKind === "species") return `/species/${slug}`;
   if (address.speciesSlug) {
@@ -253,11 +255,13 @@ export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   return `/garden?${params.toString()}`;
 }
 
-export function gardenCatalogPreselectionPath(publicSlug: string): string {
-  const params = new URLSearchParams({
-    catalog: publicSlug,
-    source: "public-catalog",
-  });
-
-  return `/garden?${params.toString()}`;
+/**
+ * Adding the organism a card describes to the gardener's garden (`OVE-485`).
+ * It goes through object setup, which first offers the gardener's own objects
+ * of that organism, so writing about the tomato they have never starts a
+ * second one.
+ */
+export function gardenObjectSetupPreselectionPath(publicSlug: string): string {
+  const params = new URLSearchParams({ catalog: publicSlug });
+  return `/garden/objects/new?${params.toString()}`;
 }

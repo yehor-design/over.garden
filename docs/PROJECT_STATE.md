@@ -61,6 +61,15 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**Progressive space and object setup (OVE-484, OVE-485):** `/garden/spaces/new`
+and `/garden/objects/new` ask only what `spaces` and `plant_objects` store, one
+question at a time, and each writes one acknowledged record per intent through
+`POST /api/garden/spaces` and `POST /api/garden/objects` (the request id is the
+record id). Neither publishes anything. An organism's card sends a gardener to
+object setup, which offers their own objects of that organism first. The
+first-entry composer still creates a destination and its first entry
+atomically. See `docs/redesign/2026-09-21/OVE-484-PROOF.md` and `OVE-485-PROOF.md`.
+
 **Every remaining public family is a static document (OVE-467, 2026-09-22):**
 `/topics/{slug}`, `/knowledge`, `/blog`, `/blog/{slug}`, `/guides/{slug}`,
 `/answers/{slug}`, `/markets/{market}`, the legal pages and `/sources/eppo`.

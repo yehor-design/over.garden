@@ -167,7 +167,11 @@ describe("/variety/[slug]", () => {
     expect(html).not.toContain("/api/engagement");
     expect(html).toContain('name="catalogPublicSlug"');
     expect(html).toContain('value="pomidor-cheri-0000000101"');
-    expect(html).toContain("/garden?catalog=pomidor-cheri-0000000101");
+    // Adding the variety goes through object setup, which offers the
+    // gardener's own objects of it first (OVE-485).
+    expect(html).toContain(
+      "/garden/objects/new?catalog=pomidor-cheri-0000000101",
+    );
     expect(html).toContain("First ripe cluster");
   });
 
@@ -184,9 +188,8 @@ describe("/variety/[slug]", () => {
     );
     expect(card).not.toContain("Збережено до вашого списку бажань.");
 
-    const { WishlistSavedReceipt } = await import(
-      "@/app/catalog-evidence-route"
-    );
+    const { WishlistSavedReceipt } =
+      await import("@/app/catalog-evidence-route");
     const label = "Збережено до вашого списку бажань.";
     const saved = await WishlistSavedReceipt({
       searchParams: Promise.resolve({ wishlist: "saved" }),
@@ -210,7 +213,9 @@ describe("/variety/[slug]", () => {
       }),
     ).resolves.toMatchObject({
       robots: { index: true, follow: true },
-      alternates: { canonical: "https://over.garden/variety/pomidor-cheri-0000000101" },
+      alternates: {
+        canonical: "https://over.garden/variety/pomidor-cheri-0000000101",
+      },
     });
   });
 

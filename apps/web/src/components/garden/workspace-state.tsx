@@ -38,7 +38,8 @@ export type WorkspaceSurface =
   | "erasure-requests"
   | "catalog-queue"
   | "catalog-sources"
-  | "space-setup";
+  | "space-setup"
+  | "object-setup";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",

@@ -28,10 +28,7 @@ import { catalogIdentifierUrl } from "@/lib/catalog/addresses";
 import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import { cn } from "@/lib/utils";
 import type { CatalogKind } from "@/db/schema";
-import {
-  gardenCatalogPreselectionPath,
-  gardenFirstEntryPreselectionPath,
-} from "@/lib/garden/public-paths";
+import { gardenObjectSetupPreselectionPath } from "@/lib/garden/public-paths";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
@@ -396,11 +393,8 @@ async function renderCatalogEvidenceCard(
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <NextLink
-              href={
-                isPlantVariety
-                  ? gardenFirstEntryPreselectionPath(page.catalog.publicSlug)
-                  : gardenCatalogPreselectionPath(page.catalog.publicSlug)
-              }
+              href={gardenObjectSetupPreselectionPath(page.catalog.publicSlug)}
+              data-organism-add-to-garden="true"
               className={buttonVariants({ size: "lg" })}
             >
               <NotebookPen aria-hidden="true" />
