@@ -5,6 +5,7 @@ import { WarningCircleIcon as AlertCircle } from "@/components/icons/WarningCirc
 import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 
 import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
+import { gardenCollectionItemHref } from "@/lib/garden/garden-collection";
 import {
   formatGardenWorkspaceDate,
   getGardenWorkspaceCopy,
@@ -21,6 +22,12 @@ interface GardenWorkspaceServiceStateProps {
   nextAction: { href: string; label: string };
   recent: GardenWorkspaceRecentEntry[];
   inbox: GardenWorkspaceInboxSummary | null;
+  /**
+   * The publication and privacy line under the header. It belongs beside a
+   * composer; a collection with nothing to publish on it leaves it out
+   * (`OVE-489`).
+   */
+  showPublicationNotice?: boolean;
 }
 
 /**
@@ -32,6 +39,7 @@ export function GardenWorkspaceServiceState({
   nextAction,
   recent,
   inbox,
+  showPublicationNotice = true,
 }: GardenWorkspaceServiceStateProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const modules = buildContextModules({
@@ -44,24 +52,26 @@ export function GardenWorkspaceServiceState({
   return (
     <>
       <SiteShellContextRailRegistration modules={modules} />
-      <section
-        id="garden-service-state"
-        data-garden-service-state="true"
-        className="border-y border-border bg-muted/20 px-4 py-3 sm:px-6 xl:hidden"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck className="size-4" aria-hidden="true" />
-            {copy.composer.publicationNotice}
-          </span>
-          <Link
-            href={localizedPath(locale, "/privacy")}
-            className="font-medium text-primary underline-offset-4 hover:underline"
-          >
-            {copy.serviceState.privacy}
-          </Link>
-        </div>
-      </section>
+      {showPublicationNotice ? (
+        <section
+          id="garden-service-state"
+          data-garden-service-state="true"
+          className="border-y border-border bg-muted/20 px-4 py-3 sm:px-6 xl:hidden"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck className="size-4" aria-hidden="true" />
+              {copy.composer.publicationNotice}
+            </span>
+            <Link
+              href={localizedPath(locale, "/privacy")}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {copy.serviceState.privacy}
+            </Link>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }
@@ -89,9 +99,11 @@ function buildContextModules({
       key: "garden-recent",
       title: copy.serviceState.context.recent,
       items: recent.slice(0, 3).map((entry) => ({
-        href: entry.objectId
-          ? `/garden/objects/${entry.objectId}`
-          : `/garden#space-${entry.spaceId}`,
+        href: gardenCollectionItemHref(
+          entry.objectId
+            ? { kind: "object", id: entry.objectId }
+            : { kind: "space", id: entry.spaceId },
+        ),
         label: entry.title,
         meta: formatGardenWorkspaceDate(locale, entry.entryDate, "short"),
       })),
@@ -101,19 +113,26 @@ function buildContextModules({
       key: "garden-inbox",
       title: copy.serviceState.context.inbox,
       items: [
+        // An unread count is shown when there is one; a nought is omitted
+        // and an unknown one is a dash (DESIGN.md §5.10).
         {
           href: localizedPath(locale, "/notifications"),
           label: copy.serviceState.context.notifications,
-          meta: inbox ? String(inbox.notificationCount) : "—",
+          meta: inboxCount(inbox?.notificationCount),
         },
         {
           href: "/garden/lineage/claims",
           label: copy.serviceState.context.lineageClaims,
-          meta: inbox ? String(inbox.claimCount) : "—",
+          meta: inboxCount(inbox?.claimCount),
         },
       ],
     },
   ];
+}
+
+function inboxCount(count: number | undefined): string | undefined {
+  if (count === undefined) return "—";
+  return count > 0 ? String(count) : undefined;
 }
 
 export function GardenWorkspaceServiceStateError({

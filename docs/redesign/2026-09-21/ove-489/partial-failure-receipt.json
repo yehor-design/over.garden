@@ -1,0 +1,14 @@
+{
+  "issue": "OVE-489",
+  "proof": "garden-collection-partial-failure",
+  "baseUrl": "http://localhost:3179",
+  "objectsFailure": "query_timeout",
+  "objectsRetryHref": "/garden#garden-objects",
+  "spacesListedDuringFailure": 3,
+  "setupClaimedDuringFailure": false,
+  "composerOfferedDuringFailure": false,
+  "objectsListedAfterRetry": 24,
+  "hardLoadStatus": 200,
+  "elapsedMs": 1882,
+  "passed": true
+}

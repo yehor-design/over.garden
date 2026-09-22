@@ -87,26 +87,26 @@ test.beforeEach(async ({ context, baseURL }) => {
 });
 
 test.describe("the workspace a gardener works in", () => {
-  test("the home leads with what needs attention, then what was written last", async ({
+  test("an empty garden opens on setup: one picture, one sentence, the first action", async ({
     page,
   }) => {
     const response = await page.goto("/garden", { waitUntil: "load" });
     expect(response?.status()).toBe(200);
 
-    const order = await page.evaluate(() =>
-      [...document.querySelectorAll("[id]")]
-        .map((node) => node.id)
-        .filter((id) =>
-          ["attention", "recent", "inventory", "spaces"].includes(id),
-        ),
-    );
-    expect(order).toEqual(["attention", "recent", "inventory", "spaces"]);
-
-    // The one primary action of the screen sits beside the objects it is
-    // about, not three sections above them.
+    // The collection home (`OVE-489`) has nothing to list yet, so it says how
+    // a garden starts instead of printing empty sections.
+    const setup = page.locator('[data-garden-setup="true"]');
+    await expect(setup).toBeVisible();
     await expect(
-      page.locator('[data-garden-next-action="true"]'),
-    ).toBeVisible();
+      setup.locator('[data-garden-setup-action="first-entry"]'),
+    ).toHaveAttribute("href", "#first-entry-composer");
+    await expect(page.locator('[data-garden-collection="true"]')).toHaveCount(
+      0,
+    );
+    // No inferred "needs attention" anywhere (OG-UX-023).
+    await expect(page.locator('[data-garden-next-action="true"]')).toHaveCount(
+      0,
+    );
   });
 
   test("adding an object shows its path before its form", async ({ page }) => {

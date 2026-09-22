@@ -67,7 +67,7 @@ describe("AuthIntentTrigger", () => {
     expect(decoded).toContain("/auth/sign-in?");
     expect(decoded).toContain("intent=create_entry");
     expect(decoded).toContain("next=/garden?authIntent=create_entry");
-    expect(decoded).toContain("#inventory");
+    expect(decoded).toContain("#garden-collection");
     // Not a POST: with nothing to sign there is nothing to protect, and a link
     // works before the bundle does.
     expect(html).not.toContain('method="post"');

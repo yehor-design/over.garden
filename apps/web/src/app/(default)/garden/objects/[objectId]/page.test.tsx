@@ -159,7 +159,7 @@ describe("/garden/objects/[objectId]", () => {
     );
 
     expect(html).toContain('lang="uk"');
-    expect(html).toContain("До моєї градини");
+    expect(html).toContain("До мого саду");
     expect(html).toContain("Cherry tomato");
     expect(html).toContain("First flowers");
     expect(html).not.toContain("Перші квіти");

@@ -177,8 +177,9 @@ function buildAuthIntentResumeAnchor(
   pathname: string,
   control?: string | null,
 ) {
+  // The collection: search and Write on every row (OVE-489).
   if (action === "create_entry" && pathname === "/garden" && !control)
-    return "inventory";
+    return "garden-collection";
   // The composer is the whole page; there is nothing to scroll to.
   if (action === "create_entry" && pathname === "/garden/new") return "";
 

@@ -685,9 +685,9 @@ export function CommunityFirstRunAction({
       // `/garden` has no locale-prefixed twin — the prefixed tree is a subset
       // of the unprefixed one, and `/bg/garden` is a `404` the proxy decides
       // before rendering. A gardener's own workspace is one address.
-      href={
-        canContribute ? "#community-contribute" : "/garden#first-entry-composer"
-      }
+      // A reader with nothing to contribute yet writes it first, in the one
+      // composer (OVE-486); the garden home carries no editor (OVE-489).
+      href={canContribute ? "#community-contribute" : "/garden/new"}
       className={buttonVariants()}
     >
       {copy.firstRunAction}
@@ -1062,7 +1062,7 @@ export function CommunityContributionForm({
             {copy.noEligibleJournals}
           </p>
           <NextLink
-            href="/garden#first-entry-composer"
+            href="/garden/new"
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             {copy.createJournal}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
+import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
 import { PlusCircleIcon as CirclePlus } from "@/components/icons/PlusCircle";
 import { CompassIcon as Compass } from "@/components/icons/Compass";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
@@ -11,12 +12,25 @@ import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
-import { EntryComposer } from "@/components/garden/entry-composer";
+import {
+  GardenActions,
+  GardenCollection,
+  GardenSetup,
+} from "@/components/garden/garden-collection";
 import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
+import {
+  GARDEN_COLLECTION_SIMPLE_LIMIT,
+  isDefaultGardenCollectionRequest,
+  normalizeGardenCollectionRequest,
+} from "@/lib/garden/garden-collection";
+import {
+  formatGardenCollectionTemplate,
+  getGardenCollectionCopy,
+} from "@/lib/garden-collection-copy";
 import { pickerKindForCatalogKind } from "@/lib/garden/catalog-object-kind";
 import {
   gardenFirstEntryPreselectionPath,
@@ -42,7 +56,12 @@ import {
 } from "@/lib/trust-surface-copy";
 import { WorkspaceSectionError } from "@/components/garden/workspace-state";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
-import { loadGardenWorkspace } from "@/server/garden-workspace-repository";
+import {
+  GARDEN_COLLECTION_GROUP_QUERY_COUNT,
+  listGardenObjects,
+  listGardenSpaces,
+} from "@/server/garden-collection-repository";
+import { loadGardenWorkspaceContext } from "@/server/garden-workspace-repository";
 import { scheduleGardenWorkspaceActivationAnalytics } from "@/server/garden-workspace-after-response";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
@@ -63,10 +82,8 @@ import {
 } from "./garden-home-shell";
 import { addCatalogPublicSlugToWishlistAction } from "../../wishlist/actions";
 import { FirstEntryComposer } from "../first-entry-composer";
-import { Illustration } from "@/components/ui/illustration";
-import { resolveIllustrationRole } from "@/lib/illustrations";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { GardenWorkspaceView } from "../garden-workspace-view";
+import { GardenWorkspaceServiceState } from "../garden-workspace-service-state";
 import { SaveProgressMoment } from "../save-progress-moment";
 import { HiddenField } from "@/components/ui/hidden-field";
 
@@ -74,7 +91,6 @@ type GardenSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const MAX_GARDEN_PAGE = 100;
 
 interface GardenPageProps {
   searchParams?: Promise<GardenSearchParams>;
@@ -144,10 +160,11 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 }
 
 /**
- * Everything on the home page that needs the database. It never throws: the
- * read model settles its four sections itself, and the three smaller reads go
- * through `settleSection`, so the worst case is a designed panel rather than a
- * boundary that never resolves.
+ * Everything on the home page that needs the database (`OVE-489`). It never
+ * throws: the two collection groups, the context rail and the three smaller
+ * reads each go through `settleSection`, so the worst case is a designed
+ * panel in one place rather than a boundary that never resolves — and a
+ * failed group never reads as an empty garden.
  */
 async function GardenHomeSections({
   locale,
@@ -160,124 +177,180 @@ async function GardenHomeSections({
   scope: ReturnType<typeof scopedToUser>;
   userId: string;
 }) {
+  const request = normalizeGardenCollectionRequest(params);
+  const groupDeadlineMs = workspaceSectionDeadlineMs(
+    GARDEN_COLLECTION_GROUP_QUERY_COUNT,
+  );
   const [
-    readModel,
+    spaces,
+    objects,
+    context,
     priorPublicationDisclosure,
     initialCatalogItem,
     pendingWishlistItem,
   ] = await Promise.all([
-    // `loadGardenWorkspace` settles its own four sections and is not supposed to
-    // reject. It is still wrapped, because "not supposed to" is exactly the
-    // assumption that left a reader on a skeleton once already, and the rule
-    // ADR-0023 states has no exceptions.
-    settleSection(
-      () =>
-        loadGardenWorkspace(scope, {
-          inventoryExpanded: firstParam(params.inventory) === "all",
-          inventoryPage: positivePage(params.inventoryPage),
-          spacesExpanded: firstParam(params.spaces) === "all",
-          spacesPage: positivePage(params.spacesPage),
-          faultSections: [],
-        }),
-      {
-        deadlineMs: workspaceSectionDeadlineMs(7),
-        surface: "garden-home",
-        section: "read-model",
-      },
-    ),
+    settleSection(() => listGardenSpaces(scope, request), {
+      deadlineMs: groupDeadlineMs,
+      surface: "garden-home",
+      section: "spaces",
+    }),
+    settleSection(() => listGardenObjects(scope, request), {
+      deadlineMs: groupDeadlineMs,
+      surface: "garden-home",
+      section: "objects",
+    }),
+    // Settles its two reads itself; wrapped anyway, because "is not supposed
+    // to reject" is the assumption ADR-0023 exists to retire.
+    settleSection(() => loadGardenWorkspaceContext(scope), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "garden-home",
+      section: "context",
+    }),
     settledOrNull(() => hasPriorPublicationDisclosure(scope)),
     settledOrNull(() => resolveInitialCatalogSelection(params)),
     settledOrNull(() => resolvePendingWishlistSelection(params)),
   ]);
 
-  if (readModel.status === "error") {
-    return (
-      <div className="px-4 py-8 sm:px-6">
-        <WorkspaceSectionError
-          locale={locale}
-          failure={readModel}
-          retryHref={GARDEN_HOME_PATH}
-        />
-      </div>
-    );
-  }
-  const workspace = readModel.value;
+  const spacesValue = spaces.status === "ready" ? spaces.value : null;
+  const objectsValue = objects.status === "ready" ? objects.value : null;
+  // Only two reads that both answered can say the garden is empty.
+  const setup = spacesValue?.owned === 0 && objectsValue?.owned === 0;
+  const ownedTotal =
+    spacesValue && objectsValue ? spacesValue.owned + objectsValue.owned : null;
+  const simple =
+    isDefaultGardenCollectionRequest(request) &&
+    ownedTotal !== null &&
+    ownedTotal <= GARDEN_COLLECTION_SIMPLE_LIMIT;
+  // The first-entry composer names a new plant and its first entry in one
+  // form. It is for a gardener with no plant or animal yet, and for a reader
+  // who came here to create one (a catalogue pick, a resumed sign-in, an
+  // activation link) — never the returning gardener's home (IA: setup only on
+  // explicit create).
+  const explicitCreate =
+    Boolean(initialCatalogItem) || isExplicitCreateRequest(params);
+  const firstObject = objectsValue?.owned === 0;
+  const showComposer = setup || firstObject || explicitCreate;
 
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
-  const canWrite = true;
   const requestedSpaceId = uuidParam(params.space);
-  const defaultSpaceId =
-    workspace.spaces.status === "ready" &&
-    workspace.spaces.value.totalCount === 1
-      ? (workspace.spaces.value.spaces[0]?.id ?? null)
-      : null;
-  const selectedSpaceId = requestedSpaceId || defaultSpaceId;
-  const initialSpace =
-    workspace.spaces.status === "ready"
-      ? (workspace.spaces.value.spaces.find(
-          (space) => space.id === selectedSpaceId,
-        ) ?? null)
-      : null;
   const today = new Date().toISOString().slice(0, 10);
+  const collectionCopy = getGardenCollectionCopy(locale);
 
-  scheduleGardenWorkspaceActivationAnalytics(scope, {
-    eventName: "activation_started",
-    properties: {
-      activation_source: activationSource,
-      source_surface_kind: activationSurfaceKindForSource(activationSource),
-      actor_class: "real_self_serve",
-    },
-  });
+  if (showComposer) {
+    scheduleGardenWorkspaceActivationAnalytics(scope, {
+      eventName: "activation_started",
+      properties: {
+        activation_source: activationSource,
+        source_surface_kind: activationSurfaceKindForSource(activationSource),
+        actor_class: "real_self_serve",
+      },
+    });
+  }
+
+  const composer = showComposer ? (
+    <GardenWriteTools
+      today={today}
+      locale={locale}
+      activationSource={activationSource}
+      initialCatalogItem={initialCatalogItem}
+      initialSpace={
+        spacesValue?.owned === 1 && spacesValue.items[0]
+          ? {
+              id: spacesValue.items[0].id,
+              displayName: spacesValue.items[0].displayName,
+            }
+          : null
+      }
+      enableServerPersistence
+      ownerUserId={userId}
+      requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
+    />
+  ) : null;
 
   return (
-    <GardenWorkspaceView
-      canWrite={canWrite}
-      locale={locale}
-      today={today}
-      workspace={workspace}
+    <div
+      data-garden-workspace={setup ? "setup" : "collection"}
+      className="flex flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8"
     >
+      <GardenWorkspaceServiceState
+        locale={locale}
+        nextAction={{
+          href: "/garden/new",
+          label: collectionCopy.actions.newEntry,
+        }}
+        recent={
+          context.status === "ready" && context.value.recent.status === "ready"
+            ? context.value.recent.value
+            : []
+        }
+        inbox={
+          context.status === "ready" && context.value.inbox.status === "ready"
+            ? context.value.inbox.value
+            : null
+        }
+        showPublicationNotice={showComposer}
+      />
       {pendingWishlistItem ? (
         <PendingWishlistIntentPanel
           item={pendingWishlistItem}
           locale={locale}
         />
       ) : null}
-      <GardenWriteTools
-        today={today}
-        locale={locale}
-        activationSource={activationSource}
-        initialCatalogItem={initialCatalogItem}
-        initialSpace={
-          initialSpace
-            ? { id: initialSpace.id, displayName: initialSpace.displayName }
-            : null
-        }
-        enableServerPersistence
-        ownerUserId={userId}
-        requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
-      >
-        {selectedSpaceId ? (
-          <Suspense fallback={null}>
-            <GardenSelectedSpaceTimeline
-              canWrite={canWrite}
-              locale={locale}
-              scope={scope}
-              spaceId={selectedSpaceId}
-              today={today}
-              enableServerPersistence
-              requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
-              showSaveProgress={
-                normalizeSaveProgressMomentKind(params.saveProgress) ===
-                "space-entry"
-              }
-            />
-          </Suspense>
-        ) : null}
-      </GardenWriteTools>
-    </GardenWorkspaceView>
+
+      {setup ? (
+        <>
+          <GardenSetup locale={locale} />
+          {composer}
+        </>
+      ) : (
+        <>
+          {requestedSpaceId ? (
+            <Suspense fallback={null}>
+              <GardenSelectedSpaceTimeline
+                locale={locale}
+                scope={scope}
+                spaceId={requestedSpaceId}
+                showSaveProgress={
+                  normalizeSaveProgressMomentKind(params.saveProgress) ===
+                  "space-entry"
+                }
+              />
+            </Suspense>
+          ) : null}
+          <GardenActions locale={locale} />
+          {explicitCreate ? composer : null}
+          <GardenCollection
+            locale={locale}
+            request={request}
+            today={today}
+            spaces={spaces}
+            objects={objects}
+            simple={simple}
+          />
+          {explicitCreate ? null : composer}
+        </>
+      )}
+    </div>
   );
+}
+
+/**
+ * A reader who came to `/garden` to create: a first-entry activation link
+ * (`?source=`), or a sign-in that resumes creating an object.
+ */
+function isExplicitCreateRequest(params: GardenSearchParams): boolean {
+  const source = firstParam(params.source).replaceAll("_", "-");
+  if (
+    source === "homepage" ||
+    source === "direct-garden" ||
+    source === "public-variety"
+  ) {
+    return true;
+  }
+  const authIntent = normalizeAuthIntentResumeAction(params.authIntent);
+  return authIntent === "create_object" || authIntent === "save";
 }
 
 /**
@@ -413,6 +486,12 @@ function GuestGardenEntry({
   );
 }
 
+/**
+ * The first-entry composer: a new plant or animal, its place and its first
+ * entry, published together. It is its own section with its own address,
+ * `#first-entry-composer`, which setup, `/garden/new` and a resumed sign-in
+ * link to.
+ */
 function GardenWriteTools({
   ownerUserId,
   today,
@@ -422,7 +501,6 @@ function GardenWriteTools({
   initialSpace,
   enableServerPersistence,
   requiresFirstPublicationDisclosure,
-  children,
 }: {
   ownerUserId: string;
   today: string;
@@ -434,85 +512,73 @@ function GardenWriteTools({
   initialSpace: { id: string; displayName: string } | null;
   enableServerPersistence: boolean;
   requiresFirstPublicationDisclosure: boolean;
-  children?: React.ReactNode;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   return (
-    <div className="flex flex-col gap-10 border-t border-border pt-8">
-      <Section
-        id="first-entry-composer"
-        title={copy.page.creation.title}
-        description={copy.page.creation.description}
-        className="scroll-mt-20"
+    <Section
+      id="first-entry-composer"
+      title={copy.page.creation.title}
+      description={copy.page.creation.description}
+      className="scroll-mt-20 border-t border-border pt-8"
+    >
+      {/* The path, before the form (`OVE-457` criterion 5). Adding an object
+          was a bare form with three unlabelled jobs inside it; a gardener
+          could not tell where they were or how much was left. The result at
+          the end is `SaveProgressMoment`, which the save redirects to. */}
+      <ol
+        data-garden-creation-steps="true"
+        aria-label={copy.page.creation.stepsLabel}
+        className="grid gap-2 sm:grid-cols-3"
       >
-        <Illustration
-          asset={resolveIllustrationRole("object-setup")}
-          size="card"
-        />
-        {/* The path, before the form (`OVE-457` criterion 5). Adding an object
-            was a bare form with three unlabelled jobs inside it; a gardener
-            could not tell where they were or how much was left. The result at
-            the end is `SaveProgressMoment`, which the save redirects to. */}
-        <ol
-          data-garden-creation-steps="true"
-          aria-label={copy.page.creation.stepsLabel}
-          className="grid gap-2 sm:grid-cols-3"
-        >
-          {copy.page.creation.steps.map((step, index) => (
-            <li
-              key={step}
-              className="flex min-w-0 items-start gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text-secondary"
+        {copy.page.creation.steps.map((step, index) => (
+          <li
+            key={step}
+            className="flex min-w-0 items-start gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text-secondary"
+          >
+            <span
+              aria-hidden="true"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action-subtle text-caption font-medium text-action-subtle-text tabular-nums"
             >
-              <span
-                aria-hidden="true"
-                className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action-subtle text-caption font-medium text-action-subtle-text tabular-nums"
-              >
-                {index + 1}
-              </span>
-              <span className="min-w-0">{step}</span>
-            </li>
-          ))}
-        </ol>
-        <div id="write-access">
-          <FirstEntryComposer
-            ownerUserId={ownerUserId}
-            locale={locale}
-            key={initialCatalogItem?.id ?? "first-entry"}
-            today={today}
-            initialClientMutationId={crypto.randomUUID()}
-            initialSpace={initialSpace}
-            initialCatalogItem={initialCatalogItem}
-            activationSource={activationSource}
-            enableServerPersistence={enableServerPersistence}
-            requiresFirstPublicationDisclosure={
-              requiresFirstPublicationDisclosure
-            }
-          />
-        </div>
-      </Section>
-
-      {children}
-    </div>
+              {index + 1}
+            </span>
+            <span className="min-w-0">{step}</span>
+          </li>
+        ))}
+      </ol>
+      <div id="write-access">
+        <FirstEntryComposer
+          ownerUserId={ownerUserId}
+          locale={locale}
+          key={initialCatalogItem?.id ?? "first-entry"}
+          today={today}
+          initialClientMutationId={crypto.randomUUID()}
+          initialSpace={initialSpace}
+          initialCatalogItem={initialCatalogItem}
+          activationSource={activationSource}
+          enableServerPersistence={enableServerPersistence}
+          requiresFirstPublicationDisclosure={
+            requiresFirstPublicationDisclosure
+          }
+        />
+      </div>
+    </Section>
   );
 }
 
+/**
+ * One space's journal, opened from its row (`?space=`). Writing into it is the
+ * one composer at `/garden/new` with the space named, not an editor inside the
+ * garden page (`OVE-489`); the space's own page is `OVE-490`.
+ */
 async function GardenSelectedSpaceTimeline({
-  canWrite,
   locale,
   scope,
   spaceId,
-  today,
-  enableServerPersistence,
-  requiresFirstPublicationDisclosure,
   showSaveProgress,
 }: {
-  canWrite: boolean;
   locale: InterfaceLocale;
   scope: ReturnType<typeof scopedToUser>;
   spaceId: string;
-  today: string;
-  enableServerPersistence: boolean;
-  requiresFirstPublicationDisclosure: boolean;
   showSaveProgress: boolean;
 }) {
   // The space timeline is an addition to a page that already renders without it,
@@ -534,6 +600,10 @@ async function GardenSelectedSpaceTimeline({
   const timeline = settled.value;
 
   const copy = getGardenWorkspaceCopy(locale);
+  const writeHref = `/garden/new?${new URLSearchParams({
+    space: timeline.space.id,
+    returnTo: `/garden?space=${timeline.space.id}#space-journal`,
+  }).toString()}`;
   return (
     <>
       {showSaveProgress ? (
@@ -545,83 +615,69 @@ async function GardenSelectedSpaceTimeline({
           entryTitle={timeline.entries[0]?.title ?? null}
           primaryHref="#space-journal"
           primaryLabel={copy.page.postSave.returnToSpaceJournal}
-          secondaryHref="#first-entry-composer"
+          secondaryHref="/garden/objects/new"
           secondaryLabel={copy.page.postSave.addAnotherObject}
         />
       ) : null}
-      <SpaceJournalTools
-        canWrite={canWrite}
-        locale={locale}
-        timeline={timeline}
-        today={today}
-        enableServerPersistence={enableServerPersistence}
-        requiresFirstPublicationDisclosure={requiresFirstPublicationDisclosure}
-      />
+      <SpaceJournal locale={locale} timeline={timeline} writeHref={writeHref} />
     </>
   );
 }
 
-function SpaceJournalTools({
-  canWrite,
+function SpaceJournal({
   locale,
   timeline,
-  today,
-  enableServerPersistence,
-  requiresFirstPublicationDisclosure,
+  writeHref,
 }: {
-  canWrite: boolean;
   locale: InterfaceLocale;
   timeline: SpaceJournalTimeline;
-  today: string;
-  enableServerPersistence: boolean;
-  requiresFirstPublicationDisclosure: boolean;
+  writeHref: string;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
+  const collectionCopy = getGardenCollectionCopy(locale);
   return (
-    <section id="space-journal" className="scroll-mt-20">
+    <section
+      id="space-journal"
+      aria-labelledby="space-journal-heading"
+      data-garden-space-journal={timeline.space.id}
+      className="scroll-mt-20"
+    >
       <p className="text-overline text-text-muted uppercase">
         {copy.page.spaceJournal.eyebrow}
       </p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-h2 text-text-heading">
+        <div className="min-w-0">
+          <h2
+            id="space-journal-heading"
+            className="text-h2 break-words text-text-heading"
+          >
             {timeline.space.display_name}
           </h2>
           <p className="mt-1 text-body-sm text-text-muted">
             {copy.page.spaceJournal.description}
           </p>
         </div>
-        <span className="text-caption text-text-muted">
-          {formatGardenWorkspaceTemplate(copy.page.spaceJournal.showing, {
-            count: timeline.entries.length,
-          })}
-        </span>
+        <Link
+          href={writeHref}
+          data-garden-write={timeline.space.id}
+          aria-label={formatGardenCollectionTemplate(
+            collectionCopy.row.writeLabel,
+            { name: timeline.space.display_name },
+          )}
+          className={buttonVariants()}
+        >
+          <NotePencil aria-hidden="true" />
+          {collectionCopy.row.write}
+        </Link>
       </div>
 
-      {canWrite ? (
-        // The one entry composer, with this space named (OVE-486).
-        <EntryComposer
-          locale={locale}
-          initialDestination={{
-            kind: "space",
-            id: timeline.space.id,
-            displayName: timeline.space.display_name,
-          }}
-          initialSpaceObjects={timeline.objects.map((object) => ({
-            id: object.id,
-            displayName: object.displayName,
-          }))}
-          today={today}
-          enableServerPersistence={enableServerPersistence}
-          requiresFirstPublicationDisclosure={
-            requiresFirstPublicationDisclosure
-          }
-          closeHref={`/garden?space=${encodeURIComponent(timeline.space.id)}#space-journal`}
-        />
-      ) : null}
-
+      <p className="mt-4 text-caption text-text-muted">
+        {formatGardenWorkspaceTemplate(copy.page.spaceJournal.showing, {
+          count: timeline.entries.length,
+        })}
+      </p>
       {timeline.entries.length > 0 ? (
-        <ol className="divide-y divide-border border-b border-border">
+        <ol className="mt-2 divide-y divide-border border-y border-border">
           {timeline.entries.map((entry) => (
             <li
               key={entry.id}
@@ -642,7 +698,7 @@ function SpaceJournalTools({
           ))}
         </ol>
       ) : (
-        <p className="border-b border-dashed border-border py-5 text-body-sm text-text-muted">
+        <p className="mt-2 border-y border-dashed border-border py-5 text-body-sm text-text-muted">
           {copy.page.spaceJournal.empty}
         </p>
       )}
@@ -743,13 +799,6 @@ function normalizeGardenReturnToParam(value: string | string[] | undefined) {
 function firstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0]?.trim() ?? "";
   return typeof value === "string" ? value.trim() : "";
-}
-
-function positivePage(value: string | string[] | undefined) {
-  const parsed = Number.parseInt(firstParam(value), 10);
-  return Number.isFinite(parsed) && parsed > 0
-    ? Math.min(parsed, MAX_GARDEN_PAGE)
-    : 1;
 }
 
 function uuidParam(value: string | string[] | undefined) {

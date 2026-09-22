@@ -70,6 +70,18 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**My garden is a collection (OVE-489):** `/garden` leads with New entry, Add
+a plant or animal and New space, then one search over spaces and plants or
+animals listed as two groups — each its own settled read
+(`server/garden-collection-repository.ts`), so a failed group shows its retry
+beside the other. Rows state identity (kind · space · organism) and the date of
+the last entry, never "needs attention"; six things or fewer are one list,
+more get search, modes, the recent/name order and pages of 24, all in the URL.
+Write on a row opens `/garden/new` with the destination named and returns to
+the row. The first-entry composer shows only for a garden with no plant yet or
+an explicit create (`?source=`, `?catalog=`, a resumed sign-in). See
+`docs/redesign/2026-09-21/OVE-489-PROOF.md` and DESIGN.md §5.13.
+
 **Editing, leaving and deleting an entry (OVE-488):** the edit page names the
 entry's destination and keeps its address; Save returns to the entry's place in
 the timeline. Close, Cancel, Escape and Back ask Stay or Discard only when there

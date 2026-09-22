@@ -139,6 +139,7 @@
     "prove:organism-graph": "tsx scripts/prove-organism-graph.ts",
     "prove:owner-mvp-reset": "tsx scripts/prove-owner-mvp-reset.ts",
     "prove:workspace-resilience": "tsx scripts/prove-workspace-resilience.ts",
+    "prove:garden-collection-partial-failure": "tsx scripts/prove-garden-collection-partial-failure.ts",
     "prove:workspace-failure-classes": "tsx scripts/prove-workspace-failure-classes.ts",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",

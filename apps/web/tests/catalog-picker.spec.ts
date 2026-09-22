@@ -6,7 +6,6 @@ import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { Pool } from "pg";
 
-
 /**
  * The gardener picker end to end (OVE-387, ADR-0026 D5–D7), against a
  * production build and a real database:
@@ -350,7 +349,9 @@ function pickerListbox(page: Page) {
 }
 
 async function openComposer(page: Page) {
-  const response = await page.goto("/garden");
+  // An explicit create: once the gardener has an object, the home is the
+  // collection and the first-entry composer opens only when asked (OVE-489).
+  const response = await page.goto("/garden?source=direct-garden");
   expect(response?.status()).toBe(200);
   const composer = page.locator("#first-entry-composer");
   await expect(composer).toBeVisible({ timeout: 15_000 });

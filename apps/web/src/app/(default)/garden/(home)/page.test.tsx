@@ -2,18 +2,25 @@ import { renderServerHtml } from "@test/render-server-html";
 import { postgresRejection } from "@test/postgres-rejection";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { GardenWorkspaceReadModel } from "@/server/garden-workspace-repository";
+import type {
+  GardenObjectsGroup,
+  GardenSpacesGroup,
+} from "@/lib/garden/garden-collection";
+import type { GardenWorkspaceContext } from "@/server/garden-workspace-repository";
 
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   scopedToUser: vi.fn(),
-  loadGardenWorkspace: vi.fn(),
+  listGardenObjects: vi.fn(),
+  listGardenSpaces: vi.fn(),
+  loadGardenWorkspaceContext: vi.fn(),
   getMySpaceJournalTimeline: vi.fn(),
   hasPriorPublicationDisclosure: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
   scheduleGardenWorkspaceActivationAnalytics: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  railModules: vi.fn(),
 }));
 
 // The signed-out path asks whether the reader arrived with a session cookie
@@ -21,6 +28,18 @@ const mocks = vi.hoisted(() => ({
 // question reads the request's own `cookie` header.
 vi.mock("next/headers", () => ({
   headers: async () => ({ get: () => null }),
+}));
+
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
+
+vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
+  SiteShellContextRailRegistration: ({ modules }: { modules: unknown }) => {
+    mocks.railModules(modules);
+    return null;
+  },
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -32,8 +51,14 @@ vi.mock("@/server/request-scope", () => ({
   scopedToUser: mocks.scopedToUser,
 }));
 
+vi.mock("@/server/garden-collection-repository", () => ({
+  GARDEN_COLLECTION_GROUP_QUERY_COUNT: 3,
+  listGardenObjects: mocks.listGardenObjects,
+  listGardenSpaces: mocks.listGardenSpaces,
+}));
+
 vi.mock("@/server/garden-workspace-repository", () => ({
-  loadGardenWorkspace: mocks.loadGardenWorkspace,
+  loadGardenWorkspaceContext: mocks.loadGardenWorkspaceContext,
 }));
 
 vi.mock("@/server/garden-workspace-after-response", () => ({
@@ -97,15 +122,23 @@ vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
   ),
 }));
 
-describe("/garden workspace V2", () => {
+const USER_ID = "00000000-0000-4000-8000-000000000001";
+const SPACE_ID = "10000000-0000-4000-8000-000000000001";
+const OBJECT_ID = "20000000-0000-4000-8000-000000000001";
+
+async function renderGarden(params: Record<string, string> = {}) {
+  const { default: GardenPage } = await import("./page");
+  return renderServerHtml(
+    await GardenPage({ searchParams: Promise.resolve(params) }),
+  );
+}
+
+describe("/garden, the collection home (OVE-489)", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue({
-      user: {
-        id: "00000000-0000-4000-8000-000000000001",
-        email: "gardener@example.com",
-      },
+      user: { id: USER_ID, email: "gardener@example.com" },
     });
     mocks.getSessionId.mockReturnValue("session-1");
     mocks.scopedToUser.mockImplementation(
@@ -114,153 +147,258 @@ describe("/garden workspace V2", () => {
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.scheduleGardenWorkspaceActivationAnalytics.mockReturnValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.loadGardenWorkspace.mockResolvedValue(workspaceModel());
+    mocks.listGardenSpaces.mockResolvedValue(spacesGroup());
+    mocks.listGardenObjects.mockResolvedValue(objectsGroup());
+    mocks.loadGardenWorkspaceContext.mockResolvedValue(workspaceContext());
     mocks.getMySpaceJournalTimeline.mockResolvedValue(spaceTimeline());
     mocks.hasPriorPublicationDisclosure.mockResolvedValue(false);
   });
 
-  it("renders the shared-shell operational home and preserves write paths", async () => {
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
+  it("leads with the actions and lists spaces and plants as facts, with Write on each", async () => {
+    const html = await renderGarden();
 
-    expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(
-      {
-        userId: "00000000-0000-4000-8000-000000000001",
-        sessionId: "session-1",
-      },
-      {
-        faultSections: [],
-        inventoryExpanded: false,
-        inventoryPage: 1,
-        spacesExpanded: false,
-        spacesPage: 1,
-      },
+    expect(mocks.listGardenObjects).toHaveBeenCalledWith(
+      { userId: USER_ID, sessionId: "session-1" },
+      { q: "", sort: "recent", kind: "all", page: 1 },
     );
-    expect(html).toContain('data-garden-workspace="operational-home"');
-    expect(html).toContain("Оновіть Cherry tomato");
-    expect(html).toContain("Рослини");
-    expect(html).toContain("Тварини");
-    expect(html).toContain("Останні події");
-    expect(html).toContain("Flowering changed");
-    expect(html).toContain("Додати живий об");
-    expect(html).toContain("First entry composer");
-    expect(html).toContain('data-initial-space-id="space-1"');
-    expect(html).toContain('data-initial-space-name="Balcony"');
-    expect(html).toContain('data-requires-first-publication-disclosure="true"');
-    // Timeline work stays behind its own Suspense boundary: the composer is
-    // written into the shell ahead of it, so a slow timeline never delays the
-    // control a gardener came here to use.
-    expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
-      expect.anything(),
-      "space-1",
-      { objectLimit: 20, entryLimit: 5 },
+    expect(html).toContain('data-garden-workspace="collection"');
+    expect(html).toContain('data-garden-action="new-entry"');
+    expect(html).toContain('href="/garden/objects/new"');
+    expect(html).toContain('href="/garden/spaces/new"');
+    // Identity: kind, species and space beside the name.
+    expect(html).toContain("Cherry tomato");
+    expect(html).toContain("Рослина · Balcony · Solanum lycopersicum");
+    expect(html).toContain('<time dateTime="2026-07-04">');
+    expect(html).toContain("Ще без записів");
+    expect(html).toContain(
+      `href="/garden/new?object=${OBJECT_ID}&amp;returnTo=%2Fgarden%23garden-object-${OBJECT_ID}"`,
     );
-    expect(html.indexOf("First entry composer")).toBeLessThan(
-      html.indexOf("Інструменти журналу простору"),
-    );
-    expect(html).not.toContain("Sign-in methods");
-    expect(html).not.toContain("Social account link panel");
+    expect(html).toContain('aria-label="Записати: Cherry tomato"');
+    expect(html).toContain(`href="/garden?space=${SPACE_ID}#space-journal"`);
+    // Recency is stated, never diagnosed (OG-UX-023).
+    expect(html).not.toMatch(/Потребує уваги|Оновіть|needs attention/iu);
+    // A small garden is read whole: no search over three things.
+    expect(html).toContain('data-garden-collection-simple="true"');
+    expect(html).not.toContain('data-garden-search="true"');
+    // The returning gardener's home carries no editor.
+    expect(html).not.toContain("First entry composer");
+    expect(html).not.toContain('id="first-entry-composer"');
+    expect(
+      mocks.scheduleGardenWorkspaceActivationAnalytics,
+    ).not.toHaveBeenCalled();
     expect(html).not.toContain("gardener@example.com");
     expect(html).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine_key|latitude|longitude/i,
     );
   });
 
-  it("does not ask a previously disclosed owner for first-publication consent again", async () => {
-    mocks.hasPriorPublicationDisclosure.mockResolvedValueOnce(true);
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
+  it("registers the last entries and the inbox in the context rail", async () => {
+    await renderGarden();
 
+    const modules = mocks.railModules.mock.calls.at(-1)?.[0] as Array<{
+      key: string;
+      items: Array<{ href: string; label: string }>;
+    }>;
+    expect(modules.map((module) => module.key)).toEqual([
+      "garden-next",
+      "garden-recent",
+      "garden-inbox",
+    ]);
+    expect(modules[0]?.items[0]?.href).toBe("/garden/new");
+    expect(
+      (modules[2]?.items as Array<{ meta?: string }>).map((item) => item.meta),
+    ).toEqual(["2", "1"]);
+    expect(modules[1]?.items).toEqual([
+      expect.objectContaining({
+        href: `/garden/objects/${OBJECT_ID}`,
+        label: "Flowering changed",
+      }),
+      expect.objectContaining({
+        href: `/garden?space=${SPACE_ID}#space-journal`,
+        label: "Morning round",
+      }),
+    ]);
+  });
+
+  it("offers search, orders and modes once the garden is bigger than a glance", async () => {
+    mocks.listGardenObjects.mockResolvedValueOnce(
+      objectsGroup({ total: 40, owned: 40 }),
+    );
+    const html = await renderGarden();
+
+    expect(html).toContain('data-garden-search="true"');
+    expect(html).toContain('name="q"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain("Спершу нещодавні записи");
+    expect(html).toContain("Сторінка 1 з 2");
+    expect(html).toContain('href="/garden?page=2#garden-collection"');
+    expect(html).toContain("У саду — простори: 1, рослини й тварини: 40");
+  });
+
+  it("reads the query, order, mode and page from the address", async () => {
+    await renderGarden({
+      q: "  томат  ",
+      sort: "name",
+      kind: "object",
+      page: "3",
+    });
+
+    const request = { q: "томат", sort: "name", kind: "object", page: 3 };
+    expect(mocks.listGardenObjects).toHaveBeenCalledWith(
+      expect.anything(),
+      request,
+    );
+    expect(mocks.listGardenSpaces).toHaveBeenCalledWith(
+      expect.anything(),
+      request,
+    );
+  });
+
+  it("keeps the query in each Write's way back", async () => {
+    const html = await renderGarden({ q: "tomato", sort: "name" });
+
+    expect(html).toContain(
+      `returnTo=%2Fgarden%3Fq%3Dtomato%26sort%3Dname%23garden-object-${OBJECT_ID}`,
+    );
+    expect(html).toContain("Знайдено — простори: 1, рослини й тварини: 2");
+  });
+
+  it("says nothing was found, and offers to add it, when a search matches nothing", async () => {
+    mocks.listGardenSpaces.mockResolvedValueOnce(
+      spacesGroup({ items: [], total: 0 }),
+    );
+    mocks.listGardenObjects.mockResolvedValueOnce(
+      objectsGroup({ items: [], total: 0 }),
+    );
+    const html = await renderGarden({ q: "кактус" });
+
+    expect(html).toContain('data-garden-no-results="true"');
+    expect(html).toContain("Нічого не знайдено");
+    expect(html).toContain("Очистити пошук");
+    expect(html).not.toContain('data-garden-setup="true"');
+  });
+
+  it("treats an empty garden as setup, with the first-entry composer and no collection", async () => {
+    mocks.listGardenSpaces.mockResolvedValueOnce(
+      spacesGroup({ items: [], total: 0, owned: 0 }),
+    );
+    mocks.listGardenObjects.mockResolvedValueOnce(
+      objectsGroup({ items: [], total: 0, owned: 0 }),
+    );
+    const html = await renderGarden();
+
+    expect(html).toContain('data-garden-workspace="setup"');
+    expect(html).toContain('data-garden-setup="true"');
+    expect(html).toContain("Почніть свій сад");
+    expect(html).toContain("/illustrations/empty-garden.webp");
+    expect(html).toContain('href="#first-entry-composer"');
+    expect(html).toContain("First entry composer");
+    expect(html).toContain('data-requires-first-publication-disclosure="true"');
+    expect(html).not.toContain('data-garden-collection="true"');
+    expect(
+      mocks.scheduleGardenWorkspaceActivationAnalytics,
+    ).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers the first-entry composer beside the spaces of a garden with no plant yet", async () => {
+    mocks.listGardenObjects.mockResolvedValueOnce(
+      objectsGroup({ items: [], total: 0, owned: 0 }),
+    );
+    const html = await renderGarden();
+
+    expect(html).toContain('data-garden-collection="true"');
+    expect(html).toContain("Рослин і тварин ще немає.");
+    expect(html).toContain("First entry composer");
+    // The one space is the composer's starting place.
+    expect(html).toContain(`data-initial-space-id="${SPACE_ID}"`);
+    expect(html.indexOf('data-garden-collection="true"')).toBeLessThan(
+      html.indexOf("First entry composer"),
+    );
+  });
+
+  it("opens the first-entry composer above the collection for a reader who came to create", async () => {
+    mocks.hasPriorPublicationDisclosure.mockResolvedValueOnce(true);
+    const html = await renderGarden({ source: "direct-garden" });
+
+    expect(html).toContain("First entry composer");
     expect(html).toContain(
       'data-requires-first-publication-disclosure="false"',
     );
-    expect(html).not.toContain("Я розумію, що цей запис");
+    expect(html.indexOf("First entry composer")).toBeLessThan(
+      html.indexOf('data-garden-collection="true"'),
+    );
   });
 
-  it("parses bounded inventory and space view-all pages from URL state", async () => {
-    const { default: GardenPage } = await import("./page");
-    await renderServerHtml(
-      await GardenPage({
-        searchParams: Promise.resolve({
-          inventory: "all",
-          inventoryPage: "999999999999999999999999",
-          spaces: "all",
-          spacesPage: "3",
-        }),
-      }),
-    );
+  it("does not treat a wishlist return as a request to create", async () => {
+    const html = await renderGarden({ source: "wishlist" });
 
-    expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(expect.anything(), {
-      faultSections: [],
-      inventoryExpanded: true,
-      inventoryPage: 100,
-      spacesExpanded: true,
-      spacesPage: 3,
-    });
+    expect(html).not.toContain("First entry composer");
   });
 
-  it("falls back to the preview space when the requested space is malformed", async () => {
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({
-        searchParams: Promise.resolve({ space: "not-a-uuid" }),
-      }),
+  it("keeps the spaces when the plants cannot be read, and never calls the garden empty", async () => {
+    mocks.listGardenObjects.mockRejectedValueOnce(
+      postgresRejection(
+        "57014",
+        "canceling statement due to statement timeout",
+      ),
     );
+    const html = await renderGarden();
 
-    expect(html).toContain('data-initial-space-id="space-1"');
+    expect(html).toContain('id="garden-objects"');
+    expect(html).toContain('data-section-failure="query_timeout"');
+    expect(html).toContain("Не вдалося показати рослини й тварин");
+    expect(html).toContain('href="/garden#garden-objects"');
+    expect(html).toContain("Balcony");
+    expect(html).not.toContain('data-garden-setup="true"');
+    expect(html).not.toContain("First entry composer");
+    expect(html).not.toContain("Рослин і тварин ще немає.");
+  });
+
+  it("keeps the plants when the spaces cannot be read", async () => {
+    mocks.listGardenSpaces.mockRejectedValueOnce(
+      postgresRejection("ECONNREFUSED"),
+    );
+    const html = await renderGarden();
+
+    expect(html).toContain('id="garden-spaces"');
+    expect(html).toContain('data-section-failure="connection_unavailable"');
+    expect(html).toContain("Cherry tomato");
+    expect(html).not.toContain('data-garden-setup="true"');
+  });
+
+  it("opens a space's journal from its row, with Write naming the space", async () => {
+    const html = await renderGarden({ space: SPACE_ID });
+
     expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
       expect.anything(),
-      "space-1",
+      SPACE_ID,
       { objectLimit: 20, entryLimit: 5 },
     );
+    expect(html).toContain(`data-garden-space-journal="${SPACE_ID}"`);
+    expect(html).toContain("Shared morning round");
+    expect(html).toContain(
+      `href="/garden/new?space=${SPACE_ID}&amp;returnTo=%2Fgarden%3Fspace%3D${SPACE_ID}%23space-journal"`,
+    );
+    // Writing is the one composer's route, not an editor on this page.
+    expect(html).not.toContain('data-entry-composer="true"');
   });
 
-  it("keeps an empty signed-in user on the first-object path", async () => {
-    mocks.loadGardenWorkspace.mockResolvedValueOnce(emptyWorkspaceModel());
-    mocks.getMySpaceJournalTimeline.mockResolvedValueOnce(null);
+  it("ignores a malformed space instead of reading it", async () => {
+    await renderGarden({ space: "not-a-uuid" });
 
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
-
-    expect(html).toContain("Почніть з одного живого об");
-    expect(html).toContain("Почати перший об");
-    expect(html).toContain("Просторів ще немає");
-    expect(html).toContain("Датованих подій ще немає");
-    expect(html).toContain("First entry composer");
-    expect(html).not.toContain("Інструменти журналу простору");
-  });
-
-  it("lets a self-serve gardener write from an authenticated session", async () => {
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
-
-    expect(html).toContain("Cherry tomato");
-    expect(html).toContain("First entry composer");
-    expect(html).not.toContain("Наразі писати можна лише за запрошенням");
-    expect(html).not.toContain('data-testid="closed-pilot-write-callout"');
+    expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
   });
 
   it("shows a contextual reversible sign-in without querying private rows", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
-
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
+    const html = await renderGarden();
 
     expect(html).toContain("Ведіть історію свого саду");
     expect(html).toContain("Sign in prompt");
     expect(html).toContain("Продовжити читати журнали");
     expect(html).toContain('href="/journals"');
-    expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
+    expect(mocks.listGardenObjects).not.toHaveBeenCalled();
+    expect(mocks.listGardenSpaces).not.toHaveBeenCalled();
     expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
   });
 
@@ -270,87 +408,98 @@ describe("/garden workspace V2", () => {
     "/%252f%255cattacker.example/steal",
   ])("falls back from unsafe post-auth return path %s", async (returnTo) => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
-
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({
-        searchParams: Promise.resolve({
-          engagement: "comment-auth",
-          returnTo,
-        }),
-      }),
-    );
+    const html = await renderGarden({ engagement: "comment-auth", returnTo });
 
     expect(html).toContain('data-next="/garden"');
     expect(html).not.toContain("attacker");
   });
 
-  it("renders its own shell and a bounded failure when the read model rejects", async () => {
-    mocks.loadGardenWorkspace.mockRejectedValueOnce(
-      postgresRejection("42P01", 'relation "plant_objects" does not exist'),
+  it("renders its own shell and bounded failures when every read rejects", async () => {
+    const missing = postgresRejection(
+      "42P01",
+      'relation "plant_objects" does not exist',
     );
-
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
+    mocks.listGardenObjects.mockRejectedValueOnce(missing);
+    mocks.listGardenSpaces.mockRejectedValueOnce(missing);
+    mocks.loadGardenWorkspaceContext.mockRejectedValueOnce(missing);
+    const html = await renderGarden();
 
     expect(html).toContain('data-workspace-surface="garden-home"');
     expect(html).toContain("Простір саду");
     expect(html).toContain('data-section-failure="schema_missing"');
     expect(html).not.toContain('data-workspace-state="loading"');
-    expect(html).not.toContain('data-garden-workspace="loading"');
+    // The sections' fallback may stream ahead of them; what ADR-0023 forbids
+    // is one left standing, with no completion to replace it.
+    if (html.includes('data-garden-workspace="loading"')) {
+      expect(html).toMatch(/\$RC\(/u);
+    }
+    expect(html).not.toContain('data-garden-setup="true"');
   });
 
   it("says the session store is unreachable instead of asking for a sign-in", async () => {
     mocks.getCurrentSession.mockRejectedValueOnce(
       postgresRejection("ECONNREFUSED"),
     );
-
-    const { default: GardenPage } = await import("./page");
-    const html = await renderServerHtml(
-      await GardenPage({ searchParams: Promise.resolve({}) }),
-    );
+    const html = await renderGarden();
 
     expect(html).toContain('data-workspace-surface="garden-home"');
     expect(html).toContain('data-section-failure="connection_unavailable"');
     expect(html).not.toContain("Sign in prompt");
-    expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
+    expect(mocks.listGardenObjects).not.toHaveBeenCalled();
   });
 });
 
-function workspaceModel(): GardenWorkspaceReadModel {
+function spacesGroup(
+  overrides: Partial<GardenSpacesGroup> = {},
+): GardenSpacesGroup {
   return {
-    inventory: {
-      status: "ready",
-      value: {
-        totalCount: 3,
-        plantCount: 1,
-        animalCount: 1,
-        objects: [workspaceObject()],
-        hasMore: false,
-        page: 1,
-        pageSize: 8,
+    items: [
+      {
+        kind: "space",
+        id: SPACE_ID,
+        displayName: "Balcony",
+        objectCount: 2,
+        lastEntryDate: "2026-07-04",
       },
-    },
-    spaces: {
-      status: "ready",
-      value: {
-        totalCount: 1,
-        spaces: [
-          {
-            id: "space-1",
-            displayName: "Balcony",
-            objectCount: 3,
-            plantCount: 1,
-            animalCount: 1,
-          },
-        ],
-        hasMore: false,
-        page: 1,
-        pageSize: 4,
+    ],
+    total: 1,
+    owned: 1,
+    ...overrides,
+  };
+}
+
+function objectsGroup(
+  overrides: Partial<GardenObjectsGroup> = {},
+): GardenObjectsGroup {
+  return {
+    items: [
+      {
+        kind: "object",
+        id: OBJECT_ID,
+        displayName: "Cherry tomato",
+        objectKind: "plant",
+        species: "Solanum lycopersicum",
+        space: { id: SPACE_ID, displayName: "Balcony" },
+        lastEntryDate: "2026-07-04",
       },
-    },
+      {
+        kind: "object",
+        id: "20000000-0000-4000-8000-000000000002",
+        displayName: "Rex",
+        objectKind: "animal",
+        species: null,
+        space: { id: SPACE_ID, displayName: "Balcony" },
+        lastEntryDate: null,
+      },
+    ],
+    total: 2,
+    owned: 2,
+    ...overrides,
+  };
+}
+
+function workspaceContext(): GardenWorkspaceContext {
+  return {
     recent: {
       status: "ready",
       value: [
@@ -361,9 +510,21 @@ function workspaceModel(): GardenWorkspaceReadModel {
           entryDate: new Date("2026-07-04T00:00:00.000Z"),
           visibility: "public",
           lifecycleState: "active",
-          objectId: "object-1",
+          objectId: OBJECT_ID,
           objectDisplayName: "Cherry tomato",
-          spaceId: "space-1",
+          spaceId: SPACE_ID,
+          spaceDisplayName: "Balcony",
+        },
+        {
+          id: "entry-2",
+          title: "Morning round",
+          entryScope: "space",
+          entryDate: new Date("2026-07-03T00:00:00.000Z"),
+          visibility: "public",
+          lifecycleState: "active",
+          objectId: null,
+          objectDisplayName: null,
+          spaceId: SPACE_ID,
           spaceDisplayName: "Balcony",
         },
       ],
@@ -372,72 +533,20 @@ function workspaceModel(): GardenWorkspaceReadModel {
       status: "ready",
       value: { notificationCount: 2, claimCount: 1 },
     },
-    allFailed: false,
-  };
-}
-
-function emptyWorkspaceModel(): GardenWorkspaceReadModel {
-  return {
-    inventory: {
-      status: "ready",
-      value: {
-        totalCount: 0,
-        plantCount: 0,
-        animalCount: 0,
-        objects: [],
-        hasMore: false,
-        page: 1,
-        pageSize: 8,
-      },
-    },
-    spaces: {
-      status: "ready",
-      value: {
-        totalCount: 0,
-        spaces: [],
-        hasMore: false,
-        page: 1,
-        pageSize: 4,
-      },
-    },
-    recent: { status: "ready", value: [] },
-    inbox: {
-      status: "ready",
-      value: { notificationCount: 0, claimCount: 0 },
-    },
-    allFailed: false,
-  };
-}
-
-function workspaceObject() {
-  return {
-    id: "object-1",
-    displayName: "Cherry tomato",
-    objectKind: "plant" as const,
-    spaceDisplayName: "Balcony",
-    catalogItemId: null,
-    catalogKind: "plant_variety" as const,
-    varietyText: "Cherry tomato",
-    varietyState: "selected" as const,
-    createdAt: new Date("2026-06-01T00:00:00.000Z"),
-    entryCount: 3,
-    publicEntryCount: 3,
-    latestEntryDate: new Date("2020-06-01T00:00:00.000Z"),
-    coverMedia: null,
   };
 }
 
 function spaceTimeline() {
   return {
     space: {
-      id: "space-1",
+      id: SPACE_ID,
       display_name: "Balcony",
       location_visibility: "hidden",
       coarse_region_code: null,
     },
     objects: [
       {
-        id: "object-1",
+        id: OBJECT_ID,
         displayName: "Cherry tomato",
         objectKind: "plant",
         catalogKind: "plant_variety",

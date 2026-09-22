@@ -32,7 +32,7 @@ export function ObjectSetupShell({
       title={copy.title}
       navigation={
         <Link
-          href="/garden#inventory"
+          href="/garden#garden-objects"
           className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <ArrowLeft aria-hidden="true" />

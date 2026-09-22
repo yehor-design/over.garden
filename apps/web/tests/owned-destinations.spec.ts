@@ -251,7 +251,8 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
       await context.addCookies([
         { name: "overgarden_interface_locale", value: locale, url: baseURL! },
       ]);
-      await page.goto(`${baseURL}/garden`);
+      // A thousand objects: the first-entry composer is an explicit create.
+      await page.goto(`${baseURL}/garden?source=direct-garden`);
       const parent = page.locator(
         '#first-entry-composer [data-owned-destination-picker="space"]',
       );
@@ -378,19 +379,16 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
     expect(written.rows).toHaveLength(1);
     expect(written.rows[0].space_id).toBe(fixture.spaces[17].id);
     expect(written.rows[0].body).toContain(retainedText);
-    await page.goto(`${baseURL}/garden`);
-    // The all-destination caller reaches an object beyond the loaded dashboard.
-    const global = page.locator(
-      '#inventory [data-owned-destination-picker="all"]',
-    );
+    // The collection's search reaches an object far beyond its first page
+    // (OVE-489), and its Write names that object.
     const late = fixture.objects[998];
-    await global.getByRole("combobox").fill(late.name);
-    await expect(global.getByRole("option")).toHaveCount(1);
-    await global.getByRole("combobox").press("ArrowDown");
-    await global.getByRole("combobox").press("Enter");
-    await expect(page).toHaveURL(
-      new RegExp(`/garden/objects/${late.id}#follow-up-composer$`),
-    );
+    await page.goto(`${baseURL}/garden?q=${encodeURIComponent(late.name)}`);
+    await expect(
+      page.locator('[data-garden-collection-list="object"] > li'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator(`[data-garden-write="${late.id}"]`),
+    ).toHaveAttribute("href", new RegExp(`^/garden/new\\?object=${late.id}&`));
   } finally {
     if (userId) await cleanupCollection(pool, userId);
     await context.close();

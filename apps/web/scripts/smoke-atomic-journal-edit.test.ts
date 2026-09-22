@@ -38,9 +38,8 @@ describe("OVE-348 atomic journal edit smoke", () => {
     const workspaceRepository = read(
       "src/server/garden-workspace-repository.ts",
     );
-    const workspaceView = read(
-      "src/app/(default)/garden/garden-workspace-view.tsx",
-    );
+    // The garden home is the collection since OVE-489.
+    const workspaceView = read("src/components/garden/garden-collection.tsx");
     const shellNavigation = read("src/lib/site-shell-navigation.ts");
 
     expect(page).toContain("readAtomicJournalEditBaseline");
@@ -60,7 +59,9 @@ describe("OVE-348 atomic journal edit smoke", () => {
     // that address has answered 308 since OVE-428 and caches nothing, so the
     // loop is gone and only the canonical address (plus its tags) remains.
     expect(route).not.toContain("for (const locale of PUBLIC_LOCALES)");
-    expect(route).not.toContain("revalidatePath(localizedPath(locale, legacyPath))");
+    expect(route).not.toContain(
+      "revalidatePath(localizedPath(locale, legacyPath))",
+    );
     // One address: the author's handle and the entry's number (ADR-0029 D9).
     // Every older spelling — the flat one, the name under the author, their
     // locale-prefixed forms — is a 308 the proxy answers itself, so there is
