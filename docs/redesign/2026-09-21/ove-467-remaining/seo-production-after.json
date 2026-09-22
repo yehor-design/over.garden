@@ -1,0 +1,764 @@
+{
+  "origin": "https://over.garden",
+  "fetchedAt": "2026-09-22T20:35:33.865Z",
+  "results": [
+    {
+      "path": "/knowledge",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Знання | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/knowledge\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/knowledge\"/>",
+        "<meta name=\"description\" content=\"Авторські гайди, короткі відповіді та перевірені теми, пов&#x27;язані з реальними публічними журналами живих об&#x27;єктів.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторські гайди, короткі відповіді та перевірені теми, пов&#x27;язані з реальними публічними журналами живих об&#x27;єктів.\"/>",
+        "<meta name=\"twitter:title\" content=\"Знання | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторські гайди, короткі відповіді та перевірені теми, пов&#x27;язані з реальними публічними журналами живих об&#x27;єктів.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Знання | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/knowledge\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/knowledge\",\"url\":\"https://over.garden/knowledge\",\"name\":\"Знання\",\"description\":\"Знайдіть орієнтир, а потім перевірте його на датованому досвіді реальних живих об'єктів.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/knowledge#collection\",\"name\":\"Знання\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Як почати живий запис рослини\"},{\"@type\":\"Thing\",\"name\":\"Чому жовтіє листя томатів?\"}],\"about\":\"OverGarden editorial knowledge\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/knowledge",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "HIT",
+      "title": "Знания | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/knowledge\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/knowledge\"/>",
+        "<meta name=\"description\" content=\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\"/>",
+        "<meta name=\"twitter:title\" content=\"Знания | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Знания | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/knowledge\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/knowledge\",\"url\":\"https://over.garden/bg/knowledge\",\"name\":\"Знания\",\"description\":\"Намерете ориентир и след това го проверете чрез датиран опит с реални живи обекти.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/knowledge#collection\",\"name\":\"Знания\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Как да започнете жив запис на растение\"},{\"@type\":\"Thing\",\"name\":\"Защо листата на доматите пожълтяват?\"}],\"about\":\"OverGarden editorial knowledge\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/knowledge",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Знания | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/knowledge\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/knowledge\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/knowledge\"/>",
+        "<meta name=\"description\" content=\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\"/>",
+        "<meta name=\"twitter:title\" content=\"Знания | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Знания | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/knowledge\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/knowledge\",\"url\":\"https://over.garden/ru/knowledge\",\"name\":\"Знания\",\"description\":\"Найдите ориентир, а затем проверьте его на датированном опыте реальных живых объектов.\",\"inLanguage\":\"ru\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/ru/knowledge#collection\",\"name\":\"Знания\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Как начать живую запись растения\"},{\"@type\":\"Thing\",\"name\":\"Почему желтеют листья томатов?\"}],\"about\":\"OverGarden editorial knowledge\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/topics/plants",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "HIT",
+      "title": "Рослини | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/topics/plants\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/topics/plants\"/>",
+        "<meta name=\"description\" content=\"Авторські гайди, короткі відповіді та перевірені теми, пов&#x27;язані з реальними публічними журналами живих об&#x27;єктів.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторські гайди, короткі відповіді та перевірені теми, пов&#x27;язані з реальними публічними журналами живих об&#x27;єктів.\"/>",
+        "<meta name=\"twitter:title\" content=\"Рослини | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторські гайди, короткі відповіді та перевірені теми, пов&#x27;язані з реальними публічними журналами живих об&#x27;єктів.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Рослини | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/topics/plants\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/topics/plants\",\"url\":\"https://over.garden/topics/plants\",\"name\":\"Рослини\",\"description\":\"Авторські гайди, короткі відповіді та перевірені теми, пов'язані з реальними публічними журналами живих об'єктів.\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/topics/plants#collection\",\"name\":\"Рослини\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Томат - Sep 1\"},{\"@type\":\"Thing\",\"name\":\"Избрана корица, която не зависи от реда\"},{\"@type\":\"Thing\",\"name\":\"Наблюдение, действие и следваща проверка\"},{\"@type\":\"Thing\",\"name\":\"Поливане според почвата, не според календара\"},{\"@type\":\"Thing\",\"name\":\"Полезна бележка за домат без снимка\"},{\"@type\":\"Thing\",\"name\":\"Обкладинка як сталий орієнтир сезону\"},{\"@type\":\"Thing\",\"name\":\"Три сигнали перед зав’язуванням плодів\"},{\"@type\":\"Thing\",\"name\":\"Полив без календарної пастки\"},{\"@type\":\"Thing\",\"name\":\"Як читати стан томата без фото\"}],\"about\":\"Curated topic with public gardener evidence\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/topics/plants",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "MISS",
+      "title": "Растения | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/topics/plants\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/topics/plants\"/>",
+        "<meta name=\"description\" content=\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\"/>",
+        "<meta name=\"twitter:title\" content=\"Растения | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Растения | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/topics/plants\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/topics/plants\",\"url\":\"https://over.garden/bg/topics/plants\",\"name\":\"Растения\",\"description\":\"Авторски ръководства, кратки отговори и проверени теми, свързани с реални публични дневници за живи обекти.\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/topics/plants#collection\",\"name\":\"Растения\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Томат - Sep 1\"},{\"@type\":\"Thing\",\"name\":\"Избрана корица, която не зависи от реда\"},{\"@type\":\"Thing\",\"name\":\"Наблюдение, действие и следваща проверка\"},{\"@type\":\"Thing\",\"name\":\"Поливане според почвата, не според календара\"},{\"@type\":\"Thing\",\"name\":\"Полезна бележка за домат без снимка\"},{\"@type\":\"Thing\",\"name\":\"Обкладинка як сталий орієнтир сезону\"},{\"@type\":\"Thing\",\"name\":\"Три сигнали перед зав’язуванням плодів\"},{\"@type\":\"Thing\",\"name\":\"Полив без календарної пастки\"},{\"@type\":\"Thing\",\"name\":\"Як читати стан томата без фото\"}],\"about\":\"Curated topic with public gardener evidence\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/topics/plants",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "MISS",
+      "title": "Растения | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/topics/plants\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/topics/plants\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/topics/plants\"/>",
+        "<meta name=\"description\" content=\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\"/>",
+        "<meta name=\"twitter:title\" content=\"Растения | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Растения | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/topics/plants\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/topics/plants\",\"url\":\"https://over.garden/ru/topics/plants\",\"name\":\"Растения\",\"description\":\"Авторские руководства, краткие ответы и проверенные темы, связанные с реальными публичными журналами живых объектов.\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/ru/topics/plants#collection\",\"name\":\"Растения\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Томат - Sep 1\"},{\"@type\":\"Thing\",\"name\":\"Избрана корица, която не зависи от реда\"},{\"@type\":\"Thing\",\"name\":\"Наблюдение, действие и следваща проверка\"},{\"@type\":\"Thing\",\"name\":\"Поливане според почвата, не според календара\"},{\"@type\":\"Thing\",\"name\":\"Полезна бележка за домат без снимка\"},{\"@type\":\"Thing\",\"name\":\"Обкладинка як сталий орієнтир сезону\"},{\"@type\":\"Thing\",\"name\":\"Три сигнали перед зав’язуванням плодів\"},{\"@type\":\"Thing\",\"name\":\"Полив без календарної пастки\"},{\"@type\":\"Thing\",\"name\":\"Як читати стан томата без фото\"}],\"about\":\"Curated topic with public gardener evidence\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/blog",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Нотатки OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/blog\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/blog\"/>",
+        "<meta name=\"description\" content=\"Авторські нотатки OverGarden про живі записи рослин, публічний доказ і безпечне пошукове відкриття.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторські нотатки OverGarden про живі записи рослин, публічний доказ і безпечне пошукове відкриття.\"/>",
+        "<meta name=\"twitter:title\" content=\"Нотатки OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторські нотатки OverGarden про живі записи рослин, публічний доказ і безпечне пошукове відкриття.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Нотатки OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/blog\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/blog\",\"url\":\"https://over.garden/blog\",\"name\":\"Корисні публічні сторінки перед тонкими публічними сторінками.\",\"description\":\"Опубліковані журнали відкриті для всіх і доступні пошуковим системам. Порожні каталожні сторінки не замінюють реального досвіду садівників.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/blog#collection\",\"name\":\"Корисні публічні сторінки перед тонкими публічними сторінками.\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Порада AI - це не те саме, що датований садовий доказ\"}],\"about\":\"OverGarden editorial\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/blog",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Бележки на OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/blog\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/blog\"/>",
+        "<meta name=\"description\" content=\"Авторски бележки на OverGarden за живи записи на растения, публично доказателство и безопасно откриване през търсене.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторски бележки на OverGarden за живи записи на растения, публично доказателство и безопасно откриване през търсене.\"/>",
+        "<meta name=\"twitter:title\" content=\"Бележки на OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторски бележки на OverGarden за живи записи на растения, публично доказателство и безопасно откриване през търсене.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Бележки на OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/blog\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/blog\",\"url\":\"https://over.garden/bg/blog\",\"name\":\"Полезни публични страници преди тънки публични страници.\",\"description\":\"Публикуваните дневници са достъпни за всички и за търсачките. Празните каталожни страници не заменят реалния опит на градинарите.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/blog#collection\",\"name\":\"Полезни публични страници преди тънки публични страници.\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"AI съветът не е същото като датирано градинско доказателство\"}],\"about\":\"OverGarden editorial\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/blog",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Заметки OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/blog\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/blog\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/blog\"/>",
+        "<meta name=\"description\" content=\"Авторские заметки OverGarden о живых записях растений, публичном доказательстве и безопасном поисковом обнаружении.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Авторские заметки OverGarden о живых записях растений, публичном доказательстве и безопасном поисковом обнаружении.\"/>",
+        "<meta name=\"twitter:title\" content=\"Заметки OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Авторские заметки OverGarden о живых записях растений, публичном доказательстве и безопасном поисковом обнаружении.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Заметки OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/blog\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/blog\",\"url\":\"https://over.garden/ru/blog\",\"name\":\"Сначала полезные публичные страницы, потом тонкие публичные страницы.\",\"description\":\"Опубликованные журналы открыты для всех и доступны поисковым системам. Пустые страницы каталога не заменяют реальный опыт садоводов.\",\"inLanguage\":\"ru\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/ru/blog#collection\",\"name\":\"Сначала полезные публичные страницы, потом тонкие публичные страницы.\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Совет AI - не то же самое, что датированное садовое доказательство\"}],\"about\":\"OverGarden editorial\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/blog/ai-garden-advice-vs-real-garden-proof",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Порада AI - це не те саме, що датований садовий доказ | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<meta name=\"description\" content=\"Чому OverGarden починає з живих записів рослин перед публічними рекомендаціями.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Чому OverGarden починає з живих записів рослин перед публічними рекомендаціями.\"/>",
+        "<meta name=\"twitter:title\" content=\"Порада AI - це не те саме, що датований садовий доказ | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Чому OverGarden починає з живих записів рослин перед публічними рекомендаціями.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Порада AI - це не те саме, що датований садовий доказ | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\",\"url\":\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\",\"name\":\"Порада AI - це не те саме, що датований садовий доказ\",\"description\":\"Чому OverGarden починає з живих записів рослин перед публічними рекомендаціями.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof#article\",\"headline\":\"Порада AI - це не те саме, що датований садовий доказ\",\"url\":\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"},\"description\":\"Чому OverGarden починає з живих записів рослин перед публічними рекомендаціями.\",\"datePublished\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"OverGarden editorial\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/blog/ai-garden-advice-vs-real-garden-proof",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "AI съветът не е същото като датирано градинско доказателство | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<meta name=\"description\" content=\"Защо OverGarden започва с живи записи на растения преди публични препоръки.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Защо OverGarden започва с живи записи на растения преди публични препоръки.\"/>",
+        "<meta name=\"twitter:title\" content=\"AI съветът не е същото като датирано градинско доказателство | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Защо OverGarden започва с живи записи на растения преди публични препоръки.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"AI съветът не е същото като датирано градинско доказателство | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\",\"url\":\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\",\"name\":\"AI съветът не е същото като датирано градинско доказателство\",\"description\":\"Защо OverGarden започва с живи записи на растения преди публични препоръки.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof#article\",\"headline\":\"AI съветът не е същото като датирано градинско доказателство\",\"url\":\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\"},\"description\":\"Защо OverGarden започва с живи записи на растения преди публични препоръки.\",\"datePublished\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"OverGarden editorial\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/blog/ai-garden-advice-vs-real-garden-proof",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Совет AI - не то же самое, что датированное садовое доказательство | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\"/>",
+        "<meta name=\"description\" content=\"Почему OverGarden начинает с живых записей растений до публичных рекомендаций.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Почему OverGarden начинает с живых записей растений до публичных рекомендаций.\"/>",
+        "<meta name=\"twitter:title\" content=\"Совет AI - не то же самое, что датированное садовое доказательство | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Почему OverGarden начинает с живых записей растений до публичных рекомендаций.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Совет AI - не то же самое, что датированное садовое доказательство | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\",\"url\":\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\",\"name\":\"Совет AI - не то же самое, что датированное садовое доказательство\",\"description\":\"Почему OverGarden начинает с живых записей растений до публичных рекомендаций.\",\"inLanguage\":\"ru\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof#article\",\"headline\":\"Совет AI - не то же самое, что датированное садовое доказательство\",\"url\":\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof\"},\"description\":\"Почему OverGarden начинает с живых записей растений до публичных рекомендаций.\",\"datePublished\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"OverGarden editorial\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/guides/start-a-living-plant-record",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Як почати живий запис рослини | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<meta name=\"description\" content=\"Практичний перший процес в OverGarden: одна рослина, одна датована нотатка і одне повернення.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Практичний перший процес в OverGarden: одна рослина, одна датована нотатка і одне повернення.\"/>",
+        "<meta name=\"twitter:title\" content=\"Як почати живий запис рослини | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Практичний перший процес в OverGarden: одна рослина, одна датована нотатка і одне повернення.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Як почати живий запис рослини | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/guides/start-a-living-plant-record\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/guides/start-a-living-plant-record\",\"url\":\"https://over.garden/guides/start-a-living-plant-record\",\"name\":\"Як почати живий запис рослини\",\"description\":\"Практичний перший процес в OverGarden: одна рослина, одна датована нотатка і одне повернення.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/guides/start-a-living-plant-record#article\",\"headline\":\"Як почати живий запис рослини\",\"url\":\"https://over.garden/guides/start-a-living-plant-record\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/guides/start-a-living-plant-record\"},\"description\":\"Практичний перший процес в OverGarden: одна рослина, одна датована нотатка і одне повернення.\",\"dateModified\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"Редакція OverGarden; Продуктові й приватнісні принципи OverGarden\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/guides/start-a-living-plant-record",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Как да започнете жив запис на растение | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/guides/start-a-living-plant-record\"/>",
+        "<meta name=\"description\" content=\"Практичен първи процес в OverGarden: едно растение, една датирана бележка и едно връщане.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Практичен първи процес в OverGarden: едно растение, една датирана бележка и едно връщане.\"/>",
+        "<meta name=\"twitter:title\" content=\"Как да започнете жив запис на растение | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Практичен първи процес в OverGarden: едно растение, една датирана бележка и едно връщане.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Как да започнете жив запис на растение | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/guides/start-a-living-plant-record\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/guides/start-a-living-plant-record\",\"url\":\"https://over.garden/bg/guides/start-a-living-plant-record\",\"name\":\"Как да започнете жив запис на растение\",\"description\":\"Практичен първи процес в OverGarden: едно растение, една датирана бележка и едно връщане.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/bg/guides/start-a-living-plant-record#article\",\"headline\":\"Как да започнете жив запис на растение\",\"url\":\"https://over.garden/bg/guides/start-a-living-plant-record\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/bg/guides/start-a-living-plant-record\"},\"description\":\"Практичен първи процес в OverGarden: едно растение, една датирана бележка и едно връщане.\",\"dateModified\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"Редакция OverGarden; Продуктови принципи и принципи за поверителност на OverGarden\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/guides/start-a-living-plant-record",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Как начать живую запись растения | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/guides/start-a-living-plant-record\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/guides/start-a-living-plant-record\"/>",
+        "<meta name=\"description\" content=\"Практичный первый процесс в OverGarden: одно растение, одна датированная заметка и одно возвращение.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Практичный первый процесс в OverGarden: одно растение, одна датированная заметка и одно возвращение.\"/>",
+        "<meta name=\"twitter:title\" content=\"Как начать живую запись растения | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Практичный первый процесс в OverGarden: одно растение, одна датированная заметка и одно возвращение.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Как начать живую запись растения | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/guides/start-a-living-plant-record\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/guides/start-a-living-plant-record\",\"url\":\"https://over.garden/ru/guides/start-a-living-plant-record\",\"name\":\"Как начать живую запись растения\",\"description\":\"Практичный первый процесс в OverGarden: одно растение, одна датированная заметка и одно возвращение.\",\"inLanguage\":\"ru\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/ru/guides/start-a-living-plant-record#article\",\"headline\":\"Как начать живую запись растения\",\"url\":\"https://over.garden/ru/guides/start-a-living-plant-record\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/ru/guides/start-a-living-plant-record\"},\"description\":\"Практичный первый процесс в OverGarden: одно растение, одна датированная заметка и одно возвращение.\",\"dateModified\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"Редакция OverGarden; Продуктовые принципы и принципы конфиденциальности OverGarden\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/answers/why-are-tomato-leaves-yellow",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Чому жовтіє листя томатів? | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<meta name=\"description\" content=\"Коротка діагностична відповідь і план перевірюваних спостережень для жовтіння листя томатів.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Коротка діагностична відповідь і план перевірюваних спостережень для жовтіння листя томатів.\"/>",
+        "<meta name=\"twitter:title\" content=\"Чому жовтіє листя томатів? | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Коротка діагностична відповідь і план перевірюваних спостережень для жовтіння листя томатів.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Чому жовтіє листя томатів? | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/answers/why-are-tomato-leaves-yellow\",\"url\":\"https://over.garden/answers/why-are-tomato-leaves-yellow\",\"name\":\"Чому жовтіє листя томатів?\",\"description\":\"Коротка діагностична відповідь і план перевірюваних спостережень для жовтіння листя томатів.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"FAQPage\",\"@id\":\"https://over.garden/answers/why-are-tomato-leaves-yellow#faq\",\"mainEntity\":[{\"@type\":\"Question\",\"name\":\"Чи варто одразу публікувати фото проблеми?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Фото необов’язкове. Браузер готує його перед завантаженням; OverGarden не зберігає оригінал. Перевірте, чи в кадрі немає адрес, облич або інших даних, які не хочете публікувати. Виберіть свій об’єкт, опишіть спостереження та натисніть «Опублікувати». Запис одразу стане публічним. До успішної публікації текст залишається лише в цій вкладці; збережених чернеток немає.\"}},{\"@type\":\"Question\",\"name\":\"Яка деталь найважливіша при жовтінні листя?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Найважливіша динаміка: де жовтіння почалося, що змінилося перед цим і чи рослина покращилась після наступної дії.\"}},{\"@type\":\"Question\",\"name\":\"Чи OverGarden сам діагностує рослину?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Поточна версія OverGarden не обіцяє автоматичну діагностику. Вона створює чистий запис, щоб садівник міг порівнювати ту саму рослину в часі і згодом додати корисний публічний доказ.\"}}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/answers/why-are-tomato-leaves-yellow",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Защо листата на доматите пожълтяват? | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\"/>",
+        "<meta name=\"description\" content=\"Кратък диагностичен отговор и план за проверими наблюдения при пожълтяване на доматени листа.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Кратък диагностичен отговор и план за проверими наблюдения при пожълтяване на доматени листа.\"/>",
+        "<meta name=\"twitter:title\" content=\"Защо листата на доматите пожълтяват? | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Кратък диагностичен отговор и план за проверими наблюдения при пожълтяване на доматени листа.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Защо листата на доматите пожълтяват? | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\",\"url\":\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\",\"name\":\"Защо листата на доматите пожълтяват?\",\"description\":\"Кратък диагностичен отговор и план за проверими наблюдения при пожълтяване на доматени листа.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"FAQPage\",\"@id\":\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow#faq\",\"mainEntity\":[{\"@type\":\"Question\",\"name\":\"Трябва ли веднага да публикувам снимка на проблема?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Снимката не е задължителна. Браузърът я подготвя преди качване; OverGarden не запазва оригинала. Проверете дали в кадъра няма адреси, лица или други данни, които не искате да публикувате. Изберете своя обект, опишете наблюдението и натиснете „Публикуване“. Записът веднага става публичен. До успешно публикуване текстът остава само в този раздел; няма запазени чернови.\"}},{\"@type\":\"Question\",\"name\":\"Кой детайл е най-важен при пожълтяване?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Най-важен е моделът във времето: откъде започва, какво се е променило преди това и дали растението се подобрява след следващото действие.\"}},{\"@type\":\"Question\",\"name\":\"OverGarden сам ли диагностицира растението?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Текущата версия на OverGarden не обещава автоматична диагностика. Тя създава чист запис, за да може градинарят да сравнява същото растение през дните и по-късно да допринесе с публично доказателство.\"}}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/answers/why-are-tomato-leaves-yellow",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Почему желтеют листья томатов? | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/answers/why-are-tomato-leaves-yellow\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\"/>",
+        "<meta name=\"description\" content=\"Краткий диагностический ответ и план проверяемых наблюдений при пожелтении листьев томатов.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Краткий диагностический ответ и план проверяемых наблюдений при пожелтении листьев томатов.\"/>",
+        "<meta name=\"twitter:title\" content=\"Почему желтеют листья томатов? | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Краткий диагностический ответ и план проверяемых наблюдений при пожелтении листьев томатов.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Почему желтеют листья томатов? | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\",\"url\":\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow\",\"name\":\"Почему желтеют листья томатов?\",\"description\":\"Краткий диагностический ответ и план проверяемых наблюдений при пожелтении листьев томатов.\",\"inLanguage\":\"ru\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"FAQPage\",\"@id\":\"https://over.garden/ru/answers/why-are-tomato-leaves-yellow#faq\",\"mainEntity\":[{\"@type\":\"Question\",\"name\":\"Стоит ли сразу публиковать фото проблемы?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Фото необязательно. Браузер подготавливает его перед загрузкой; OverGarden не хранит оригинал. Проверьте, нет ли в кадре адресов, лиц или других данных, которые вы не хотите публиковать. Выберите свой объект, опишите наблюдение и нажмите «Опубликовать». Запись сразу станет публичной. До успешной публикации текст остаётся только в этой вкладке; сохранённых черновиков нет.\"}},{\"@type\":\"Question\",\"name\":\"Какая деталь важнее всего при пожелтении листьев?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Важнее всего динамика: где пожелтение началось, что изменилось до этого и улучшилось ли растение после следующего действия.\"}},{\"@type\":\"Question\",\"name\":\"OverGarden сам диагностирует растение?\",\"acceptedAnswer\":{\"@type\":\"Answer\",\"text\":\"Текущая версия OverGarden не обещает автоматическую диагностику. Она создает чистую запись, чтобы садовод мог сравнить одно и то же растение по дням и позже внести полезное публичное доказательство.\"}}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/markets/ukraine",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "OverGarden для садівників в Україні | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"canonical\" href=\"https://over.garden/markets/ukraine\"/>",
+        "<meta name=\"description\" content=\"Публічний журнал для садівників: датовані спостереження, фотографії та історії власних рослин.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Публічний журнал для садівників: датовані спостереження, фотографії та історії власних рослин.\"/>",
+        "<meta name=\"twitter:title\" content=\"OverGarden для садівників в Україні | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Публічний журнал для садівників: датовані спостереження, фотографії та історії власних рослин.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"OverGarden для садівників в Україні | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/markets/ukraine\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/markets/ukraine\",\"url\":\"https://over.garden/markets/ukraine\",\"name\":\"OverGarden для садівників в Україні\",\"description\":\"Публічний журнал для садівників: датовані спостереження, фотографії та історії власних рослин.\",\"inLanguage\":\"uk\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/markets/ukraine#article\",\"headline\":\"OverGarden для садівників в Україні\",\"url\":\"https://over.garden/markets/ukraine\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/markets/ukraine\"},\"description\":\"Публічний журнал для садівників: датовані спостереження, фотографії та історії власних рослин.\",\"dateModified\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"OverGarden market guidance\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/bg/markets/bulgaria",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "OverGarden за градинари в България | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/markets/bulgaria\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/markets/bulgaria\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/bg/markets/bulgaria\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/bg/markets/bulgaria\"/>",
+        "<meta name=\"description\" content=\"Публичен дневник за градинари: датирани наблюдения, снимки и истории на собствените растения.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Публичен дневник за градинари: датирани наблюдения, снимки и истории на собствените растения.\"/>",
+        "<meta name=\"twitter:title\" content=\"OverGarden за градинари в България | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Публичен дневник за градинари: датирани наблюдения, снимки и истории на собствените растения.\"/>",
+        "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"OverGarden за градинари в България | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/bg/markets/bulgaria\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/markets/bulgaria\",\"url\":\"https://over.garden/bg/markets/bulgaria\",\"name\":\"OverGarden за градинари в България\",\"description\":\"Публичен дневник за градинари: датирани наблюдения, снимки и истории на собствените растения.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/bg/markets/bulgaria#article\",\"headline\":\"OverGarden за градинари в България\",\"url\":\"https://over.garden/bg/markets/bulgaria\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/bg/markets/bulgaria\"},\"description\":\"Публичен дневник за градинари: датирани наблюдения, снимки и истории на собствените растения.\",\"dateModified\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"OverGarden market guidance\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/ru/markets/bulgaria",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "OverGarden для садоводов в Болгарии | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/markets/bulgaria\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/markets/bulgaria\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/bg/markets/bulgaria\"/>",
+        "<link rel=\"canonical\" href=\"https://over.garden/ru/markets/bulgaria\"/>",
+        "<meta name=\"description\" content=\"Публичный журнал для садоводов: датированные наблюдения, фотографии и истории своих растений.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Публичный журнал для садоводов: датированные наблюдения, фотографии и истории своих растений.\"/>",
+        "<meta name=\"twitter:title\" content=\"OverGarden для садоводов в Болгарии | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Публичный журнал для садоводов: датированные наблюдения, фотографии и истории своих растений.\"/>",
+        "<meta property=\"og:locale\" content=\"ru_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"OverGarden для садоводов в Болгарии | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"article\"/>",
+        "<meta property=\"og:url\" content=\"https://over.garden/ru/markets/bulgaria\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/ru/markets/bulgaria\",\"url\":\"https://over.garden/ru/markets/bulgaria\",\"name\":\"OverGarden для садоводов в Болгарии\",\"description\":\"Публичный журнал для садоводов: датированные наблюдения, фотографии и истории своих растений.\",\"inLanguage\":\"ru\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"Article\",\"@id\":\"https://over.garden/ru/markets/bulgaria#article\",\"headline\":\"OverGarden для садоводов в Болгарии\",\"url\":\"https://over.garden/ru/markets/bulgaria\",\"mainEntityOfPage\":{\"@id\":\"https://over.garden/ru/markets/bulgaria\"},\"description\":\"Публичный журнал для садоводов: датированные наблюдения, фотографии и истории своих растений.\",\"dateModified\":\"2026-07-03T00:00:00.000Z\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"},\"about\":\"OverGarden market guidance\"},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+      ]
+    },
+    {
+      "path": "/privacy",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Повідомлення про приватність для MVP | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Затверджене засновником повідомлення OverGarden для MVP про приватність, публікацію, підтримку та зберігання даних.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/bg/privacy",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Уведомление за поверителност за MVP | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Одобрено от основателя уведомление на OverGarden за MVP относно поверителност, публикуване, поддръжка и съхранение на данни.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/ru/privacy",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Уведомление о конфиденциальности для MVP | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Утверждённое основателем уведомление OverGarden для MVP о конфиденциальности, публикации, поддержке и хранении данных.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/support",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Підтримка й питання приватності | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Контакти підтримки OverGarden для питань щодо облікового запису, видалення даних, публікації та приватності в MVP.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/bg/support",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Поддръжка и въпроси за поверителност | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Контакти за поддръжка на OverGarden при въпроси за профил, изтриване, публикуване и поверителност в MVP.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/ru/support",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Поддержка и вопросы конфиденциальности | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Контакты поддержки OverGarden для вопросов об аккаунте, удалении данных, публикации и конфиденциальности в MVP.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/first-publication-disclosure",
+      "locale": "uk",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Повідомлення перед першою публікацією в MVP | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Затверджене засновником повідомлення OverGarden для MVP, яке показується перед першою публікацією запису журналу.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/bg/first-publication-disclosure",
+      "locale": "bg",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Уведомление преди първото публикуване в MVP | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Одобрено от основателя уведомление на OverGarden за MVP, показвано преди първото публично публикуване в дневника.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    },
+    {
+      "path": "/ru/first-publication-disclosure",
+      "locale": "ru",
+      "status": 200,
+      "xVercelCache": "PRERENDER",
+      "title": "Уведомление перед первой публикацией в MVP | OverGarden",
+      "titleInHead": true,
+      "seoTags": [
+        "<meta name=\"description\" content=\"Утверждённое основателем уведомление OverGarden для MVP, которое показывается перед первой публичной публикацией записи журнала.\"/>",
+        "<meta name=\"robots\" content=\"noindex, nofollow\"/>"
+      ],
+      "jsonLd": []
+    }
+  ]
+}

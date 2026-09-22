@@ -72,7 +72,7 @@ import {
 } from "./actions";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { CatalogResolveControl } from "./catalog-resolve-control";
-import { FollowUpEntryComposer } from "./follow-up-entry-composer";
+import { EntryComposer } from "@/components/garden/entry-composer";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
 import { ObjectProgressMoment } from "./object-progress-moment";
@@ -145,7 +145,6 @@ export default async function PlantObjectReadbackPage({
           objectId={objectId}
           query={query}
           scope={viewer.scope}
-          userId={viewer.userId}
         />
       </Suspense>
     </ObjectShell>
@@ -163,13 +162,11 @@ async function PlantObjectSections({
   objectId,
   query,
   scope,
-  userId,
 }: {
   locale: InterfaceLocale;
   objectId: string;
   query: Awaited<PlantObjectPageProps["searchParams"]>;
   scope: RequestScope;
-  userId: string;
 }) {
   const copy = getInterfaceCopy(locale);
   const workspaceCopy = getGardenWorkspaceCopy(locale);
@@ -353,17 +350,22 @@ async function PlantObjectSections({
           </p>
         </div>
 
-        <FollowUpEntryComposer
-          ownerUserId={userId}
+        {/* The one entry composer, with this object named (OVE-486). */}
+        <EntryComposer
           locale={locale}
-          objectId={objectId}
-          objectDisplayName={page.plantObject.display_name}
-          objectKind={page.plantObject.object_kind}
+          initialDestination={{
+            kind: "object",
+            id: objectId,
+            displayName: page.plantObject.display_name,
+            objectKind: page.plantObject.object_kind,
+            parent: { id: page.space.id, displayName: page.space.display_name },
+            species: page.plantObject.catalog_canonical_name ?? null,
+          }}
           today={today}
-          initialClientMutationId={crypto.randomUUID()}
           requiresFirstPublicationDisclosure={
             !page.hasPriorPublicationDisclosure
           }
+          closeHref={`/garden/objects/${encodeURIComponent(objectId)}`}
         />
       </section>
 

@@ -50,10 +50,6 @@ test("OVE-486: global Write opens the destination-aware composer", async ({
     .filter({ visible: true })
     .first();
   await expect(write).toBeVisible();
-  test.fail(
-    !process.env.REDESIGN_ENFORCE_BASELINES,
-    "Known OG-UX global writing regression; corrected with OVE-486",
-  );
   await expect(write).toHaveAttribute("href", "/garden/new");
 });
 

@@ -11,7 +11,7 @@ import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
-import { SpaceEntryComposer } from "@/app/(default)/garden/space-entry-composer";
+import { EntryComposer } from "@/components/garden/entry-composer";
 import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
@@ -33,7 +33,6 @@ import {
   formatGardenWorkspaceDate,
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
-  type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import { localizedPath } from "@/lib/public-localization";
 import {
@@ -264,7 +263,6 @@ async function GardenHomeSections({
             <GardenSelectedSpaceTimeline
               canWrite={canWrite}
               locale={locale}
-              ownerUserId={userId}
               scope={scope}
               spaceId={selectedSpaceId}
               today={today}
@@ -501,7 +499,6 @@ function GardenWriteTools({
 async function GardenSelectedSpaceTimeline({
   canWrite,
   locale,
-  ownerUserId,
   scope,
   spaceId,
   today,
@@ -511,7 +508,6 @@ async function GardenSelectedSpaceTimeline({
 }: {
   canWrite: boolean;
   locale: InterfaceLocale;
-  ownerUserId: string;
   scope: ReturnType<typeof scopedToUser>;
   spaceId: string;
   today: string;
@@ -556,7 +552,6 @@ async function GardenSelectedSpaceTimeline({
       <SpaceJournalTools
         canWrite={canWrite}
         locale={locale}
-        ownerUserId={ownerUserId}
         timeline={timeline}
         today={today}
         enableServerPersistence={enableServerPersistence}
@@ -569,7 +564,6 @@ async function GardenSelectedSpaceTimeline({
 function SpaceJournalTools({
   canWrite,
   locale,
-  ownerUserId,
   timeline,
   today,
   enableServerPersistence,
@@ -577,7 +571,6 @@ function SpaceJournalTools({
 }: {
   canWrite: boolean;
   locale: InterfaceLocale;
-  ownerUserId: string;
   timeline: SpaceJournalTimeline;
   today: string;
   enableServerPersistence: boolean;
@@ -605,23 +598,25 @@ function SpaceJournalTools({
         </span>
       </div>
 
-      {canWrite && timeline.objects.length > 0 ? (
-        <SpaceEntryComposer
+      {canWrite ? (
+        // The one entry composer, with this space named (OVE-486).
+        <EntryComposer
           locale={locale}
-          ownerUserId={ownerUserId}
-          spaceId={timeline.space.id}
+          initialDestination={{
+            kind: "space",
+            id: timeline.space.id,
+            displayName: timeline.space.display_name,
+          }}
+          initialSpaceObjects={timeline.objects.map((object) => ({
+            id: object.id,
+            displayName: object.displayName,
+          }))}
           today={today}
           enableServerPersistence={enableServerPersistence}
           requiresFirstPublicationDisclosure={
             requiresFirstPublicationDisclosure
           }
-          objects={timeline.objects.map((object) => ({
-            id: object.id,
-            displayName: object.displayName,
-            objectKindLabel: `${localizedPageObjectKind(object.objectKind, copy)} · ${
-              object.varietyText ?? copy.page.spaceJournal.unknownIdentity
-            }`,
-          }))}
+          closeHref={`/garden?space=${encodeURIComponent(timeline.space.id)}#space-journal`}
         />
       ) : null}
 
@@ -760,9 +755,4 @@ function positivePage(value: string | string[] | undefined) {
 function uuidParam(value: string | string[] | undefined) {
   const candidate = firstParam(value);
   return UUID_PATTERN.test(candidate) ? candidate : "";
-}
-
-function localizedPageObjectKind(value: string, copy: GardenWorkspaceCopy) {
-  if (value === "animal") return copy.composer.objectKind.animal.label;
-  return copy.composer.objectKind.plant.label;
 }

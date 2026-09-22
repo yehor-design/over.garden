@@ -28,12 +28,19 @@ export function OwnedDestinationPicker({
   onSelect,
   kind = "all",
   disabled = false,
+  autoFocus = false,
 }: {
   locale: InterfaceLocale;
   selection: OwnedDestination | null;
   onSelect: (value: OwnedDestination) => void;
   kind?: DestinationFilter;
   disabled?: boolean;
+  /**
+   * Focus the field on mount, which opens the recent destinations: the global
+   * composer's first question is where (OVE-486), so choosing a recent one is
+   * one activation.
+   */
+  autoFocus?: boolean;
 }) {
   const copy = DESTINATION_COPY[locale];
   const id = useId();
@@ -43,6 +50,9 @@ export function OwnedDestinationPicker({
   useEffect(() => {
     scopeRef.current = scope;
   }, [scope]);
+  useEffect(() => {
+    if (autoFocus) input.current?.focus();
+  }, [autoFocus]);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);

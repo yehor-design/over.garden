@@ -39,7 +39,8 @@ export type WorkspaceSurface =
   | "catalog-queue"
   | "catalog-sources"
   | "space-setup"
-  | "object-setup";
+  | "object-setup"
+  | "entry-composer";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",

@@ -82,7 +82,8 @@ export interface SiteShellNavigation {
 }
 
 /** Where a reader who presses the primary action ends up once signed in. */
-export const SITE_SHELL_COMPOSER_PATH = "/garden#inventory";
+/** The one composer every "New entry" opens (OVE-486). */
+export const SITE_SHELL_COMPOSER_PATH = "/garden/new";
 
 /**
  * The screen the editor owns on its own, where the tab bar would compete with
@@ -91,8 +92,11 @@ export const SITE_SHELL_COMPOSER_PATH = "/garden#inventory";
  * section of a page that also carries navigation of its own.
  */
 export function isSiteShellComposerRoute(pathname: string) {
-  return /^\/garden\/entries\/[^/]+\/edit$/u.test(
-    normalizeSiteShellPath(pathname),
+  const path = normalizeSiteShellPath(pathname);
+  // The edit screen and the one entry composer (OVE-486) are focused writing
+  // surfaces: full height on a phone, no tab bar under the keyboard.
+  return (
+    /^\/garden\/entries\/[^/]+\/edit$/u.test(path) || path === "/garden/new"
   );
 }
 
@@ -258,7 +262,7 @@ export function getSiteShellNavigation(
     : buildSignInHref({
         returnTo: buildAuthIntentResumeHref({
           action: "create_entry",
-          returnTo: "/garden",
+          returnTo: SITE_SHELL_COMPOSER_PATH,
         }),
         intent: "create_entry",
       });

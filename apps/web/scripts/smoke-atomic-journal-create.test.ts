@@ -22,16 +22,17 @@ import {
 } from "./smoke-atomic-journal-create";
 
 const WEB_ROOT = process.cwd();
+// The first-entry composer creates a destination and its entry together; the
+// one entry composer (OVE-486) writes to an existing space or object.
 const CREATE_COMPOSERS = [
   "src/app/(default)/garden/first-entry-composer.tsx",
-  "src/app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-  "src/app/(default)/garden/space-entry-composer.tsx",
+  "src/components/garden/entry-composer.tsx",
 ] as const;
 
 describe("OVE-347 atomic journal creation smoke", () => {
-  it("focused contract: cuts all three create callers to local-only atomic publication", () => {
+  it("focused contract: cuts every create caller to local-only atomic publication", () => {
     const sources = CREATE_COMPOSERS.map(read);
-    expect(sources).toHaveLength(3);
+    expect(sources).toHaveLength(2);
     for (const source of sources) {
       expect(source).toContain("useLocalJournalComposer");
       expect(source).toContain("local.publish({");

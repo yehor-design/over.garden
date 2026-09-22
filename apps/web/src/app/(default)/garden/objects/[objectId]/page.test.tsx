@@ -59,13 +59,13 @@ vi.mock("./catalog-resolve-control", () => ({
   CatalogResolveControl: () => <section>Catalog resolve</section>,
 }));
 
-vi.mock("./follow-up-entry-composer", () => ({
-  FollowUpEntryComposer: (props: {
-    objectKind: string;
+vi.mock("@/components/garden/entry-composer", () => ({
+  EntryComposer: (props: {
+    initialDestination: { kind: string; objectKind?: string } | null;
     requiresFirstPublicationDisclosure: boolean;
   }) => (
     <form
-      data-object-kind={props.objectKind}
+      data-object-kind={props.initialDestination?.objectKind}
       data-requires-first-publication-disclosure={String(
         props.requiresFirstPublicationDisclosure,
       )}

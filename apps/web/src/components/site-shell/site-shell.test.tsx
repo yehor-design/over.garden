@@ -215,7 +215,7 @@ describe("the one primary action", () => {
     expect(actions.filter((node) => banner.contains(node))).toHaveLength(1);
     expect(actions.filter((node) => tabBar.contains(node))).toHaveLength(1);
     for (const action of actions) {
-      expect(action.getAttribute("href")).toBe("/garden#inventory");
+      expect(action.getAttribute("href")).toBe("/garden/new");
     }
     // The rail's copy is drawn only from `lg`; the bar carrying the other is
     // hidden from `lg`. A reader is never offered both.
@@ -240,7 +240,7 @@ describe("the one primary action", () => {
       const href = action.getAttribute("href") ?? "";
       expect(href).toContain("/auth/sign-in?next=");
       expect(href).toContain("intent=create_entry");
-      expect(decodeURIComponent(href)).toContain("inventory");
+      expect(decodeURIComponent(href)).toContain("/garden/new");
     }
   });
 });

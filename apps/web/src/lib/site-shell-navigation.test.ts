@@ -95,10 +95,12 @@ describe("site shell navigation contract", () => {
     // Signed in it is the composer. Signed out it is the sign-in screen with
     // the composer as its return, so the reader lands on the thing they
     // pressed rather than on the workspace around it.
-    expect(member.primaryActionHref).toBe("/garden#inventory");
+    expect(member.primaryActionHref).toBe("/garden/new");
     expect(guest.primaryActionHref).toContain("/auth/sign-in?next=");
     expect(guest.primaryActionHref).toContain("intent=create_entry");
-    expect(decodeURIComponent(guest.primaryActionHref)).toContain("inventory");
+    expect(decodeURIComponent(guest.primaryActionHref)).toContain(
+      "/garden/new?authIntent=create_entry",
+    );
     expect(guest.primaryAction.href).toBe(guest.primaryActionHref);
   });
 
@@ -130,6 +132,8 @@ describe("site shell navigation contract", () => {
   it("knows the one screen the editor owns on its own", () => {
     expect(isSiteShellComposerRoute("/garden/entries/abc-1/edit")).toBe(true);
     expect(isSiteShellComposerRoute("/garden/entries/abc-1/edit/")).toBe(true);
+    // The one entry composer is a focused writing surface too (OVE-486).
+    expect(isSiteShellComposerRoute("/garden/new")).toBe(true);
     // The workspace is not the composer: it is a page with navigation of its
     // own that happens to carry the first-entry composer as one section.
     expect(isSiteShellComposerRoute("/garden")).toBe(false);
