@@ -2,6 +2,14 @@
 
 import { DESTINATION_COPY } from "@/lib/garden/owned-destinations";
 import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
+import { SpaceSetupFlow } from "@/components/garden/space-setup-flow";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { getSpaceSetupCopy } from "@/lib/space-setup-copy";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CloudArrowUpIcon as UploadCloud } from "@/components/icons/CloudArrowUp";
@@ -122,6 +130,7 @@ export function FirstEntryComposer({
   enableServerPersistence = true,
 }: FirstEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
+  const spaceSetupCopy = getSpaceSetupCopy(locale);
   const atomicCopy = getAtomicJournalCreateCopy(locale);
   const documentMutation = useOptionalOwnerScope();
   const localPersistenceEnabled = enableServerPersistence;
@@ -163,6 +172,7 @@ export function FirstEntryComposer({
     JournalMentionSelection[]
   >([]);
   const [topicTagInput, setTopicTagInput] = useState("");
+  const [spaceSetupOpen, setSpaceSetupOpen] = useState(false);
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -722,22 +732,61 @@ export function FirstEntryComposer({
               }));
             }}
           />
-          {draft.spaceId ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={persistenceFrozen}
-              onClick={() =>
-                setDraft((current) => ({
-                  ...current,
-                  spaceId: null,
-                  spaceName: "",
-                }))
-              }
+          {/* A new space from inside the editor: the same progressive setup
+              as /garden/spaces/new, in `propose` mode. Nothing is written —
+              the answers come back here and Publish creates the space and
+              the entry together, so the text being written never leaves
+              memory (OVE-484, INFORMATION_ARCHITECTURE.md). */}
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={persistenceFrozen}
+            data-composer-new-space="true"
+            onClick={() => setSpaceSetupOpen(true)}
+          >
+            {copy.composer.fields.createNewSpace}
+          </Button>
+          <Sheet open={spaceSetupOpen} onOpenChange={setSpaceSetupOpen}>
+            <SheetContent
+              side="bottom"
+              closeLabel={spaceSetupCopy.close}
+              className="max-h-svh overflow-y-auto"
             >
-              {copy.composer.fields.createNewSpace}
-            </Button>
-          ) : null}
+              <SheetHeader>
+                <SheetTitle>{spaceSetupCopy.title}</SheetTitle>
+              </SheetHeader>
+              <div className="px-4 pb-4">
+                <SpaceSetupFlow
+                  locale={locale}
+                  mode="propose"
+                  initial={
+                    draft.spaceId
+                      ? {}
+                      : {
+                          displayName: draft.spaceName,
+                          locationVisibility: draft.locationVisibility,
+                          coarseRegionCode: draft.coarseRegionCode,
+                        }
+                  }
+                  onCancel={() => setSpaceSetupOpen(false)}
+                  onPropose={(values) => {
+                    if (isComposerPersistenceFrozen()) return;
+                    setDraft((current) => ({
+                      ...current,
+                      spaceId: null,
+                      spaceName: values.displayName,
+                      locationVisibility: values.locationVisibility,
+                      coarseRegionCode:
+                        values.locationVisibility === "region"
+                          ? values.coarseRegionCode
+                          : "",
+                    }));
+                    setSpaceSetupOpen(false);
+                  }}
+                />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
 
         {!draft.spaceId ? (

@@ -3,6 +3,7 @@ import { OwnedDestinationNavigation } from "@/components/garden/owned-destinatio
 import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
 import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
 import { CameraIcon as Camera } from "@/components/icons/Camera";
+import { PlusIcon as Plus } from "@/components/icons/Plus";
 import { PlusCircleIcon as CirclePlus } from "@/components/icons/PlusCircle";
 import { ImageBrokenIcon as ImageOff } from "@/components/icons/ImageBroken";
 import { LeafIcon as Leaf } from "@/components/icons/Leaf";
@@ -538,16 +539,28 @@ function SpacesSection({
       description={copy.workspace.spaces.description}
       className="scroll-mt-20"
       actions={
-        spaces.hasMore && spaces.page === 1 ? (
+        <>
+          {spaces.hasMore && spaces.page === 1 ? (
+            <Link
+              href="/garden?spaces=all#spaces"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              {formatGardenWorkspaceTemplate(copy.workspace.spaces.viewAll, {
+                count: spaces.totalCount,
+              })}
+            </Link>
+          ) : null}
+          {/* Setting up a space is its own short task, apart from writing
+              (OVE-484). */}
           <Link
-            href="/garden?spaces=all#spaces"
+            href="/garden/spaces/new"
+            data-garden-new-space="true"
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
-            {formatGardenWorkspaceTemplate(copy.workspace.spaces.viewAll, {
-              count: spaces.totalCount,
-            })}
+            <Plus aria-hidden="true" />
+            {copy.workspace.spaces.newSpace}
           </Link>
-        ) : undefined
+        </>
       }
     >
       {spaces.spaces.length > 0 ? (
