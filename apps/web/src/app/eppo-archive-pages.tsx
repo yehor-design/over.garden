@@ -22,6 +22,12 @@ import {
   type EppoArchiveRequest,
   type PublicEppoSourceRecord,
 } from "@/server/catalog-source/public-eppo-explorer-repository";
+import { readPublicEppoSourcePage } from "@/server/public-cache";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
   resolvePublicSurfacePayload,
@@ -44,8 +50,10 @@ const DETAIL_CONSUMER_ID = "eppo_archive_detail";
 export async function renderEppoArchiveExplorer(
   locale: PublicLocale,
   searchParams: Record<string, string | string[] | undefined> = {},
+  phase: PublicRenderPhase = "request",
 ) {
   if (!isEppoArchiveEnabled()) notFound();
+  await deferStaticRenderWithoutDatabase(phase);
   const parsed = parseEppoArchiveRequest(searchParams);
   if (parsed.error) {
     return (
@@ -59,7 +67,14 @@ export async function renderEppoArchiveExplorer(
     );
   }
 
-  const resolved = await loadExplorerWithDiscovery(locale, parsed.request);
+  const resolved = await loadExplorerWithDiscovery(
+    locale,
+    parsed.request,
+    phase,
+  );
+  // A degraded archive renders successfully; it must never become the shell
+  // every reader gets (ADR-0032 D4).
+  if (!resolved.payload) deferStaticRenderAfterFailure(phase);
   const state: EppoArchiveExplorerState = resolved.payload
     ? resolved.payload.records.length > 0
       ? "ready"
@@ -81,6 +96,7 @@ export async function renderEppoArchiveExplorer(
 
 export async function eppoArchiveExplorerMetadata(
   locale: PublicLocale,
+  phase: PublicRenderPhase = "request",
 ): Promise<Metadata> {
   if (!isEppoArchiveEnabled()) {
     return {
@@ -91,7 +107,7 @@ export async function eppoArchiveExplorerMetadata(
     };
   }
   const request = parseEppoArchiveRequest({}).request;
-  const resolved = await loadExplorerWithDiscovery(locale, request);
+  const resolved = await loadExplorerWithDiscovery(locale, request, phase);
   const page = resolved.payload ?? emptyExplorerPage(request);
   return buildExplorerSurfaceMetadata(locale, page, resolved).metadata;
 }
@@ -186,17 +202,32 @@ export async function eppoArchiveDetailMetadata(
 async function loadExplorerWithDiscovery(
   locale: PublicLocale,
   request: EppoArchiveRequest,
+  phase: PublicRenderPhase = "request",
 ) {
   return resolvePublicSurfacePayload({
     consumerId: BROWSE_CONSUMER_ID,
+    document: phase === "static" ? "static" : "request",
     load: async () => {
-      const page = await listPublicEppoSourcePage(request, locale);
+      // The unfiltered page is the static document's; a filtered one comes
+      // from the twin, at request time, and reads the repository directly.
+      const page = isUnfilteredEppoArchiveRequest(request)
+        ? await readPublicEppoSourcePage(locale)
+        : await listPublicEppoSourcePage(request, locale);
       return {
         payload: page,
         source: buildExplorerDiscoverySource(locale, page),
       };
     },
   });
+}
+
+/** Nothing asked of it: the address the static document belongs to. */
+function isUnfilteredEppoArchiveRequest(request: EppoArchiveRequest) {
+  return (
+    request.kind === parseEppoArchiveRequest({}).request.kind &&
+    !request.query &&
+    !request.cursor
+  );
 }
 
 function emptyExplorerPage(request: EppoArchiveRequest): EppoArchivePage {

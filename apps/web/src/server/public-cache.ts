@@ -265,6 +265,20 @@ export async function readCommunityNavigationReadiness() {
   return hasReadyCommunityNavigation();
 }
 
+/**
+ * The EPPO archive's first page, unfiltered: the static document's read
+ * (ADR-0032). The capture itself is immutable (ADR-0025 D2), so the only thing
+ * that changes here is which canonical cards the records point at.
+ */
+export async function readPublicEppoSourcePage(locale: PublicLocale) {
+  "use cache";
+  cacheLife("days");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { listPublicEppoSourcePage, parseEppoArchiveRequest } =
+    await import("@/server/catalog-source/public-eppo-explorer-repository");
+  return listPublicEppoSourcePage(parseEppoArchiveRequest({}).request, locale);
+}
+
 export async function readPublicObjectCatalogPage(
   request: PublicObjectCatalogRequest,
   locale: PublicLocale,

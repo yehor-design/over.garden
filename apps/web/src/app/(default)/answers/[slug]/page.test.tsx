@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listPublicKnowledgeEvidence: vi.fn(),
@@ -17,6 +17,12 @@ vi.mock("@/lib/storage", () => ({
 import AnswerRoute, {
   generateMetadata,
 } from "@/app/[locale]/answers/[slug]/page";
+
+beforeEach(() => {
+  // An authored page is a static document: with no database in the environment
+  // it defers to the request and renders the skeleton (ADR-0032 D4).
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/x");
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -69,7 +75,8 @@ describe("/answers/[slug]", () => {
     ).resolves.toMatchObject({
       title: "Почему желтеют листья томатов? | OverGarden",
       alternates: {
-        canonical: "https://over.garden/ru/answers/why-are-tomato-leaves-yellow",
+        canonical:
+          "https://over.garden/ru/answers/why-are-tomato-leaves-yellow",
         languages: {
           uk: "https://over.garden/answers/why-are-tomato-leaves-yellow",
           bg: "https://over.garden/bg/answers/why-are-tomato-leaves-yellow",

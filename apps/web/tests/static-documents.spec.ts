@@ -563,6 +563,39 @@ test.describe("a public page is a static document", () => {
     ).toBe(404);
   });
 
+  test("the authored pages, a market and the source archive are in the served bytes", async ({
+    request,
+  }) => {
+    for (const address of [
+      "/blog",
+      "/bg/blog",
+      "/blog/ai-garden-advice-vs-real-garden-proof",
+      "/guides/start-a-living-plant-record",
+      "/answers/why-are-tomato-leaves-yellow",
+      "/markets/ukraine",
+      "/privacy",
+      "/sources/eppo",
+      "/bg/sources/eppo",
+    ]) {
+      for (const attempt of [1, 2]) {
+        const { status, html } = await getDocument(request, address);
+        expect(status, `${address}: ${attempt}`).toBe(200);
+        const served = readStaticDocument(html);
+        expect(served.titleInHead, address).toBe(true);
+        expect(served.heading?.hidden, address).toBe(false);
+        expect(served.skeleton, address).toBe(false);
+        expect(served.visibleText.length, address).toBeGreaterThan(600);
+      }
+    }
+    // The archive's own filters render from its twin, which is not an address.
+    expect(
+      (await getDocument(request, "/sources/eppo?kind=plant")).status,
+    ).toBe(200);
+    expect(
+      (await getDocument(request, "/q/sources/eppo?kind=plant")).status,
+    ).toBe(404);
+  });
+
   test("the knowledge hub and a topic are in the served bytes", async ({
     request,
   }) => {
@@ -819,6 +852,11 @@ test.describe("a public page is a static document", () => {
         `/species/${fixture.organism.speciesSlug}`,
         "/communities",
         "/knowledge",
+        "/blog",
+        "/guides/start-a-living-plant-record",
+        "/answers/why-are-tomato-leaves-yellow",
+        "/markets/ukraine",
+        "/sources/eppo",
         ...(await activeCommunityPaths(pool)),
         ...(await curatedTopicPaths(pool)),
       ]) {
@@ -865,6 +903,10 @@ test.describe("a public page is a static document", () => {
       `/species/${fixture.organism.speciesSlug}`,
       "/communities",
       "/knowledge",
+      "/blog",
+      "/guides/start-a-living-plant-record",
+      "/markets/ukraine",
+      "/sources/eppo",
       ...(await activeCommunityPaths(pool, true)),
       ...(await curatedTopicPaths(pool)),
     ]) {
