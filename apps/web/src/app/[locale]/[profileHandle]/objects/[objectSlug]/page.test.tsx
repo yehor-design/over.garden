@@ -8,7 +8,7 @@ const getPublicObjectPassportIdBySlug = vi.fn(
 );
 
 vi.mock("@/app/[locale]/lineage/objects/[objectId]/page", () => ({
-  default: (...args: unknown[]) => passportRoute(...(args as [])),
+  renderPassport: (...args: unknown[]) => passportRoute(...(args as [])),
   generateMetadata: (...args: unknown[]) => passportMetadata(...(args as [])),
 }));
 vi.mock("@/server/public-object-passport-repository", () => ({
@@ -16,9 +16,8 @@ vi.mock("@/server/public-object-passport-repository", () => ({
     getPublicObjectPassportIdBySlug(...args),
 }));
 
-const { default: AuthorScopedPassportRoute, generateMetadata } = await import(
-  "./page"
-);
+const { default: AuthorScopedPassportRoute, generateMetadata } =
+  await import("./page");
 
 /**
  * The two spellings a router can hand a route, and the one that shipped broken.
@@ -32,6 +31,7 @@ const { default: AuthorScopedPassportRoute, generateMetadata } = await import(
  */
 describe("the object passport at its author's address", () => {
   beforeEach(() => {
+    vi.stubEnv("DATABASE_URL", "postgres://test@127.0.0.1/test");
     passportRoute.mockClear();
     passportMetadata.mockClear();
     getPublicObjectPassportIdBySlug.mockClear();
@@ -46,10 +46,7 @@ describe("the object passport at its author's address", () => {
         objectSlug: encodeURIComponent("томат"),
       },
     ],
-    [
-      "decoded",
-      { locale: "uk", profileHandle: "@yehor", objectSlug: "томат" },
-    ],
+    ["decoded", { locale: "uk", profileHandle: "@yehor", objectSlug: "томат" }],
   ] as const) {
     it(`renders the passport when the segments arrive ${name}`, async () => {
       await AuthorScopedPassportRoute({ params: Promise.resolve(params) });
@@ -59,10 +56,20 @@ describe("the object passport at its author's address", () => {
         "томат",
       );
       expect(passportRoute).toHaveBeenCalledTimes(1);
+      // One static attempt: the passport renders in this route's phase
+      // rather than through a second route that would attempt again.
+      expect(passportRoute).toHaveBeenCalledWith(
+        "object-1",
+        "uk",
+        undefined,
+        "static",
+      );
     });
 
     it(`names the passport in its metadata when the segments arrive ${name}`, async () => {
-      const metadata = await generateMetadata({ params: Promise.resolve(params) });
+      const metadata = await generateMetadata({
+        params: Promise.resolve(params),
+      });
 
       expect(metadata).toEqual({ title: "Томат | OverGarden" });
     });

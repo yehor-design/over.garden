@@ -4,12 +4,13 @@ const mocks = vi.hoisted(() => ({
   resolveMutationScope: vi.fn(),
   resolveLineageClaim: vi.fn(),
   revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
   revalidateTag: vi.fn(),
-  updateTag: vi.fn(),
+  updateTag: mocks.updateTag,
 }));
 
 vi.mock("@/server/mutation-scope", () => ({
@@ -57,6 +58,8 @@ describe("/garden/lineage/claims actions", () => {
         decision: "confirmed",
       },
     );
+    expect(mocks.updateTag).toHaveBeenCalledWith("catalog");
+    expect(mocks.updateTag).toHaveBeenCalledWith("profiles");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden/lineage/claims");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
     expect(mocks.revalidatePath).toHaveBeenCalledWith(

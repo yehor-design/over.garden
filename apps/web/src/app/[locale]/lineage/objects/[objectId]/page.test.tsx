@@ -1,3 +1,4 @@
+import type { PublicLineageGraphPage } from "@/server/public-lineage-repository";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
@@ -54,6 +55,7 @@ const objectPassportPage = {
     catalogKind: "plant_variety",
     catalogCanonicalName: "Red Cherry tomato",
     catalogPublicSlug: "red-cherry-tomato-0000000101",
+    catalogSpeciesSlug: null,
     catalogPath: "/variety/red-cherry-tomato-0000000101",
     safeLocationLabel: "Region: Ukraine - Kyiv City",
     publicEntryCount: 2,
@@ -120,7 +122,7 @@ const objectPassportPage = {
   timelineHasMore: false,
 };
 
-const lineageGraphPage = {
+const lineageGraphPage: PublicLineageGraphPage = {
   root: {
     plantObjectId: objectId,
     displayName: "Balcony tomato",
@@ -130,6 +132,7 @@ const lineageGraphPage = {
     catalogKind: "plant_variety",
     catalogCanonicalName: "Red Cherry tomato",
     catalogPublicSlug: "red-cherry-tomato-0000000101",
+    catalogSpeciesSlug: null,
     safeLocationLabel: "Region: Ukraine - Kyiv City",
   },
   nodes: [
@@ -142,6 +145,7 @@ const lineageGraphPage = {
       catalogKind: "plant_variety",
       catalogCanonicalName: "Red Cherry tomato",
       catalogPublicSlug: "red-cherry-tomato-0000000101",
+      catalogSpeciesSlug: null,
       safeLocationLabel: "Region: Ukraine - Kyiv City",
     },
     {
@@ -153,6 +157,7 @@ const lineageGraphPage = {
       catalogKind: "plant_variety",
       catalogCanonicalName: "Red Cherry tomato",
       catalogPublicSlug: "red-cherry-tomato-0000000101",
+      catalogSpeciesSlug: null,
       safeLocationLabel: null,
     },
   ],
@@ -170,6 +175,7 @@ const lineageGraphPage = {
 
 describe("/lineage/objects/[objectId]", () => {
   beforeEach(() => {
+    vi.stubEnv("DATABASE_URL", "postgres://test@127.0.0.1/test");
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue(null);
     mocks.getSessionId.mockReturnValue(null);
@@ -316,15 +322,34 @@ describe("/lineage/objects/[objectId]", () => {
       "follow",
       `${lineageGraphPage.edges[0].id}:${sourceObjectId}`,
     );
-    const { default: PublicLineageObjectRoute } = await import("./page");
+    const { ViewerLineageInteraction, PassportViewerEngagement } =
+      await import("./passport-regions");
+    const searchParams = Promise.resolve({
+      authIntent: "follow",
+      authControl: followControl,
+    });
+    const nodesById = new Map(
+      lineageGraphPage.nodes.map((node) => [node.plantObjectId, node]),
+    );
     const html = renderToStaticMarkup(
-      await PublicLineageObjectRoute({
-        params: Promise.resolve({ locale: "bg", objectId }),
-        searchParams: Promise.resolve({
-          authIntent: "follow",
-          authControl: followControl,
-        }),
-      }),
+      <>
+        {await ViewerLineageInteraction({
+          edge: lineageGraphPage.edges[0],
+          edges: lineageGraphPage.edges,
+          nodesById,
+          target: nodesById.get(sourceObjectId)!,
+          rootPlantObjectId: objectId,
+          rootPublicPath: objectPassportPage.object.publicPath,
+          locale: "bg",
+          searchParams,
+        })}
+        {await PassportViewerEngagement({
+          locale: "bg",
+          target: { kind: "lineage_object", ref: objectId },
+          returnTo: objectPassportPage.object.publicPath,
+          searchParams,
+        })}
+      </>,
     );
 
     expect(html).toContain("Запази");

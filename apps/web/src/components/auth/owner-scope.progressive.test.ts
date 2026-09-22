@@ -28,7 +28,9 @@ const PROGRESSIVE_SURFACES = [
   // seventeen files still used the closure form when Slice 28 began; these are
   // the first six converted, and each page-family task carries its own share.
   "components/public/public-profile.tsx",
-  "app/[locale]/lineage/objects/[objectId]/page.tsx",
+  // Since `OVE-467` the passport is a static document and its forms live in
+  // the request-time regions beside it.
+  "app/[locale]/lineage/objects/[objectId]/passport-regions.tsx",
   // `OVE-454`: join, leave, contribute, report and block on a community.
   "components/public/public-community.tsx",
   // `OVE-456`: the reader's own pages and the erasure family. Removing a

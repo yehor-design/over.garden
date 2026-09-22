@@ -804,6 +804,51 @@ describe("app route cache guardrail", () => {
     );
   });
 
+  it.each(["/@active_garden", "/bg/@active_garden", "/ru/@active_garden"])(
+    "rewrites selected profile tabs after lifecycle classification: %s",
+    async (address) => {
+      const response = await responseFor(`${address}?tab=entries`, {
+        accept: "text/html",
+      });
+      expect(response.status).toBe(200);
+      const rewrite = response.headers.get("x-middleware-rewrite");
+      expect(rewrite).toContain("/q/@active_garden?tab=entries");
+      expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+        "active_garden",
+        null,
+      );
+    },
+  );
+
+  it.each([
+    "/@blocked_garden",
+    "/bg/@blocked_garden",
+    "/ru/@blocked_garden?tab=entries",
+  ])(
+    "refuses blocked profile RSC and prefetch reads before serving cached content: %s",
+    async (address) => {
+      const viewerUserId = "00000000-0000-4000-8000-000000000203";
+      for (const prefetch of [false, true]) {
+        mocks.getSession.mockResolvedValueOnce({ user: { id: viewerUserId } });
+        mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+          status: "not_found",
+        });
+        const response = await responseFor(address, {
+          accept: "text/x-component",
+          rsc: "1",
+          ...(prefetch ? { "next-router-prefetch": "1" } : {}),
+          cookie: "__Secure-overgarden.session_token=opaque-test-token",
+        });
+        expect(response.status).toBe(404);
+        expect(response.headers.get("x-middleware-rewrite")).toBeNull();
+        expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenLastCalledWith(
+          "blocked_garden",
+          viewerUserId,
+        );
+      }
+    },
+  );
+
   it("hard-classifies unavailable communities without intercepting active or RSC routes", async () => {
     mocks.getPublicCommunityLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",

@@ -1,0 +1,57 @@
+{
+  "mergeSha": "51d814a73a3c1ab283884045ad3222d609bbe20d",
+  "testedSha": "c41aeecbb2b83ec4aca45214c0e1eb418103efd6",
+  "deployment": "dpl_4DArMS7zyWARx3NNb1XhuBQNijv9",
+  "ciRun": 35644435607,
+  "ciNote": "Green; one existing community axe test timed out at 30 seconds and passed retry. Local full browser gate passed without retries.",
+  "samples": [
+    {
+      "report": "production-after-devtools-1.json.gz",
+      "method": "devtools",
+      "lcpMs": 3126.676,
+      "cls": 3.081779520405444e-05,
+      "originalReportSha256": "5678a701ce83c937e2ed5070fe47e24ee990147f73c619ef27c78b5b5ad53ae0",
+      "storedReportSha256": "2a3d2a04d8ddbfa5b1856705a08824ecdf12d1f9b3387b70a7690d0626195136"
+    },
+    {
+      "report": "production-after-devtools-2.json.gz",
+      "method": "devtools",
+      "lcpMs": 3124.463,
+      "cls": 3.081779520405444e-05,
+      "originalReportSha256": "155d86e5e82f8c18dccd7f5746d975f565d2583108a3da3d946a4f9cb5da4654",
+      "storedReportSha256": "7114ad0cf2aa33df29585eed91fa59473e33ba7baa4f8cfcbb8cfbc5b23ed9b5"
+    },
+    {
+      "report": "production-after-devtools-3.json.gz",
+      "method": "devtools",
+      "lcpMs": 3171.353,
+      "cls": 3.081779520405444e-05,
+      "originalReportSha256": "014e00ee6140bc36c9179cee338d016b03a256c9bf20cb4dbb9bc80c2b883354",
+      "storedReportSha256": "772909371e0633b2e5791e631c768893100e05f16813533c454a66748f8c498a"
+    },
+    {
+      "report": "production-after-simulate-1.json.gz",
+      "method": "simulate",
+      "lcpMs": 3510.509,
+      "cls": 0,
+      "originalReportSha256": "c44a2592b384ae35d5c3a776004234b4332bac8c6a20330056b3a76b0ac69f24",
+      "storedReportSha256": "8ceb2ba2bbb26fc2c41bddddf325ad9aa82722b5c3bde1353f2e020164f7a5f4"
+    },
+    {
+      "report": "production-after-simulate-2.json.gz",
+      "method": "simulate",
+      "lcpMs": 3506.361,
+      "cls": 0,
+      "originalReportSha256": "3be3be71065379d39b03f97d5575195e26fb59c50f5de0462c838fb02e43d791",
+      "storedReportSha256": "2b89afb8afa5fe90450b81876a552247b739976ad0e8232898996d81b0c5d366"
+    },
+    {
+      "report": "production-after-simulate-3.json.gz",
+      "method": "simulate",
+      "lcpMs": 5008.251,
+      "cls": 0,
+      "originalReportSha256": "b5a11a0031cbab8b06ad57acfd98996c8b3103cf3fb7a49061d81a321598d735",
+      "storedReportSha256": "07da233792eef0d7fac53600ead27d71716cd7284e5e05bd350ac1a0917c136d"
+    }
+  ]
+}

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { cache } from "react";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { Suspense } from "react";
 
-import { PublicProfileView } from "@/components/public/public-profile";
+import {
+  ProfileActions,
+  PublicProfileView,
+} from "@/components/public/public-profile";
 import { normalizePublicProfileTab } from "@/lib/public-profile-tabs";
 import {
   publicProfileBasePath,
@@ -10,21 +13,12 @@ import {
 } from "@/lib/garden/public-paths";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 import {
-  normalizeAuthIntentResumeAction,
-  normalizeAuthIntentResumeControl,
-} from "@/lib/auth/auth-intent-contract";
-import {
   PUBLIC_LOCALES,
   isPublicLocale,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getPublicProfileCopy } from "@/lib/public-profile-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { getProfileViewerState } from "@/server/profile-interaction-repository";
-import {
-  getPublicProfileLifecycleLookup,
-  type PublicProfileEvidencePage,
-} from "@/server/public-profile-repository";
+import { type PublicProfileEvidencePage } from "@/server/public-profile-repository";
 import {
   resolvePublicSurfaceDiscoveryForRequest,
   resolvePublicSurfacePayload,
@@ -34,52 +28,28 @@ import {
 } from "@/server/public-surface-discovery";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { scopedToUser } from "@/server/request-scope";
 import { readPublicProfileEvidencePage } from "@/server/public-cache";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
+import { STATIC_PARAMS_PLACEHOLDER } from "@/server/public-prerender";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
+import { ProfileActionStatus, ProfileViewerActions } from "./profile-regions";
 
-interface LocalizedPublicProfileRouteProps {
+export interface LocalizedPublicProfileRouteProps {
   params: Promise<{ locale: string; profileHandle: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 const GUEST_PROFILE_VIEWER = { kind: "guest" } as const;
-const UNAVAILABLE_PROFILE_ROUTE_STATE = { kind: "unavailable" } as const;
 
-const getCachedPublicProfileRouteState = cache(
-  async (handle: string, locale: "uk" | "bg" | "ru") => {
-    const session = await getCurrentSession();
-    const viewerUserId = session?.user?.id ?? null;
-    const lifecycle = await getPublicProfileLifecycleLookup(
-      handle,
-      viewerUserId,
-    );
-    if (lifecycle.status !== "active") {
-      return UNAVAILABLE_PROFILE_ROUTE_STATE;
-    }
-
-    const viewerPromise = viewerUserId
-      ? getProfileViewerState(
-          scopedToUser(viewerUserId, getSessionId(session)),
-          handle,
-        )
-      : Promise.resolve(GUEST_PROFILE_VIEWER);
-    const [profile, viewer] = await Promise.all([
-      readPublicProfileEvidencePage(handle, locale),
-      viewerPromise,
-    ]);
-
-    if (
-      !profile ||
-      viewer.kind === "blocked" ||
-      viewer.kind === "unavailable"
-    ) {
-      return UNAVAILABLE_PROFILE_ROUTE_STATE;
-    }
-
-    return { kind: "available", profile, viewer } as const;
-  },
-);
+export function generateStaticParams() {
+  return [{ profileHandle: STATIC_PARAMS_PLACEHOLDER }];
+}
 
 export async function generateMetadata({
   params,
@@ -92,20 +62,16 @@ export async function generateMetadata({
     isPublicLocale(localeParam) && routeHandle
       ? await resolvePublicSurfacePayload({
           consumerId: "localized_profile",
+          document: "static",
           load: async () => {
-            const routeState = await getCachedPublicProfileRouteState(
+            const profile = await readPublicProfileEvidencePage(
               routeHandle,
               localeParam,
             );
-            if (routeState.kind !== "available") {
-              throw new Error("Public profile unavailable.");
-            }
+            if (!profile) throw new Error("Public profile unavailable.");
             return {
-              source: buildProfileDiscoverySource(
-                localeParam,
-                routeState.profile,
-              ),
-              payload: routeState.profile,
+              source: buildProfileDiscoverySource(localeParam, profile),
+              payload: profile,
             };
           },
         })
@@ -128,22 +94,36 @@ export default async function LocalizedPublicProfileRoute({
   params,
   searchParams,
 }: LocalizedPublicProfileRouteProps) {
-  const [{ locale: localeParam, profileHandle }, query] = await Promise.all([
-    params,
-    searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
-  ]);
-
+  const { locale: localeParam, profileHandle } = await params;
   if (!isPublicLocale(localeParam)) notFound();
-  const routeHandle = routeHandleFromSegment(profileHandle);
-  if (!routeHandle) notFound();
+  if (profileHandle === STATIC_PARAMS_PLACEHOLDER) return null;
+  const handle = routeHandleFromSegment(profileHandle);
+  if (!handle) notFound();
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) =>
+      renderPublicProfile(localeParam, handle, searchParams, "objects", phase),
+  });
+}
 
-  const routeState = await getCachedPublicProfileRouteState(
+export async function renderPublicProfile(
+  localeParam: PublicLocale,
+  routeHandle: string,
+  searchParams: LocalizedPublicProfileRouteProps["searchParams"],
+  activeTab: ReturnType<typeof normalizePublicProfileTab> = "objects",
+  phase: PublicRenderPhase = "request",
+) {
+  await deferStaticRenderWithoutDatabase(phase);
+  const profile = await readPublicProfileEvidencePage(
     routeHandle,
     localeParam,
-  );
-  if (routeState.kind === "unavailable") notFound();
-  const { profile, viewer } = routeState;
-  const resumeAction = profileResumeAction(query.authIntent);
+  ).catch((error: unknown) => {
+    unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    deferStaticRenderAfterFailure(phase);
+    throw error;
+  });
+  if (!profile) notFound();
   const surface = buildProfileSurface(localeParam, profile);
   const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
 
@@ -161,12 +141,31 @@ export default async function LocalizedPublicProfileRoute({
       <PublicProfileView
         profile={profile}
         locale={localeParam}
-        viewer={viewer}
-        actionStatus={firstParam(query.profileAction)}
-        activeTab={normalizePublicProfileTab(query.tab)}
-        resumeAction={resumeAction}
-        resumeControl={normalizeAuthIntentResumeControl(query.authControl)}
+        viewer={GUEST_PROFILE_VIEWER}
+        activeTab={activeTab}
+        actionSlot={
+          <Suspense
+            fallback={
+              <ProfileActions
+                profile={profile}
+                locale={localeParam}
+                viewer={GUEST_PROFILE_VIEWER}
+                returnTo={publicProfilePath(localeParam, profile.handle)}
+                resumeAction={null}
+              />
+            }
+          >
+            <ProfileViewerActions
+              profile={profile}
+              locale={localeParam}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        }
       />
+      <Suspense fallback={null}>
+        <ProfileActionStatus locale={localeParam} searchParams={searchParams} />
+      </Suspense>
     </main>
   );
 }
@@ -253,15 +252,4 @@ function routeHandleFromSegment(segment: string) {
   } catch {
     return null;
   }
-}
-
-function firstParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function profileResumeAction(value: string | string[] | undefined) {
-  const action = normalizeAuthIntentResumeAction(value);
-  return action === "follow" || action === "report" || action === "block"
-    ? action
-    : null;
 }

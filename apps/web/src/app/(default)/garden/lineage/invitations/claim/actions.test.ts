@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
+  updateTag: vi.fn(),
   redirect: vi.fn(),
   cookies: vi.fn(),
   cookieGet: vi.fn(),
@@ -21,7 +22,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
   revalidateTag: vi.fn(),
-  updateTag: vi.fn(),
+  updateTag: mocks.updateTag,
 }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
@@ -93,6 +94,8 @@ describe("/garden/lineage/invitations/claim actions", () => {
       name: "overgarden-lineage-claim",
       path: "/garden/lineage/invitations/claim",
     });
+    expect(mocks.updateTag).toHaveBeenCalledWith("catalog");
+    expect(mocks.updateTag).toHaveBeenCalledWith("profiles");
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/lineage/invitations/claim",
     );

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -99,4 +101,8 @@ function revalidateLineageInvitationClaimPaths(subjectPlantObjectId: string) {
   revalidatePath(LINEAGE_INVITATION_CLAIM_PATH);
   revalidatePath("/garden");
   revalidatePath(`/garden/objects/${subjectPlantObjectId}`);
+  revalidatePublicCacheTags(
+    [PUBLIC_CACHE_TAGS.catalog, PUBLIC_CACHE_TAGS.profiles],
+    "update",
+  );
 }

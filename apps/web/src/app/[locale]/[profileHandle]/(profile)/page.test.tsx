@@ -1,3 +1,4 @@
+import type { PublicProfileEvidencePage } from "@/server/public-profile-repository";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -45,7 +46,7 @@ vi.mock("@/app/[locale]/[profileHandle]/actions", () => ({
   blockProfileAction: vi.fn(),
 }));
 
-const PROFILE = {
+const PROFILE: PublicProfileEvidencePage = {
   handle: "green_thumb",
   mention: "@green_thumb",
   displayName: "Green Thumb",
@@ -72,6 +73,12 @@ const PROFILE = {
       publicEntryCount: 2,
       publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000001",
       coverImageUrl: null,
+      coverFocalX: null,
+      coverFocalY: null,
+      coverIntrinsicWidth: null,
+      coverIntrinsicHeight: null,
+      coverPlaceholderDataUri: null,
+      coverVariantLongEdges: [],
       coverImageAlt: "Balcony tomato",
     },
   ],
@@ -90,15 +97,22 @@ const PROFILE = {
         objectKind: "plant",
       },
       coverImageUrl: null,
+      coverFocalX: null,
+      coverFocalY: null,
+      coverIntrinsicWidth: null,
+      coverIntrinsicHeight: null,
+      coverPlaceholderDataUri: null,
+      coverVariantLongEdges: [],
       coverImageAlt: "Balcony tomato",
     },
   ],
   hasMoreObjects: false,
   hasMoreJournals: false,
-} as const;
+};
 
 describe("/{locale}/@:handle public profile route", () => {
   beforeEach(() => {
+    vi.stubEnv("DATABASE_URL", "postgres://test@127.0.0.1/test");
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue(null);
@@ -143,10 +157,7 @@ describe("/{locale}/@:handle public profile route", () => {
       "@green_thumb",
       "uk",
     );
-    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
-      "@green_thumb",
-      null,
-    );
+    expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
     expect(html).toContain('data-public-profile="v2"');
     expect(html.indexOf("Живі об’єкти")).toBeLessThan(
       html.indexOf("Журнал догляду"),
@@ -160,7 +171,8 @@ describe("/{locale}/@:handle public profile route", () => {
   });
 
   it("opens the tab `?tab=` names, and ignores one that is not a tab", async () => {
-    const { default: LocalizedPublicProfileRoute } = await import("./page");
+    const { default: LocalizedPublicProfileRoute } =
+      await import("../../q/[profileHandle]/page");
     const open = async (tab?: string) =>
       renderToStaticMarkup(
         await LocalizedPublicProfileRoute({
@@ -186,23 +198,28 @@ describe("/{locale}/@:handle public profile route", () => {
       session: { id: "session-1" },
     });
     mocks.getProfileViewerState.mockResolvedValueOnce({ kind: "following" });
-    const { default: LocalizedPublicProfileRoute } = await import("./page");
+    const { ProfileViewerActions, ProfileActionStatus } =
+      await import("./profile-regions");
     const html = renderToStaticMarkup(
-      await LocalizedPublicProfileRoute({
-        params: Promise.resolve({
-          locale: "bg",
-          profileHandle: "@green_thumb",
-        }),
+      await ProfileViewerActions({
+        profile: PROFILE,
+        locale: "bg",
         searchParams: Promise.resolve({ profileAction: "followed" }),
       }),
     );
 
     expect(mocks.getProfileViewerState).toHaveBeenCalledWith(
       { userId: "viewer-user", sessionId: "session-1" },
-      "@green_thumb",
+      "green_thumb",
     );
     expect(html).toContain("Спри следването");
-    expect(html).toContain("Вече следвате този профил.");
+    const status = renderToStaticMarkup(
+      await ProfileActionStatus({
+        locale: "bg",
+        searchParams: Promise.resolve({ profileAction: "followed" }),
+      }),
+    );
+    expect(status).toContain("Вече следвате този профил.");
     expect(html).not.toContain("viewer-user");
   });
 
@@ -214,13 +231,11 @@ describe("/{locale}/@:handle public profile route", () => {
     mocks.getProfileViewerState.mockResolvedValueOnce({
       kind: "not_following",
     });
-    const { default: LocalizedPublicProfileRoute } = await import("./page");
+    const { ProfileViewerActions } = await import("./profile-regions");
     const html = renderToStaticMarkup(
-      await LocalizedPublicProfileRoute({
-        params: Promise.resolve({
-          locale: "uk",
-          profileHandle: "@green_thumb",
-        }),
+      await ProfileViewerActions({
+        profile: PROFILE,
+        locale: "uk",
         searchParams: Promise.resolve({ authIntent: "report" }),
       }),
     );
@@ -229,75 +244,81 @@ describe("/{locale}/@:handle public profile route", () => {
     expect(html).toContain('data-auth-intent-control="report"');
   });
 
-  it("does not load blocked identity evidence when viewer-aware lifecycle is unavailable", async () => {
-    mocks.getCurrentSession.mockResolvedValue({
-      user: { id: "blocked-viewer" },
-      session: { id: "session-1" },
+  it("builds public metadata without reading the viewer", async () => {
+    const { generateMetadata } = await import("./page");
+    await generateMetadata({
+      params: Promise.resolve({ locale: "uk", profileHandle: "@green_thumb" }),
     });
-    mocks.getPublicProfileLifecycleLookup.mockResolvedValue({
-      status: "not_found",
-    });
-    const { default: LocalizedPublicProfileRoute, generateMetadata } =
-      await import("./page");
-    const params = {
-      locale: "uk",
-      profileHandle: "@green_thumb",
-    };
-
-    const metadata = await generateMetadata({
-      params: Promise.resolve(params),
-    });
-    await expect(
-      LocalizedPublicProfileRoute({ params: Promise.resolve(params) }),
-    ).rejects.toThrow("NEXT_NOT_FOUND");
-
-    expect(metadata).toMatchObject({
-      title: "Профіль садівника | OverGarden",
-      robots: { index: false, follow: false },
-    });
-    expect(JSON.stringify(metadata)).not.toMatch(
-      /green_thumb|Green Thumb|public-safe profile biography|canonical|openGraph/i,
-    );
-    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
-      "@green_thumb",
-      "blocked-viewer",
-    );
-    expect(mocks.getPublicProfileEvidencePageByHandle).not.toHaveBeenCalled();
+    expect(mocks.getCurrentSession).not.toHaveBeenCalled();
     expect(mocks.getProfileViewerState).not.toHaveBeenCalled();
+    // Mutual-block refusal is now asserted at the proxy for documents, RSC
+    // and prefetch requests, before the shared static representation is read.
+    expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
   });
 
   it.each(["blocked", "unavailable"] as const)(
-    "fails metadata and RSC closed when the final viewer state is %s",
-    async (viewerKind) => {
+    "omits viewer controls for %s",
+    async (kind) => {
       mocks.getCurrentSession.mockResolvedValue({
         user: { id: "viewer-user" },
         session: { id: "session-1" },
       });
-      mocks.getProfileViewerState.mockResolvedValue({ kind: viewerKind });
-      const { default: LocalizedPublicProfileRoute, generateMetadata } =
-        await import("./page");
-      const params = {
-        locale: "bg",
-        profileHandle: "@green_thumb",
-      };
-
-      const metadata = await generateMetadata({
-        params: Promise.resolve(params),
-      });
-      await expect(
-        LocalizedPublicProfileRoute({ params: Promise.resolve(params) }),
-      ).rejects.toThrow("NEXT_NOT_FOUND");
-
-      expect(metadata).toMatchObject({
-        title: "Профил на градинар | OverGarden",
-        robots: { index: false, follow: false },
-      });
-      expect(JSON.stringify(metadata)).not.toMatch(
-        /green_thumb|Green Thumb|public-safe profile biography|canonical|openGraph/i,
+      mocks.getProfileViewerState.mockResolvedValue({ kind });
+      const { ProfileViewerActions } = await import("./profile-regions");
+      const html = renderToStaticMarkup(
+        await ProfileViewerActions({
+          profile: PROFILE,
+          locale: "uk",
+          searchParams: undefined,
+        }),
       );
-      expect(mocks.notFound).toHaveBeenCalled();
+      expect(html).not.toContain("<form");
+      expect(html).not.toContain("viewer-user");
     },
   );
+
+  it("never consumes request parameters while rendering the default profile", async () => {
+    const { default: Page } = await import("./page");
+    const query = {
+      then: vi.fn(() => {
+        throw new Error("request read by page");
+      }),
+    };
+    await Page({
+      params: Promise.resolve({ locale: "uk", profileHandle: "@green_thumb" }),
+      searchParams: query as unknown as Promise<Record<string, string>>,
+    });
+    expect(query.then).not.toHaveBeenCalled();
+    expect(mocks.getCurrentSession).not.toHaveBeenCalled();
+  });
+
+  it("defers a failed static read instead of caching missing content", async () => {
+    mocks.getPublicProfileEvidencePageByHandle.mockRejectedValue(
+      new Error("database away"),
+    );
+    const { renderPublicProfile } = await import("./page");
+    await expect(
+      renderPublicProfile("uk", "@green_thumb", undefined, "objects", "static"),
+    ).rejects.toThrow("read_failed");
+    await expect(
+      renderPublicProfile(
+        "uk",
+        "@green_thumb",
+        undefined,
+        "objects",
+        "request",
+      ),
+    ).rejects.toThrow("database away");
+  });
+
+  it("renders its build placeholder without any database read", async () => {
+    const { default: Page, generateStaticParams } = await import("./page");
+    const params = generateStaticParams()[0]!;
+    expect(
+      await Page({ params: Promise.resolve({ locale: "uk", ...params }) }),
+    ).toBeNull();
+    expect(mocks.getPublicProfileEvidencePageByHandle).not.toHaveBeenCalled();
+  });
 
   it("uses localized missing metadata without querying malformed routes", async () => {
     const { generateMetadata } = await import("./page");

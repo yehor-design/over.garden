@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { PUBLIC_CACHE_TAGS } from "@/lib/public-cache-tags";
+import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 import { resolveLineageClaim } from "@/server/lineage-repository";
 import {
@@ -60,4 +62,8 @@ function revalidateLineageClaimPaths(subjectPlantObjectId: string) {
   revalidatePath(LINEAGE_CLAIMS_PATH);
   revalidatePath("/garden");
   revalidatePath(`/garden/objects/${subjectPlantObjectId}`);
+  revalidatePublicCacheTags(
+    [PUBLIC_CACHE_TAGS.catalog, PUBLIC_CACHE_TAGS.profiles],
+    "update",
+  );
 }

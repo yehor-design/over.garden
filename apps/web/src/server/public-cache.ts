@@ -30,7 +30,11 @@ import {
   listPublicObjectCatalogPage,
   type PublicObjectCatalogRequest,
 } from "@/server/public-object-catalog-repository";
-import { getPublicObjectPassportPage } from "@/server/public-object-passport-repository";
+import {
+  getPublicObjectPassportIdBySlug,
+  getPublicObjectPassportPage,
+} from "@/server/public-object-passport-repository";
+import { getPublicLineageGraphPage } from "@/server/public-lineage-repository";
 import { getPublicProfileEvidencePageByHandle } from "@/server/public-profile-repository";
 import {
   buildPublicSitemapChunk,
@@ -105,9 +109,8 @@ export async function readCatalogRegisterHub(speciesSlug: string) {
   "use cache";
   cacheLife("days");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const { getCatalogRegisterHub } = await import(
-    "@/server/public-catalog-register-repository"
-  );
+  const { getCatalogRegisterHub } =
+    await import("@/server/public-catalog-register-repository");
   return getCatalogRegisterHub(speciesSlug);
 }
 
@@ -115,9 +118,8 @@ export async function readCatalogRegisterHubSpecies() {
   "use cache";
   cacheLife("days");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const { listCatalogRegisterHubSpecies } = await import(
-    "@/server/public-catalog-register-repository"
-  );
+  const { listCatalogRegisterHubSpecies } =
+    await import("@/server/public-catalog-register-repository");
   return listCatalogRegisterHubSpecies();
 }
 
@@ -125,9 +127,8 @@ export async function readCatalogBrowseKingdoms() {
   "use cache";
   cacheLife("days");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const { listCatalogBrowseKingdoms } = await import(
-    "@/server/public-catalog-browse-repository"
-  );
+  const { listCatalogBrowseKingdoms } =
+    await import("@/server/public-catalog-browse-repository");
   return listCatalogBrowseKingdoms();
 }
 
@@ -146,9 +147,8 @@ export async function readCatalogBrowsePage(
   "use cache";
   cacheLife("days");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const { listCatalogBrowsePage } = await import(
-    "@/server/public-catalog-browse-repository"
-  );
+  const { listCatalogBrowsePage } =
+    await import("@/server/public-catalog-browse-repository");
   return listCatalogBrowsePage(request, locale);
 }
 
@@ -159,9 +159,8 @@ export async function readCatalogBrowseFacets(
   "use cache";
   cacheLife("days");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const { countCatalogBrowseFacets } = await import(
-    "@/server/public-catalog-browse-repository"
-  );
+  const { countCatalogBrowseFacets } =
+    await import("@/server/public-catalog-browse-repository");
   return countCatalogBrowseFacets(request);
 }
 
@@ -274,6 +273,28 @@ export async function readPublicObjectCatalogPage(
   cacheLife("minutes");
   cacheTag(PUBLIC_CACHE_TAGS.catalog);
   return listPublicObjectCatalogPage(request, locale);
+}
+
+/** Address changes and newly published objects invalidate this resolver. */
+export async function readPublicObjectPassportIdBySlug(
+  handle: string,
+  slug: string,
+) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog, publicCacheTag.profile(handle));
+  const id = await getPublicObjectPassportIdBySlug(handle, slug);
+  if (id) cacheTag(publicCacheTag.object(id));
+  return id;
+}
+
+export async function readPublicLineageGraphPage(objectId: string) {
+  "use cache";
+  cacheLife("hours");
+  // A confirmed edge can change the graph viewed from either end and every
+  // ancestor. Claim mutations expire the family, not only the subject page.
+  cacheTag(PUBLIC_CACHE_TAGS.catalog, publicCacheTag.object(objectId));
+  return getPublicLineageGraphPage(objectId);
 }
 
 export async function readPublicObjectPassportPage(

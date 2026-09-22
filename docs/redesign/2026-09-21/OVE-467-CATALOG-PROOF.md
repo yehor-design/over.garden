@@ -86,3 +86,30 @@ No audit history was deleted. The unmatched 13-card attempt was discarded.
 hash. Adjacent compressed reports omit embedded screenshots only. Production
 release evidence follows after green CI and exact-SHA deployment. OVE-467
 and the complete redesign remain in progress.
+
+## Production release
+
+PR #440 merged after green CI run `35644435607`: tested
+`c41aeecbb2b83ec4aca45214c0e1eb418103efd6`; main
+`51d814a73a3c1ab283884045ad3222d609bbe20d`; production
+`dpl_4DArMS7zyWARx3NNb1XhuBQNijv9` READY on that exact SHA.
+Local and remote main were synchronized before starting the next family.
+
+CI completed with 4,327 web tests passing, 13 skips and 14 worker tests passing.
+Browser shards: 104 + 102 passed, one skip, one flaky community accessibility
+test (30-second timeout, passed retry). The local full browser gate had no retries;
+CI must not be described as retry-free. This existing community test remains a
+follow-up for that family's conversion.
+
+Production `/catalog` returns PRERENDER with all 60 cards outside hidden
+segments, its heading and controls visible, title in head, no directory skeleton.
+All 18 SEO tags, title and JSON-LD are byte-identical. UK/BG/RU and the plant
+filter return 200; 25 held segments adopted, zero dropped or leftover segments,
+zero captured hydration errors.
+
+Three-run production medians: applied LCP 3,113.696 → 3,126.676 ms;
+simulated 4,709.486 → 3,510.509 ms. Maximum applied CLS 0.000030818;
+simulated CLS 0. The applied result is effectively unchanged and exceeds the
+2-second budget. No production speedup is claimed. The consent paragraph is
+still the measured LCP element. Compressed reports and numeric/HTTP/browser
+receipts are adjacent. OVE-467 stays In Progress; profile/passport is next.

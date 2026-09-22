@@ -1,0 +1,110 @@
+{
+  "profile": {
+    "equal": true,
+    "originNormalized": "http://127.0.0.1:3000 (before build) and http://127.0.0.1:3179 (after) both read as ORIGIN",
+    "before": {
+      "title": [
+        "<title>@gardener_c0b19ff95fcbe88b (@gardener_c0b19ff95fcbe88b) · публічний профіль | OverGarden</title>"
+      ],
+      "tags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"ORIGIN/bg/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"ORIGIN/ru/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"canonical\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>",
+        "<meta name=\"description\" content=\"Об’єкти: 1. Записи: 1.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Об’єкти: 1. Записи: 1.\"/>",
+        "<meta name=\"twitter:title\" content=\"@gardener_c0b19ff95fcbe88b (@gardener_c0b19ff95fcbe88b) · публічний профіль | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Об’єкти: 1. Записи: 1.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"@gardener_c0b19ff95fcbe88b (@gardener_c0b19ff95fcbe88b) · публічний профіль | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"profile\"/>",
+        "<meta property=\"og:url\" content=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\",\"url\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\",\"name\":\"@gardener_c0b19ff95fcbe88b\",\"description\":\"Об’єкти: 1. Записи: 1.\",\"inLanguage\":\"uk\",\"mainEntity\":{\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\"},\"isPartOf\":{\"@id\":\"ORIGIN/#website\"}},{\"@type\":\"ProfilePage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b#main-entity\",\"name\":\"@gardener_c0b19ff95fcbe88b\",\"description\":\"Об’єкти: 1. Записи: 1.\",\"about\":\"Public active OverGarden profile\",\"mainEntity\":{\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\"}},{\"@type\":\"Person\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\",\"name\":\"@gardener_c0b19ff95fcbe88b\",\"url\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\"},{\"@type\":\"Organization\",\"@id\":\"ORIGIN/#organization\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\"},{\"@type\":\"WebSite\",\"@id\":\"ORIGIN/#website\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\",\"publisher\":{\"@id\":\"ORIGIN/#organization\"}}]}"
+      ]
+    },
+    "after": {
+      "title": [
+        "<title>@gardener_c0b19ff95fcbe88b (@gardener_c0b19ff95fcbe88b) · публічний профіль | OverGarden</title>"
+      ],
+      "tags": [
+        "<link rel=\"alternate\" hrefLang=\"bg\" href=\"ORIGIN/bg/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"alternate\" hrefLang=\"ru\" href=\"ORIGIN/ru/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"alternate\" hrefLang=\"uk\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>",
+        "<link rel=\"canonical\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>",
+        "<meta name=\"description\" content=\"Об’єкти: 1. Записи: 1.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Об’єкти: 1. Записи: 1.\"/>",
+        "<meta name=\"twitter:title\" content=\"@gardener_c0b19ff95fcbe88b (@gardener_c0b19ff95fcbe88b) · публічний профіль | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Об’єкти: 1. Записи: 1.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"bg_BG\"/>",
+        "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"@gardener_c0b19ff95fcbe88b (@gardener_c0b19ff95fcbe88b) · публічний профіль | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"profile\"/>",
+        "<meta property=\"og:url\" content=\"ORIGIN/@gardener_c0b19ff95fcbe88b\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\",\"url\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\",\"name\":\"@gardener_c0b19ff95fcbe88b\",\"description\":\"Об’єкти: 1. Записи: 1.\",\"inLanguage\":\"uk\",\"mainEntity\":{\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\"},\"isPartOf\":{\"@id\":\"ORIGIN/#website\"}},{\"@type\":\"ProfilePage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b#main-entity\",\"name\":\"@gardener_c0b19ff95fcbe88b\",\"description\":\"Об’єкти: 1. Записи: 1.\",\"about\":\"Public active OverGarden profile\",\"mainEntity\":{\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\"}},{\"@type\":\"Person\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\",\"name\":\"@gardener_c0b19ff95fcbe88b\",\"url\":\"ORIGIN/@gardener_c0b19ff95fcbe88b\"},{\"@type\":\"Organization\",\"@id\":\"ORIGIN/#organization\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\"},{\"@type\":\"WebSite\",\"@id\":\"ORIGIN/#website\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\",\"publisher\":{\"@id\":\"ORIGIN/#organization\"}}]}"
+      ]
+    }
+  },
+  "passport": {
+    "equal": true,
+    "originNormalized": "http://127.0.0.1:3000 (before build) and http://127.0.0.1:3179 (after) both read as ORIGIN",
+    "before": {
+      "title": [
+        "<title>Томат Чорний принц · живий об&#x27;єкт | OverGarden</title>"
+      ],
+      "tags": [
+        "<link rel=\"canonical\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\"/>",
+        "<meta name=\"description\" content=\"Публічний паспорт живого об&#x27;єкта: Томат Чорний принц.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Публічний паспорт живого об&#x27;єкта: Томат Чорний принц.\"/>",
+        "<meta name=\"twitter:title\" content=\"Томат Чорний принц · живий об&#x27;єкт | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Публічний паспорт живого об&#x27;єкта: Томат Чорний принц.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Томат Чорний принц · живий об&#x27;єкт | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\",\"url\":\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\",\"name\":\"Томат Чорний принц\",\"description\":\"Публічний паспорт живого об'єкта: Томат Чорний принц.\",\"isPartOf\":{\"@id\":\"ORIGIN/#website\"}},{\"@type\":\"ItemPage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato#main-entity\",\"name\":\"Томат Чорний принц\",\"description\":\"Публічний паспорт живого об'єкта: Томат Чорний принц.\",\"about\":\"Public object history with confirmed provenance only\"},{\"@type\":\"Organization\",\"@id\":\"ORIGIN/#organization\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\"},{\"@type\":\"WebSite\",\"@id\":\"ORIGIN/#website\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\",\"publisher\":{\"@id\":\"ORIGIN/#organization\"}}]}"
+      ]
+    },
+    "after": {
+      "title": [
+        "<title>Томат Чорний принц · живий об&#x27;єкт | OverGarden</title>"
+      ],
+      "tags": [
+        "<link rel=\"canonical\" href=\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\"/>",
+        "<meta name=\"description\" content=\"Публічний паспорт живого об&#x27;єкта: Томат Чорний принц.\"/>",
+        "<meta name=\"robots\" content=\"index, follow\"/>",
+        "<meta name=\"twitter:card\" content=\"summary\"/>",
+        "<meta name=\"twitter:description\" content=\"Публічний паспорт живого об&#x27;єкта: Томат Чорний принц.\"/>",
+        "<meta name=\"twitter:title\" content=\"Томат Чорний принц · живий об&#x27;єкт | OverGarden\"/>",
+        "<meta property=\"og:description\" content=\"Публічний паспорт живого об&#x27;єкта: Томат Чорний принц.\"/>",
+        "<meta property=\"og:locale\" content=\"uk_UA\"/>",
+        "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+        "<meta property=\"og:title\" content=\"Томат Чорний принц · живий об&#x27;єкт | OverGarden\"/>",
+        "<meta property=\"og:type\" content=\"website\"/>",
+        "<meta property=\"og:url\" content=\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\"/>"
+      ],
+      "jsonLd": [
+        "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\",\"url\":\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato\",\"name\":\"Томат Чорний принц\",\"description\":\"Публічний паспорт живого об'єкта: Томат Чорний принц.\",\"isPartOf\":{\"@id\":\"ORIGIN/#website\"}},{\"@type\":\"ItemPage\",\"@id\":\"ORIGIN/@gardener_c0b19ff95fcbe88b/objects/ove467-profile-tomato#main-entity\",\"name\":\"Томат Чорний принц\",\"description\":\"Публічний паспорт живого об'єкта: Томат Чорний принц.\",\"about\":\"Public object history with confirmed provenance only\"},{\"@type\":\"Organization\",\"@id\":\"ORIGIN/#organization\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\"},{\"@type\":\"WebSite\",\"@id\":\"ORIGIN/#website\",\"name\":\"OverGarden\",\"url\":\"ORIGIN/\",\"publisher\":{\"@id\":\"ORIGIN/#organization\"}}]}"
+      ]
+    }
+  }
+}

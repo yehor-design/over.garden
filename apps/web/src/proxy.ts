@@ -574,7 +574,11 @@ function getAuthorScopedRewriteResponse(
       new Headers(request.headers),
       localization,
     );
-    url.pathname = `/${locale}${rootProfilePath}`;
+    const twinPath = publicQueryTwinPath(
+      rootProfilePath,
+      request.nextUrl.searchParams,
+    );
+    url.pathname = `/${locale}${twinPath ?? rootProfilePath}`;
     url.search = sanitizeInterfaceRouteSearch(
       rootProfilePath,
       request.nextUrl.searchParams,
@@ -703,7 +707,8 @@ async function getPublicProfileLifecycleResponse(
   );
   if (lookup.status === "gone") {
     return notFoundDocument(
-      renderGonePublicProfileHtml(localization.locale, lifecycleLocation), 410,
+      renderGonePublicProfileHtml(localization.locale, lifecycleLocation),
+      410,
     );
   }
   if (lookup.status === "not_found") {
@@ -874,9 +879,8 @@ export async function proxy(request: NextRequest) {
     ? matchAddressPath("object", request.nextUrl.pathname)
     : null;
   if (legacyPassportId) {
-    const { getPublicObjectPassportAddress } = await import(
-      "@/server/public-object-passport-repository"
-    );
+    const { getPublicObjectPassportAddress } =
+      await import("@/server/public-object-passport-repository");
     const address = await getPublicObjectPassportAddress(
       legacyPassportId,
     ).catch(() => null);
@@ -891,7 +895,7 @@ export async function proxy(request: NextRequest) {
     }
   }
   const canonicalDefaultProfileHandle =
-    isDocumentNavigation && initialStrippedPath.locale === null
+    initialStrippedPath.locale === null
       ? matchPublicProfilePath(request.nextUrl.pathname)
       : null;
   if (canonicalDefaultProfileHandle) {
@@ -1019,7 +1023,7 @@ export async function proxy(request: NextRequest) {
   // prefixed one. Now that the rewrite no longer returns before this point,
   // without the distinction the unprefixed profile would be looked up twice.
   const publicProfileHandle =
-    isDocumentNavigation && initialStrippedPath.locale !== null
+    initialStrippedPath.locale !== null
       ? matchPublicProfilePath(request.nextUrl.pathname)
       : null;
   if (publicProfileHandle) {
@@ -1043,7 +1047,8 @@ export async function proxy(request: NextRequest) {
     if (lookup.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(
-          renderGonePublicObjectPassportHtml(locale, lifecycleLocation), 410,
+          renderGonePublicObjectPassportHtml(locale, lifecycleLocation),
+          410,
         ),
         request,
         localization,
@@ -1068,8 +1073,10 @@ export async function proxy(request: NextRequest) {
     ? matchAuthorScopedObjectPath(request.nextUrl.pathname)
     : null;
   if (authorScopedObject) {
-    const { getPublicObjectPassportLifecycleBySlug, resolvePlantObjectAddress } =
-      await import("@/server/public-object-passport-repository");
+    const {
+      getPublicObjectPassportLifecycleBySlug,
+      resolvePlantObjectAddress,
+    } = await import("@/server/public-object-passport-repository");
     // A failed lookup lets the page decide, as the catalog block does: a
     // database that is down must not turn every passport into a 404.
     const lookup = await getPublicObjectPassportLifecycleBySlug(
@@ -1099,7 +1106,8 @@ export async function proxy(request: NextRequest) {
     if (lookup?.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(
-          renderGonePublicObjectPassportHtml(locale, lifecycleLocation), 410,
+          renderGonePublicObjectPassportHtml(locale, lifecycleLocation),
+          410,
         ),
         request,
         localization,
@@ -1147,9 +1155,8 @@ export async function proxy(request: NextRequest) {
     ? matchAuthorScopedEntryPath(request.nextUrl.pathname)
     : null;
   if (numberedEntry) {
-    const { getPublicJournalEntryLifecycleLookup } = await import(
-      "@/server/journal-repository"
-    );
+    const { getPublicJournalEntryLifecycleLookup } =
+      await import("@/server/journal-repository");
     const lookup = await getPublicJournalEntryLifecycleLookup(
       publicJournalEntryNumberKey(
         numberedEntry.handle,
@@ -1159,7 +1166,8 @@ export async function proxy(request: NextRequest) {
     if (lookup.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(
-          renderGonePublicJournalEntryHtml(locale, lifecycleLocation), 410,
+          renderGonePublicJournalEntryHtml(locale, lifecycleLocation),
+          410,
         ),
         request,
         localization,
@@ -1190,11 +1198,13 @@ export async function proxy(request: NextRequest) {
       null)
     : null;
   if (legacyJournalSlug) {
-    const [{ getPublicJournalEntryLifecycleLookup }, { resolveJournalEntryAddress }] =
-      await Promise.all([
-        import("@/server/journal-repository"),
-        import("@/server/journal-slug-repository"),
-      ]);
+    const [
+      { getPublicJournalEntryLifecycleLookup },
+      { resolveJournalEntryAddress },
+    ] = await Promise.all([
+      import("@/server/journal-repository"),
+      import("@/server/journal-slug-repository"),
+    ]);
     // The name is per author since `0073`, so an author-scoped address is
     // looked up by `(handle, slug)`. A flat `/journal/{slug}` carries no
     // handle and its slug may name more than one entry now; it is answered
@@ -1230,7 +1240,10 @@ export async function proxy(request: NextRequest) {
           ).catch(() => null));
     if (address) {
       const url = request.nextUrl.clone();
-      url.pathname = publicJournalEntryPath(address.handle, address.entryNumber);
+      url.pathname = publicJournalEntryPath(
+        address.handle,
+        address.entryNumber,
+      );
       url.search = sanitizeInterfaceRouteSearch(
         url.pathname,
         request.nextUrl.searchParams,
@@ -1244,7 +1257,8 @@ export async function proxy(request: NextRequest) {
     return withAppRouteContract(
       lookup.status === "gone"
         ? notFoundDocument(
-            renderGonePublicJournalEntryHtml(locale, lifecycleLocation), 410,
+            renderGonePublicJournalEntryHtml(locale, lifecycleLocation),
+            410,
           )
         : notFoundDocument(
             renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
@@ -1272,9 +1286,9 @@ export async function proxy(request: NextRequest) {
       CatalogSpeciesHubSegment,
       (speciesSlug: string) => Promise<boolean>
     >;
-    const exists = await hubExists[speciesHub.hub](speciesHub.speciesSlug).catch(
-      () => null,
-    );
+    const exists = await hubExists[speciesHub.hub](
+      speciesHub.speciesSlug,
+    ).catch(() => null);
     if (exists === false) {
       const { resolvePublicCatalogAddress } =
         await import("@/server/public-catalog-address-repository");
