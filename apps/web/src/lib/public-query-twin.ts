@@ -1,3 +1,4 @@
+import { matchPublicProfilePath } from "./public-profile-lifecycle";
 import { stripLocalePrefix } from "./public-localization";
 
 /**
@@ -57,7 +58,9 @@ export function publicQueryTwinPath(
   search: Pick<URLSearchParams, "getAll"> | string | null | undefined,
 ): string | null {
   const basePath = stripLocalePrefix(pathname).path;
-  const keys = PUBLIC_QUERY_TWINS.get(basePath);
+  const keys =
+    PUBLIC_QUERY_TWINS.get(basePath) ??
+    (matchPublicProfilePath(basePath) ? ["tab"] : undefined);
   if (!keys || !search) return null;
 
   const params =

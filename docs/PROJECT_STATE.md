@@ -61,10 +61,17 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
-**Static catalog directory (second OVE-467 family, in progress):** the default
-catalog uses the shared static document renderer; its own filter keys select an
-internal query twin, including repeated facet values. The delivery proof and
-remaining release checks are in `docs/redesign/2026-09-21/OVE-467-CATALOG-PROOF.md`.
+**Static public profile and object passport (third OVE-467 family):** `/@{handle}`
+and `/@{handle}/objects/{slug}` are static documents; follow/report/block, the
+passport's likes, comments and lineage forms arrive in request-time regions with
+the guest's controls as their fallback. `?tab=` renders from an internal
+`/q/@{handle}` twin, and the proxy still refuses a blocked viewer. See
+`docs/redesign/2026-09-21/OVE-467-PROFILE-PROOF.md`.
+
+**Static catalog directory (second OVE-467 family, released 2026-09-21):** the
+default catalog uses the shared static document renderer; its own filter keys
+select an internal query twin, including repeated facet values. See
+`docs/redesign/2026-09-21/OVE-467-CATALOG-PROOF.md`.
 
 **Static journal directory (first OVE-467 family):** the plain `/journals`
 document includes its title, controls, first photograph and cards in the visible

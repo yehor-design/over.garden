@@ -89,6 +89,31 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
     expect(publicQueryTwinPath("/catalog", "?kind=plant")).toBeNull();
   });
 
+  it("routes profile tabs, but not viewer status or object addresses, to the mounted dynamic twin", () => {
+    for (const prefix of ["", "/uk", "/bg", "/ru"]) {
+      expect(publicQueryTwinPath(`${prefix}/@gardener`, "?tab=entries")).toBe(
+        "/q/@gardener",
+      );
+      expect(
+        publicQueryTwinPath(`${prefix}/@gardener`, "?profileAction=followed"),
+      ).toBeNull();
+      expect(
+        publicQueryTwinPath(`${prefix}/@gardener`, "?utm_source=mail"),
+      ).toBeNull();
+      expect(
+        publicQueryTwinPath(
+          `${prefix}/@gardener/objects/tomato`,
+          "?tab=entries",
+        ),
+      ).toBeNull();
+    }
+    expect(
+      existsSync(
+        path.join(process.cwd(), "src/app/[locale]/q/[profileHandle]/page.tsx"),
+      ),
+    ).toBe(true);
+  });
+
   it("recognises the reserved segment with and without a locale", () => {
     for (const address of ["/q", "/q/journals", "/uk/q", "/bg/q/journals"]) {
       expect(isPublicQueryTwinPath(address), address).toBe(true);

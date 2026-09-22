@@ -65,6 +65,7 @@ interface StaticFixture {
   ownerUserId: string;
   handle: string;
   entryPath: string;
+  passportPath: string;
   organism: OrganismFixture;
 }
 
@@ -215,11 +216,19 @@ async function seedStaticFixture(pool: Pool): Promise<StaticFixture> {
   });
   const organism = await seedOrganismFixture(pool, ORGANISM_PREFIX);
   await photographTheSpeciesEntry(pool, organism);
+  const passportSlug = "static-passport";
+  const object = await pool.query(
+    `update plant_objects set public_slug = $1 where id = (select plant_object_id from journal_entries where id = $2) and owner_user_id = $3 returning id`,
+    [passportSlug, entry.entryId, entry.ownerUserId],
+  );
+  if (object.rowCount !== 1)
+    throw new Error("Expected the fixture's own object");
   return {
     entry,
     ownerUserId: entry.ownerUserId,
     handle: entry.handle,
     entryPath: entry.entryPath,
+    passportPath: `/@${entry.handle}/objects/${passportSlug}`,
     organism,
   };
 }
@@ -494,6 +503,39 @@ test.describe("a public page is a static document", () => {
     }
   });
 
+  test("profiles and passports put their identity, photo and evidence in the served bytes", async ({
+    request,
+  }) => {
+    for (const address of [
+      `/@${fixture.handle}`,
+      `/bg/@${fixture.handle}`,
+      `/ru/@${fixture.handle}`,
+      fixture.passportPath,
+    ]) {
+      for (const attempt of [1, 2]) {
+        const { status, html } = await getDocument(request, address);
+        expect(status, `${address}: ${attempt}`).toBe(200);
+        const served = readStaticDocument(html);
+        expect(served.titleInHead, address).toBe(true);
+        expect(served.heading?.hidden, address).toBe(false);
+        expect(served.image?.hidden, address).toBe(false);
+        expect(served.imagePreloadInHead, address).toBe(true);
+        expect(served.skeleton, address).toBe(false);
+        expect(served.visibleText.length, address).toBeGreaterThan(600);
+      }
+    }
+    const tracked = await getDocument(
+      request,
+      `/@${fixture.handle}?utm_source=proof`,
+    );
+    expect(readStaticDocument(tracked.html).heading?.hidden).toBe(false);
+    const tab = await getDocument(request, `/@${fixture.handle}?tab=entries`);
+    expect(tab.html).toContain('data-profile-tab="entries"');
+    expect(
+      (await getDocument(request, `/q/@${fixture.handle}?tab=entries`)).status,
+    ).toBe(404);
+  });
+
   test("catalog directories serve every result and control outside hidden segments", async ({
     request,
   }) => {
@@ -585,6 +627,8 @@ test.describe("a public page is a static document", () => {
         "/journals",
         fixture.entryPath,
         `/@${fixture.handle}`,
+        `/@${fixture.handle}?tab=entries`,
+        fixture.passportPath,
         card,
       ]) {
         await page.goto(address, { waitUntil: "load" });
@@ -657,6 +701,8 @@ test.describe("a public page is a static document", () => {
         "/bg/catalog",
         "/ru/catalog",
         fixture.entryPath,
+        `/@${fixture.handle}`,
+        fixture.passportPath,
         `/species/${fixture.organism.speciesSlug}`,
       ]) {
         await page.goto(address, { waitUntil: "load" });
@@ -697,6 +743,8 @@ test.describe("a public page is a static document", () => {
       "/catalog",
       fixture.entryPath,
       `/@${fixture.handle}`,
+      `/@${fixture.handle}?tab=entries`,
+      fixture.passportPath,
       `/species/${fixture.organism.speciesSlug}`,
     ]) {
       await page.setViewportSize({ width: 1_440, height: 900 });
@@ -758,6 +806,8 @@ test.describe("a public page is a static document", () => {
       "/knowledge",
       "/communities",
       `/@${fixture.handle}`,
+      `/@${fixture.handle}?tab=entries`,
+      fixture.passportPath,
       ...community.rows.map((row) => `/communities/${row.slug}`),
     ];
 

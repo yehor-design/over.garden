@@ -119,7 +119,11 @@ async function axeViolations(page: Page) {
  */
 async function seedPublishedWork(
   gardener: SyntheticGardener,
-): Promise<{ objectSlugs: string[]; objectIds: string[]; edgeId: string | null }> {
+): Promise<{
+  objectSlugs: string[];
+  objectIds: string[];
+  edgeId: string | null;
+}> {
   const run = randomUUID().slice(0, 8);
   const space = await pool.query<{ id: string }>(
     `insert into spaces (owner_user_id, display_name) values ($1::uuid, $2)
@@ -211,11 +215,17 @@ function encodeMultipart(fields: Array<[string, string]>) {
 }
 
 /** Every field of one `<form>` as the browser would submit it. */
-function readFormFields(html: string, marker: string) {
+function readFormFields(
+  html: string,
+  marker: string,
+  accept: (form: string) => boolean = () => true,
+) {
   const forms = [...html.matchAll(/<form\b[\s\S]*?<\/form>/gu)].map(
     (match) => match[0],
   );
-  const form = forms.find((candidate) => candidate.includes(marker));
+  const form = forms.find(
+    (candidate) => candidate.includes(marker) && accept(candidate),
+  );
   if (!form) return null;
   const action = /<form[^>]*\baction="([^"]*)"/u.exec(form)?.[1] ?? null;
   const fields: Array<[string, string]> = [
@@ -225,7 +235,8 @@ function readFormFields(html: string, marker: string) {
   // as the empty string, and the endpoint needs it present.
   for (const match of form.matchAll(/<input[^>]*\bname="(\$ACTION_[^"]+)"/gu)) {
     const name = match[1]!;
-    if (!fields.some(([existing]) => existing === name)) fields.push([name, ""]);
+    if (!fields.some(([existing]) => existing === name))
+      fields.push([name, ""]);
   }
   return { action, fields };
 }
@@ -237,6 +248,48 @@ function decodeHtml(value: string) {
     .replaceAll("&#x27;", "'")
     .replaceAll("&lt;", "<")
     .replaceAll("&gt;", ">");
+}
+
+/**
+ * One more public object, with one public entry, in the space of an object the
+ * fixture already has — for a proof that needs a passport nobody has read.
+ */
+async function seedColdPublicObject(
+  ownerUserId: string,
+  besideObjectId: string,
+) {
+  const run = randomUUID().slice(0, 8);
+  const slug = `${FIXTURE_PREFIX}-cold-${run}`;
+  const object = await pool.query<{ id: string; space_id: string }>(
+    `insert into plant_objects
+       (owner_user_id, space_id, display_name, object_kind, public_slug,
+        variety_state)
+     select $1::uuid, space_id, $3, 'plant', $4, 'unknown'
+       from plant_objects where id = $2::uuid and owner_user_id = $1::uuid
+     returning id::text id, space_id::text space_id`,
+    [ownerUserId, besideObjectId, `${FIXTURE_PREFIX} об'єкт ${run}`, slug],
+  );
+  const row = object.rows[0];
+  if (!row) throw new Error("The cold object was not written.");
+  await pool.query(
+    `insert into journal_entries
+       (owner_user_id, space_id, plant_object_id, title, body,
+        client_mutation_id, public_slug, published_at, entry_date,
+        source_language, visibility, lifecycle_state, content_class,
+        entry_scope)
+     values ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, now(),
+             current_date, 'uk', 'public', 'active', 'real_ugc', 'object')`,
+    [
+      ownerUserId,
+      row.space_id,
+      row.id,
+      `${FIXTURE_PREFIX} запис ${run}`,
+      "Новий приріст рівний, листя без плям на зворотному боці.",
+      randomUUID(),
+      `${FIXTURE_PREFIX}-cold-entry-${run}`,
+    ],
+  );
+  return { slug, objectId: row.id };
 }
 
 /** One transaction, for the writes a deferrable constraint pairs together. */
@@ -406,12 +459,18 @@ test.describe("the public profile and the object passport", () => {
     await selectLocale(context, baseURL);
     const handle = fixture!.gardener.handle;
     const renamed = `${handle.slice(0, 28)}x`;
-    // An object no earlier test in this file has opened. The passport caches
-    // for hours, and a rename made in SQL cannot fire the tags the real
-    // action fires — `src/lib/public-cache-tags.test.ts` is where that list is
-    // pinned. Reading a cold passport keeps this proof about the addresses.
-    const slug = fixture!.objectSlugs[2]!;
-    const objectId = fixture!.objectIds[2]!;
+    // An object nothing has read yet. The passport caches for hours, and a
+    // rename made in SQL cannot fire the tags the real action fires —
+    // `src/lib/public-cache-tags.test.ts` is where that list is pinned.
+    // Reading a cold passport keeps this proof about the addresses. It is
+    // seeded here rather than in `beforeAll` because "no earlier test opened
+    // it" is not enough since ADR-0032: the profile is a static document and
+    // the passports are too, so a profile open in a browser prefetches — and
+    // so renders and caches — every passport it links to.
+    const { slug, objectId } = await seedColdPublicObject(
+      fixture!.gardener.id,
+      fixture!.objectIds[2]!,
+    );
 
     // This is what a rename is in the schema: the old handle retires, the new
     // one becomes current, and the profile is repointed at it.
@@ -499,10 +558,9 @@ test.describe("the public profile and the object passport", () => {
         'link[rel="canonical"]',
         "href",
       );
-      expect(
-        profileCanonical,
-        `canonical was ${profileCanonical}`,
-      ).toContain(`/@${renamed}`);
+      expect(profileCanonical, `canonical was ${profileCanonical}`).toContain(
+        `/@${renamed}`,
+      );
     } finally {
       await withTransaction(async (client) => {
         await client.query(
@@ -536,7 +594,21 @@ test.describe("the public profile and the object passport", () => {
       const profileUrl = `${baseURL}/uk/@${fixture!.gardener.handle}`;
       const page = await request.get(profileUrl);
       expect(page.status()).toBe(200);
-      const form = readFormFields(await page.text(), 'data-auth-intent-control="follow"');
+      const html = await page.text();
+      // The profile is a static document (ADR-0032 D2): its first bytes carry
+      // the guest's working controls, and the reader's own arrive in the
+      // streamed segment React's inline reveal swaps in — before any bundle
+      // has run. The guest's follow is a real endpoint of its own…
+      const guest = readFormFields(html, 'data-auth-intent-control="follow"');
+      expect(guest?.action, "the guest follow has no endpoint").toBe(
+        "/auth/intent/start",
+      );
+      // …and the gardener's is a server action with its reference.
+      const form = readFormFields(
+        html,
+        'data-auth-intent-control="follow"',
+        (candidate) => candidate.includes("$ACTION_"),
+      );
       expect(form, "the profile rendered no follow form").not.toBeNull();
 
       // This is the discriminator the issue warns about. React writes

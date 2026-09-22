@@ -1,8 +1,22 @@
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
+import {
+  STATIC_PARAMS_PLACEHOLDER,
+  staticReadsAreAvailable,
+} from "@/server/public-prerender";
+import { readPublicObjectPassportIdBySlug } from "@/server/public-cache";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+} from "@/server/static-public-page";
 
-import PublicLineageObjectRoute, {
+import {
   generateMetadata as generatePassportMetadata,
+  renderPassport,
 } from "@/app/[locale]/lineage/objects/[objectId]/page";
+import { isPublicLocale } from "@/lib/public-localization";
 import { matchAuthorScopedObjectPath } from "@/lib/address/match-address-path";
 import {
   decodeRouteSegment,
@@ -45,10 +59,7 @@ async function resolveObjectId(
   );
   if (!matched) return null;
 
-  const { getPublicObjectPassportIdBySlug } = await import(
-    "@/server/public-object-passport-repository"
-  );
-  const objectId = await getPublicObjectPassportIdBySlug(
+  const objectId = await readPublicObjectPassportIdBySlug(
     matched.handle,
     matched.slug,
   );
@@ -58,7 +69,12 @@ async function resolveObjectId(
 export async function generateMetadata({
   params,
 }: AuthorScopedPassportRouteProps) {
-  const address = await resolveObjectId(params);
+  if ((await params).profileHandle === STATIC_PARAMS_PLACEHOLDER) return {};
+  if (!(await staticReadsAreAvailable())) return {};
+  const address = await resolveObjectId(params).catch((error: unknown) => {
+    unstable_rethrow(error);
+    return null;
+  });
   if (!address) return {};
   return generatePassportMetadata({
     params: Promise.resolve({
@@ -68,29 +84,52 @@ export async function generateMetadata({
   });
 }
 
+export function generateStaticParams() {
+  return [
+    {
+      profileHandle: STATIC_PARAMS_PLACEHOLDER,
+      objectSlug: STATIC_PARAMS_PLACEHOLDER,
+    },
+  ];
+}
+
 export default async function AuthorScopedPassportRoute({
   params,
   searchParams,
 }: AuthorScopedPassportRouteProps) {
   const { profileHandle, objectSlug } = await params;
-  const address = await resolveObjectId(params);
-  if (!address) {
-    logAddressRefusal({
-      route: "author_scoped_passport",
-      reason: "address_unresolved",
-      detail: {
-        handle: routeHandleSegment(profileHandle),
-        slug: decodeRouteSegment(objectSlug),
-      },
-    });
-    notFound();
-  }
-
-  return PublicLineageObjectRoute({
-    params: Promise.resolve({
-      locale: address.locale,
-      objectId: address.objectId,
-    }),
-    searchParams,
+  if (profileHandle === STATIC_PARAMS_PLACEHOLDER) return null;
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: async (phase) => {
+      await deferStaticRenderWithoutDatabase(phase);
+      const address = await resolveObjectId(params).catch((error: unknown) => {
+        unstable_rethrow(error);
+        if (error instanceof StaticRenderDeferred) throw error;
+        deferStaticRenderAfterFailure(phase);
+        throw error;
+      });
+      if (!address) {
+        logAddressRefusal({
+          route: "author_scoped_passport",
+          reason: "address_unresolved",
+          detail: {
+            handle: routeHandleSegment(profileHandle),
+            slug: decodeRouteSegment(objectSlug),
+          },
+        });
+        notFound();
+      }
+      if (!isPublicLocale(address.locale)) notFound();
+      // The passport's own renderer, in this attempt's phase: calling the
+      // lineage route instead would start a second static attempt inside
+      // this one.
+      return renderPassport(
+        address.objectId,
+        address.locale,
+        searchParams,
+        phase,
+      );
+    },
   });
 }

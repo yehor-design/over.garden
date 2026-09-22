@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Tabs, type TabModel } from "@/components/ui/tabs";
 
@@ -16,6 +15,13 @@ import { Tabs, type TabModel } from "@/components/ui/tabs";
  * `replace` rather than `push`: a tab is a view of one page, not a page of its
  * own, and filling the Back button with tab changes would make Back stop
  * meaning "the page I came from".
+ *
+ * **The address is written with `history.replaceState`, not the router.** The
+ * profile is a static document (ADR-0032) and a `?tab=` address renders from
+ * its `/q` twin, which is another route tree: a router navigation to it
+ * re-mounted the whole page under the keyboard and focus fell to `<body>`
+ * mid-arrow-key. Nothing needs fetching anyway — every panel is already here —
+ * and Next's router adopts a native `replaceState` as its own address.
  *
  * Every panel is rendered whichever tab is selected — `Tabs` hides the others
  * rather than dropping them — so a crawler still reads a profile's entries and
@@ -43,9 +49,6 @@ export function PublicProfileTabs({
   selectedId: string;
   parameter?: string;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const search = useSearchParams();
   const [selected, setSelected] = useState(selectedId);
   const [fromServer, setFromServer] = useState(selectedId);
 
@@ -64,15 +67,20 @@ export function PublicProfileTabs({
       data-profile-tab={selected}
       onSelect={(id) => {
         setSelected(id);
-        const next = new URLSearchParams(search.toString());
+        // Read the address only in response to a press. Reading router search
+        // state during render would postpone the entire static profile.
+        const pathname = window.location.pathname;
+        const next = new URLSearchParams(window.location.search);
         // The first tab is the page itself, so it is absent rather than
         // written: absent means unset, here as everywhere else.
         if (id === tabs[0]?.id) next.delete(parameter);
         else next.set(parameter, id);
         const query = next.toString();
-        router.replace(query ? `${pathname}?${query}` : pathname, {
-          scroll: false,
-        });
+        window.history.replaceState(
+          null,
+          "",
+          `${query ? `${pathname}?${query}` : pathname}${window.location.hash}`,
+        );
       }}
     />
   );

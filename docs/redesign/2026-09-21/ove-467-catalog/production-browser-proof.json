@@ -1,0 +1,184 @@
+{
+  "measuredAt": "2026-09-21T19:38:37.517Z",
+  "reader": "fresh guest",
+  "segmentHoldMs": 1200,
+  "results": [
+    {
+      "path": "/catalog",
+      "status": 200,
+      "cache": "PRERENDER",
+      "title": "Каталог організмів | OverGarden",
+      "heading": "Каталог організмів",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "all",
+      "errors": []
+    },
+    {
+      "path": "/bg/catalog",
+      "status": 200,
+      "cache": "HIT",
+      "title": "Каталог на организмите | OverGarden",
+      "heading": "Каталог на организмите",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "all",
+      "errors": []
+    },
+    {
+      "path": "/ru/catalog",
+      "status": 200,
+      "cache": "PRERENDER",
+      "title": "Каталог организмов | OverGarden",
+      "heading": "Каталог организмов",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "all",
+      "errors": []
+    },
+    {
+      "path": "/catalog?kingdom=plantae",
+      "status": 200,
+      "cache": "HIT",
+      "title": "Каталог організмів | OverGarden",
+      "heading": "Каталог організмів",
+      "directory": "ready",
+      "segments": [
+        {
+          "boundary": "B:0",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:1",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:2",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:3",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:4",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:5",
+          "outcome": "adopted",
+          "holds": ""
+        },
+        {
+          "boundary": "B:6",
+          "outcome": "adopted",
+          "holds": ""
+        }
+      ],
+      "hiddenSegments": 0,
+      "kind": "plantae",
+      "errors": []
+    }
+  ]
+}

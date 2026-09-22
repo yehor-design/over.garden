@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
 import { FlagIcon as Flag } from "@/components/icons/Flag";
@@ -77,10 +78,12 @@ export function PublicProfileView({
   activeTab = "objects",
   resumeAction = null,
   resumeControl = null,
+  actionSlot,
 }: {
   profile: PublicProfileEvidencePage;
   locale: InterfaceLocale;
   viewer: PublicProfileViewer;
+  actionSlot?: ReactNode;
   actionStatus?: string | null;
   /** The owner's editor preview shows the owner-facing empty states. */
   preview?: boolean;
@@ -349,13 +352,15 @@ export function PublicProfileView({
           },
         ]}
         action={
-          <ProfileActions
-            profile={profile}
-            locale={locale}
-            viewer={viewer}
-            returnTo={basePath}
-            resumeAction={resumeAction}
-          />
+          actionSlot ?? (
+            <ProfileActions
+              profile={profile}
+              locale={locale}
+              viewer={viewer}
+              returnTo={basePath}
+              resumeAction={resumeAction}
+            />
+          )
         }
       />
 
@@ -402,7 +407,7 @@ function publicProfileRegionLabel(code: string | null) {
   return label.split(" - ")[0] ?? null;
 }
 
-function ProfileActions({
+export function ProfileActions({
   profile,
   locale,
   viewer,
@@ -846,7 +851,7 @@ export function buildPublicProfileContextModules(
   ];
 }
 
-function profileActionMessage(
+export function profileActionMessage(
   status: string | null | undefined,
   locale: InterfaceLocale,
 ) {

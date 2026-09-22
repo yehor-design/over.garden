@@ -1,0 +1,59 @@
+{
+  "equal": true,
+  "before": {
+    "title": [
+      "<title>Каталог на организмите | OverGarden</title>"
+    ],
+    "tags": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/catalog\"/>",
+      "<link rel=\"canonical\" href=\"https://over.garden/bg/catalog\"/>",
+      "<meta name=\"description\" content=\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\"/>",
+      "<meta name=\"twitter:title\" content=\"Каталог на организмите | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\"/>",
+      "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Каталог на организмите | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"https://over.garden/bg/catalog\"/>"
+    ],
+    "jsonLd": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/catalog\",\"url\":\"https://over.garden/bg/catalog\",\"name\":\"Каталог на организмите\",\"description\":\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/catalog#collection\",\"name\":\"Каталог на организмите\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Растения\"},{\"@type\":\"Thing\",\"name\":\"Животни\"},{\"@type\":\"Thing\",\"name\":\"Гъби\"},{\"@type\":\"Thing\",\"name\":\"Бактерии\"},{\"@type\":\"Thing\",\"name\":\"Хромисти\"},{\"@type\":\"Thing\",\"name\":\"Вируси\"},{\"@type\":\"Thing\",\"name\":\"Протозои\"},{\"@type\":\"Thing\",\"name\":\"Археи\"}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+    ]
+  },
+  "after": {
+    "title": [
+      "<title>Каталог на организмите | OverGarden</title>"
+    ],
+    "tags": [
+      "<link rel=\"alternate\" hrefLang=\"bg\" href=\"https://over.garden/bg/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"ru\" href=\"https://over.garden/ru/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"uk\" href=\"https://over.garden/catalog\"/>",
+      "<link rel=\"alternate\" hrefLang=\"x-default\" href=\"https://over.garden/catalog\"/>",
+      "<link rel=\"canonical\" href=\"https://over.garden/bg/catalog\"/>",
+      "<meta name=\"description\" content=\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\"/>",
+      "<meta name=\"robots\" content=\"index, follow\"/>",
+      "<meta name=\"twitter:card\" content=\"summary\"/>",
+      "<meta name=\"twitter:description\" content=\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\"/>",
+      "<meta name=\"twitter:title\" content=\"Каталог на организмите | OverGarden\"/>",
+      "<meta property=\"og:description\" content=\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\"/>",
+      "<meta property=\"og:locale\" content=\"bg_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"ru_BG\"/>",
+      "<meta property=\"og:locale:alternate\" content=\"uk_UA\"/>",
+      "<meta property=\"og:site_name\" content=\"OverGarden\"/>",
+      "<meta property=\"og:title\" content=\"Каталог на организмите | OverGarden\"/>",
+      "<meta property=\"og:type\" content=\"website\"/>",
+      "<meta property=\"og:url\" content=\"https://over.garden/bg/catalog\"/>"
+    ],
+    "jsonLd": [
+      "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"WebPage\",\"@id\":\"https://over.garden/bg/catalog\",\"url\":\"https://over.garden/bg/catalog\",\"name\":\"Каталог на организмите\",\"description\":\"Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.\",\"inLanguage\":\"bg\",\"isPartOf\":{\"@id\":\"https://over.garden/#website\"}},{\"@type\":\"CollectionPage\",\"@id\":\"https://over.garden/bg/catalog#collection\",\"name\":\"Каталог на организмите\",\"hasPart\":[{\"@type\":\"Thing\",\"name\":\"Растения\"},{\"@type\":\"Thing\",\"name\":\"Животни\"},{\"@type\":\"Thing\",\"name\":\"Гъби\"},{\"@type\":\"Thing\",\"name\":\"Бактерии\"},{\"@type\":\"Thing\",\"name\":\"Хромисти\"},{\"@type\":\"Thing\",\"name\":\"Вируси\"},{\"@type\":\"Thing\",\"name\":\"Протозои\"},{\"@type\":\"Thing\",\"name\":\"Археи\"}]},{\"@type\":\"Organization\",\"@id\":\"https://over.garden/#organization\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\"},{\"@type\":\"WebSite\",\"@id\":\"https://over.garden/#website\",\"name\":\"OverGarden\",\"url\":\"https://over.garden/\",\"publisher\":{\"@id\":\"https://over.garden/#organization\"}}]}"
+    ]
+  }
+}
