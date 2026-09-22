@@ -224,7 +224,10 @@ test.describe("the catalogue's one door", () => {
     expect(form, "the catalogue renders no filter form").toBeTruthy();
     expect(form).toContain('method="get"');
     expect(form).toContain('action="/catalog"');
-    for (const facet of ["kingdom", "rank", "register", "grown"]) {
+    // The kingdom is the listing's one mode, a plain link (OVE-482).
+    expect(html).toContain('data-filter-bar-modes="true"');
+    expect(html).toMatch(/href="\/catalog\?kingdom=[a-z]+"/u);
+    for (const facet of ["rank", "register", "grown"]) {
       expect(html, `the ${facet} facet is in the form`).toContain(
         `data-filter-bar-facet="${facet}"`,
       );
@@ -256,10 +259,10 @@ test.describe("the catalogue's one door", () => {
     const filteredRows = [...filteredHtml.matchAll(/data-slot="list-row"/gu)]
       .length;
     expect(filteredRows).toBeLessThan(unfilteredRows);
-    // The chosen option comes back selected, so a reader without the bundle
-    // sees the state they asked for rather than a reset form.
+    // The chosen kingdom comes back as the current mode, so a reader without
+    // the bundle sees the state they asked for rather than a reset form.
     expect(filteredHtml).toMatch(
-      /<option[^>]*value="fungi"[^>]*selected|selected[^>]*value="fungi"/u,
+      /href="[^"]*kingdom=fungi[^"]*"[^>]*aria-current="page"|aria-current="page"[^>]*href="[^"]*kingdom=fungi/u,
     );
     expect(filteredHtml).toMatch(/value="amanita"/u);
     // And both filters are named in the page as removable chips.
@@ -306,10 +309,14 @@ test.describe("the catalogue's one door", () => {
     expect(page.url()).toContain("letter=");
     const chosen = new URL(href!, baseURL).searchParams.get("letter")!;
     await expect(
-      page.locator('nav[aria-label="За літерою"]:visible a[aria-current="true"]'),
+      page.locator(
+        'nav[aria-label="За літерою"]:visible a[aria-current="true"]',
+      ),
     ).toHaveText(chosen);
     await expect(
-      page.locator('[data-filter-bar-form]:visible input[name="letter"]').first(),
+      page
+        .locator('[data-filter-bar-form]:visible input[name="letter"]')
+        .first(),
     ).toHaveValue(chosen);
   });
 

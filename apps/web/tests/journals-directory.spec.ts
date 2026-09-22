@@ -102,39 +102,63 @@ async function openDirectory(page: Page, query = "") {
   await waitForHydration(page.locator(visibleBar));
 }
 
-test.describe("the journals directory applies its filters on change", () => {
-  test("three filters by keyboard, in the URL, surviving reload and Back", async ({
+test.describe("the journals directory: search, one mode, a draft filter panel", () => {
+  /** Open the panel, choose one value, press Show results, wait for the URL. */
+  async function applyInPanel(page: Page, key: string, value: string) {
+    await waitForHydration(page.locator(visibleBar));
+    const open = page
+      .locator(visibleBar)
+      .locator('[data-filter-bar-open="true"]');
+    await open.focus();
+    await page.keyboard.press("Enter");
+    const panel = page.locator('[data-slot="filter-panel"]:popover-open');
+    await expect(panel).toBeVisible();
+    const control = panel.locator(`[data-filter-bar-facet="${key}"]`);
+    await control.focus();
+    await expect(control).toBeFocused();
+    await control.selectOption(value);
+    // A draft: choosing a value moves nothing.
+    expect(new URL(page.url()).searchParams.get(key)).not.toBe(value);
+    await panel.getByRole("button", { name: "Показати результати" }).click();
+    await page.waitForURL((url) => url.searchParams.get(key) === value, {
+      timeout: 20_000,
+    });
+  }
+
+  test("mode, filter and sort by keyboard, in the URL, surviving reload and Back", async ({
     baseURL,
     context,
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
-    await openDirectory(page);
+    await openDirectory(page, "?q=%D1%82%D0%BE%D0%BC%D0%B0%D1%82");
 
-    // Criterion 1: no submit press. Each change is a navigation of its own, so
-    // each one is waited for before the next — which is also how a reader
-    // uses it.
-    const facet = async (key: string, value: string) => {
-      await waitForHydration(page.locator(visibleBar));
-      // Scoped to the bar a reader can see. The streamed shell leaves the
-      // loading skeleton's copy of the form in the document until the reveal,
-      // so a document-wide locator matches two selects and fails in strict
-      // mode — intermittently, because whether it has revealed yet depends on
-      // how busy the server is. Observed on 2026-09-18 in a full gate run.
-      const control = page
+    // Plants or animals is a mode: a link with aria-current, in one place.
+    const plants = page
+      .locator(visibleBar)
+      .locator('[data-filter-bar-modes="true"] a', { hasText: "Рослини" });
+    await plants.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForURL((url) => url.searchParams.get("kind") === "plant", {
+      timeout: 20_000,
+    });
+    await expect(page.locator(visibleBar)).toBeVisible({ timeout: 20_000 });
+    await expect(
+      page
         .locator(visibleBar)
-        .locator(`[data-filter-bar-facet="${key}"]`);
-      await control.focus();
-      await expect(control).toBeFocused();
-      await control.selectOption(value);
-      await page.waitForURL((url) => url.searchParams.get(key) === value, {
-        timeout: 20_000,
-      });
-    };
+        .locator('[data-filter-bar-modes="true"] a[aria-current="page"]'),
+    ).toHaveText("Рослини");
+    // The query survived the mode change.
+    expect(new URL(page.url()).searchParams.get("q")).toBe("томат");
 
-    await facet("kind", "plant");
-    await facet("season", "summer");
+    await applyInPanel(page, "season", "summer");
+    expect(new URL(page.url()).searchParams.get("q")).toBe("томат");
+    expect(new URL(page.url()).searchParams.get("kind")).toBe("plant");
+    await expect(
+      page.locator(visibleBar).locator('[data-filter-bar-open="true"]'),
+    ).toHaveText(/Фільтри \(1\)/u);
+
     await waitForHydration(page.locator(visibleBar));
     const sort = page
       .locator(visibleBar)
@@ -145,8 +169,6 @@ test.describe("the journals directory applies its filters on change", () => {
       timeout: 20_000,
     });
 
-    // Criterion 5: one parameter per facet, named for the facet, and the view
-    // is the URL — nothing is held in memory.
     const filtered = new URL(page.url());
     expect(filtered.pathname).toBe("/journals");
     expect(filtered.searchParams.get("kind")).toBe("plant");
@@ -160,18 +182,17 @@ test.describe("the journals directory applies its filters on change", () => {
     expect(
       await page
         .locator(visibleBar)
-        .locator('[data-filter-bar-facet="kind"]')
-        .evaluate((node: HTMLSelectElement) => node.value),
-    ).toBe("plant");
-    expect(
-      await page
-        .locator(visibleBar)
         .locator('[data-filter-bar-sort="true"]')
         .evaluate((node: HTMLSelectElement) => node.value),
     ).toBe("oldest");
+    expect(
+      await page
+        .locator(visibleBar)
+        .locator('input[name="q"]')
+        .evaluate((node: HTMLInputElement) => node.value),
+    ).toBe("томат");
 
-    // And Back walks the filters off one at a time, because each was a real
-    // navigation rather than a state update.
+    // Back walks the changes off one at a time: each was a real navigation.
     await page.goBack({ waitUntil: "load" });
     await expect
       .poll(() => new URL(page.url()).searchParams.get("sort"), {
@@ -179,6 +200,89 @@ test.describe("the journals directory applies its filters on change", () => {
       })
       .toBeNull();
     expect(new URL(page.url()).searchParams.get("season")).toBe("summer");
+    expect(new URL(page.url()).searchParams.get("q")).toBe("томат");
+  });
+
+  test("Close discards the draft; Clear filters keeps the search", async ({
+    baseURL,
+    context,
+    page,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    await selectLocale(context, baseURL);
+    await openDirectory(
+      page,
+      "?q=%D1%82%D0%BE%D0%BC%D0%B0%D1%82&season=summer",
+    );
+    const before = page.url();
+
+    const open = page
+      .locator(visibleBar)
+      .locator('[data-filter-bar-open="true"]');
+    await open.click();
+    const panel = page.locator('[data-slot="filter-panel"]:popover-open');
+    await expect(panel).toBeVisible();
+    // The panel says what is committed now.
+    await expect(panel.locator('[data-filter-bar-facet="season"]')).toHaveValue(
+      "summer",
+    );
+    await panel
+      .locator('[data-filter-bar-facet="season"]')
+      .selectOption("winter");
+
+    // Close is named Close, never Reset, and changes nothing.
+    const close = panel.getByRole("button", { name: "Закрити" });
+    await expect(close).toBeVisible();
+    await close.click();
+    await expect(panel).toHaveCount(0);
+    expect(page.url()).toBe(before);
+    await expect(open).toBeFocused();
+
+    // Reopened, the draft is gone and the committed value is back.
+    await open.click();
+    await expect(
+      page
+        .locator('[data-slot="filter-panel"]:popover-open')
+        .locator('[data-filter-bar-facet="season"]'),
+    ).toHaveValue("summer");
+    await page.keyboard.press("Escape");
+    await expect(open).toBeFocused();
+
+    // Clear filters removes the season and keeps the words typed.
+    await open.click();
+    await page
+      .locator('[data-slot="filter-panel"]:popover-open')
+      .getByRole("link", { name: "Очистити фільтри" })
+      .click();
+    await page.waitForURL((url) => !url.searchParams.has("season"), {
+      timeout: 20_000,
+    });
+    expect(new URL(page.url()).searchParams.get("q")).toBe("томат");
+  });
+
+  test("with scripts off the panel still opens and applies", async ({
+    browser,
+    baseURL,
+  }) => {
+    if (!baseURL) throw new Error("Playwright baseURL is required");
+    const context = await browser.newContext({ javaScriptEnabled: false });
+    await selectLocale(context, baseURL);
+    const page = await context.newPage();
+    // The static document: a `/q` twin still streams its results, which a
+    // scripts-off reader sees only once OVE-461's reveal lands everywhere.
+    // That the panel form carries the query is proven in filter-bar.test.tsx.
+    await page.goto("/journals", { waitUntil: "load" });
+    const bar = page.locator('[data-filter-bar-form="true"]:visible');
+    await expect(bar).toHaveCount(1);
+    await bar.locator('[data-filter-bar-open="true"]').click();
+    const panel = page.locator('[data-slot="filter-panel"]:popover-open');
+    await expect(panel).toBeVisible();
+    await panel
+      .locator('[data-filter-bar-facet="season"]')
+      .selectOption("summer");
+    await panel.getByRole("button", { name: "Показати результати" }).click();
+    await page.waitForURL((url) => url.searchParams.get("season") === "summer");
+    await context.close();
   });
 
   test("a chip removes one filter, and the count is announced once", async ({
@@ -225,7 +329,7 @@ test.describe("the journals directory applies its filters on change", () => {
     expect(new URL(page.url()).searchParams.get("season")).toBe("summer");
   });
 
-  test("below lg the filters are one button that opens a sheet with Apply", async ({
+  test("below lg the filters are one button that opens a labelled sheet", async ({
     baseURL,
     context,
     page,
@@ -233,27 +337,31 @@ test.describe("the journals directory applies its filters on change", () => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
     await page.setViewportSize({ width: 375, height: 812 });
-    await openDirectory(page, "?kind=plant");
+    await openDirectory(page, "?season=summer");
 
     // Criterion 6: one button, labelled with how many filters are on.
     const open = page.locator('[data-filter-bar-open="true"]');
     await expect(open).toBeVisible();
     await expect(open).toHaveText(/Фільтри \(\d+\)/u);
-    // The inline facets are the desktop shape and must not be reachable here.
+    // The facets live in the panel only, never inline.
     await expect(
-      page.locator('[data-filter-bar-facet="kind"]').first(),
+      page.locator('[data-filter-bar-facet="season"]').first(),
     ).toBeHidden();
 
     await open.click();
     // The sheet by name of its slot: the consent notice is a dialog too, and
     // on every page for a reader who has not answered it (`OVE-473`).
-    const sheet = page.locator('[role="dialog"][data-slot="sheet-content"]');
+    const sheet = page.locator('[role="dialog"][data-slot="filter-panel"]');
     await expect(sheet).toBeVisible();
-    // A sheet hides the results it is filtering, which is the one place Apply
-    // earns its keep (DESIGN.md §5.1).
+    await expect(sheet).toHaveAccessibleName("Фільтри журналів");
+    // Bottom-anchored and the full width of a phone.
+    const box = await sheet.boundingBox();
+    expect(box?.width).toBe(375);
+    expect(Math.round((box?.y ?? 0) + (box?.height ?? 0))).toBe(812);
     await expect(
-      sheet.getByRole("button", { name: "Застосувати" }),
+      sheet.getByRole("button", { name: "Показати результати" }),
     ).toBeVisible();
+    await expect(sheet.getByRole("button", { name: "Закрити" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(sheet).not.toBeVisible();
     await expect(open).toBeFocused();
@@ -288,7 +396,7 @@ test.describe("the journals directory applies its filters on change", () => {
     expect(form, "the directory renders no filter form").toBeTruthy();
     expect(form).toContain('method="get"');
     expect(form).toContain('action="/journals"');
-    for (const facet of ["kind", "catalog", "topic", "season", "region"]) {
+    for (const facet of ["catalog", "topic", "season", "region"]) {
       expect(html, `the ${facet} facet is in the form`).toContain(
         `data-filter-bar-facet="${facet}"`,
       );
@@ -309,11 +417,9 @@ test.describe("the journals directory applies its filters on change", () => {
     );
     expect(filtered.status()).toBe(200);
     const filteredHtml = await filtered.text();
-    // The chosen option comes back selected, so a reader without the bundle
+    // The chosen mode comes back current, so a reader without the bundle
     // sees the state they asked for rather than a reset form.
-    expect(filteredHtml).toMatch(
-      /<option[^>]*value="plant"[^>]*selected|selected[^>]*value="plant"/u,
-    );
+    expect(filteredHtml).toMatch(/aria-current="page"[^>]*>Рослини/u);
     // And the filter is named in the page as a removable chip.
     expect(filteredHtml).toContain('data-slot="chip"');
     expect(filteredHtml).toContain("Прибрати фільтр");

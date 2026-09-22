@@ -14,8 +14,9 @@ const labels: FilterBarProps["labels"] = {
   filters: "Фільтри журналів",
   openFilters: "Фільтри (2)",
   sheetDescription: "Виберіть фільтри та застосуйте їх.",
-  apply: "Застосувати",
-  clear: "Скинути",
+  apply: "Показати результати",
+  close: "Закрити",
+  clear: "Очистити фільтри",
   clearAll: "Скинути все",
   activeFilters: "Активні фільтри",
   sort: "Сортування",
@@ -66,55 +67,96 @@ describe("FilterBar", () => {
   beforeEach(() => {
     push.mockClear();
   });
+  afterEach(() => vi.unstubAllGlobals());
 
-  it("is a GET form with a real action, so it filters without JavaScript", () => {
+  it("is a GET form with a real action, so it searches without JavaScript", () => {
     const { container } = renderBar();
-    const form = container.querySelector("form");
+    const form = container.querySelector('form[data-filter-bar-form="true"]');
 
-    // Criterion 7. The form is the mechanism; on-change is layered over it.
     expect(form?.getAttribute("method")).toBe("get");
     expect(form?.getAttribute("action")).toBe("/journals");
-    // The submit the no-script path needs is the caller's own, inside the
-    // form — here the search button — so there is no `<noscript>` block and
-    // no control that appears and vanishes on hydration.
     expect(form?.querySelector('button[type="submit"]')).toBeTruthy();
+    // The committed filters ride along as hidden fields, so a search never
+    // drops them.
+    expect(
+      form?.querySelector('input[type="hidden"][name="kind"]'),
+    ).toHaveProperty("value", "plant");
   });
 
-  it("names every facet and states what is selected", () => {
-    renderBar();
+  it("puts the secondary facets in a native popover panel, labelled, with Close", () => {
+    const { container } = renderBar({ clearFiltersHref: "/journals?q=x" });
 
-    const kind = screen.getByLabelText("Живий об'єкт");
-    expect(kind).toHaveProperty("value", "plant");
-    const topic = screen.getByLabelText("Тема");
-    // Unset means the "any" option, which is the empty value — so the
-    // parameter is simply absent from the next URL.
-    expect(topic).toHaveProperty("value", "");
+    const open = screen.getByRole("button", { name: "Фільтри (2)" });
+    const panel = container.querySelector('[data-slot="filter-panel"]');
+    // Opened by the browser itself, so it works before hydration.
+    expect(open.getAttribute("popovertarget")).toBe(panel?.id);
+    expect(panel?.getAttribute("popover")).toBe("auto");
+    expect(panel?.getAttribute("role")).toBe("dialog");
+    // Close is named Close — never Reset — and only hides the panel.
+    const close = container.querySelector('[data-filter-bar-close="true"]');
+    expect(close?.getAttribute("aria-label")).toBe("Закрити");
+    expect(close?.getAttribute("popovertargetaction")).toBe("hide");
+    // Clear filters is its own link, separate from Close.
+    expect(
+      container
+        .querySelector('[data-filter-bar-clear="true"]')
+        ?.getAttribute("href"),
+    ).toBe("/journals?q=x");
   });
 
-  it("applies on change, and drops the page it was on", async () => {
-    renderBar({ hidden: { q: "томат", page: "3" } });
+  it("keeps the panel's controls in their own form, carrying the query", () => {
+    const { container } = renderBar({ carry: { q: "томат" } });
+
+    const panelForm = container.querySelector(
+      'form[data-filter-bar-panel-form="true"]',
+    ) as HTMLFormElement;
+    const topic = screen.getByLabelText("Тема") as HTMLSelectElement;
+    expect(topic.form).toBe(panelForm);
+    expect(new FormData(panelForm).get("q")).toBe("томат");
+    const submit = screen.getByRole("button", {
+      name: "Показати результати",
+      hidden: true,
+    }) as HTMLButtonElement;
+    expect(submit.form).toBe(panelForm);
+  });
+
+  it("applies the draft only on Show results, and drops the page it was on", async () => {
+    renderBar({ hidden: { page: "3" }, carry: { q: "томат" } });
 
     await userEvent.selectOptions(screen.getByLabelText("Тема"), [
       "winter-care",
     ]);
+    // A draft: nothing moves until the reader says so.
+    expect(push).not.toHaveBeenCalled();
 
-    // Criterion 1 and criterion 5: no submit press, and the whole view is in
-    // the URL — one parameter per facet, named for the facet.
+    await userEvent.click(
+      screen.getByRole("button", { name: "Показати результати", hidden: true }),
+    );
     expect(push).toHaveBeenCalledTimes(1);
     const target = new URL(push.mock.calls[0]![0] as string, "https://x.test");
     expect(target.pathname).toBe("/journals");
     expect(target.searchParams.get("q")).toBe("томат");
     expect(target.searchParams.get("kind")).toBe("plant");
     expect(target.searchParams.get("topic")).toBe("winter-care");
-    // The default sort is left out, because absent means unset: a default
-    // written into the URL gives one view two addresses.
     expect(target.searchParams.has("sort")).toBe(false);
-    // A new filter starts at the first page, which is the only one that
-    // certainly exists.
     expect(target.searchParams.has("page")).toBe(false);
   });
 
-  it("sorts through its own control, which is never inside the filters", async () => {
+  it("discards the draft when the panel closes without applying", () => {
+    const { container } = renderBar();
+    const topic = screen.getByLabelText("Тема") as HTMLSelectElement;
+    topic.value = "winter-care";
+
+    const panel = container.querySelector('[data-slot="filter-panel"]')!;
+    const event = new Event("toggle") as Event & { newState?: string };
+    Object.defineProperty(event, "newState", { value: "closed" });
+    panel.dispatchEvent(event);
+
+    expect(topic.value).toBe("");
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("sorts through its own control, on change", async () => {
     renderBar();
 
     const sort = screen.getByRole("combobox", { name: "Сортування" });
@@ -122,9 +164,8 @@ describe("FilterBar", () => {
 
     expect(push).toHaveBeenCalledTimes(1);
     expect(push.mock.calls[0]![0]).toContain("sort=relevance");
+    expect(push.mock.calls[0]![0]).toContain("kind=plant");
   });
-
-  afterEach(() => vi.unstubAllGlobals());
 
   it("crosses the static query-twin boundary with a document navigation", async () => {
     const assign = vi.fn();
@@ -133,6 +174,9 @@ describe("FilterBar", () => {
     await userEvent.selectOptions(screen.getByLabelText("Тема"), [
       "winter-care",
     ]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Показати результати", hidden: true }),
+    );
     expect(push).not.toHaveBeenCalled();
     expect(assign).toHaveBeenCalledWith(
       "/journals?kind=plant&topic=winter-care",
@@ -156,7 +200,12 @@ describe("FilterBar", () => {
       sort: undefined,
     });
 
-    await userEvent.click(screen.getByRole("checkbox", { name: /Обрізка/u }));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: /Обрізка/u, hidden: true }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Показати результати", hidden: true }),
+    );
 
     const target = new URL(push.mock.calls[0]![0] as string, "https://x.test");
     // Repeated, never comma-joined: a comma is a legal character in a slug.
@@ -164,6 +213,27 @@ describe("FilterBar", () => {
       "winter-care",
       "pruning",
     ]);
+  });
+
+  it("draws the primary modes as links with aria-current", () => {
+    renderBar({
+      modes: [
+        { label: "Усі", href: "/journals", current: false },
+        { label: "Рослини", href: "/journals?kind=plant", current: true },
+      ],
+      labels: { ...labels, modes: "Що показати" },
+    });
+
+    const nav = screen.getByRole("navigation", { name: "Що показати" });
+    expect(nav).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Рослини" })
+        .getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      screen.getByRole("link", { name: "Усі" }).getAttribute("aria-current"),
+    ).toBeNull();
   });
 
   it("renders the active filters as chips whose removal is a real link", () => {
@@ -185,8 +255,6 @@ describe("FilterBar", () => {
       clearAllHref: "/journals",
     });
 
-    // Criterion 2. A link rather than a button, so a chip works unhydrated and
-    // a reader can open the narrowed view in a new tab.
     expect(
       screen
         .getByRole("link", { name: "Зняти фільтр: Рослини" })
@@ -213,16 +281,8 @@ describe("FilterBar", () => {
     expect(screen.queryByRole("link", { name: "Скинути все" })).toBeNull();
   });
 
-  it("collapses into one button below lg, and that sheet is the one place Apply survives", async () => {
-    renderBar({ chips: [] });
-
-    const open = screen.getByRole("button", { name: /Фільтри \(2\)/u });
-    await userEvent.click(open);
-
-    // Criterion 6: a sheet hides the results, so it needs Apply and Clear.
-    expect(screen.getByRole("button", { name: "Застосувати" })).toBeTruthy();
-    expect(
-      screen.getByRole("dialog", { name: "Фільтри журналів" }),
-    ).toBeTruthy();
+  it("draws no Filters button when a listing has no secondary facet", () => {
+    renderBar({ facets: [] });
+    expect(screen.queryByRole("button", { name: /Фільтри/u })).toBeNull();
   });
 });

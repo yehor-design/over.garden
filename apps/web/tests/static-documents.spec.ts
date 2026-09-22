@@ -514,9 +514,8 @@ test.describe("a public page is a static document", () => {
   }) => {
     const filtered = await getDocument(request, "/journals?kind=animal");
     expect(filtered.status).toBe(200);
-    expect(filtered.html).toMatch(
-      /<option[^>]*(?:value="animal"[^>]*selected=""|selected=""[^>]*value="animal")/,
-    );
+    // The mode the query chose comes back current in the served bytes.
+    expect(filtered.html).toMatch(/aria-current="page"[^>]*>Тварини/u);
     for (const address of ["/q/journals", "/bg/q/journals", "/ru/q/journals"]) {
       expect((await getDocument(request, address)).status, address).toBe(404);
     }
@@ -651,7 +650,7 @@ test.describe("a public page is a static document", () => {
       const filtered = await getDocument(request, address);
       expect(filtered.status, address).toBe(200);
       expect(filtered.html, address).toMatch(
-        /<option[^>]*(?:value="plantae"[^>]*selected=""|selected=""[^>]*value="plantae")/,
+        /href="[^"]*kingdom=plantae[^"]*"[^>]*aria-current="page"|aria-current="page"[^>]*href="[^"]*kingdom=plantae/,
       );
     }
     for (const address of ["/q/catalog", "/bg/q/catalog", "/ru/q/catalog"]) {

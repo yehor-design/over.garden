@@ -27,6 +27,7 @@ import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntryCard } from "@/components/ui/entry-card";
 import { Field } from "@/components/ui/field";
+import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { HiddenField } from "@/components/ui/hidden-field";
 import NextLink from "next/link";
@@ -764,8 +765,8 @@ function CommunityBreadcrumb({
 
 /**
  * The same bar `/journals`, `/catalog` and `/knowledge` use (DESIGN.md §5.1):
- * one parameter per facet, apply on change after hydration, a real `GET`
- * submit before it, and chips above the results.
+ * the search, plants or animals as the one mode, a real `GET` submit, and
+ * chips above the results.
  */
 function CommunityFilters({
   locale,
@@ -780,8 +781,11 @@ function CommunityFilters({
   request: PublicCommunityViewRequest;
   canonicalPath: string;
 }) {
+  const chrome = getFilterBarChromeCopy(locale);
   return (
     <FilterBar
+      /* The community's query views are `/q` twins (ADR-0032). */
+      documentNavigation
       action={canonicalPath}
       search={
         <div className="flex items-end gap-2">
@@ -803,29 +807,35 @@ function CommunityFilters({
           </Button>
         </div>
       }
-      facets={[
-        {
-          key: "kind",
-          label: copy.kindLabel,
-          value: request.kind === "all" ? [] : [request.kind],
-          anyLabel: copy.allKinds,
-          options: PUBLIC_COMMUNITY_OBJECT_KINDS.map((kind) => ({
-            value: kind,
-            label: copy.kindLabels[kind],
-          })),
-        },
-      ]}
+      facets={[]}
+      /* Plants or animals is the community's one split, so it is a mode —
+         not a sheet holding a single select (OVE-482). */
+      modes={(["all", ...PUBLIC_COMMUNITY_OBJECT_KINDS] as const).map(
+        (kind) => ({
+          label: kind === "all" ? copy.allKinds : copy.kindLabels[kind],
+          href: buildPublicCommunityHref(locale, slug, {
+            query: request.query,
+            kind,
+            cursor: null,
+          }),
+          current: request.kind === kind,
+        }),
+      )}
+      hidden={request.kind === "all" ? {} : { kind: request.kind }}
       chips={buildCommunityChips(locale, copy, slug, request)}
       clearAllHref={canonicalPath}
       labels={{
         filters: copy.filtersLabel,
         openFilters: copy.filtersLabel,
         sheetDescription: copy.rulesDescription,
-        apply: copy.search,
-        clear: copy.clearFilters,
+        apply: chrome.showResults,
+        close: chrome.close,
+        clear: chrome.clearFilters,
         clearAll: copy.clearFilters,
         activeFilters: copy.filtersLabel,
         sort: copy.kindLabel,
+        modes: copy.kindLabel,
+        pending: chrome.pending,
       }}
     />
   );

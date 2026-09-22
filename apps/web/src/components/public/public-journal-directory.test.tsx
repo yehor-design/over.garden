@@ -214,7 +214,10 @@ describe("public journal directory", () => {
     // as its own control beside them.
     expect(html).toContain('data-filter-bar-form="true"');
     expect(html).toContain('name="q"');
-    expect(html).toContain('data-filter-bar-facet="kind"');
+    // Plants or animals is the one mode, as links; the rest sit in the panel.
+    expect(html).toContain('data-filter-bar-modes="true"');
+    expect(html).toMatch(/href="\/journals\?[^"]*kind=plant[^"]*"/u);
+    expect(html).not.toContain('data-filter-bar-facet="kind"');
     expect(html).toContain('data-filter-bar-facet="catalog"');
     expect(html).toContain('data-filter-bar-facet="topic"');
     expect(html).toContain('data-filter-bar-facet="season"');
@@ -224,16 +227,20 @@ describe("public journal directory", () => {
     expect(html).toContain('data-journal-result-count="true"');
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain("18 записів");
-    // Criterion 6: one button below `lg`, labelled with the active count.
+    // One button, labelled with the applied *secondary* filters: catalogue,
+    // topic, season and region. The query, the mode and the sort are shown
+    // where they are set, not counted twice (OVE-482).
     expect(html).toContain('data-filter-bar-open="true"');
-    expect(html).toContain("Фільтри (7)");
+    expect(html).toContain("Фільтри (4)");
 
     expect(html).toContain("Кішка після адаптації");
     expect(html).toContain('href="/breed/domestic-shorthair"');
     expect(html).toContain('href="/@demo_danylo"');
     // Each result is an `<article>` a reader can be told the name of, and it
     // keeps the exact directory URL it came from.
-    expect(html).toContain('aria-labelledby="entry-card-/journal/recovery-check-title"');
+    expect(html).toContain(
+      'aria-labelledby="entry-card-/journal/recovery-check-title"',
+    );
     expect(html).toContain(
       'href="/journal/recovery-check?from=%2Fjournals%3Fq%3D',
     );

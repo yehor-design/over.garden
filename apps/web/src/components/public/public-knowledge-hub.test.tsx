@@ -61,9 +61,9 @@ describe("PublicKnowledgeHub", () => {
     expect(html).toContain('method="get"');
     expect(html).toContain('name="q"');
     expect(html).toContain('data-filter-bar-facet="type"');
-    expect(html).toContain('data-filter-bar-facet="kind"');
+    expect(html).toContain('data-filter-bar-modes="true"');
+    expect(html).toContain('href="/knowledge?kind=plant"');
     expect(html).toContain('name="type"');
-    expect(html).toContain('name="kind"');
     // A list of things is a list, and the count survives a filter change in
     // one live region rather than arriving with a fresh document.
     expect(html).toContain('data-slot="list-row"');

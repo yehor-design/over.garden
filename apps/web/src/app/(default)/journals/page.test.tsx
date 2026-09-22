@@ -112,7 +112,7 @@ describe("/journals", () => {
     expect(html).toContain("Дневници");
     // The page is the faceted bar now, not a form behind an Apply button.
     expect(html).toContain('data-filter-bar-form="true"');
-    expect(html).toContain('data-filter-bar-facet="kind"');
+    expect(html).toContain('data-filter-bar-modes="true"');
     expect(html).toContain('data-filter-bar-sort="true"');
     expect(html).toContain('aria-live="polite"');
     // The mocked directory lists nothing: an empty listing stays noindex (ADR-0022, D3).

@@ -485,9 +485,12 @@ test.describe("the community family", () => {
     await page.goto(`/communities/${slug}?kind=plant`, { waitUntil: "load" });
     await expect(rows.first()).toBeVisible({ timeout: 15_000 });
     expect(await rows.count()).toBeLessThan(all);
+    // Plants or animals is the community's one mode: the current one says so.
     await expect(
-      page.locator("[data-filter-bar-active]").first(),
-    ).toHaveAttribute("data-filter-bar-active", "1");
+      page
+        .locator('[data-filter-bar-modes="true"] [aria-current="page"]')
+        .first(),
+    ).toHaveAttribute("href", `/communities/${slug}?kind=plant`);
   });
 
   test("an empty community is one state, not a stack of empty sections", async ({

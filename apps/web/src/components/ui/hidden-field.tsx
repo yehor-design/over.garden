@@ -11,8 +11,11 @@ function HiddenField({
   name,
   value,
   required,
+  form,
 }: {
   name: string;
+  /** The id of a form this field belongs to when it sits outside it. */
+  form?: string;
   value: string | number | readonly string[] | undefined;
   /**
    * A browser bars a hidden input from constraint validation, so this changes
@@ -22,7 +25,8 @@ function HiddenField({
    */
   required?: boolean;
 }) {
-  return <input type="hidden" name={name} value={value} required={required} />;
+  // prettier-ignore
+  return <input type="hidden" name={name} value={value} required={required} form={form} />;
 }
 
 export { HiddenField };
