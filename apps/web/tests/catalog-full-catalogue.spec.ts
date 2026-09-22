@@ -4,7 +4,6 @@ import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { Pool } from "pg";
 
-
 /**
  * The picker's secondary path end to end (OVE-392, ADR-0026 D7), against a
  * production build and a database holding a real Catalogue of Life release.
@@ -261,7 +260,7 @@ function pickerCombobox(page: Page) {
 }
 
 async function openComposer(page: Page) {
-  const response = await page.goto("/garden");
+  const response = await page.goto("/garden?source=direct-garden");
   expect(response?.status()).toBe(200);
   const composer = page.locator("#first-entry-composer");
   await expect(composer).toBeVisible({ timeout: 15_000 });

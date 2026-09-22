@@ -357,7 +357,9 @@ test("guest and member shell stays centered across locales and mobile widths", a
           await settleShell(page);
           if (role === "member") {
             await expect(
-              page.locator('#inventory [data-slot="list-row"]'),
+              page.locator(
+                '[data-garden-collection-list="object"] [data-slot="list-row"]',
+              ),
             ).toHaveCount(1);
           }
           const frame = (await page

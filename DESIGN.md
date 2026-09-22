@@ -1020,6 +1020,40 @@ and comment moderation — and the rules that make an hour bearable.
   files silently did nothing until the bundle ran. Slice 28 converted them all
   and deleted the shape. A form that cannot be imported cannot be reached for.
 
+### 5.13 My garden is a collection
+
+`/garden` is where a gardener finds what they own and writes again (`OVE-489`,
+OG-UX-006/023/043). It used to be a dashboard — "needs attention", recent
+events, an inventory preview, spaces, onboarding and two editors on one long
+page — so a returning gardener scrolled past forms to reach a tomato, and every
+tomato unwritten for a fortnight was flagged as a problem.
+
+- **The actions first, by name, and each on its own route.** New entry
+  (`/garden/new`), Add a plant or animal (`/garden/objects/new`), New space
+  (`/garden/spaces/new`). No editor lives on the home: the first-entry composer
+  appears only for a garden with no plant yet, or for a reader who came to
+  create (`?source=`, `?catalog=`, a resumed sign-in). Writing into a space
+  from its journal is the one composer with the space named.
+- **One query, two groups, two reads.** Spaces and plants or animals are
+  searched together and listed apart, and each group is its own settled read
+  (ADR-0023). A failed group says so with its own retry and the other still
+  lists what it holds; a failure is never counted as nought, and "nothing
+  found" needs every shown group to have answered nothing.
+- **Recency is a date, never a diagnosis.** A row says when the gardener last
+  wrote — "Останній запис: 3 тижні тому" — and nothing about the plant. A
+  dormant bulb is not overdue because nobody wrote about it.
+- **Identity is kind · space · organism**, the order the destination picker
+  uses, so two tomatoes with one name differ in the line beneath it and the
+  pressed row is the tomato meant. The organism is the secondary line, never
+  the name.
+- **Small is read, large is searched.** Six things or fewer are one list with
+  no search box; beyond that come the search, the modes (all / plants and
+  animals / spaces), the order (recent entry / name) and pages of 24. A page
+  past the end shows the last page, not an empty garden.
+- **Every view is an address.** Query, mode, order and page are the URL, so a
+  view survives reload and Back; each row's Write carries `returnTo` back to
+  that row's own anchor, and Close lands on it.
+
 ---
 
 ## 6. Language and locale

@@ -98,9 +98,11 @@ test("guest, ordinary member, sealed owner and expired session are distinct serv
     ).toBe(0);
     const page = await context.newPage();
     await page.goto(`${baseURL}/garden`);
-    await expect(page.locator("#first-entry-composer")).toBeVisible({
+    // A thousand objects are a collection to search, not a form (OVE-489).
+    await expect(page.locator('[data-garden-collection="true"]')).toBeVisible({
       timeout: 20_000,
     });
+    await expect(page.locator('[data-garden-search="true"]')).toBeVisible();
     await testInfo.attach("member-large-collection", {
       body: await page.screenshot(),
       contentType: "image/png",

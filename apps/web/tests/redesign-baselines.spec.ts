@@ -54,7 +54,9 @@ test("OVE-486: global Write opens the destination-aware composer", async ({
 });
 
 test("multiple spaces require an explicit destination", async ({ page }) => {
-  await page.goto("/garden");
+  // A returning gardener's home is the collection (OVE-489); the first-entry
+  // composer opens there on an explicit create.
+  await page.goto("/garden?source=direct-garden");
   const composer = page.locator("#first-entry-composer");
   await expect(
     composer.locator('[data-owned-destination-picker="space"]'),

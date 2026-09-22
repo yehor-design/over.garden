@@ -161,6 +161,11 @@ export interface LivingObjectPassportCopy {
   readLatest: string;
   addUpdate: string;
   backToGarden: string;
+  /**
+   * The organism's catalogue card, named: a reference link is secondary and
+   * says what it opens ("Apis mellifera у каталозі"), never a bare "Open the
+   * catalogue" beside the gardener's own object (OVE-489 criterion 6).
+   */
   openCatalog: string;
   openProfile: string;
   publicEntry: string;
@@ -213,8 +218,8 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     noOwnerEntries: "Додайте перший датований запис, щоб почати історію.",
     readLatest: "Читати останній запис",
     addUpdate: "Новий запис",
-    backToGarden: "До моєї градини",
-    openCatalog: "Відкрити каталог",
+    backToGarden: "До мого саду",
+    openCatalog: "{name} у каталозі",
     openProfile: "Відкрити профіль",
     publicEntry: "Публічний запис",
     directObjectUpdate: "Запис об'єкта",
@@ -267,7 +272,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     readLatest: "Прочетете последния запис",
     addUpdate: "Нов запис",
     backToGarden: "Към моята градина",
-    openCatalog: "Отворете каталога",
+    openCatalog: "{name} в каталога",
     openProfile: "Отворете профила",
     publicEntry: "Публичен запис",
     directObjectUpdate: "Запис за обекта",
@@ -320,7 +325,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     readLatest: "Читать последнюю запись",
     addUpdate: "Новая запись",
     backToGarden: "В мой сад",
-    openCatalog: "Открыть каталог",
+    openCatalog: "{name} в каталоге",
     openProfile: "Открыть профиль",
     publicEntry: "Публичная запись",
     directObjectUpdate: "Запись объекта",

@@ -188,7 +188,12 @@ export function buildOwnerObjectPassportPresentation(
     },
     secondaryActions: [
       { href: "/garden", label: copy.backToGarden },
-      catalogPath ? { href: catalogPath, label: copy.openCatalog } : null,
+      catalogPath
+        ? {
+            href: catalogPath,
+            label: copy.openCatalog.replace("{name}", identityValue),
+          }
+        : null,
     ].filter((action): action is NonNullable<typeof action> => action !== null),
     ownerContext: {
       spaceId: page.space.id,

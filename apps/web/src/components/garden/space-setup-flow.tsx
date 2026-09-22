@@ -255,7 +255,7 @@ export function SpaceSetupFlow({
         {returnTo ? null : (
           <div>
             <Link
-              href="/garden#spaces"
+              href="/garden#garden-spaces"
               className={buttonVariants({ variant: "secondary" })}
             >
               {copy.result.toGarden}
@@ -537,7 +537,7 @@ function OutcomeNotice({
           actions={
             <>
               <Link
-                href="/garden#spaces"
+                href="/garden#garden-spaces"
                 className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.duplicate.openExisting}

@@ -327,6 +327,31 @@ export async function loadGardenWorkspace(
   return readModel;
 }
 
+export interface GardenWorkspaceContext {
+  recent: GardenWorkspaceSection<GardenWorkspaceRecentEntry[]>;
+  inbox: GardenWorkspaceSection<GardenWorkspaceInboxSummary>;
+}
+
+/**
+ * What the garden home's context rail shows beside the collection
+ * (`OVE-489`): the last entries written and the inbox counts, each settled on
+ * its own. The collection itself is `garden-collection-repository`.
+ */
+export async function loadGardenWorkspaceContext(
+  scope: RequestScope,
+  options: { faultSections?: readonly GardenWorkspaceSectionKey[] } = {},
+  sources: Pick<GardenWorkspaceSources, "recent" | "inbox"> = defaultSources,
+): Promise<GardenWorkspaceContext> {
+  const faultSections = new Set(options.faultSections ?? []);
+  const [recent, inbox] = await Promise.all([
+    settleWorkspaceSource(faultSections, "recent", () =>
+      sources.recent(scope, WORKSPACE_RECENT_LIMIT),
+    ),
+    settleWorkspaceSource(faultSections, "inbox", () => sources.inbox(scope)),
+  ]);
+  return { recent, inbox };
+}
+
 function settleWorkspaceSource<T>(
   faultSections: ReadonlySet<GardenWorkspaceSectionKey>,
   section: GardenWorkspaceSectionKey,

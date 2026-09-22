@@ -301,7 +301,7 @@ export function ObjectSetupFlow({
               {copy.result.write}
             </Link>
             <Link
-              href="/garden#inventory"
+              href="/garden#garden-objects"
               className={buttonVariants({ variant: "secondary" })}
             >
               {copy.result.toGarden}

@@ -5,6 +5,7 @@ import {
   WorkspaceShell,
 } from "@/components/garden/workspace-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getGardenCollectionCopy } from "@/lib/garden-collection-copy";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import {
   getInterfaceCopy,
@@ -50,44 +51,29 @@ export function GardenHomeShell({
 }
 
 /**
- * The fallback for the streamed half of the home page. It mirrors what arrives:
- * the next-action block, the four-fact strip, then the inventory and recent
- * lists, so nothing above the fold moves when the read model lands.
+ * The fallback for the streamed half of the home page (`OVE-489`). It mirrors
+ * what arrives — the three actions, then the collection's rows — so nothing
+ * above the fold moves when the collection lands.
  */
 export function GardenHomeSectionsSkeleton({
   locale,
 }: {
   locale: InterfaceLocale;
 }) {
-  const copy = getGardenWorkspaceCopy(locale).workspace;
+  const copy = getGardenCollectionCopy(locale).groups;
 
   return (
-    <div data-garden-workspace="loading" className="flex flex-col">
-      <div className="px-4 sm:px-6">
-        <section className="border-b border-border py-6">
-          <Skeleton className="h-3 w-28" />
-          <Skeleton className="mt-3 h-8 w-2/3" />
-          <Skeleton className="mt-3 h-4 w-full max-w-xl" />
-        </section>
+    <div
+      data-garden-workspace="loading"
+      className="flex flex-col gap-8 px-4 py-6 sm:px-6 sm:py-8"
+    >
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-10 w-36" />
+        <Skeleton className="h-10 w-56" />
+        <Skeleton className="h-10 w-40" />
       </div>
-      <div className="grid grid-cols-2 border-b border-border bg-foreground p-4 md:grid-cols-4">
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="mx-2 h-12 bg-surface/20" />
-        ))}
-      </div>
-      <div className="flex flex-col gap-10 px-4 py-8 sm:px-6">
-        <WorkspaceSectionSkeleton
-          locale={locale}
-          title={copy.inventory.title}
-          rows={4}
-        />
-        <WorkspaceSectionSkeleton
-          locale={locale}
-          title={copy.recent.title}
-          rows={3}
-          media={false}
-        />
-      </div>
+      <WorkspaceSectionSkeleton locale={locale} title={copy.spaces} rows={1} />
+      <WorkspaceSectionSkeleton locale={locale} title={copy.objects} rows={4} />
     </div>
   );
 }

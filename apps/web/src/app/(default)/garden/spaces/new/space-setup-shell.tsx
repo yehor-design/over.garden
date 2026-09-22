@@ -32,7 +32,7 @@ export function SpaceSetupShell({
       title={copy.title}
       navigation={
         <Link
-          href="/garden#spaces"
+          href="/garden#garden-spaces"
           className={buttonVariants({ variant: "secondary", size: "sm" })}
         >
           <ArrowLeft aria-hidden="true" />

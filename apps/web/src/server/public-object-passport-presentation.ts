@@ -23,7 +23,9 @@ export function buildPublicObjectPassportPresentation(
   // ADR-0026 D6: a gardener's own name never appears on a public surface.
   const identityValue =
     page.object.catalogCanonicalName ??
-    (page.object.varietyState === "selected" ? page.object.varietyText : null) ??
+    (page.object.varietyState === "selected"
+      ? page.object.varietyText
+      : null) ??
     copy.unknownIdentity;
   const entries = buildLivingObjectTimeline(
     [...page.journalPreview, ...page.journalContinuation].map((entry) => ({
@@ -190,7 +192,10 @@ export function buildPublicObjectPassportPresentation(
       : null,
     secondaryActions: [
       page.object.catalogPath
-        ? { href: page.object.catalogPath, label: copy.openCatalog }
+        ? {
+            href: page.object.catalogPath,
+            label: copy.openCatalog.replace("{name}", identityValue),
+          }
         : null,
       page.author?.profilePath
         ? { href: page.author.profilePath, label: copy.openProfile }

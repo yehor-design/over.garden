@@ -258,7 +258,7 @@ describe("PublicCommunityView", () => {
     expect(html).toContain("Написати перший запис");
     // `/garden` has no prefixed twin either; a bg reader following this would
     // meet a 404 the proxy decides before the page renders.
-    expect(html).toContain('href="/garden#first-entry-composer"');
+    expect(html).toContain('href="/garden/new"');
     // No filter bar over nothing, no "Записи · 0" heading, no result count.
     expect(html).not.toContain('data-slot="filter-bar"');
     expect(html).not.toContain("data-community-result-count");
