@@ -63,20 +63,28 @@ test.describe("OVE-417 Notion-shaped composer", () => {
         composer.locator('[data-structured-journal-composer="true"]'),
       ).toHaveAttribute("data-status", "ready");
 
-      // The retired button row leaves nothing behind.
+      // The retired row of every mark stays retired; ADR-0028 D3 as amended
+      // puts one row of ordinary tools under the text instead (`OVE-487`).
       await expect(composer.locator('[role="toolbar"]')).toHaveCount(0);
+      await expect(
+        composer.getByRole("group", { name: "Інструменти запису" }),
+      ).toBeVisible();
 
       const editor = canvas.locator('[contenteditable="true"]').first();
       await editor.click();
 
-      // 1. The placeholder names the key that opens the menu.
+      // 1. The first line invites writing, not a command (`OVE-487`); the
+      //    next empty line names the key that opens the menu.
       await expect(
         canvas.locator("[data-journal-placeholder]"),
-      ).toHaveAttribute("data-journal-placeholder", /\//u);
+      ).toHaveAttribute("data-journal-placeholder", "Як минув день у саду?");
 
       // 2. Input rules: a heading, a list, and a marked run — no control used.
       await page.keyboard.type("## Травень");
       await page.keyboard.press("Enter");
+      await expect(
+        canvas.locator("[data-journal-placeholder]"),
+      ).toHaveAttribute("data-journal-placeholder", /\//u);
       await page.keyboard.type("- полити зранку");
       await page.keyboard.press("Enter");
       await page.keyboard.press("Enter");
@@ -346,6 +354,29 @@ test.describe("OVE-458 the composer a keyboard can finish", () => {
       await expect(sheet).toBeHidden();
 
       // 5. AC7 — the cover says its value in words, and changes it by key.
+      //    It is a question only once there is a photograph (`OVE-487`): a
+      //    note of three paragraphs has no cover section at all, and the
+      //    tool row's photo button brings one. The photograph's upload is
+      //    refused here — no Worker in this run — and its block, which is
+      //    what the cover chooses between, is there regardless.
+      await expect(
+        composer.locator("[data-journal-cover-controls]"),
+      ).toHaveCount(0);
+      const chooser = page.waitForEvent("filechooser");
+      await composer.locator('[data-journal-tool="photo"]').click();
+      await (
+        await chooser
+      ).setFiles({
+        name: "leaf.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+          "base64",
+        ),
+      });
+      await expect(
+        composer.locator('[data-journal-cover-controls="true"]'),
+      ).toBeVisible();
       const coverValue = composer.locator('[data-journal-cover-value="true"]');
       await expect(coverValue).toContainText(/Обрано: Автоматично/u);
       const noCover = composer.getByRole("button", {

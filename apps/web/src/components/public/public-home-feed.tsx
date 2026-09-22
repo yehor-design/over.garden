@@ -22,7 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { resolveIllustration } from "@/lib/illustrations";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
-import { publicMediaAltText } from "@/lib/public-media-alt";
+import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import {
   contentLanguageAttribute,
   localizedPath,
@@ -366,7 +366,7 @@ function PublicFeedEntryCard({
           ? {
               src: sourceSet.src,
               srcSet: sourceSet.srcSet,
-              alt: publicMediaAltText({}, entry.title),
+              alt: publicCardMediaAltText(cover),
               placeholderDataUri: cover.placeholderDataUri,
               focalX: cover.focalX,
               focalY: cover.focalY,

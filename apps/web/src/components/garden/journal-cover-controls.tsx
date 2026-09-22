@@ -1,6 +1,7 @@
 /**
  * Progressive journal cover controls (OVE-207).
- * Optional Cover section — never required on the shortest create path.
+ * Optional Cover section — never required on the shortest create path, and
+ * not on the screen at all until the entry has a photograph (`OVE-487`).
  *
  * `OVE-458` AC7 rewrote how the section states itself. Before, the choice lived
  * in a button's fill: the selected mode was the one rendered `primary`, which
@@ -140,6 +141,20 @@ export function JournalCoverControls({
   const [uploading, setUploading] = useState(false);
   const previewUrl = resolveCoverPreviewUrl(selection, eligibleInline);
   const valueText = describeCoverSelection(selection, eligibleInline, copy);
+
+  // A cover is a choice between photographs, so there is nothing to choose
+  // until the entry has one (`OVE-487` criterion 3): a plain note never meets
+  // this section, and a first photograph brings it.
+  if (
+    !journalCoverHasSuitableMedia(
+      selection,
+      eligibleInline,
+      pendingInlineRemoval,
+      uploading,
+    )
+  ) {
+    return null;
+  }
 
   async function onPickSeparate(file: File | null) {
     if (!file || disabled) return;
@@ -387,6 +402,25 @@ export function JournalCoverControls({
         </div>
       ) : null}
     </section>
+  );
+}
+
+/**
+ * Whether the cover section has anything to decide: a photograph in the
+ * story, a cover photograph of its own, or a removal waiting for an answer.
+ */
+export function journalCoverHasSuitableMedia(
+  selection: JournalCoverSelectionState,
+  eligibleInline: readonly JournalCoverEligibleInline[],
+  pendingInlineRemoval: { mediaAssetId: string } | null = null,
+  uploading = false,
+): boolean {
+  return (
+    eligibleInline.length > 0 ||
+    selection.mode === "separate" ||
+    selection.mode === "explicit_inline" ||
+    pendingInlineRemoval !== null ||
+    uploading
   );
 }
 

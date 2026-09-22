@@ -56,7 +56,7 @@ import {
   publicTopicPath,
 } from "@/lib/garden/public-paths";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
-import { publicMediaAltText } from "@/lib/public-media-alt";
+import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import {
   buildCommunityRemovalHref,
   buildPublicCommunityHref,
@@ -1136,7 +1136,7 @@ function CommunityContributionCard({
                 intrinsicWidth: item.coverIntrinsicWidth,
                 intrinsicHeight: item.coverIntrinsicHeight,
               }).srcSet,
-              alt: publicMediaAltText({}, item.title),
+              alt: publicCardMediaAltText({}),
               focalX: item.coverFocalX,
               focalY: item.coverFocalY,
               intrinsicWidth: item.coverIntrinsicWidth,

@@ -453,4 +453,42 @@ describe("an entry written in another language", () => {
     expect(html).not.toContain('lang="bg"');
     expect(html).not.toContain('lang="ru"');
   });
+
+  /**
+   * OG-UX-029 (`OVE-487`): a card's photograph sits beside its own linked
+   * title. It carries the gardener's description when there is one, and is
+   * decorative otherwise — never the title a screen reader just read.
+   */
+  it("describes a card's photograph in the gardener's words, or not at all", () => {
+    const [first] = page.entries;
+    const described = renderToStaticMarkup(
+      <PublicHomeFeed
+        locale="uk"
+        copy={copy}
+        feed={{
+          ...page,
+          entries: [
+            {
+              ...first!,
+              media: [
+                {
+                  ...first!.media[0]!,
+                  caption: "Жовті плями на нижньому листі",
+                },
+              ],
+            },
+          ],
+        }}
+        request={{ cursor: null, kind: "all", topic: null }}
+        topics={topics}
+        state="ready"
+      />,
+    );
+    expect(described).toContain('alt="Жовті плями на нижньому листі"');
+    expect(described).not.toContain(`alt="${first!.title}"`);
+
+    const bare = render();
+    expect(bare).toMatch(/<img[^>]*alt=""/u);
+    expect(bare).not.toContain(`alt="${first!.title}"`);
+  });
 });

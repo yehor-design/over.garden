@@ -43,7 +43,11 @@ export interface EntryCardCover {
   /** `<img srcset>` candidates from `buildPublicMediaSourceSet` (ADR-0022 D2). */
   srcSet?: string | null;
   sizes?: string;
-  /** Real alt text. `public-media-alt` builds it; never an empty string here. */
+  /**
+   * `publicCardMediaAltText` builds it: the gardener's own description of the
+   * photograph, or `""` when there is none — the card's linked title already
+   * names the entry, and saying it twice describes nothing (OG-UX-029).
+   */
   alt: string;
   /** The 16 px WebP data URI painted until the photograph arrives. */
   placeholderDataUri?: string | null;

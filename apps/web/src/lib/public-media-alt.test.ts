@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { publicMediaAltText } from "@/lib/public-media-alt";
+import {
+  publicCardMediaAltText,
+  publicMediaAltText,
+} from "@/lib/public-media-alt";
 
 /**
  * There were three fallbacks before this, two of them on one page:
@@ -45,5 +48,28 @@ describe("the sentence a photograph is described by", () => {
     ];
     const alts = photos.map((photo) => publicMediaAltText(photo, title));
     expect(new Set(alts).size).toBe(1);
+  });
+});
+
+/**
+ * OG-UX-029: a card's photograph sits beside the entry's own linked title, so
+ * repeating the title made a screen reader say it twice and described nothing.
+ */
+describe("the sentence a card's photograph is described by", () => {
+  it("carries the gardener's own description", () => {
+    expect(
+      publicCardMediaAltText({ caption: "Жовті плями на нижньому листі" }),
+    ).toBe("Жовті плями на нижньому листі");
+  });
+
+  it("is decorative without one, never the title again", () => {
+    expect(publicCardMediaAltText({})).toBe("");
+    expect(publicCardMediaAltText({ caption: "  ", altText: null })).toBe("");
+  });
+
+  it("falls back to the stored alt text of an older row", () => {
+    expect(publicCardMediaAltText({ altText: "Стиглі томати" })).toBe(
+      "Стиглі томати",
+    );
   });
 });

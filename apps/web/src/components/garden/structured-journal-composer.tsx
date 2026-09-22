@@ -97,6 +97,37 @@ export interface StructuredJournalComposerLabels {
   imageCaptionPlaceholder: string;
   imageRemove: string;
   imageRejectRemote: string;
+  /** "Фото {index}": a photograph named by its position (`OVE-487`). */
+  imageName: string;
+  /** "{action}: {photo}": a control named with the photograph it acts on. */
+  imageActionName: string;
+  imageMoveUp: string;
+  imageMoveDown: string;
+  /**
+   * A staged photograph, ready to go out with the entry. Never "uploaded" or
+   * "saved": nothing is public until Publish is acknowledged.
+   */
+  imageReady: string;
+  /** More photographs than one entry holds; `{max}` is the limit. */
+  imageLimit: string;
+  /**
+   * The composer's ordinary controls under the text (`OVE-487`, ADR-0028 D3
+   * as amended): the group's name and the two controls that carry words.
+   */
+  composerTools: {
+    label: string;
+    addPhoto: string;
+    blocks: string;
+  };
+  /** Every photograph's state at once, beside Publish (`OVE-487`). */
+  readiness: {
+    /** `{ready}` of `{total}` prepared; Publish waits for the rest. */
+    preparing: string;
+    /** `{total}` prepared, going out with the entry. */
+    ready: string;
+    /** `{photos}` failed; each must be retried or removed first. */
+    failed: string;
+  };
   unavailableTitle: string;
   unavailableBody: string;
   titleLabel: string;
@@ -160,6 +191,8 @@ export interface StructuredJournalComposerProps {
   onRetryImage?: (mediaAssetId: string) => void;
   onReplaceImage?: (mediaAssetId: string, file: File) => void;
   onSetImageAsCover?: (mediaAssetId: string) => void;
+  /** The photograph the cover resolves to, so its block can say so. */
+  coverMediaAssetId?: string | null;
   composerRef?: MutableRefObject<StructuredJournalComposerHandle | null>;
 }
 

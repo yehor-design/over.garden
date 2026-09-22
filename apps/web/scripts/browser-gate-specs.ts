@@ -48,6 +48,7 @@ export const BROWSER_GATE_SPECS = [
   "space-setup.spec.ts",
   "object-setup.spec.ts",
   "entry-composer.spec.ts",
+  "composer-media.spec.ts",
   "redesign-baselines.spec.ts",
   "journal-deletion-retention.spec.ts",
   "public-profile.spec.ts",

@@ -70,6 +70,21 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**Photographs and blocks in the shared composer (OVE-487):** one row of
+ordinary tools under the text — Photo (several files at once), bold, italic,
+a bulleted list and every block behind "Block" — keeps the caret; the slash
+menu, the gutter (from `sm` up) and the shortcuts stay. Each photograph says
+its step (read and compressed to WebP on the device, sent to temporary
+storage, ready to publish), carries always-visible controls named with the
+photograph (Up, Down, Retry, Replace, Cover, Remove), and one line beside
+Publish counts them; Publish with a failed photograph sends nothing. The cover
+section appears with the first photograph; the separate "optional photo"
+section is gone. Feed and directory cards carry the photograph's caption as
+`alt`, or `alt=""` without one (OG-UX-029). The browser stager called `fetch`
+as its own method ("Illegal invocation"), so every composer photo failed in
+production until PR #448 (2026-09-23). See
+`docs/redesign/2026-09-21/OVE-487-PROOF.md`.
+
 **Progressive space and object setup (OVE-484, OVE-485):** `/garden/spaces/new`
 and `/garden/objects/new` ask only what `spaces` and `plant_objects` store, one
 question at a time, and each writes one acknowledged record per intent through

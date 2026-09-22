@@ -8,8 +8,19 @@ import {
   $getRoot,
   $getSelection,
   $insertNodes,
+  $isNodeSelection,
+  $isParagraphNode,
+  $isRangeSelection,
+  type LexicalNode,
 } from "lexical";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 
 import { ephemeralStagingFailureCode } from "@/lib/media/ephemeral-staging-client";
 
@@ -26,7 +37,7 @@ import { JournalPlaceholderPlugin } from "./journal-placeholder-plugin";
 import { JournalFileDropPlugin } from "./journal-file-drop-plugin";
 import { JournalSelectionToolbar } from "./journal-selection-toolbar";
 import { JournalSlashMenu } from "./journal-slash-menu";
-import { JournalShortcutSheet } from "./journal-shortcut-sheet";
+import { JournalComposerTools } from "./journal-composer-tools";
 import {
   moveJournalBlockById,
   moveJournalBlockToIndex,
@@ -45,6 +56,7 @@ import {
 import {
   createEmptyJournalDocument,
   journalDocumentImageCount,
+  listJournalDocumentImageMediaIds,
   MAX_JOURNAL_INLINE_IMAGES,
   normalizeJournalDocumentOrThrow,
   semanticJournalDocumentHash,
@@ -93,6 +105,7 @@ class JournalDegradationBridge {
 
 export function JournalLexicalClient(props: JournalLexicalClientProps) {
   const {
+    coverMediaAssetId,
     imagePreviewUrls,
     imageStates,
     onRemoveImageBlock,
@@ -167,13 +180,37 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
     },
     [],
   );
+  // The photographs in reading order, so each block can be named by its
+  // position — "Фото 2" — and know whether it can move up or down.
+  const [imageOrder, setImageOrder] = useState<readonly string[]>(() =>
+    listJournalDocumentImageMediaIds(initialBinding),
+  );
+  const [blockOrder, setBlockOrder] = useState<readonly string[]>(() =>
+    initialBinding.blocks.map((block) => block.id),
+  );
+  const announceRef = useRef<((message: string) => void) | null>(null);
   const onLatestGoodDocument = useCallback(
-    (document: JournalDocumentV1) => degradationBridge.record(document),
+    (document: JournalDocumentV1) => {
+      degradationBridge.record(document);
+      setImageOrder((current) =>
+        sameIds(current, listJournalDocumentImageMediaIds(document)),
+      );
+      setBlockOrder((current) =>
+        sameIds(
+          current,
+          document.blocks.map((block) => block.id),
+        ),
+      );
+    },
     [degradationBridge],
   );
   const previewContext = useMemo(
     () => ({
       disabled: props.disabled ?? false,
+      imageOrder,
+      blockOrder,
+      coverMediaAssetId: coverMediaAssetId ?? null,
+      announce: (message: string) => announceRef.current?.(message),
       getState: (mediaAssetId: string) => {
         const localState = imageStates?.get(mediaAssetId);
         if (localState) return localState;
@@ -197,6 +234,12 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
         setCover: props.labels.imageSetCover,
         caption: props.labels.imageCaption,
         captionPlaceholder: props.labels.imageCaptionPlaceholder,
+        name: props.labels.imageName,
+        actionName: props.labels.imageActionName,
+        moveUp: props.labels.imageMoveUp,
+        moveDown: props.labels.imageMoveDown,
+        ready: props.labels.imageReady,
+        moved: props.labels.reorder.movedAnnouncement,
       },
       onRemove: (blockId: string, mediaAssetId: string) => {
         onPreviewRemoved(mediaAssetId);
@@ -208,6 +251,9 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       onSetCover: (mediaAssetId: string) => onSetImageAsCover?.(mediaAssetId),
     }),
     [
+      blockOrder,
+      coverMediaAssetId,
+      imageOrder,
       imageStates,
       localFailureCodes,
       onPreviewRemoved,
@@ -227,6 +273,12 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
       props.labels.imageCaption,
       props.labels.imageCaptionPlaceholder,
       props.labels.imageUploading,
+      props.labels.imageName,
+      props.labels.imageActionName,
+      props.labels.imageMoveUp,
+      props.labels.imageMoveDown,
+      props.labels.imageReady,
+      props.labels.reorder.movedAnnouncement,
     ],
   );
 
@@ -239,6 +291,7 @@ export function JournalLexicalClient(props: JournalLexicalClientProps) {
           onPreviewResolved={onPreviewResolved}
           onPreviewFailed={onPreviewFailed}
           onLatestGoodDocument={onLatestGoodDocument}
+          announceRef={announceRef}
         />
       </LexicalExtensionComposer>
     </JournalImagePreviewProvider>
@@ -249,6 +302,7 @@ interface JournalLexicalClientBodyProps extends JournalLexicalClientProps {
   onPreviewResolved(mediaAssetId: string, previewUrl: string): void;
   onPreviewFailed(mediaAssetId: string, failureCode: string): void;
   onLatestGoodDocument(document: JournalDocumentV1): void;
+  announceRef: MutableRefObject<((message: string) => void) | null>;
 }
 
 function JournalLexicalClientBody({
@@ -265,6 +319,7 @@ function JournalLexicalClientBody({
   onPreviewResolved,
   onPreviewFailed,
   onLatestGoodDocument,
+  announceRef,
   imageInsertionMode = "after-ready",
 }: JournalLexicalClientBodyProps) {
   const [editor] = useLexicalComposerContext();
@@ -380,139 +435,157 @@ function JournalLexicalClientBody({
     };
   }, [editor, serialize]);
 
-  const chooseImage = useCallback(
-    async (file: File) => {
-      if (disabled || !mountedRef.current) return;
-      // A file over the limit or of another type is refused here, before a
-      // block or the codec sees it, with the bounded copy (OVE-371).
-      const refusal = classifyComposerPhotoRefusal(file);
-      if (refusal) {
-        setMediaMessage(
-          refusal === "too_large"
-            ? labels.imageTooLarge
-            : labels.imageUnsupported,
-        );
-        return;
+  // One or several photographs at once, in the order they were chosen
+  // (`OVE-487`). Each file is refused or accepted on its own: one file over
+  // the limit does not cost the gardener the other four.
+  const chooseImages = useCallback(
+    async (files: readonly File[]) => {
+      if (disabled || !mountedRef.current || files.length === 0) return;
+      const refusals = new Set<string>();
+      const accepted: File[] = [];
+      let capacity =
+        MAX_JOURNAL_INLINE_IMAGES -
+        journalDocumentImageCount(latestDocumentRef.current) -
+        pendingMediaCountRef.current -
+        completedUnserializedMediaCountRef.current;
+      for (const file of files) {
+        // A file over the limit or of another type is refused here, before a
+        // block or the codec sees it, with the bounded copy (OVE-371).
+        const refusal = classifyComposerPhotoRefusal(file);
+        if (refusal) {
+          refusals.add(
+            refusal === "too_large"
+              ? labels.imageTooLarge
+              : labels.imageUnsupported,
+          );
+          continue;
+        }
+        if (capacity <= 0) {
+          refusals.add(
+            labels.imageLimit.replaceAll(
+              "{max}",
+              String(MAX_JOURNAL_INLINE_IMAGES),
+            ),
+          );
+          continue;
+        }
+        capacity -= 1;
+        accepted.push(file);
       }
-      if (
-        journalDocumentImageCount(latestDocumentRef.current) +
-          pendingMediaCountRef.current +
-          completedUnserializedMediaCountRef.current >=
-        MAX_JOURNAL_INLINE_IMAGES
-      ) {
-        setMediaMessage(labels.failureBody);
-        return;
-      }
+      setMediaMessage([...refusals].join(" "));
+      if (accepted.length === 0) return;
       const binding = bindingRef.current;
-      const blockId = createJournalBlockId();
       if (imageInsertionMode === "immediate") {
-        const mediaAssetId = crypto.randomUUID();
+        const planned = accepted.map((file) => ({
+          file,
+          blockId: createJournalBlockId(),
+          mediaAssetId: crypto.randomUUID(),
+        }));
         editor.update(
           () => {
-            const image = $createOverGardenImageNode({ blockId, mediaAssetId });
-            const trailing = $setJournalBlockId(
-              $createParagraphNode(),
-              createJournalBlockId(),
+            $insertJournalImages(
+              planned.map(({ blockId, mediaAssetId }) =>
+                $createOverGardenImageNode({ blockId, mediaAssetId }),
+              ),
             );
-            if ($getSelection()) $insertNodes([image, trailing]);
-            else $getRoot().append(image, trailing);
-            trailing.selectStart();
           },
           { discrete: true },
         );
         serialize();
-        void callbacksRef.current
-          .onSelectImageFile(file, blockId, mediaAssetId)
-          .then((result) => {
-            if (
-              !mountedRef.current ||
-              bindingRef.current !== binding ||
-              (result.mediaAssetId && result.mediaAssetId !== mediaAssetId)
-            ) {
-              return;
-            }
-            if (result.previewUrl) {
-              onPreviewResolved(mediaAssetId, result.previewUrl);
-            }
-          })
-          .catch((error: unknown) => {
-            if (mountedRef.current && bindingRef.current === binding) {
-              onPreviewFailed(mediaAssetId, ephemeralStagingFailureCode(error));
-              setMediaMessage(labels.imageFailed);
-            }
-          });
+        for (const { file, blockId, mediaAssetId } of planned) {
+          void callbacksRef.current
+            .onSelectImageFile(file, blockId, mediaAssetId)
+            .then((result) => {
+              if (
+                !mountedRef.current ||
+                bindingRef.current !== binding ||
+                (result.mediaAssetId && result.mediaAssetId !== mediaAssetId)
+              ) {
+                return;
+              }
+              if (result.previewUrl) {
+                onPreviewResolved(mediaAssetId, result.previewUrl);
+              }
+            })
+            .catch((error: unknown) => {
+              // The photograph says so itself, with its reason and its
+              // Retry, and the readiness line beside Publish counts it; a
+              // third message here would only repeat them.
+              if (mountedRef.current && bindingRef.current === binding) {
+                onPreviewFailed(
+                  mediaAssetId,
+                  ephemeralStagingFailureCode(error),
+                );
+              }
+            });
+        }
         return;
       }
-      pendingMediaCountRef.current += 1;
-      mediaInFlightCountRef.current += 1;
-      setLifecycle("media_in_flight");
-      setMediaMessage("");
-      let pendingReleased = false;
-      let completedUnserialized = false;
-      try {
-        const result = await callbacksRef.current.onSelectImageFile(
-          file,
-          blockId,
-        );
-        if (
-          !mountedRef.current ||
-          bindingRef.current !== binding ||
-          !result.mediaAssetId
-        ) {
-          return;
-        }
-        pendingMediaCountRef.current = Math.max(
-          0,
-          pendingMediaCountRef.current - 1,
-        );
-        pendingReleased = true;
-        completedUnserializedMediaCountRef.current += 1;
-        completedUnserialized = true;
-        editor.update(
-          () => {
-            const image = $createOverGardenImageNode({
-              blockId,
-              mediaAssetId: result.mediaAssetId!,
-            });
-            const trailing = $setJournalBlockId(
-              $createParagraphNode(),
-              createJournalBlockId(),
-            );
-            if ($getSelection()) {
-              $insertNodes([image, trailing]);
-            } else {
-              $getRoot().append(image, trailing);
-            }
-            trailing.selectStart();
-          },
-          { discrete: true },
-        );
-        if (result.previewUrl) {
-          onPreviewResolved(result.mediaAssetId, result.previewUrl);
-        }
-      } catch {
-        if (completedUnserialized) {
-          completedUnserializedMediaCountRef.current = Math.max(
-            0,
-            completedUnserializedMediaCountRef.current - 1,
+      for (const file of accepted) {
+        if (!mountedRef.current || bindingRef.current !== binding) return;
+        const blockId = createJournalBlockId();
+        pendingMediaCountRef.current += 1;
+        mediaInFlightCountRef.current += 1;
+        setLifecycle("media_in_flight");
+        let pendingReleased = false;
+        let completedUnserialized = false;
+        try {
+          const result = await callbacksRef.current.onSelectImageFile(
+            file,
+            blockId,
           );
-        }
-        if (mountedRef.current && bindingRef.current === binding) {
-          setMediaMessage(labels.failureBody);
-        }
-      } finally {
-        if (!pendingReleased) {
+          if (
+            !mountedRef.current ||
+            bindingRef.current !== binding ||
+            !result.mediaAssetId
+          ) {
+            return;
+          }
           pendingMediaCountRef.current = Math.max(
             0,
             pendingMediaCountRef.current - 1,
           );
-        }
-        if (mountedRef.current && bindingRef.current === binding) {
-          mediaInFlightCountRef.current = Math.max(
-            0,
-            mediaInFlightCountRef.current - 1,
+          pendingReleased = true;
+          completedUnserializedMediaCountRef.current += 1;
+          completedUnserialized = true;
+          editor.update(
+            () => {
+              $insertJournalImages([
+                $createOverGardenImageNode({
+                  blockId,
+                  mediaAssetId: result.mediaAssetId!,
+                }),
+              ]);
+            },
+            { discrete: true },
           );
-          if (mediaInFlightCountRef.current === 0) serialize();
+          if (result.previewUrl) {
+            onPreviewResolved(result.mediaAssetId, result.previewUrl);
+          }
+        } catch {
+          if (completedUnserialized) {
+            completedUnserializedMediaCountRef.current = Math.max(
+              0,
+              completedUnserializedMediaCountRef.current - 1,
+            );
+          }
+          if (mountedRef.current && bindingRef.current === binding) {
+            setMediaMessage(labels.imageFailed);
+          }
+        } finally {
+          if (!pendingReleased) {
+            pendingMediaCountRef.current = Math.max(
+              0,
+              pendingMediaCountRef.current - 1,
+            );
+          }
+          if (mountedRef.current && bindingRef.current === binding) {
+            mediaInFlightCountRef.current = Math.max(
+              0,
+              mediaInFlightCountRef.current - 1,
+            );
+            if (mediaInFlightCountRef.current === 0) serialize();
+          }
         }
       }
     },
@@ -520,14 +593,18 @@ function JournalLexicalClientBody({
       disabled,
       editor,
       imageInsertionMode,
-      labels.failureBody,
       labels.imageFailed,
+      labels.imageLimit,
       labels.imageTooLarge,
       labels.imageUnsupported,
       onPreviewFailed,
       onPreviewResolved,
       serialize,
     ],
+  );
+  const chooseImage = useCallback(
+    (file: File) => chooseImages([file]),
+    [chooseImages],
   );
 
   const updateReordering = useCallback(
@@ -549,6 +626,12 @@ function JournalLexicalClientBody({
       if (mountedRef.current) setAnnouncement(message);
     }, 0);
   }, []);
+  useEffect(() => {
+    announceRef.current = announce;
+    return () => {
+      if (announceRef.current === announce) announceRef.current = null;
+    };
+  }, [announce, announceRef]);
 
   const rejectExternalContent = useCallback(() => {
     if (!mountedRef.current) return;
@@ -608,13 +691,21 @@ function JournalLexicalClientBody({
     >
       <div
         ref={containerRef}
-        className="journal-composer-canvas group/canvas relative mx-auto min-h-40 w-full pr-2 pl-14"
+        // The 56 px gutter is a pointer and keyboard enhancement; on a phone
+        // it would take a sixth of the line and answer to no hover, so the
+        // text gets the whole width and the tool row under it carries the
+        // same blocks (DESIGN.md §5.11, `OVE-487`).
+        className="journal-composer-canvas group/canvas relative mx-auto min-h-40 w-full sm:pr-2 sm:pl-14"
         data-lexical-journal-canvas="true"
       >
         <ContentEditable
           aria-label={labels.tools.editor}
           aria-keyshortcuts="Control+Shift+M Meta+Shift+M"
-          className="min-h-32 text-base leading-normal outline-none"
+          // The product's own ring, not the browser's: a text surface always
+          // matches :focus-visible, and the unlayered focus rule in
+          // globals.css turned a bare `outline-none` into a black medium
+          // outline around the whole story.
+          className="min-h-32 rounded-sm text-base leading-normal outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-focus-ring"
           spellCheck
         />
         <JournalPlaceholderPlugin
@@ -648,12 +739,15 @@ function JournalLexicalClientBody({
           onChooseImage={chooseImage}
         />
       </div>
-      {/* Beside the canvas, not inside it: the sheet is about the editor and
-          must not be reachable only from within a `contenteditable`
-          (`OVE-458`). */}
-      <div className="journal-composer-column mx-auto flex w-full justify-end">
-        <JournalShortcutSheet labels={labels} />
-      </div>
+      {/* Under the canvas, not inside it: ordinary buttons for a photo, the
+          basic marks and every block, and the shortcut sheet at the end of the
+          same row — none of them reachable only from within a
+          `contenteditable` (`OVE-458`, `OVE-487`). */}
+      <JournalComposerTools
+        labels={labels}
+        disabled={disabled}
+        onChooseImages={(files) => void chooseImages(files)}
+      />
       <JournalSafePastePlugin
         disabled={disabled}
         onChooseImage={chooseImage}
@@ -675,4 +769,84 @@ function JournalLexicalClientBody({
       </div>
     </div>
   );
+}
+
+/**
+ * Puts photographs where the caret is (`OVE-487`). An empty line is replaced
+ * rather than left standing above the first photograph, and the caret lands
+ * on the line after the last one, so the gardener goes on writing where the
+ * story continues. With no caret yet, the photographs go to the end, and an
+ * empty document's one empty line is replaced the same way.
+ *
+ * **Nothing the gardener wrote is replaced.** Lexical's own `$insertNodes`
+ * replaces whatever is selected: selected words, and — under a node
+ * selection, which every block move leaves behind — the whole selected block.
+ * A photograph added after moving a paragraph used to take that paragraph's
+ * place. So a range is collapsed to its end first, and a selected block gets
+ * the photographs after it.
+ */
+function $insertJournalImages(images: readonly LexicalNode[]): void {
+  if (images.length === 0) return;
+  const selection = $getSelection();
+  const root = $getRoot();
+  if ($isRangeSelection(selection) && !selection.isCollapsed()) {
+    const end = selection.isBackward() ? selection.anchor : selection.focus;
+    selection.anchor.set(end.key, end.offset, end.type);
+    selection.focus.set(end.key, end.offset, end.type);
+  }
+  const anchorBlock = $isRangeSelection(selection)
+    ? selection.anchor.getNode().getTopLevelElement()
+    : null;
+  const selectedBlock = $isNodeSelection(selection)
+    ? (selection.getNodes().at(-1)?.getTopLevelElement() ?? null)
+    : null;
+  const emptyLine =
+    anchorBlock && $isParagraphNode(anchorBlock) && anchorBlock.isEmpty()
+      ? anchorBlock
+      : !selection
+        ? (() => {
+            const last = root.getLastChild();
+            return $isParagraphNode(last) && last.isEmpty() ? last : null;
+          })()
+        : null;
+  const insertAfter = (anchor: LexicalNode) => {
+    let previous = anchor;
+    for (const image of images) {
+      previous.insertAfter(image);
+      previous = image;
+    }
+  };
+  if (emptyLine) {
+    insertAfter(emptyLine);
+    emptyLine.remove();
+  } else if (selectedBlock) {
+    insertAfter(selectedBlock);
+  } else if ($isRangeSelection(selection)) {
+    $insertNodes([...images]);
+  } else {
+    root.append(...images);
+  }
+  const last = images.at(-1)!;
+  const next = last.getNextSibling();
+  if ($isParagraphNode(next)) {
+    next.selectStart();
+    return;
+  }
+  const trailing = $setJournalBlockId(
+    $createParagraphNode(),
+    createJournalBlockId(),
+  );
+  last.insertAfter(trailing);
+  trailing.selectStart();
+}
+
+/** The same list back when nothing changed, so a memo keyed on it holds. */
+function sameIds(
+  current: readonly string[],
+  next: readonly string[],
+): readonly string[] {
+  return current.length === next.length &&
+    current.every((id, index) => id === next[index])
+    ? current
+    : next;
 }

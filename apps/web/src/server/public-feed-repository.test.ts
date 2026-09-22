@@ -235,6 +235,9 @@ describe("public feed repository", () => {
     expect(media.sql).toContain('"media_rank" <=');
     expect(media.sql).not.toContain("quarantine_key");
     expect(media.sql).toContain('"media_assets"."revoked_at" is null');
+    // The card's `alt` is the gardener's description (OG-UX-029).
+    expect(media.sql).toContain('"media_assets"."caption" as "caption"');
+    expect(media.sql).toContain('"ranked_media"."caption" as "caption"');
     expect(media.sql).not.toMatch(
       /original_deleted_at|media_readiness_state|quality_policy_version|quality_class/,
     );
@@ -289,6 +292,7 @@ describe("public feed repository", () => {
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          caption: "  Жовті плями на нижньому листі ",
         },
         {
           id: "00000000-0000-4000-8000-000000000202",
@@ -345,6 +349,8 @@ describe("public feed repository", () => {
         intrinsicHeight: 600,
         placeholderDataUri: null,
         variantLongEdges: [],
+        // The gardener's description travels to the card, trimmed (OG-UX-029).
+        caption: "Жовті плями на нижньому листі",
       },
       {
         id: "00000000-0000-4000-8000-000000000202",
@@ -355,6 +361,7 @@ describe("public feed repository", () => {
         intrinsicHeight: 600,
         placeholderDataUri: null,
         variantLongEdges: [],
+        caption: null,
       },
     ]);
     expect(page.entries[1].object.safeRegionCode).toBeNull();

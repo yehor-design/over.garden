@@ -422,6 +422,15 @@ draws as its hero. Uncropped in the story is the right way round: a portrait
 photograph is never letterboxed on its own page to make a box tidy, which is
 also what Medium and Substack do with a lead image.
 
+**A card's photograph is described by the gardener, or it is decorative**
+(OG-UX-029, `OVE-487`). On a card the photograph sits beside the entry's own
+linked title, so an `alt` that repeats the title makes a screen reader say it
+twice and describes nothing. `publicCardMediaAltText` gives a card the
+caption the gardener wrote — "Жовті плями на нижньому листі" is an
+observation the title does not make — and `alt=""` when there is none. The
+entry's own page keeps `publicMediaAltText` (caption, else the title), where
+the photograph is the content rather than a preview of it.
+
 ### 2.11 Layering
 
 `--z-base` 0 · `--z-sticky` 10 · `--z-rail` 20 · `--z-header` 30 ·
@@ -934,7 +943,33 @@ and the consequences belong on the screen rather than in the reader's memory.
 - **One readable responsive canvas.** Use the main content cap and fluid inner
   padding. Keep advanced block controls in a focusable menu on narrow screens;
   the old fixed 56 px gutter must not steal writing space. Slash commands and
-  drag handles are enhancements, never the only accessible controls.
+  drag handles are enhancements, never the only accessible controls. Below
+  `sm` the gutter is gone and the text has the whole width (`OVE-487`).
+- **The tools sit under the text, and none of them takes the caret.** One row
+  of ordinary buttons (`lexical-journal/journal-composer-tools.tsx`, a
+  labelled group, not a toolbar of every mark): Photo, bold, italic, a
+  bulleted list, and every block in the registry behind one "Block" menu —
+  each block with its Phosphor glyph, the same record the slash menu and the
+  gutter read. A pointer press never moves the selection; a keyboard press
+  acts on the selection Lexical still holds and puts the caret back. The
+  first line's placeholder invites writing and does not name the slash key;
+  later empty lines still do. The shortcut sheet ends the row on `sm` and up.
+- **A photograph says where it is, in words, and every control names it.**
+  Photo takes several files at once and puts them where the caret is, never
+  over a selected block or selected words. Each photograph says its step —
+  read on this device, compressed to WebP on this device, sent to temporary
+  storage — and "ready" means ready to publish, never uploaded or published.
+  Its controls are always on the screen (a phone has no hover): Up, Down,
+  Retry, Replace, Cover (`aria-pressed`) and Remove, each named with the
+  photograph — "Прибрати: Фото 2 — Жовті плями на нижньому листі". Beside
+  Publish one line counts them all, and Publish with a failed photograph sends
+  nothing and takes the reader to its Retry. The caption field is the
+  photograph's description and its `alt`; its placeholder asks for what the
+  photograph shows, not for the post again.
+- **The cover is a question only once there is a photograph.** A plain note
+  never meets the cover section; the first photograph brings it, and a cover
+  of its own (in no block) keeps it. There is no separate "optional photo"
+  section: photographs are added to the story.
 - **Creation has two explicit transactions.** Standalone Create acknowledges an
   empty entity; nested first-entry creation stages the proposed destination in
   memory and commits destination plus first entry atomically at Publish. Failure

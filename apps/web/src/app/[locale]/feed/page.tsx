@@ -17,7 +17,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { resolveIllustration } from "@/lib/illustrations";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
-import { publicMediaAltText } from "@/lib/public-media-alt";
+import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import {
   contentLanguageAttribute,
   isPublicLocale,
@@ -301,7 +301,7 @@ function PublicFeedEntryCard({
           ? {
               src: sourceSet.src,
               srcSet: sourceSet.srcSet,
-              alt: publicMediaAltText({}, entry.title),
+              alt: publicCardMediaAltText(cover),
               placeholderDataUri: cover.placeholderDataUri,
               focalX: cover.focalX,
               focalY: cover.focalY,
@@ -455,7 +455,7 @@ function FollowedFeedEntryCard({
         item.mediaUrl
           ? {
               src: item.mediaUrl,
-              alt: publicMediaAltText({}, item.title),
+              alt: publicCardMediaAltText({}),
             }
           : null
       }
