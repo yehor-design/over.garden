@@ -37,7 +37,8 @@ export type WorkspaceSurface =
   | "lineage-invitation-claim"
   | "erasure-requests"
   | "catalog-queue"
-  | "catalog-sources";
+  | "catalog-sources"
+  | "space-setup";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",
@@ -96,7 +97,7 @@ export function WorkspaceShell({
         {eyebrow ? (
           <p className="text-overline text-text-muted uppercase">{eyebrow}</p>
         ) : null}
-        <h1 className="text-text-heading text-h1">{title}</h1>
+        <h1 className="text-h1 text-text-heading">{title}</h1>
         {description ? (
           <p className="max-w-prose text-body-sm text-text-muted">
             {description}
@@ -135,7 +136,7 @@ export function WorkspaceSectionSkeleton({
       aria-label={title ?? copy.loading.label}
     >
       {title ? (
-        <h2 className="text-text-heading text-h2">{title}</h2>
+        <h2 className="text-h2 text-text-heading">{title}</h2>
       ) : (
         <Skeleton className="h-6 w-40" />
       )}
@@ -237,7 +238,7 @@ export function WorkspaceMissingRecord({
       data-workspace-record="missing"
       className="border-y border-border py-6"
     >
-      <h2 className="text-text-heading text-h3">{copy.title}</h2>
+      <h2 className="text-h3 text-text-heading">{copy.title}</h2>
       <p className="mt-1 max-w-prose text-body-sm text-text-muted">
         {copy.description}
       </p>
@@ -324,7 +325,7 @@ export function WorkspaceAccessPanel({
         {navigation ? (
           <div className="flex flex-wrap items-center gap-3">{navigation}</div>
         ) : null}
-        <h1 className="text-text-heading text-h1">{title}</h1>
+        <h1 className="text-h1 text-text-heading">{title}</h1>
       </header>
       {failure ? (
         <WorkspaceSectionError

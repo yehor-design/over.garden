@@ -45,6 +45,7 @@ export const BROWSER_GATE_SPECS = [
   "component-specimens.spec.ts",
   "redesign-fixtures.spec.ts",
   "owned-destinations.spec.ts",
+  "space-setup.spec.ts",
   "redesign-baselines.spec.ts",
   "journal-deletion-retention.spec.ts",
   "public-profile.spec.ts",
