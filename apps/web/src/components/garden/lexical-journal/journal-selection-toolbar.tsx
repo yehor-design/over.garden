@@ -244,8 +244,9 @@ export function JournalSelectionToolbar({
         ),
         editor.registerCommand(
           KEY_ESCAPE_COMMAND,
-          () => {
+          (event) => {
             if (!linkOpen) return false;
+            event?.preventDefault();
             closeLinkEditor(true);
             return true;
           },

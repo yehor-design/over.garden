@@ -35,26 +35,12 @@ describe("owner object copy", () => {
     expect(getOwnerObjectCopy("ru").catalog.save).toBe(
       "Сохранить соответствие каталогу",
     );
-    expect(getOwnerObjectCopy("bg").entryActions.deleteButton).toBe(
-      "Изтриване на записа окончателно",
+    expect(getOwnerObjectCopy("bg").entryActions.openPassport).toBe(
+      "Отваряне на публичния паспорт",
     );
     expect(getOwnerObjectCopy("ru").provenance.consent.confirmed).toBe(
       "Происхождение подтверждено",
     );
-  });
-
-  it("states the irreversible seven-day deletion contract in every locale", () => {
-    // OVE-353 / AC-03: the owner must be able to predict that delete is final
-    // before confirming it. Every market names the seven-day technical window
-    // and offers no archive or restore wording.
-    for (const locale of ["uk", "bg", "ru"] as const) {
-      const actions = getOwnerObjectCopy(locale).entryActions;
-      expect(actions.deleteDisclosure).toContain("7");
-      expect(actions.deleteButton.trim().length).toBeGreaterThan(0);
-      expect(actions).not.toHaveProperty("archivedTitle");
-      expect(actions).not.toHaveProperty("archivedGone");
-      expect(actions).not.toHaveProperty("archivedGonePending");
-    }
   });
 
   it("preserves user, catalog, and source values inside localized templates", () => {

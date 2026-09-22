@@ -260,7 +260,10 @@ export function JournalSlashMenu({
       ),
       editor.registerCommand(
         KEY_ESCAPE_COMMAND,
-        () => {
+        (event) => {
+          // Taken here: the composer around the editor reads an Escape nobody
+          // took as "close the composer" (`OVE-488`).
+          event?.preventDefault();
           close();
           return true;
         },

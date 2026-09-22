@@ -21,6 +21,13 @@ export interface AtomicJournalEditCopy {
   copyLocalChanges: string;
   localChangesCopied: string;
   closeConflict: string;
+  /**
+   * A save refused for an ended session (`OVE-488` criterion 3): the edit is
+   * still here, in this tab only, and signing in happens in another tab so
+   * this one is not navigated away from it.
+   */
+  sessionEnded: string;
+  signInNewTab: string;
 }
 
 const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
@@ -47,6 +54,9 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     copyLocalChanges: "Скопіювати мої зміни",
     localChangesCopied: "Ваші зміни скопійовано.",
     closeConflict: "Продовжити редагування",
+    sessionEnded:
+      "Сесія завершилася, і зміни не збережено. Вони залишаються лише в цій вкладці: увійдіть у новій вкладці й натисніть «Зберегти зміни» ще раз.",
+    signInNewTab: "Увійти в новій вкладці",
   },
   bg: {
     leaseAtRisk:
@@ -72,6 +82,9 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     copyLocalChanges: "Копирай моите промени",
     localChangesCopied: "Промените ви са копирани.",
     closeConflict: "Продължи редактирането",
+    sessionEnded:
+      "Сесията изтече и промените не са запазени. Те са само в този раздел: влезте в нов раздел и натиснете „Запази промените“ отново.",
+    signInNewTab: "Вход в нов раздел",
   },
   ru: {
     leaseAtRisk:
@@ -98,6 +111,9 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     copyLocalChanges: "Скопировать мои изменения",
     localChangesCopied: "Ваши изменения скопированы.",
     closeConflict: "Продолжить редактирование",
+    sessionEnded:
+      "Сессия завершилась, и изменения не сохранены. Они есть только в этой вкладке: войдите в новой вкладке и нажмите «Сохранить изменения» ещё раз.",
+    signInNewTab: "Войти в новой вкладке",
   },
 };
 

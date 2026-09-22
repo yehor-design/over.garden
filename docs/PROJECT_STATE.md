@@ -70,6 +70,15 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**Editing, leaving and deleting an entry (OVE-488):** the edit page names the
+entry's destination and keeps its address; Save returns to the entry's place in
+the timeline. Close, Cancel, Escape and Back ask Stay or Discard only when there
+is work to lose (every composer, one `UnpublishedWorkGuard`); an ended session
+keeps the work and offers sign-in in another tab. Deletion lives in each
+entry's own menu (`EntryActionsMenu`) — on the object timeline and the edit
+page — and its confirmation names the entry and the ADR-0021 consequences. See
+`docs/redesign/2026-09-21/OVE-488-PROOF.md`.
+
 **Photographs and blocks in the shared composer (OVE-487):** one row of
 ordinary tools under the text — Photo (several files at once), bold, italic,
 a bulleted list and every block behind "Block" — keeps the caret; the slash

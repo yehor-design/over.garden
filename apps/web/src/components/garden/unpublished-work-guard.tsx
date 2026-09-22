@@ -1,7 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MutableRefObject,
+} from "react";
 
 import {
   AlertDialog,
@@ -30,6 +37,13 @@ import { Button } from "@/components/ui/button";
  *
  * It warns **once**: the dialog is the whole interruption, and leaving after it
  * asks nothing further.
+ *
+ * `OVE-488` closes the two ways out it did not see. **Back**: while the work is
+ * dirty the guard keeps one copy of the current history entry on top, so the
+ * browser's Back lands on the same page and asks instead of unmounting the
+ * composer; Stay puts the copy back, Leave goes back for real. **Close and
+ * Escape**: the composer's own Close asks through `closeRequestRef`, the same
+ * dialog, so a clean composer closes at once and a dirty one asks first.
  */
 /**
  * Four strings, so the create composers and the edit composer can each speak
@@ -67,16 +81,65 @@ export function shouldGuardNavigation(
   );
 }
 
+/** Marks the copy of the current entry the guard keeps on top of history. */
+const HISTORY_MARKER = "__overgardenUnpublishedWork";
+
+type PendingLeave =
+  | { kind: "href"; href: string }
+  | { kind: "close"; leave: () => void }
+  | { kind: "back" };
+
+/**
+ * Escape asks to close the composer unless something inside it took the key
+ * first — the slash menu, a listbox, the link field, an open date picker —
+ * or an input method is still composing.
+ */
+export function isComposerEscape(
+  event: Pick<
+    ReactKeyboardEvent<HTMLElement>,
+    "key" | "defaultPrevented" | "target" | "currentTarget"
+  > & { nativeEvent?: { isComposing?: boolean } },
+): boolean {
+  if (event.key !== "Escape" || event.defaultPrevented) return false;
+  if (event.nativeEvent?.isComposing) return false;
+  const target = event.target;
+  // React carries a key pressed in a portal — a menu, a popover, this guard's
+  // own dialog — up to the composer; those close themselves.
+  if (!(target instanceof Node) || !event.currentTarget.contains(target)) {
+    return false;
+  }
+  if (
+    target instanceof Element &&
+    target.closest(
+      '[role="combobox"], [role="listbox"], [aria-expanded="true"], input[type="date"]',
+    )
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function UnpublishedWorkGuard({
   active,
   copy,
+  closeRequestRef,
 }: {
   /** Dirty, and not yet published. */
   active: boolean;
   copy: UnpublishedWorkGuardCopy;
+  /**
+   * Filled with the guarded close: call it with what closing does, and it
+   * runs at once when nothing would be lost, or after the reader chooses to
+   * leave.
+   */
+  closeRequestRef?: MutableRefObject<((leave: () => void) => void) | null>;
 }) {
   const router = useRouter();
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingLeave | null>(null);
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
   /**
    * Set once the reader has decided to go. The listener is attached only while
    * `active`, but `active` is still true during the router's own navigation —
@@ -88,7 +151,8 @@ export function UnpublishedWorkGuard({
   const onDocumentClick = useCallback((event: MouseEvent) => {
     if (leavingRef.current) return;
     if (event.defaultPrevented || event.button !== 0) return;
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
     const target = event.target;
     if (!(target instanceof Element)) return;
     const anchor = target.closest("a[href]");
@@ -103,7 +167,7 @@ export function UnpublishedWorkGuard({
     }
     event.preventDefault();
     event.stopPropagation();
-    setPending(anchor.href);
+    setPending({ kind: "href", href: anchor.href });
   }, []);
 
   useEffect(() => {
@@ -112,23 +176,65 @@ export function UnpublishedWorkGuard({
     return () => document.removeEventListener("click", onDocumentClick, true);
   }, [active, onDocumentClick]);
 
+  useEffect(() => {
+    if (!closeRequestRef) return;
+    const request = (leave: () => void) => {
+      if (!activeRef.current || leavingRef.current) {
+        leave();
+        return;
+      }
+      setPending({ kind: "close", leave });
+    };
+    closeRequestRef.current = request;
+    return () => {
+      if (closeRequestRef.current === request) closeRequestRef.current = null;
+    };
+  }, [closeRequestRef]);
+
+  // Back. The copy on top means Back arrives here rather than on the page
+  // before, and the composer is still mounted to ask.
+  useEffect(() => {
+    if (!active) return;
+    if (!isGuardEntry(window.history.state)) pushGuardEntry();
+    const onPopState = () => {
+      if (leavingRef.current || isGuardEntry(window.history.state)) return;
+      setPending({ kind: "back" });
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [active]);
+
+  function stay() {
+    if (pending?.kind === "back") pushGuardEntry();
+    setPending(null);
+  }
+
+  function leave() {
+    const decided = pending;
+    setPending(null);
+    leavingRef.current = true;
+    if (!decided) return;
+    if (decided.kind === "href") router.push(decided.href);
+    else if (decided.kind === "close") decided.leave();
+    else window.history.back();
+  }
+
   return (
     <AlertDialog
       open={pending !== null}
       onOpenChange={(open) => {
-        if (!open) setPending(null);
+        if (!open) stay();
       }}
     >
       <AlertDialogContent data-unpublished-work-guard="true">
         <AlertDialogTitle>{copy.leaveTitle}</AlertDialogTitle>
-        <AlertDialogDescription>
-          {copy.leaveDescription}
-        </AlertDialogDescription>
+        <AlertDialogDescription>{copy.leaveDescription}</AlertDialogDescription>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setPending(null)}
+            data-unpublished-work-guard-stay="true"
+            onClick={stay}
           >
             {copy.leaveCancel}
           </Button>
@@ -136,12 +242,7 @@ export function UnpublishedWorkGuard({
             type="button"
             variant="danger"
             data-unpublished-work-guard-confirm="true"
-            onClick={() => {
-              const href = pending;
-              setPending(null);
-              leavingRef.current = true;
-              if (href) router.push(href);
-            }}
+            onClick={leave}
           >
             {copy.leaveConfirm}
           </Button>
@@ -149,4 +250,36 @@ export function UnpublishedWorkGuard({
       </AlertDialogContent>
     </AlertDialog>
   );
+}
+
+function isGuardEntry(state: unknown): boolean {
+  return Boolean(
+    state &&
+    typeof state === "object" &&
+    (state as Record<string, unknown>)[HISTORY_MARKER],
+  );
+}
+
+/**
+ * One more copy of the entry the reader is on, marked. The router's own state
+ * rides along, so the router treats it as its own entry for the same page.
+ */
+function pushGuardEntry() {
+  const state =
+    window.history.state && typeof window.history.state === "object"
+      ? window.history.state
+      : {};
+  window.history.pushState(
+    { ...state, [HISTORY_MARKER]: true },
+    "",
+    window.location.href,
+  );
+}
+
+/**
+ * How far Back goes to leave the page: past the guard's own copy when it is
+ * on top, so a composer's Close lands where the reader came from.
+ */
+export function stepsBackToLeave(): number {
+  return isGuardEntry(window.history.state) ? -2 : -1;
 }

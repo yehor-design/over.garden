@@ -18,7 +18,7 @@ import {
   DELETED_JOURNAL_ENTRY_TITLE,
   JOURNAL_DELETION_RETENTION_DAYS,
 } from "@/server/journal-deletion-retention";
-import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
+import { getEntryActionsCopy } from "@/lib/entry-actions-copy";
 
 /** PERF-01 budget from the OVE-353 contract. */
 const JOURNAL_DELETE_ACTION_DURATION_BUDGET_MS = 500;
@@ -194,9 +194,10 @@ describe("OVE-353 owner safety and localized control", () => {
   it.each(["uk", "bg", "ru"] as const)(
     "states an irreversible seven-day deletion in %s with no restore wording",
     (locale) => {
-      const copy = getOwnerObjectCopy(locale).entryActions;
-      expect(copy.deleteDisclosure).toContain("7");
-      expect(copy.deleteButton.trim().length).toBeGreaterThan(0);
+      // The confirmation lives in the entry's own menu since `OVE-488`.
+      const copy = getEntryActionsCopy(locale);
+      expect(copy.deleteBody).toContain("7");
+      expect(copy.deleteConfirm.trim().length).toBeGreaterThan(0);
       expect(copy).not.toHaveProperty("archivedTitle");
       expect(copy).not.toHaveProperty("restoreButton");
     },

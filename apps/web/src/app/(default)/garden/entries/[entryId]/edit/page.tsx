@@ -7,6 +7,10 @@ import {
   WorkspaceSectionSkeleton,
 } from "@/components/garden/workspace-state";
 import { JournalEntryEditComposer } from "@/app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer";
+import { deleteJournalEntryAction } from "@/app/(default)/garden/objects/[objectId]/actions";
+import { publicJournalEntryAddress } from "@/lib/garden/public-paths";
+import { getPublicAuthorHandle } from "@/server/author-handle-repository";
+import { readOwnedDestination } from "@/server/owned-destination-repository";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -115,6 +119,34 @@ async function JournalEntryEditSection({
   }
 
   const baseline = settled.value;
+  const destinationTarget =
+    baseline.entry.entry_scope === "space" || !baseline.entry.plant_object_id
+      ? ({ kind: "space", id: baseline.entry.space_id } as const)
+      : ({ kind: "object", id: baseline.entry.plant_object_id } as const);
+  // The destination and the entry's address name the entry; neither is
+  // needed to edit it, so a slow read costs the name, never the editor.
+  const [destinationSection, handleSection] = await Promise.all([
+    settleSection(() => readOwnedDestination(scope, destinationTarget), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "entry-edit",
+      section: "destination",
+      record: false,
+    }),
+    settleSection(() => getPublicAuthorHandle(scope.userId), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "entry-edit",
+      section: "author-handle",
+      record: false,
+    }),
+  ]);
+  const destination =
+    destinationSection.status === "ready" ? destinationSection.value : null;
+  const authorHandle =
+    handleSection.status === "ready" ? handleSection.value : null;
+  const afterDeleteHref =
+    destinationTarget.kind === "object"
+      ? `/garden/objects/${encodeURIComponent(destinationTarget.id)}`
+      : `/garden?space=${encodeURIComponent(destinationTarget.id)}#space-journal`;
   const blockIdByMediaId = new Map(
     baseline.document.blocks.flatMap((block) =>
       block.type === "image" ? [[block.mediaAssetId, block.id] as const] : [],
@@ -144,6 +176,14 @@ async function JournalEntryEditSection({
       existingMedia={existingMedia}
       initialCoverMediaAssetId={baseline.entry.cover_media_asset_id}
       returnTo={returnTo}
+      destination={destination}
+      publicHref={publicJournalEntryAddress({
+        authorHandle,
+        entryNumber: baseline.entry.author_entry_number,
+        publicSlug: baseline.entry.public_slug,
+      })}
+      deleteAction={deleteJournalEntryAction}
+      afterDeleteHref={afterDeleteHref}
     />
   );
 }
