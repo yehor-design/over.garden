@@ -73,12 +73,14 @@ import {
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { CatalogResolveControl } from "./catalog-resolve-control";
 import { EntryComposer } from "@/components/garden/entry-composer";
+import { EntryActionsMenu } from "@/components/garden/entry-actions-menu";
+import { getEntryActionsCopy } from "@/lib/entry-actions-copy";
+import { gardenEntryEditPath } from "@/app/(default)/garden/entries/[entryId]/edit/edit-shell";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
 import { ObjectProgressMoment } from "./object-progress-moment";
 import { SaveProgressMoment } from "../../save-progress-moment";
 import { HiddenField } from "@/components/ui/hidden-field";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -369,6 +371,17 @@ async function PlantObjectSections({
         />
       </section>
 
+      {objectPassportReadbackPath ? (
+        // Once for the object, not once per entry (OG-UX-045).
+        <p className="-mb-2">
+          <Link
+            href={objectPassportReadbackPath}
+            className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
+          >
+            {ownerCopy.entryActions.openPassport}
+          </Link>
+        </p>
+      ) : null}
       <OwnerLivingObjectPassportTimeline
         passport={presentation}
         locale={locale}
@@ -378,7 +391,6 @@ async function PlantObjectSections({
             <OwnerEntryActions
               entry={entry}
               objectId={objectId}
-              objectPassportReadbackPath={objectPassportReadbackPath}
               locale={locale}
               authorHandle={authorHandle}
             />
@@ -456,68 +468,59 @@ async function PlantObjectSections({
 function OwnerEntryActions({
   entry,
   objectId,
-  objectPassportReadbackPath,
   locale,
   authorHandle,
 }: {
   entry: PlantObjectPage["entries"][number];
   objectId: string;
-  objectPassportReadbackPath: string | null;
   locale: InterfaceLocale;
   /** The owner's registry handle; the public link hangs from it (ADR-0029 D9). */
   authorHandle: string | null;
 }) {
-  const actionCopy = getOwnerObjectCopy(locale).entryActions;
+  const actionCopy = getEntryActionsCopy(locale);
 
   if (entry.visibility === "public" && entry.public_slug) {
+    const publicHref = publicJournalEntryAddress({
+      authorHandle,
+      entryNumber: entry.author_entry_number,
+      publicSlug: entry.public_slug,
+    });
+    // Back to this entry's place in the timeline once the edit is saved or
+    // discarded (`OVE-488` criterion 6).
+    const editHref = gardenEntryEditPath(
+      entry.id,
+      `/garden/objects/${encodeURIComponent(objectId)}#passport-entry-${entry.id}`,
+    );
     return (
       <div
         data-owner-entry-controls="public"
-        className="flex flex-wrap items-center gap-3"
+        className="flex flex-wrap items-center justify-between gap-2"
       >
-        <span className="text-caption text-text-muted">
-          {actionCopy.publicAvailable}
-        </span>
-        {objectPassportReadbackPath ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Link
-            href={objectPassportReadbackPath}
+            href={editHref}
+            data-owner-entry-edit={entry.id}
             className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
           >
-            {actionCopy.openPassport}
+            {actionCopy.edit}
           </Link>
-        ) : null}
-        <Link
-          href={publicJournalEntryAddress({
-            authorHandle,
-            entryNumber: entry.author_entry_number,
-            publicSlug: entry.public_slug,
-          })}
-          className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
-        >
-          {actionCopy.openPage}
-        </Link>
-        <OwnerScopedProgressiveForm
-          action={deleteJournalEntryAction}
-          className="flex w-full flex-col gap-3 pt-1"
-        >
-          <HiddenField name="entryId" value={entry.id} />
-          <HiddenField name="objectId" value={objectId} />
-          <Checkbox
-            name="deleteAccepted"
-            required
-            label={actionCopy.deleteDisclosure}
-          />
-          <button
-            type="submit"
-            className={buttonVariants({
-              variant: "danger",
-              size: "sm",
-              className: "self-start",
-            })}
+          <Link
+            href={publicHref}
+            className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
           >
-            {actionCopy.deleteButton}
-          </button>
-        </OwnerScopedProgressiveForm>
+            {actionCopy.openPublic}
+          </Link>
+        </div>
+        {/* The one irreversible act on an entry, behind its own menu and
+            apart from everything an owner does every day (OG-UX-045). */}
+        <EntryActionsMenu
+          locale={locale}
+          entryId={entry.id}
+          entryTitle={entry.title}
+          objectId={objectId}
+          deleteAction={deleteJournalEntryAction}
+          focusAfterDelete="#passport-timeline h2"
+        />
       </div>
     );
   }

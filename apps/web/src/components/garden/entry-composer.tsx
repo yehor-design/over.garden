@@ -31,7 +31,11 @@ import {
 import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
-import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
+import {
+  isComposerEscape,
+  stepsBackToLeave,
+  UnpublishedWorkGuard,
+} from "@/components/garden/unpublished-work-guard";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -147,6 +151,7 @@ export function EntryComposer({
   const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
     null,
   );
+  const closeRequestRef = useRef<((leave: () => void) => void) | null>(null);
   const [destination, setDestination] = useState<OwnedDestination | null>(
     initialDestination,
   );
@@ -248,6 +253,9 @@ export function EntryComposer({
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    // A form rendered in a portal inside this one (a sheet, a dialog) bubbles
+    // its submit here through React; only this form's own submit publishes.
+    if (event.target !== event.currentTarget) return;
     event.preventDefault();
     if (persistenceFrozen) return;
     setAuthRecoveryUrl(null);
@@ -376,10 +384,16 @@ export function EntryComposer({
     }
   }
 
+  // Close asks first when there is something to lose, and not otherwise:
+  // the same dialog as a link out, Back and Escape (`OVE-488`).
   function handleClose() {
-    local.abandon();
-    if (closeHref) router.push(closeHref);
-    else router.back();
+    const leave = () => {
+      local.abandon();
+      if (closeHref) router.push(closeHref);
+      else window.history.go(stepsBackToLeave());
+    };
+    if (closeRequestRef.current) closeRequestRef.current(leave);
+    else leave();
   }
 
   async function buildDocument(): Promise<JournalDocumentV1> {
@@ -456,6 +470,11 @@ export function EntryComposer({
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={(event) => {
+        if (!isComposerEscape(event)) return;
+        event.preventDefault();
+        handleClose();
+      }}
       data-entry-composer="true"
       data-local-composer-kind={
         destination?.kind === "space" ? "space_entry" : "follow_up"
@@ -471,6 +490,7 @@ export function EntryComposer({
       />
       <UnpublishedWorkGuard
         active={dirty && local.state.status !== "published"}
+        closeRequestRef={closeRequestRef}
         copy={atomicCopy}
       />
 

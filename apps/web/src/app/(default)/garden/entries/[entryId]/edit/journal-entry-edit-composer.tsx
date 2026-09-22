@@ -10,7 +10,11 @@ import {
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
 import { LocalJournalComposerStatus } from "@/components/garden/local-journal-composer-status";
-import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
+import {
+  isComposerEscape,
+  UnpublishedWorkGuard,
+} from "@/components/garden/unpublished-work-guard";
+import { EntryActionsMenu } from "@/components/garden/entry-actions-menu";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import {
   JournalMediaReadiness,
@@ -26,8 +30,15 @@ import {
   AlertDialogDescription,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
 import { getAtomicJournalEditCopy } from "@/lib/garden/atomic-journal-edit-copy";
+import { getEntryComposerCopy } from "@/lib/entry-composer-copy";
+import {
+  destinationDetail,
+  type OwnedDestination,
+} from "@/lib/garden/owned-destinations";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import {
@@ -67,6 +78,10 @@ export function JournalEntryEditComposer({
   existingMedia,
   initialCoverMediaAssetId = null,
   returnTo,
+  destination = null,
+  publicHref = null,
+  deleteAction,
+  afterDeleteHref,
 }: {
   locale: PublicLocale;
   entryId: string;
@@ -77,18 +92,29 @@ export function JournalEntryEditComposer({
   existingMedia: readonly JournalEntryEditExistingMedia[];
   initialCoverMediaAssetId?: string | null;
   returnTo: string;
+  /** Where the entry is written: named, not changed, while editing. */
+  destination?: OwnedDestination | null;
+  /** The entry's one public address, for its menu. */
+  publicHref?: string | null;
+  /** Deletes the entry (ADR-0021); only the entry's own menu offers it. */
+  deleteAction?: (
+    previousState: unknown,
+    formData: FormData,
+  ) => Promise<unknown>;
+  /** Where the owner lands once the entry is gone: never the entry's page. */
+  afterDeleteHref?: string;
 }) {
   const router = useRouter();
   const documentMutation = useOptionalOwnerScope();
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
   const saveButtonRef = useRef<HTMLButtonElement | null>(null);
-  const cancelEditingButtonRef = useRef<HTMLButtonElement | null>(null);
+  const closeRequestRef = useRef<((leave: () => void) => void) | null>(null);
+  const [authRecoveryUrl, setAuthRecoveryUrl] = useState<string | null>(null);
   const [title, setTitle] = useState(initialTitle);
   const [entryDate, setEntryDate] = useState(initialEntryDate);
   const [document, setDocument] = useState(initialDocument);
   const [mediaDirty, setMediaDirty] = useState(false);
   const [conflictOpen, setConflictOpen] = useState(false);
-  const [discardOpen, setDiscardOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [pendingInlineRemoval, setPendingInlineRemoval] = useState<{
     mediaAssetId: string;
@@ -187,6 +213,7 @@ export function JournalEntryEditComposer({
     const flushed = (await composerRef.current?.flushLatest()) ?? document;
     setDocument(flushed);
     setCopied(false);
+    setAuthRecoveryUrl(null);
     try {
       const result = await local.publishEdit({
         entryId,
@@ -218,12 +245,35 @@ export function JournalEntryEditComposer({
     ) {
       documentMutation?.handleActionResult(error.details);
     }
+    // Leaving for sign-in would take the edit with it: it exists only in this
+    // tab. Sign-in happens in another one, and Save works again from here
+    // (`OVE-488` criterion 3).
     if (
       error instanceof LocalJournalComposerError &&
       error.details?.authIntentUrl
     ) {
-      window.location.assign(error.details.authIntentUrl);
+      setAuthRecoveryUrl(error.details.authIntentUrl);
+    } else if (
+      error instanceof LocalJournalComposerError &&
+      error.details?.mutationScope === "session_required"
+    ) {
+      setAuthRecoveryUrl(
+        buildSignInHref({
+          returnTo: `${window.location.pathname}${window.location.search}`,
+        }),
+      );
     }
+  }
+
+  // Close asks first only when there is something to lose (`OVE-488`
+  // criterion 2): the guard's one dialog, the same for Back and a link out.
+  function close() {
+    const leave = () => {
+      local.abandon();
+      router.push(safeReturnTo);
+    };
+    if (closeRequestRef.current) closeRequestRef.current(leave);
+    else leave();
   }
 
   function ensureFocal(mediaAssetId: string) {
@@ -269,8 +319,56 @@ export function JournalEntryEditComposer({
       className="grid gap-4"
       data-local-composer-kind="edit_entry"
       data-local-composer-read-only={persistenceFrozen || undefined}
-      onSubmit={(event) => void save(event)}
+      onSubmit={(event) => {
+        // Only this form's own submit is a save; a form in a portal below it
+        // — the entry's delete confirmation — bubbles here through React.
+        if (event.target !== event.currentTarget) return;
+        void save(event);
+      }}
+      onKeyDown={(event) => {
+        if (!isComposerEscape(event)) return;
+        event.preventDefault();
+        close();
+      }}
     >
+      {/* Where the entry is and what can be done to it as a whole: the
+          destination named, and the entry's own menu — the only place its
+          deletion lives, apart from Save (`OVE-488` criteria 1 and 4). */}
+      <div
+        data-entry-edit-destination="true"
+        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+      >
+        <p className="min-w-0 text-body-sm">
+          {destination ? (
+            <>
+              <span className="text-text-muted">
+                {getEntryComposerCopy(locale).writingTo}
+              </span>{" "}
+              <span
+                className="font-medium break-words text-text-heading"
+                data-entry-edit-destination-name="true"
+              >
+                {destination.displayName}
+              </span>
+              <span className="text-text-muted">
+                {" · "}
+                {destinationDetail(destination, locale)}
+              </span>
+            </>
+          ) : null}
+        </p>
+        {deleteAction ? (
+          <EntryActionsMenu
+            locale={locale}
+            entryId={entryId}
+            entryTitle={initialTitle}
+            objectId={destination?.kind === "object" ? destination.id : null}
+            publicHref={publicHref}
+            deleteAction={deleteAction}
+            afterDeleteHref={afterDeleteHref ?? "/garden"}
+          />
+        ) : null}
+      </div>
       <LocalJournalComposerStatus
         state={local.state}
         lease={local.media.lease}
@@ -281,6 +379,7 @@ export function JournalEntryEditComposer({
           saved rather than published (`OVE-458` AC5). */}
       <UnpublishedWorkGuard
         active={dirty && local.state.status !== "published"}
+        closeRequestRef={closeRequestRef}
         copy={{
           leaveTitle: editCopy.discardTitle,
           leaveDescription: editCopy.discardBody,
@@ -416,6 +515,26 @@ export function JournalEntryEditComposer({
         ) : null}
       </fieldset>
 
+      {authRecoveryUrl ? (
+        <Callout
+          tone="warning"
+          live="assertive"
+          data-entry-edit-session="ended"
+          actions={
+            <a
+              href={authRecoveryUrl}
+              target="_blank"
+              rel="noopener"
+              className={buttonVariants({ size: "sm" })}
+            >
+              {editCopy.signInNewTab}
+            </a>
+          }
+        >
+          <p>{editCopy.sessionEnded}</p>
+        </Callout>
+      ) : null}
+
       <JournalMediaReadiness summary={readiness} labels={labels} />
 
       <div className="flex flex-wrap items-center gap-3">
@@ -434,18 +553,11 @@ export function JournalEntryEditComposer({
           {editCopy.copyLocalChanges}
         </Button>
         <Button
-          ref={cancelEditingButtonRef}
           type="button"
           variant="ghost"
           disabled={persistenceFrozen}
-          onClick={() => {
-            if (dirty) {
-              setDiscardOpen(true);
-              return;
-            }
-            local.abandon();
-            router.push(safeReturnTo);
-          }}
+          data-entry-edit-cancel="true"
+          onClick={close}
         >
           {editCopy.cancelEditing}
         </Button>
@@ -486,41 +598,6 @@ export function JournalEntryEditComposer({
             <Button type="button" onClick={() => window.location.reload()}>
               {editCopy.reloadLatest}
             </Button>
-          </div>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog
-        open={discardOpen}
-        onOpenChange={(open) => setDiscardOpen(open)}
-      >
-        <AlertDialogContent
-          data-atomic-journal-edit-discard="true"
-          finalFocus={cancelEditingButtonRef}
-        >
-          <AlertDialogTitle>{editCopy.discardTitle}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {editCopy.discardBody}
-          </AlertDialogDescription>
-          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <AlertDialogClose
-              render={
-                <Button type="button" variant="secondary">
-                  {editCopy.keepEditing}
-                </Button>
-              }
-            />
-            <AlertDialogClose
-              onClick={() => {
-                local.abandon();
-                router.push(safeReturnTo);
-              }}
-              render={
-                <Button type="button" variant="danger">
-                  {editCopy.discardChanges}
-                </Button>
-              }
-            />
           </div>
         </AlertDialogContent>
       </AlertDialog>

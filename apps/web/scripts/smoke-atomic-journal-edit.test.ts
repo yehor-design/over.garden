@@ -167,8 +167,10 @@ describe("OVE-348 atomic journal edit smoke", () => {
     expect(composer).toContain("<AlertDialogTitle>");
     expect(composer).toContain("<AlertDialogDescription>");
     expect(composer).toContain("finalFocus={saveButtonRef}");
-    expect(composer).toContain("finalFocus={cancelEditingButtonRef}");
-    expect(composer).toContain('data-atomic-journal-edit-discard="true"');
+    // Since `OVE-488` discarding goes through the composers' one guard, whose
+    // dialog is the design system's own; the edit composer asks it to close.
+    expect(composer).toContain("closeRequestRef={closeRequestRef}");
+    expect(composer).toContain("isComposerEscape(event)");
     expect(composer).toContain("<FocalPointControl");
     expect(composer).toContain("editCopy.copyLocalChanges");
     expect(composer).toContain("normalizeJournalComposerReturnTo");

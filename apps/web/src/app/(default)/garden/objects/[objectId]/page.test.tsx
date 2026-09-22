@@ -233,25 +233,25 @@ describe("/garden/objects/[objectId]", () => {
   it.each([
     [
       "uk",
-      "Опубліковані записи відкриті для всіх",
+      "Відкрити публічну сторінку",
       "/journal/first-public-flowers",
       "/lineage/objects/object-1",
     ],
     [
       "bg",
-      "Публикуваните записи са достъпни за всички",
+      "Отвори публичната страница",
       "/journal/first-public-flowers",
       "/bg/lineage/objects/object-1",
     ],
     [
       "ru",
-      "Опубликованные записи доступны всем",
+      "Открыть публичную страницу",
       "/journal/first-public-flowers",
       "/ru/lineage/objects/object-1",
     ],
   ] as const)(
     "localizes owner actions in %s while preserving journal content and locale-aware public links",
-    async (locale, publicAvailable, journalPath, passportPath) => {
+    async (locale, openPublic, journalPath, passportPath) => {
       mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
       mocks.getPlantObjectPage.mockResolvedValue(
         plantObjectPage([
@@ -275,7 +275,7 @@ describe("/garden/objects/[objectId]", () => {
       );
 
       expect(html).toContain(`lang="${locale}"`);
-      expect(html).toContain(publicAvailable);
+      expect(html).toContain(openPublic);
       expect(html).toContain(journalPath);
       expect(html).toContain(passportPath);
       expect(html).toContain("First public flowers");
@@ -431,16 +431,17 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).not.toMatch(/@renamed_gardener|source_owner_user_id|email/i);
   });
 
-  // OVE-353 / AC-03: the owner control is an irreversible delete in every
-  // market. It must state the seven-day technical window, require an explicit
-  // acknowledgement, and offer no archive or restore affordance anywhere.
+  // OVE-353 / AC-03, reshaped by `OVE-488` (OG-UX-045): deletion is no longer
+  // a form repeated under every entry. Each entry has its own menu, named with
+  // the entry; the confirmation it opens names the entry and the seven-day
+  // technical window, and offers no archive or restore.
   it.each([
-    ["uk", "Видалити запис назавжди"],
-    ["bg", "Изтриване на записа окончателно"],
-    ["ru", "Удалить запись навсегда"],
+    ["uk", "Дії із записом «Winter pruning note»", "Редагувати"],
+    ["bg", "Действия със записа „Winter pruning note“", "Редактирай"],
+    ["ru", "Действия с записью «Winter pruning note»", "Редактировать"],
   ] as const)(
-    "localizes the irreversible delete control in %s",
-    async (locale, deleteLabel) => {
+    "puts the irreversible delete behind the entry's own menu in %s",
+    async (locale, menuLabel, editLabel) => {
       mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
       mocks.getPlantObjectPage.mockResolvedValue(
         plantObjectPage([
@@ -464,9 +465,15 @@ describe("/garden/objects/[objectId]", () => {
         }),
       );
 
-      expect(html).toContain(deleteLabel);
-      expect(html).toContain('name="deleteAccepted"');
-      expect(html).toContain("7");
+      expect(html).toContain(`aria-label="${menuLabel}"`);
+      expect(html).toContain('data-entry-actions-trigger="entry-active"');
+      // No delete form on the page until the owner asks for it.
+      expect(html).not.toContain('name="deleteAccepted"');
+      // Editing returns to this entry's place in the timeline.
+      expect(html).toContain(editLabel);
+      expect(html).toContain(
+        "returnTo=%2Fgarden%2Fobjects%2Fobject-1%23passport-entry-entry-active",
+      );
       // Active history stays readable; deletion is the only way it leaves.
       expect(html).toContain("Winter pruning note");
       expect(html).toContain("Owner-visible active history.");
@@ -474,7 +481,7 @@ describe("/garden/objects/[objectId]", () => {
     },
   );
 
-  it("keeps both WAIT-01 controls enabled alongside the delete form", async () => {
+  it("keeps both WAIT-01 controls enabled beside the entry's menu", async () => {
     // WAIT-01: the owner must stay able to leave while a delete is in flight.
     // Both named controls are plain links rendered outside the form, so a
     // pending submission cannot disable them and no overlay covers them.
@@ -503,7 +510,7 @@ describe("/garden/objects/[objectId]", () => {
     // "return to active journal link" and "object navigation link".
     expect(html).toContain('href="/garden"');
     expect(html).toContain('href="/journal/winter-pruning-note"');
-    expect(html).toContain('name="deleteAccepted"');
+    expect(html).toContain('data-entry-actions-trigger="entry-active"');
     // No blocking alert, global wait overlay, or pointer trap around them.
     expect(html).not.toMatch(/aria-modal|role="alertdialog"|\binert\b/);
     expect(html).not.toContain("<a disabled");

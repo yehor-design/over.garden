@@ -22,7 +22,6 @@ import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { expect, test, type BrowserContext } from "playwright/test";
 import { Pool } from "pg";
 
-
 const TEST_PASSWORD = "OVE353-local-password-1!";
 const LOCALE_COOKIE = "overgarden_interface_locale";
 
@@ -68,27 +67,28 @@ test.describe("OVE-353 journal deletion retention", () => {
         page.locator('[data-owner-entry-controls="archived"]'),
       ).toHaveCount(0);
 
-      const acknowledgement = page.locator('input[name="deleteAccepted"]');
-      await expect(acknowledgement).toBeVisible();
-
-      // AC-03: the control is keyboard operable and states the window.
-      await acknowledgement.focus();
-      await expect(acknowledgement).toBeFocused();
-      await page.keyboard.press("Space");
-      await expect(acknowledgement).toBeChecked();
-
-      const deleteButton = page.locator(
-        `form:has(input[name="deleteAccepted"]) button[type="submit"]`,
+      // AC-03, through the entry's own menu since `OVE-488`: the control is
+      // keyboard operable, names the entry and states the window.
+      const trigger = page.locator(
+        `[data-entry-actions-trigger="${entry.id}"]`,
       );
-      await expect(deleteButton).toBeEnabled();
+      await expect(trigger).toBeVisible();
+      await trigger.focus();
+      await page.keyboard.press("Enter");
+      const deleteItem = page.locator('[data-entry-action="delete"]');
+      await expect(deleteItem).toBeVisible();
+      await deleteItem.focus();
+      await page.keyboard.press("Enter");
+      const dialog = page.locator(`[data-entry-delete-dialog="${entry.id}"]`);
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toContainText(entry.title);
+      await expect(dialog).toContainText("7");
 
       // WAIT-01: both wait-safe controls are reachable at submit time.
-      await expect(page.locator('a[href="/garden"]').first()).toBeVisible();
+      await expect(page.locator('a[href="/garden"]').first()).toBeAttached();
 
-      await Promise.all([
-        page.waitForLoadState("networkidle"),
-        deleteButton.click(),
-      ]);
+      await dialog.locator(`[data-entry-delete-confirm="${entry.id}"]`).click();
+      await expect(trigger).toHaveCount(0, { timeout: 20_000 });
 
       // 1. Gone from the owner's own journal, immediately and canonically.
       await page.goto(`/garden/objects/${entry.objectId}`);

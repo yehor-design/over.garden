@@ -15,7 +15,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CloudArrowUpIcon as UploadCloud } from "@/components/icons/CloudArrowUp";
 import { useRouter } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import {
   journalCoverPhotoLabel,
@@ -26,7 +26,13 @@ import {
   LocalJournalComposerStatus,
   LocalJournalPublicationDisclosure,
 } from "@/components/garden/local-journal-composer-status";
-import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
+import {
+  isComposerEscape,
+  UnpublishedWorkGuard,
+} from "@/components/garden/unpublished-work-guard";
+import { Callout } from "@/components/ui/callout";
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
+import { getEntryComposerCopy } from "@/lib/entry-composer-copy";
 import {
   JournalMediaReadiness,
   journalMediaReadinessText,
@@ -180,6 +186,8 @@ export function FirstEntryComposer({
   const [mentionStatus, setMentionStatus] =
     useState<MentionTypeaheadStatus>("idle");
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [authRecoveryUrl, setAuthRecoveryUrl] = useState<string | null>(null);
+  const closeRequestRef = useRef<((leave: () => void) => void) | null>(null);
   const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const labels = getStructuredJournalComposerLabels(locale);
@@ -280,6 +288,9 @@ export function FirstEntryComposer({
   );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    // A form rendered in a portal inside this one (a sheet, a dialog) bubbles
+    // its submit here through React; only this form's own submit publishes.
+    if (event.target !== event.currentTarget) return;
     event.preventDefault();
     if (isComposerPersistenceFrozen()) return;
 
@@ -363,9 +374,14 @@ export function FirstEntryComposer({
     }
   }
 
+  // Asks first only when there is something to lose (`OVE-488`).
   function handleCancel() {
-    local.abandon();
-    router.push("/garden");
+    const leave = () => {
+      local.abandon();
+      router.push("/garden");
+    };
+    if (closeRequestRef.current) closeRequestRef.current(leave);
+    else leave();
   }
 
   function handleTransportBoundary(error: unknown) {
@@ -375,11 +391,22 @@ export function FirstEntryComposer({
     ) {
       documentMutation?.handleActionResult(error.details);
     }
+    // Leaving for sign-in would take the unpublished work with it; sign-in
+    // happens in another tab and Publish works again from here (`OVE-488`).
     if (
       error instanceof LocalJournalComposerError &&
       error.details?.authIntentUrl
     ) {
-      window.location.assign(error.details.authIntentUrl);
+      setAuthRecoveryUrl(error.details.authIntentUrl);
+    } else if (
+      error instanceof LocalJournalComposerError &&
+      error.details?.mutationScope === "session_required"
+    ) {
+      setAuthRecoveryUrl(
+        buildSignInHref({
+          returnTo: `${window.location.pathname}${window.location.search}`,
+        }),
+      );
     }
   }
 
@@ -595,6 +622,11 @@ export function FirstEntryComposer({
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={(event) => {
+        if (!isComposerEscape(event)) return;
+        event.preventDefault();
+        handleCancel();
+      }}
       data-local-composer-kind="first_entry"
       data-local-composer-read-only={persistenceFrozen || undefined}
       className="grid min-w-0 gap-4"
@@ -611,6 +643,7 @@ export function FirstEntryComposer({
       />
       <UnpublishedWorkGuard
         active={dirty && local.state.status !== "published"}
+        closeRequestRef={closeRequestRef}
         copy={atomicCopy}
       />
 
@@ -1022,6 +1055,26 @@ export function FirstEntryComposer({
         >
           {message}
         </p>
+      ) : null}
+
+      {authRecoveryUrl ? (
+        <Callout
+          tone="warning"
+          live="assertive"
+          data-first-entry-session="ended"
+          actions={
+            <a
+              href={authRecoveryUrl}
+              target="_blank"
+              rel="noopener"
+              className={buttonVariants({ size: "sm" })}
+            >
+              {getEntryComposerCopy(locale).signInNewTab}
+            </a>
+          }
+        >
+          <p>{getEntryComposerCopy(locale).sessionEnded}</p>
+        </Callout>
       ) : null}
 
       <JournalMediaReadiness summary={readiness} labels={labels} />

@@ -966,6 +966,23 @@ and the consequences belong on the screen rather than in the reader's memory.
   nothing and takes the reader to its Retry. The caption field is the
   photograph's description and its `alt`; its placeholder asks for what the
   photograph shows, not for the post again.
+- **Editing is the same composer, named and guarded** (`OVE-488`). The edit
+  page names where the entry is ("Запис у Томат · Рослина · Теплиця") and
+  keeps its date, blocks and address; Save returns to the entry's own place in
+  its timeline (`#passport-entry-{id}`). Close, Cancel, Escape and the
+  browser's Back leave a clean composer at once and ask a dirty one Stay or
+  Discard — one dialog, `UnpublishedWorkGuard`, which keeps a copy of the
+  current history entry on top while there is work to lose. A save or publish
+  refused for an ended session never navigates away: the work exists only in
+  the tab, so sign-in opens in another one and the same button works again.
+- **Deleting an entry lives in the entry's own menu** (`EntryActionsMenu`,
+  OG-UX-045): never beside Save or Publish and never repeated as a form under
+  every entry. It asks once, names the entry and what deletion does — gone
+  from history and public pages at once, its address answering 410, photos
+  removed, a cleaned technical record for seven days, no undo — with Cancel
+  focused first and focus back on the menu's button. A form inside a dialog
+  inside a composer must stop its `submit` from reaching the composer: React
+  carries portal events up its own tree.
 - **The cover is a question only once there is a photograph.** A plain note
   never meets the cover section; the first photograph brings it, and a cover
   of its own (in no block) keeps it. There is no separate "optional photo"
