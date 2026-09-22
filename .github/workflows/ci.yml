@@ -211,6 +211,12 @@ jobs:
       MEILISEARCH_API_KEY: overgarden-ci-meili-key
       MATCHING_SERVICE_URL: http://localhost:8000
       MATCHING_SERVICE_TOKEN: overgarden-ci-matching-token
+      # The EPPO archive is dark unless the environment opens it (ADR-0025
+      # D3). The gate opens it so the archive's own document is what the specs
+      # prove; with it closed every archive address is the proxy's 404, which
+      # `src/proxy.test.ts` proves instead. It is read at build time too, since
+      # `/sources/eppo` is a static document.
+      STABLE_REGISTRY_PUBLIC_DISCOVERY: "true"
     steps:
       - name: Check out repository
         uses: actions/checkout@v7

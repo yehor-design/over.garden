@@ -587,6 +587,28 @@ test.describe("a public page is a static document", () => {
         expect(served.visibleText.length, address).toBeGreaterThan(600);
       }
     }
+    // A landing written only in Ukrainian is the Ukrainian landing for every
+    // reader, not the not-found page inside a 200; a prefixed spelling of a
+    // translation that does not exist is one 308 to the page.
+    const bulgarianReader = await request.get("/markets/ukraine", {
+      maxRedirects: 0,
+      headers: {
+        accept: "text/html",
+        cookie: "overgarden_interface_locale=bg",
+      },
+    });
+    expect(bulgarianReader.status()).toBe(200);
+    const landingHtml = await bulgarianReader.text();
+    expect(readStaticDocument(landingHtml).heading?.hidden).toBe(false);
+    expect(landingHtml).toContain("OverGarden для садівників в Україні");
+    const missingTranslation = await request.get("/bg/markets/ukraine", {
+      maxRedirects: 0,
+      headers: { accept: "text/html" },
+    });
+    expect(missingTranslation.status()).toBe(308);
+    expect(missingTranslation.headers()["location"]).toMatch(
+      /\/markets\/ukraine$/u,
+    );
     // The archive's own filters render from its twin, which is not an address.
     expect(
       (await getDocument(request, "/sources/eppo?kind=plant")).status,

@@ -67,6 +67,11 @@ import {
 } from "@/lib/walking-skeleton/environment";
 
 import { renderNotFoundUnknownRouteHtml } from "@/lib/public-unknown-route-lifecycle";
+import { isEppoArchiveEnabled } from "@/lib/catalog-source/eppo-archive-gate";
+import {
+  contentLocaleForReader,
+  contentLocalesForPath,
+} from "@/lib/market-landing-locales";
 import { canonicalLowerCasePath } from "@/lib/address/canonical-case";
 import {
   matchAddressPath,
@@ -121,6 +126,12 @@ type InternalNamespacePath = {
   namespace: InternalNamespace;
   representation: "canonical" | "encoded";
 };
+
+/** `/sources/eppo` and everything under it, in any locale. */
+function isEppoArchivePath(pathname: string) {
+  const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "");
+  return path === "/sources/eppo" || path.startsWith("/sources/eppo/");
+}
 
 function getHardNotFoundResponse() {
   return new NextResponse(null, {
@@ -666,11 +677,29 @@ function getPublicDocumentRewriteResponse(
     return null;
   }
 
+  // A page written in fewer than three languages — a market landing — has no
+  // prefixed spelling for the others (ADR-0029). That spelling is not an
+  // address, and it used to stream the not-found page inside a 200; the page
+  // itself exists, in its own language, so the answer is one 308 there.
+  const contentLocales = contentLocalesForPath(stripped.path);
+  if (
+    stripped.locale !== null &&
+    contentLocales &&
+    !contentLocales.includes(stripped.locale)
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = localizedPath(contentLocales[0]!, stripped.path);
+    return NextResponse.redirect(url, { status: 308 });
+  }
+
   const twinPath = publicQueryTwinPath(pathname, request.nextUrl.searchParams);
   // A prefixed address already names its subtree; only a twin moves it.
   if (stripped.locale !== null && twinPath === null) return null;
 
-  const routeLocale = stripped.locale ?? locale;
+  // The reader's language, unless the page has no translation into it: then
+  // the page's own language, rather than a translation that is not there.
+  const routeLocale =
+    stripped.locale ?? contentLocaleForReader(stripped.path, locale);
   const routePath = twinPath ?? stripped.path;
   const url = request.nextUrl.clone();
   url.pathname =
@@ -816,6 +845,28 @@ export async function proxy(request: NextRequest) {
   }
 
   const isDocumentNavigation = isDocumentNavigationRequest(request);
+
+  // The EPPO archive stays dark until the environment opens it (ADR-0025 D3).
+  // Dark means absent, at every one of its addresses: the static archive
+  // answers 404 from its own render, but its query twin and a record page
+  // stream behind a boundary, and a `notFound()` there is a 200 shell with the
+  // not-found page inside. So the answer is decided here, before any of them.
+  if (
+    isDocumentNavigation &&
+    isEppoArchivePath(request.nextUrl.pathname) &&
+    !isEppoArchiveEnabled()
+  ) {
+    return withAppRouteContract(
+      notFoundDocument(
+        renderNotFoundUnknownRouteHtml(locale, {
+          pathname: request.nextUrl.pathname,
+          search: request.nextUrl.searchParams,
+        }),
+      ),
+      request,
+      localization,
+    );
+  }
 
   // Two more shapes that used to reach a `[...missing]` catch-all and answer
   // 200 with a `noindex` body: a section root nothing serves (`/species`,

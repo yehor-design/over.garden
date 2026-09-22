@@ -61,6 +61,17 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**Every remaining public family is a static document (OVE-467, 2026-09-22):**
+`/topics/{slug}`, `/knowledge`, `/blog`, `/blog/{slug}`, `/guides/{slug}`,
+`/answers/{slug}`, `/markets/{market}`, the legal pages and `/sources/eppo`.
+The topic's follow control is a request-time region; the hub and the archive
+read their query strings from `/q` twins. A market landing written in fewer
+than three languages renders in a language it has for every reader, and a
+prefixed spelling of a missing translation is one 308 (it used to be the
+not-found page inside a 200). The EPPO archive stays dark in production and now
+answers a real 404 at every address while it is. `/sources/eppo/{code}` keeps a
+request-time boundary. See `docs/redesign/2026-09-21/OVE-467-REMAINING-PROOF.md`.
+
 **Static community list and community page (fourth OVE-467 family):**
 `/communities` and `/communities/{slug}` are static documents; join, the
 contribution picker, report, block and the moderation link arrive in

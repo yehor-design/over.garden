@@ -1,5 +1,10 @@
 import "server-only";
 
+import {
+  MARKET_LANDING_LOCALES,
+  type MarketLandingMarket,
+} from "@/lib/market-landing-locales";
+
 import type { MetadataRoute } from "next";
 
 import type { PlantObjectKind } from "@/db/schema";
@@ -121,7 +126,7 @@ export interface AnswerPageContent {
 
 export interface MarketLandingContent {
   kind: "marketing_landing";
-  market: "ukraine" | "bulgaria";
+  market: MarketLandingMarket;
   path: string;
   title: string;
   description: string;
@@ -179,13 +184,7 @@ export interface AuthoredPublicSurfaceSourceInput {
 export const BLOG_INDEX_PATH = "/blog";
 export const KNOWLEDGE_HUB_PATH = "/knowledge";
 
-export const MARKET_LANDING_LOCALES: Record<
-  MarketLandingContent["market"],
-  readonly PublicLocale[]
-> = {
-  ukraine: ["uk"],
-  bulgaria: ["bg", "ru"],
-};
+export { MARKET_LANDING_LOCALES } from "@/lib/market-landing-locales";
 
 const BLOG_POSTS: BlogPostContent[] = [
   {
