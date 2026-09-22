@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 
 import { LocalizedAnswerPage } from "@/components/public/localized-public-pages";
 import {
@@ -14,7 +14,14 @@ import {
   getContentAvailableLocales,
   getLocalizedRouteChrome,
 } from "@/server/public-localized-content";
-import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
+import { readPublicKnowledgeEvidence } from "@/server/public-cache";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 import {
   answerVisibleText,
   authoredContentEntityIds,
@@ -79,6 +86,24 @@ export default async function AnswerRoute({
 
   if (!isPublicLocale(localeParam)) notFound();
 
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) => renderAnswerPage(localeParam, slug, phase),
+  });
+}
+
+/**
+ * An authored page is a static document (ADR-0032 D8): its words are in the
+ * code, and the one thing it reads — how much gardener evidence stands behind
+ * it — is a cached read prerendered with the page. A failed read defers to the
+ * request rather than caching a page whose evidence says nothing.
+ */
+export async function renderAnswerPage(
+  localeParam: PublicLocale,
+  slug: string,
+  phase: PublicRenderPhase,
+) {
+  await deferStaticRenderWithoutDatabase(phase);
   const resolved = await resolveAnswer(localeParam, slug);
   const page = resolved.page;
 
@@ -86,7 +111,7 @@ export default async function AnswerRoute({
 
   const surface = buildAnswerSurface(localeParam, page);
 
-  const evidenceResult = await listPublicKnowledgeEvidence(
+  const evidenceResult = await readPublicKnowledgeEvidence(
     page.knowledge.evidence,
     localeParam,
   ).then(
@@ -94,10 +119,11 @@ export default async function AnswerRoute({
       evidence,
       state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
     }),
-    () => ({
-      evidence: emptyEvidence(localeParam),
-      state: "error" as const,
-    }),
+    (error: unknown) => {
+      unstable_rethrow(error);
+      deferStaticRenderAfterFailure(phase);
+      return { evidence: emptyEvidence(localeParam), state: "error" as const };
+    },
   );
 
   return (

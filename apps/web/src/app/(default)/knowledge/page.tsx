@@ -1,7 +1,7 @@
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedKnowledgeMetadata,
-  renderPublicKnowledgePage,
+  renderStaticPublicKnowledgePage,
 } from "@/app/[locale]/knowledge/page";
 
 export async function generateMetadata({
@@ -25,11 +25,6 @@ export async function generateMetadata({
  * settles it anyway: a canonical URL answers `200` to everyone, which is what
  * OVE-422 established for every other public page.
  */
-export default async function RootKnowledgeRoute({
-  searchParams,
-}: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-} = {}) {
-  const query = (await searchParams) ?? {};
-  return renderPublicKnowledgePage(DEFAULT_PUBLIC_LOCALE, query);
+export default async function RootKnowledgeRoute() {
+  return renderStaticPublicKnowledgePage(DEFAULT_PUBLIC_LOCALE);
 }

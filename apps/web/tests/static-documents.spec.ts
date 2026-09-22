@@ -308,6 +308,15 @@ function largestPhotographOnTheFirstScreen() {
   return candidates[0] ?? null;
 }
 
+/** The gate database's curated topics, as addresses. */
+async function curatedTopicPaths(pool: Pool) {
+  const topic = await pool.query<{ slug: string }>(
+    `select slug from journal_topics
+      where trust_state = 'curated' order by slug limit 1`,
+  );
+  return topic.rows.map((row) => `/topics/${row.slug}`);
+}
+
 /**
  * The gate database's live communities, as addresses.
  *
@@ -554,6 +563,99 @@ test.describe("a public page is a static document", () => {
     ).toBe(404);
   });
 
+  test("the authored pages, a market and the source archive are in the served bytes", async ({
+    request,
+  }) => {
+    for (const address of [
+      "/blog",
+      "/bg/blog",
+      "/blog/ai-garden-advice-vs-real-garden-proof",
+      "/guides/start-a-living-plant-record",
+      "/answers/why-are-tomato-leaves-yellow",
+      "/markets/ukraine",
+      "/privacy",
+      "/sources/eppo",
+      "/bg/sources/eppo",
+    ]) {
+      for (const attempt of [1, 2]) {
+        const { status, html } = await getDocument(request, address);
+        expect(status, `${address}: ${attempt}`).toBe(200);
+        const served = readStaticDocument(html);
+        expect(served.titleInHead, address).toBe(true);
+        expect(served.heading?.hidden, address).toBe(false);
+        expect(served.skeleton, address).toBe(false);
+        expect(served.visibleText.length, address).toBeGreaterThan(600);
+      }
+    }
+    // A landing written only in Ukrainian is the Ukrainian landing for every
+    // reader, not the not-found page inside a 200; a prefixed spelling of a
+    // translation that does not exist is one 308 to the page.
+    const bulgarianReader = await request.get("/markets/ukraine", {
+      maxRedirects: 0,
+      headers: {
+        accept: "text/html",
+        cookie: "overgarden_interface_locale=bg",
+      },
+    });
+    expect(bulgarianReader.status()).toBe(200);
+    const landingHtml = await bulgarianReader.text();
+    expect(readStaticDocument(landingHtml).heading?.hidden).toBe(false);
+    expect(landingHtml).toContain("OverGarden для садівників в Україні");
+    const missingTranslation = await request.get("/bg/markets/ukraine", {
+      maxRedirects: 0,
+      headers: { accept: "text/html" },
+    });
+    expect(missingTranslation.status()).toBe(308);
+    expect(missingTranslation.headers()["location"]).toMatch(
+      /\/markets\/ukraine$/u,
+    );
+    // The archive's own filters render from its twin, which is not an address.
+    expect(
+      (await getDocument(request, "/sources/eppo?kind=plant")).status,
+    ).toBe(200);
+    expect(
+      (await getDocument(request, "/q/sources/eppo?kind=plant")).status,
+    ).toBe(404);
+  });
+
+  test("the knowledge hub and a topic are in the served bytes", async ({
+    request,
+  }) => {
+    const topic = await pool.query<{ slug: string }>(
+      `select slug from journal_topics
+        where trust_state = 'curated' order by slug limit 1`,
+    );
+    const slug = topic.rows[0]?.slug;
+    expect(slug, "the gate database has no curated topic").toBeTruthy();
+    for (const address of [
+      "/knowledge",
+      "/bg/knowledge",
+      "/ru/knowledge",
+      `/topics/${slug}`,
+      `/bg/topics/${slug}`,
+      // A resumed sign-in intent is the follow control's to read; the topic
+      // itself stays the static document.
+      `/topics/${slug}?authIntent=follow`,
+    ]) {
+      for (const attempt of [1, 2]) {
+        const { status, html } = await getDocument(request, address);
+        expect(status, `${address}: ${attempt}`).toBe(200);
+        const served = readStaticDocument(html);
+        expect(served.titleInHead, address).toBe(true);
+        expect(served.heading?.hidden, address).toBe(false);
+        expect(served.skeleton, address).toBe(false);
+        expect(served.visibleText.length, address).toBeGreaterThan(600);
+      }
+    }
+    // The hub's own filters render from its twin, and the twin is not an
+    // address.
+    const filtered = await getDocument(request, "/knowledge?type=guide");
+    expect(filtered.status).toBe(200);
+    expect((await getDocument(request, "/q/knowledge?type=guide")).status).toBe(
+      404,
+    );
+  });
+
   test("communities serve their list and a community's evidence in the served bytes", async ({
     request,
   }) => {
@@ -771,7 +873,14 @@ test.describe("a public page is a static document", () => {
         fixture.passportPath,
         `/species/${fixture.organism.speciesSlug}`,
         "/communities",
+        "/knowledge",
+        "/blog",
+        "/guides/start-a-living-plant-record",
+        "/answers/why-are-tomato-leaves-yellow",
+        "/markets/ukraine",
+        "/sources/eppo",
         ...(await activeCommunityPaths(pool)),
+        ...(await curatedTopicPaths(pool)),
       ]) {
         await page.goto(address, { waitUntil: "load" });
         await expect(page.locator("h1").first(), address).toBeVisible();
@@ -815,7 +924,13 @@ test.describe("a public page is a static document", () => {
       fixture.passportPath,
       `/species/${fixture.organism.speciesSlug}`,
       "/communities",
+      "/knowledge",
+      "/blog",
+      "/guides/start-a-living-plant-record",
+      "/markets/ukraine",
+      "/sources/eppo",
       ...(await activeCommunityPaths(pool, true)),
+      ...(await curatedTopicPaths(pool)),
     ]) {
       await page.setViewportSize({ width: 1_440, height: 900 });
       await page.goto(address, { waitUntil: "load" });

@@ -1663,6 +1663,90 @@ describe("unknown root segments", () => {
   });
 });
 
+describe("a page written in fewer than three languages (ADR-0029)", () => {
+  const documentHeaders = { accept: "text/html", "sec-fetch-dest": "document" };
+
+  it("gives a reader the landing in a language it has, at the unprefixed address", async () => {
+    const cases: Array<[string, "uk" | "bg" | "ru", string]> = [
+      ["/markets/ukraine", "uk", "/uk/markets/ukraine"],
+      ["/markets/ukraine", "bg", "/uk/markets/ukraine"],
+      ["/markets/ukraine", "ru", "/uk/markets/ukraine"],
+      ["/markets/bulgaria", "bg", "/bg/markets/bulgaria"],
+      ["/markets/bulgaria", "ru", "/ru/markets/bulgaria"],
+      ["/markets/bulgaria", "uk", "/bg/markets/bulgaria"],
+    ];
+    for (const [path, locale, target] of cases) {
+      const response = await responseFor(path, {
+        ...documentHeaders,
+        cookie: interfaceCookies(
+          locale === "uk" ? "ukraine" : "bulgaria",
+          locale,
+        ),
+      });
+      expect(response.status, `${path} ${locale}`).toBe(200);
+      expect(
+        new URL(response.headers.get("x-middleware-rewrite") ?? "").pathname,
+        `${path} ${locale}`,
+      ).toBe(target);
+    }
+  });
+
+  it("answers one 308 for a prefixed spelling of a translation that does not exist", async () => {
+    for (const [path, target] of [
+      ["/bg/markets/ukraine", "/markets/ukraine"],
+      ["/ru/markets/ukraine", "/markets/ukraine"],
+    ] as const) {
+      const response = await responseFor(path, documentHeaders);
+      expect(response.status, path).toBe(308);
+      expect(new URL(response.headers.get("location") ?? "").pathname).toBe(
+        target,
+      );
+    }
+    // A translation that exists keeps its own address.
+    for (const path of ["/bg/markets/bulgaria", "/ru/markets/bulgaria"]) {
+      const response = await responseFor(path, documentHeaders);
+      expect(response.status, path).toBe(200);
+    }
+  });
+});
+
+describe("the dark EPPO archive (ADR-0025 D3)", () => {
+  const documentHeaders = { accept: "text/html", "sec-fetch-dest": "document" };
+
+  it("answers a real 404 at every archive address while the flag is off", async () => {
+    vi.stubEnv("STABLE_REGISTRY_PUBLIC_DISCOVERY", "");
+    try {
+      for (const path of [
+        "/sources/eppo",
+        "/bg/sources/eppo",
+        "/ru/sources/eppo",
+        "/sources/eppo?kind=plant",
+        "/sources/eppo/SOLLC",
+      ]) {
+        const response = await responseFor(path, documentHeaders);
+        expect(response.status, path).toBe(404);
+        expect(response.headers.get("X-Robots-Tag"), path).toBe(
+          "noindex, nofollow",
+        );
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("lets the archive through once the environment opens it", async () => {
+    vi.stubEnv("STABLE_REGISTRY_PUBLIC_DISCOVERY", "true");
+    try {
+      for (const path of ["/sources/eppo", "/bg/sources/eppo?kind=plant"]) {
+        const response = await responseFor(path, documentHeaders);
+        expect(response.status, path).not.toBe(404);
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
 describe("organism addresses (ADR-0026 D8)", () => {
   const document = { accept: "text/html", "sec-fetch-dest": "document" };
 

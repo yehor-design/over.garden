@@ -3,9 +3,19 @@ import { describe, expect, it } from "vitest";
 
 import MarketLandingRoute, {
   generateMetadata,
+  generateStaticParams,
 } from "@/app/[locale]/markets/[market]/page";
 
 describe("/markets/[market]", () => {
+  it("prerenders every language a landing is written in, the default one included", () => {
+    // The proxy rewrites `/markets/ukraine` to `/uk/markets/ukraine` (ADR-0032
+    // D1). A pair missing here renders on demand from the fallback shell,
+    // which answered 500 once the page lost its boundary (OVE-467).
+    const params = generateStaticParams();
+    expect(params).toContainEqual({ locale: "uk", market: "ukraine" });
+    expect(params).toContainEqual({ locale: "bg", market: "bulgaria" });
+  });
+
   it("renders the Ukraine market landing as a localized indexable read-only page", async () => {
     const html = renderToStaticMarkup(
       await MarketLandingRoute({

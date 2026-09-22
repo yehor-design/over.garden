@@ -7,7 +7,10 @@ const mocks = vi.hoisted(() => ({
   notFound: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  notFound: mocks.notFound,
+}));
 
 vi.mock("@/lib/catalog-source/eppo-archive-gate", () => ({
   isEppoArchiveEnabled: mocks.enabled,
@@ -31,6 +34,9 @@ describe("localized EPPO source explorer page", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    // The archive is a static document: with no database in the environment it
+    // defers to the request and renders the skeleton (ADR-0032 D4).
+    vi.stubEnv("DATABASE_URL", "postgresql://unit.test/x");
     mocks.enabled.mockReturnValue(true);
     mocks.listPublicEppoSourcePage.mockResolvedValue({
       request: { kind: "plant", query: "sollc", cursor: null },
@@ -62,16 +68,16 @@ describe("localized EPPO source explorer page", () => {
   });
 
   it("shows the source-only distinction and mandatory credit for guests", async () => {
+    // The address itself is the static document and asks for nothing; a query
+    // it reads renders from the `/q` twin (ADR-0032 D5), which is the second
+    // case below.
     const { default: Route } = await import("./page");
     const html = renderToStaticMarkup(
-      await Route({
-        params: Promise.resolve({ locale: "ru" }),
-        searchParams: Promise.resolve({ q: "sollc", kind: "plant" }),
-      }),
+      await Route({ params: Promise.resolve({ locale: "ru" }) }),
     );
 
     expect(mocks.listPublicEppoSourcePage).toHaveBeenCalledWith(
-      { kind: "plant", query: "sollc", cursor: null },
+      { kind: "all", query: "", cursor: null },
       "ru",
     );
     expect(html).toContain('data-eppo-archive="explorer"');
@@ -82,5 +88,22 @@ describe("localized EPPO source explorer page", () => {
     expect(html).toContain("Таксономический ранг");
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain("Одобрено Stable Registry");
+  });
+
+  it("reads the archive's own filters only through its twin", async () => {
+    const { default: TwinRoute } =
+      await import("@/app/[locale]/q/sources/eppo/page");
+    const html = renderToStaticMarkup(
+      await TwinRoute({
+        params: Promise.resolve({ locale: "ru" }),
+        searchParams: Promise.resolve({ q: "sollc", kind: "plant" }),
+      }),
+    );
+
+    expect(mocks.listPublicEppoSourcePage).toHaveBeenCalledWith(
+      { kind: "plant", query: "sollc", cursor: null },
+      "ru",
+    );
+    expect(html).toContain('data-eppo-archive="explorer"');
   });
 });

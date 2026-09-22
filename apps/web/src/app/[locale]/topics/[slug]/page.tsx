@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 
 import { PublicKnowledgeTopicPage } from "@/components/public/public-knowledge-topic";
 import { EngagementFollowControl } from "@/app/engagement/public-engagement-panel";
-import { normalizeAuthIntentResumeAction } from "@/lib/auth/auth-intent-contract";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import {
   isPublicLocale,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { getEngagementFollowState } from "@/server/engagement-repository";
 import {
   buildPublicTopicDiscoverySource,
   type PublicTopicAggregationPage,
@@ -24,11 +22,19 @@ import {
   type PublicSurfaceDiscoveryResult,
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { scopedToUser } from "@/server/request-scope";
 import {
   readPublicKnowledgeEvidence,
   readPublicTopicPage,
 } from "@/server/public-cache";
+import { STATIC_PARAMS_PLACEHOLDER } from "@/server/public-prerender";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
+import { TopicViewerFollow } from "./topic-regions";
 import { publicTopicPath } from "@/lib/garden/public-paths";
 
 interface PublicTopicRouteProps {
@@ -49,8 +55,10 @@ export async function generateMetadata({
     return missingTopicMetadata();
   }
 
+  if (slug === STATIC_PARAMS_PLACEHOLDER) return {};
   const bounded = await resolvePublicSurfacePayload({
     consumerId: "localized_topic",
+    document: "static",
     load: async () => {
       const topic = await loadTopicPage(slug, localeParam);
       if (!topic) throw new Error("Public topic unavailable.");
@@ -70,87 +78,93 @@ export async function generateMetadata({
   return buildTopicSurface(localeParam, bounded.payload, bounded).metadata;
 }
 
+export function generateStaticParams() {
+  return [{ slug: STATIC_PARAMS_PLACEHOLDER }];
+}
+
 export default async function TopicRoute({
   params,
   searchParams,
 }: PublicTopicRouteProps) {
   const { locale: localeParam, slug } = await params;
+  if (slug === STATIC_PARAMS_PLACEHOLDER) return null;
   if (!isPublicLocale(localeParam)) notFound();
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) => renderTopicPage(localeParam, slug, searchParams, phase),
+  });
+}
 
-  const query = (await searchParams) ?? {};
-  // A rejection here is a guest or a missing topic — unless it is Next's own
-  // prerender bail-out, which must reach Next (see the community directory).
-  const session = await getCurrentSession().catch((error: unknown) => {
+/**
+ * A topic as a static document (ADR-0032 D8). Its entries, its evidence and
+ * its counts are the same for every reader; the one thing that is not — the
+ * follow control, which says whether *this* reader already follows the topic —
+ * is a request-time region below it, with the guest's control as its fallback.
+ */
+export async function renderTopicPage(
+  locale: PublicLocale,
+  slug: string,
+  searchParams: PublicTopicRouteProps["searchParams"],
+  phase: PublicRenderPhase,
+) {
+  await deferStaticRenderWithoutDatabase(phase);
+  const topic = await loadTopicPage(slug, locale).catch((error: unknown) => {
     unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    // A topic that could not be read is not a topic that is not there.
+    deferStaticRenderAfterFailure(phase);
     return null;
   });
-  const topic = await loadTopicPage(slug, localeParam).catch(
-    (error: unknown) => {
-      unstable_rethrow(error);
-      return null;
-    },
-  );
   if (!topic) notFound();
-  const userId = session?.user?.id;
-  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
-  const followTarget = {
-    kind: "topic" as const,
-    ref: topic.topic.slug,
-  };
-  const following = scope
-    ? await getEngagementFollowState(scope, followTarget).catch(
-        (error: unknown) => {
-          unstable_rethrow(error);
-          return false;
-        },
-      )
-    : false;
-  const returnTo = localizedPath(
-    localeParam,
-    publicTopicPath(topic.topic.slug),
-  );
-  const surface = buildTopicSurface(localeParam, topic);
+  const followTarget = { kind: "topic" as const, ref: topic.topic.slug };
+  const returnTo = localizedPath(locale, publicTopicPath(topic.topic.slug));
+  const surface = buildTopicSurface(locale, topic);
 
   const evidenceResult = await readPublicKnowledgeEvidence(
     { topicSlugs: [topic.topic.slug], catalogSlugs: [] },
-    localeParam,
+    locale,
   ).then(
     (evidence) => ({
       evidence,
       state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
     }),
-    () => ({
-      evidence: emptyEvidence(localeParam),
-      state: "error" as const,
-    }),
+    (error: unknown) => {
+      unstable_rethrow(error);
+      deferStaticRenderAfterFailure(phase);
+      return { evidence: emptyEvidence(locale), state: "error" as const };
+    },
   );
 
   return (
     <PublicKnowledgeTopicPage
-      locale={localeParam}
-      copy={getPublicKnowledgeCopy(localeParam)}
+      locale={locale}
+      copy={getPublicKnowledgeCopy(locale)}
       topic={topic}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
       actions={
-        <EngagementFollowControl
-          isAuthenticated={Boolean(userId)}
-          locale={localeParam}
-          target={followTarget}
-          returnTo={returnTo}
-          following={following}
-          resumeAction={normalizeAuthIntentResumeAction(
-            firstParam(query.authIntent) ?? undefined,
-          )}
-        />
+        <Suspense
+          fallback={
+            <EngagementFollowControl
+              isAuthenticated={false}
+              locale={locale}
+              target={followTarget}
+              returnTo={returnTo}
+              following={false}
+            />
+          }
+        >
+          <TopicViewerFollow
+            locale={locale}
+            target={followTarget}
+            returnTo={returnTo}
+            searchParams={searchParams}
+          />
+        </Suspense>
       }
       jsonLd={surface.jsonLd}
     />
   );
-}
-
-function firstParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
 }
 
 function missingTopicMetadata(locale?: "uk" | "bg" | "ru"): Metadata {
@@ -168,7 +182,12 @@ function buildTopicSurface(
   locale: PublicLocale,
   topic: PublicTopicAggregationPage,
   discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
-    buildPublicTopicDiscoverySource(topic, "localized_topic", "candidate", locale),
+    buildPublicTopicDiscoverySource(
+      topic,
+      "localized_topic",
+      "candidate",
+      locale,
+    ),
   ),
 ) {
   const copy = getPublicKnowledgeCopy(locale);

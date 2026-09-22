@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listPublicKnowledgeEvidence: vi.fn(),
@@ -17,6 +17,12 @@ vi.mock("@/lib/storage", () => ({
 import GuideRoute, {
   generateMetadata,
 } from "@/app/[locale]/guides/[slug]/page";
+
+beforeEach(() => {
+  // An authored page is a static document: with no database in the environment
+  // it defers to the request and renders the skeleton (ADR-0032 D4).
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/x");
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();

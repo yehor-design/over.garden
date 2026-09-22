@@ -35,6 +35,9 @@ vi.mock("@/lib/storage", () => ({
 }));
 
 beforeEach(() => {
+  // A topic is a static document: with no database in the environment it
+  // defers to the request and renders the skeleton (ADR-0032 D4).
+  vi.stubEnv("DATABASE_URL", "postgresql://unit.test/x");
   mocks.getPublicTopicAggregationPage.mockResolvedValue(topicPage());
   mocks.listPublicKnowledgeEvidence.mockResolvedValue(evidence());
   mocks.getRequestInterfaceLocale.mockResolvedValue("uk");

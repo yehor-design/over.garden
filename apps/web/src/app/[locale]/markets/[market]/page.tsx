@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 
 import { LocalizedMarketLandingPage } from "@/components/public/localized-public-pages";
 import {
-  DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
   localizedPath,
   type PublicLocale,
@@ -28,14 +27,22 @@ interface LocalizedMarketRouteProps {
   params: Promise<{ locale: string; market: string }>;
 }
 
+/**
+ * Every language a market landing is written in, the default one included.
+ *
+ * The default locale used to be left out, when the unprefixed tree rendered
+ * Ukrainian readers. Since ADR-0032 D1 the proxy rewrites `/markets/ukraine`
+ * to `/uk/markets/ukraine`, and a pair missing from this list renders on
+ * demand from the route's fallback shell — which, with no boundary above the
+ * page any more, regenerated with a revalidate of 0 and answered 500
+ * (OVE-467).
+ */
 export function generateStaticParams() {
   return listMarketLandings().flatMap((landing) =>
-    getMarketLandingLocales(landing.market)
-      .filter((locale) => locale !== DEFAULT_PUBLIC_LOCALE)
-      .map((locale) => ({
-        locale,
-        market: landing.market,
-      })),
+    getMarketLandingLocales(landing.market).map((locale) => ({
+      locale,
+      market: landing.market,
+    })),
   );
 }
 
