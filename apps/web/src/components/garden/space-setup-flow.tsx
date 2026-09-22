@@ -10,6 +10,10 @@ import { Illustration } from "@/components/ui/illustration";
 import { Input } from "@/components/ui/input";
 import { Link } from "@/components/ui/link";
 import { RadioCard } from "@/components/ui/radio-card";
+import {
+  ProgressiveActions as StepActions,
+  ProgressiveStep,
+} from "@/components/garden/progressive-steps";
 import { Select } from "@/components/ui/select";
 import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
@@ -27,7 +31,6 @@ import {
 import { resolveIllustration } from "@/lib/illustrations";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getSpaceSetupCopy } from "@/lib/space-setup-copy";
-import { cn } from "@/lib/utils";
 
 type Step = "name" | "region" | "review";
 const STEPS: readonly Step[] = ["name", "region", "review"];
@@ -300,12 +303,13 @@ export function SpaceSetupFlow({
       </div>
 
       <ol className="grid list-none gap-3">
-        <StepSection
+        <ProgressiveStep
+          slot="space-setup"
           step="name"
-          index={0}
+          position={copy.stepOf(1, STEPS.length)}
           active={step === "name"}
           reached={reached.has("name")}
-          copy={copy}
+          changeLabel={copy.change}
           question={copy.name.question}
           summary={values.displayName || null}
           onChange={() => open("name")}
@@ -344,14 +348,15 @@ export function SpaceSetupFlow({
             ) : null}
             <Button type="submit">{copy.next}</Button>
           </StepActions>
-        </StepSection>
+        </ProgressiveStep>
 
-        <StepSection
+        <ProgressiveStep
+          slot="space-setup"
           step="region"
-          index={1}
+          position={copy.stepOf(2, STEPS.length)}
           active={step === "region"}
           reached={reached.has("region")}
-          copy={copy}
+          changeLabel={copy.change}
           question={copy.region.question}
           optional={copy.optional}
           summary={
@@ -436,14 +441,15 @@ export function SpaceSetupFlow({
             )}
             <Button type="submit">{copy.next}</Button>
           </StepActions>
-        </StepSection>
+        </ProgressiveStep>
 
-        <StepSection
+        <ProgressiveStep
+          slot="space-setup"
           step="review"
-          index={2}
+          position={copy.stepOf(3, STEPS.length)}
           active={step === "review"}
           reached={reached.has("review")}
-          copy={copy}
+          changeLabel={copy.change}
           question={copy.review.question}
           summary={null}
           onChange={() => open("review")}
@@ -500,96 +506,9 @@ export function SpaceSetupFlow({
                   : copy.review.create}
             </Button>
           </StepActions>
-        </StepSection>
+        </ProgressiveStep>
       </ol>
     </form>
-  );
-}
-
-function StepSection({
-  step,
-  index,
-  active,
-  reached,
-  copy,
-  question,
-  optional,
-  summary,
-  onChange,
-  headingRef,
-  children,
-}: {
-  step: Step;
-  index: number;
-  active: boolean;
-  reached: boolean;
-  copy: ReturnType<typeof getSpaceSetupCopy>;
-  question: string;
-  optional?: string;
-  summary: string | null;
-  onChange: () => void;
-  headingRef: (node: HTMLHeadingElement | null) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <li
-      data-space-setup-section={step}
-      data-state={active ? "active" : reached ? "done" : "upcoming"}
-      className={cn(
-        "grid gap-3 rounded-lg border p-4 sm:p-5",
-        active ? "border-border-strong bg-surface" : "border-border",
-      )}
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div className="grid min-w-0 gap-0.5">
-          <span className="text-caption text-text-muted">
-            {copy.stepOf(index + 1, STEPS.length)}
-            {optional ? ` · ${optional}` : ""}
-          </span>
-          <h2
-            ref={headingRef}
-            tabIndex={-1}
-            className={cn(
-              "outline-none",
-              active
-                ? "text-h3 text-text-heading"
-                : "text-body font-medium text-text",
-            )}
-          >
-            {question}
-          </h2>
-          {!active && summary ? (
-            <p
-              className="text-body-sm break-words text-text-muted"
-              data-space-setup-summary={step}
-            >
-              {summary}
-            </p>
-          ) : null}
-        </div>
-        {!active && reached && summary ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onChange}
-            aria-label={`${copy.change}: ${question}`}
-          >
-            {copy.change}
-          </Button>
-        ) : null}
-      </div>
-      {active ? <div className="grid gap-3">{children}</div> : null}
-    </li>
-  );
-}
-
-/** Kept in view above a phone keyboard: the actions stick to the bottom. */
-function StepActions({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-4 pt-3 pb-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:pb-0">
-      {children}
-    </div>
   );
 }
 

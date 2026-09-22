@@ -216,8 +216,11 @@ function AttentionSection({
               ? nextAction.label
               : copy.workspace.nextAction.checkWriteAccess}
           </Link>
+          {/* Adding a plant or an animal is its own short setup, apart from
+              writing (OVE-485); the first entry is written from its page. */}
           <Link
-            href="#first-entry-composer"
+            href="/garden/objects/new"
+            data-garden-new-object="true"
             className={buttonVariants({ variant: "secondary" })}
           >
             <CirclePlus aria-hidden="true" />
@@ -358,16 +361,26 @@ function InventorySection({
       description={copy.workspace.inventory.description}
       className="scroll-mt-20"
       actions={
-        inventory.hasMore && inventory.page === 1 ? (
+        <>
+          {inventory.hasMore && inventory.page === 1 ? (
+            <Link
+              href="/garden?inventory=all#inventory"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              {formatGardenWorkspaceTemplate(copy.workspace.inventory.viewAll, {
+                count: inventory.totalCount,
+              })}
+            </Link>
+          ) : null}
           <Link
-            href="/garden?inventory=all#inventory"
+            href="/garden/objects/new"
+            data-garden-inventory-new-object="true"
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
-            {formatGardenWorkspaceTemplate(copy.workspace.inventory.viewAll, {
-              count: inventory.totalCount,
-            })}
+            <Plus aria-hidden="true" />
+            {copy.workspace.inventory.newObject}
           </Link>
-        ) : undefined
+        </>
       }
     >
       <OwnedDestinationNavigation locale={locale} />
