@@ -37,6 +37,12 @@ import {
   readPublicKnowledgeEvidence,
   readPublicKnowledgeTopics,
 } from "@/server/public-cache";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
 import { publicTopicPath } from "@/lib/garden/public-paths";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
 
@@ -69,7 +75,9 @@ export async function generateMetadata({
 export async function renderPublicKnowledgePage(
   locale: PublicLocale,
   searchParams: SearchParams = {},
+  phase: PublicRenderPhase = "request",
 ) {
+  await deferStaticRenderWithoutDatabase(phase);
   const request = normalizePublicKnowledgeRequest(searchParams);
   const surface = buildKnowledgeSurface(locale);
   const guides = listLocalizedGuides(locale);
@@ -86,6 +94,9 @@ export async function renderPublicKnowledgePage(
   const failed =
     topicsResult?.status === "rejected" ||
     evidenceResults.some((result) => result.status === "rejected");
+  // A hub with no topics and no evidence counts renders successfully and would
+  // be cached as the shell for everyone (ADR-0032 D4).
+  if (failed) deferStaticRenderAfterFailure(phase);
 
   const authoredItems: PublicKnowledgeHubItem[] = [
     ...guides.map((guide, index) => ({
@@ -181,12 +192,28 @@ function buildKnowledgeSurface(locale: PublicLocale) {
 
 export default async function PublicKnowledgeRoute({
   params,
-  searchParams,
 }: PublicKnowledgeRouteProps) {
   const { locale: localeParam } = await params;
   if (!isPublicLocale(localeParam)) notFound();
 
-  return renderPublicKnowledgePage(localeParam, (await searchParams) ?? {});
+  return renderStaticPublicKnowledgePage(localeParam);
+}
+
+/** The hub with nothing asked of it: the static document (ADR-0032 D8). */
+export function renderStaticPublicKnowledgePage(locale: PublicLocale) {
+  return renderStaticPublicPage({
+    render: (phase) => renderPublicKnowledgePage(locale, {}, phase),
+    fallback: (
+      <PublicKnowledgeHub
+        locale={locale}
+        copy={getPublicKnowledgeCopy(locale)}
+        request={normalizePublicKnowledgeRequest({})}
+        items={[]}
+        contextItems={[]}
+        state="loading"
+      />
+    ),
+  });
 }
 
 function fulfilledEvidenceCount(

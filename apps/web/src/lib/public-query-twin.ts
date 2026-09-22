@@ -47,6 +47,7 @@ export const PUBLIC_QUERY_TWINS: ReadonlyMap<string, readonly string[]> =
       "/journals",
       ["q", "kind", "catalog", "topic", "season", "region", "sort", "page"],
     ],
+    ["/knowledge", ["q", "type", "kind"]],
   ]);
 
 /**

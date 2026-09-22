@@ -33,8 +33,20 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
   });
 
   it("leaves a route without a mounted twin to read its own query string", () => {
-    expect(publicQueryTwinPath("/knowledge", "?kind=plant")).toBeNull();
+    expect(publicQueryTwinPath("/markets/ukraine", "?kind=plant")).toBeNull();
     expect(publicQueryTwinPath("/garden", "?kind=plant")).toBeNull();
+  });
+
+  it("sends the knowledge hub's own filters to its twin", () => {
+    for (const key of ["q", "type", "kind"]) {
+      expect(publicQueryTwinPath("/knowledge", `?${key}=guide`)).toBe(
+        "/q/knowledge",
+      );
+      expect(publicQueryTwinPath("/bg/knowledge", `?${key}=guide`)).toBe(
+        "/q/knowledge",
+      );
+    }
+    expect(publicQueryTwinPath("/knowledge", "?utm_source=mail")).toBeNull();
   });
 
   it("reads every journal filter only through its mounted twin", () => {
