@@ -1,4 +1,11 @@
+import type { ReactElement, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+/** The route returns the page's own tree: one element, with its props. */
+function asElement(node: ReactNode) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return node as ReactElement<Record<string, any>>;
+}
 
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
@@ -38,6 +45,14 @@ vi.mock("next/navigation", async (importOriginal) => ({
 }));
 vi.mock("@/components/public/public-community", () => ({
   PublicCommunityView: mocks.publicCommunityView,
+  PublicCommunityUnavailable: (props: { retryHref: string }) => (
+    <div data-unavailable={props.retryHref} />
+  ),
+  CommunityMembershipAction: () => null,
+  CommunitySafetyActions: () => null,
+  CommunityFirstRunAction: () => null,
+  CommunityContributionForm: () => null,
+  CommunityModeratorLink: () => null,
 }));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
@@ -111,33 +126,91 @@ describe("localized community detail route", () => {
     vi.unstubAllEnvs();
   });
 
-  it("propagates repository failures to the route error boundary", async () => {
+  it("is the guest's community for every reader, and never reads the request", async () => {
     const { default: CommunityDetailRoute } = await import("./page");
-    mocks.readPublicCommunityPage.mockRejectedValueOnce(
+    const query = {
+      then: vi.fn(() => {
+        throw new Error("request read by page");
+      }),
+    };
+    const element = asElement(
+      await CommunityDetailRoute({
+        params: Promise.resolve({ locale: "uk", slug: "observation-and-care" }),
+        searchParams: query as unknown as Promise<Record<string, string>>,
+      }),
+    );
+
+    expect(query.then).not.toHaveBeenCalled();
+    expect(mocks.getCurrentSession).not.toHaveBeenCalled();
+    expect(mocks.getPublicCommunityPage).not.toHaveBeenCalled();
+    expect(element.props).toMatchObject({
+      viewer: "guest",
+      request: { query: "", kind: "all", cursor: null },
+    });
+    // Every viewer-dependent part arrives as a request-time region.
+    expect(Object.keys(element.props.regions).sort()).toEqual([
+      "contribute",
+      "firstRunAction",
+      "intentFocus",
+      "membership",
+      "moderator",
+      "safety",
+      "status",
+    ]);
+    expect(mocks.readPublicCommunityPage).toHaveBeenCalledWith(
+      "observation-and-care",
+      "uk",
+      "",
+      "all",
+      null,
+    );
+  });
+
+  it("renders nothing for the prerender's placeholder sample", async () => {
+    const { default: CommunityDetailRoute } = await import("./page");
+    expect(
+      await CommunityDetailRoute({
+        params: Promise.resolve({ locale: "uk", slug: "__static_params__" }),
+      }),
+    ).toBeNull();
+    expect(mocks.readPublicCommunityPage).not.toHaveBeenCalled();
+    expect(mocks.notFound).not.toHaveBeenCalled();
+  });
+
+  it("defers a failed static read, and settles one at request time", async () => {
+    const { renderStaticCommunity } = await import("./page");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.readPublicCommunityPage.mockRejectedValue(
       new Error("database unavailable"),
     );
 
     await expect(
-      CommunityDetailRoute({
-        params: Promise.resolve({
-          locale: "uk",
-          slug: "observation-and-care",
-        }),
-      }),
-    ).rejects.toThrow("database unavailable");
+      renderStaticCommunity("uk", "observation-and-care", undefined, "static"),
+    ).rejects.toThrow("read_failed");
+    const element = asElement(
+      await renderStaticCommunity(
+        "uk",
+        "observation-and-care",
+        undefined,
+        "request",
+      ),
+    );
+    expect(element.props).toMatchObject({
+      retryHref: "/communities/observation-and-care",
+    });
+    expect(error).toHaveBeenCalledTimes(1);
     expect(mocks.notFound).not.toHaveBeenCalled();
   });
 
-  it("reads one request object, and refuses a kind it does not know", async () => {
-    const { default: CommunityDetailRoute } = await import("./page");
-    const element = await CommunityDetailRoute({
-      params: Promise.resolve({ locale: "uk", slug: "observation-and-care" }),
-      searchParams: Promise.resolve({
+  it("the twin reads one request object, and refuses a kind it does not know", async () => {
+    const { renderCommunityForRequest } = await import("./page");
+    const element = asElement(
+      await renderCommunityForRequest("uk", "observation-and-care", {
         q: "  волога  ",
         kind: "fungus",
         cursor: "eyJpZCI6IjEifQ",
       }),
-    });
+    );
 
     expect(element.props).toMatchObject({
       request: { query: "волога", kind: "all", cursor: "eyJpZCI6IjEifQ" },
@@ -155,9 +228,11 @@ describe("localized community detail route", () => {
 
   it("carries the rest of the directory for the rail, without the page itself", async () => {
     const { default: CommunityDetailRoute } = await import("./page");
-    const element = await CommunityDetailRoute({
-      params: Promise.resolve({ locale: "uk", slug: "observation-and-care" }),
-    });
+    const element = asElement(
+      await CommunityDetailRoute({
+        params: Promise.resolve({ locale: "uk", slug: "observation-and-care" }),
+      }),
+    );
 
     // Digg's "Discover Communities" panel. It is the same cached read
     // `/communities` makes, so a reader who came from the list pays nothing.

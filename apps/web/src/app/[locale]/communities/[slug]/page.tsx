@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import { notFound, unstable_rethrow } from "next/navigation";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 
-import { PublicCommunityView } from "@/components/public/public-community";
+import {
+  CommunityFirstRunAction,
+  CommunityMembershipAction,
+  CommunitySafetyActions,
+  PublicCommunityUnavailable,
+  PublicCommunityView,
+} from "@/components/public/public-community";
+import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
@@ -11,11 +18,10 @@ import {
   getCommunityContentCopy,
   getCommunityCopy,
 } from "@/lib/community-copy";
+import { isPublicLocale, type PublicLocale } from "@/lib/public-localization";
 import {
-  isPublicLocale,
-  type PublicLocale,
-} from "@/lib/public-localization";
-import {
+  buildPublicCommunityHref,
+  communityBasePath,
   EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST,
   normalizePublicCommunityViewRequest,
 } from "@/lib/public-community-view";
@@ -23,7 +29,6 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   buildPublicCommunityDiscoverySource,
   getPublicCommunityPage,
-  listPublicCommunities,
   type PublicCommunityPageModel,
 } from "@/server/community-repository";
 import {
@@ -38,13 +43,32 @@ import {
   readPublicCommunityDirectory,
   readPublicCommunityPage,
 } from "@/server/public-cache";
+import { STATIC_PARAMS_PLACEHOLDER } from "@/server/public-prerender";
+import {
+  deferStaticRenderAfterFailure,
+  deferStaticRenderWithoutDatabase,
+  renderStaticPublicPage,
+  StaticRenderDeferred,
+  type PublicRenderPhase,
+} from "@/server/static-public-page";
+import {
+  describeWorkspaceFailure,
+  recordPublicSurfaceFailure,
+} from "@/server/workspace-failure";
+import {
+  CommunityIntentFocus,
+  CommunityViewerContribution,
+  CommunityViewerFirstRunAction,
+  CommunityViewerMembership,
+  CommunityViewerModerator,
+  CommunityViewerSafety,
+  CommunityViewerStatus,
+} from "./community-regions";
 
 interface CommunityDetailRouteProps {
   params: Promise<{ locale: string; slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
-
-const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
 type CommunityPageOptions = NonNullable<
   Parameters<typeof getPublicCommunityPage>[2]
@@ -74,19 +98,21 @@ export async function generateMetadata({
   params,
 }: CommunityDetailRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
+  if (slug === STATIC_PARAMS_PLACEHOLDER) return {};
   const safeSlug = normalizeCommunitySlug(slug);
   if (!isPublicLocale(localeParam) || !safeSlug) {
     return missingCommunityMetadata();
   }
   const discovery = await resolvePublicSurfaceDiscoveryFromLoad({
     consumerId: "localized_community",
+    document: "static",
     loadSource: async () => {
       const community = await loadCommunityPage(
         safeSlug,
         localeParam,
         null,
         EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST.query,
-        undefined,
+        "all",
         EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST.cursor,
       );
       if (!community) throw new Error("Public community unavailable.");
@@ -96,25 +122,191 @@ export async function generateMetadata({
   return buildCommunitySurface(localeParam, safeSlug, null, discovery).metadata;
 }
 
+export function generateStaticParams() {
+  return [{ slug: STATIC_PARAMS_PLACEHOLDER }];
+}
+
 export default async function CommunityDetailRoute({
   params,
   searchParams,
 }: CommunityDetailRouteProps) {
-  const [{ locale: localeParam, slug: slugParam }, queryParams] =
-    await Promise.all([
-      params,
-      searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
-    ]);
+  const { locale: localeParam, slug: slugParam } = await params;
+  if (slugParam === STATIC_PARAMS_PLACEHOLDER) return null;
   if (!isPublicLocale(localeParam)) return notFound();
   const slug = normalizeCommunitySlug(slugParam);
   if (!slug) return notFound();
-  const viewerScope = await currentViewerScope();
+  return renderStaticPublicPage({
+    fallback: <RootLoadingSkeleton />,
+    render: (phase) =>
+      renderStaticCommunity(localeParam, slug, searchParams, phase),
+  });
+}
 
+/**
+ * The community as a static document (ADR-0032): the guest's community and
+ * the rail's directory are read in the prerender; everything that differs by
+ * reader is a request-time region (`community-regions.tsx`). A query the
+ * community reads — `q`, `kind`, `cursor` — renders from the `/q` twin, which
+ * is `renderCommunityForRequest`.
+ */
+export async function renderStaticCommunity(
+  locale: PublicLocale,
+  slug: string,
+  searchParams: CommunityDetailRouteProps["searchParams"],
+  phase: PublicRenderPhase,
+) {
+  await deferStaticRenderWithoutDatabase(phase);
+  const request = EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST;
+  let community: PublicCommunityPageModel | null;
+  let directory: Awaited<ReturnType<typeof readPublicCommunityDirectory>>;
+  try {
+    [community, directory] = await Promise.all([
+      loadCommunityPage(
+        slug,
+        locale,
+        null,
+        request.query,
+        "all",
+        request.cursor,
+      ),
+      readPublicCommunityDirectory(),
+    ]);
+  } catch (error) {
+    unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    deferStaticRenderAfterFailure(phase);
+    recordPublicSurfaceFailure(describeWorkspaceFailure(error), {
+      surface: "community",
+      section: "community",
+      locale,
+    });
+    return (
+      <PublicCommunityUnavailable
+        locale={locale}
+        retryHref={communityBasePath(locale, slug)}
+      />
+    );
+  }
+  if (!community) notFound();
+  const guestCommunity = community;
+  const discovery = resolvePublicSurfaceDiscoveryForRequest(
+    buildPublicCommunityDiscoverySource(locale, guestCommunity),
+  );
+  const surface = buildCommunitySurface(
+    locale,
+    slug,
+    guestCommunity,
+    discovery,
+  );
+  const communityPath = buildPublicCommunityHref(locale, slug, request);
+
+  return (
+    <PublicCommunityView
+      locale={locale}
+      community={guestCommunity}
+      viewer="guest"
+      request={request}
+      otherCommunities={directory}
+      state="ready"
+      jsonLd={surface.jsonLd}
+      regions={{
+        intentFocus: (
+          <Suspense fallback={null}>
+            <CommunityIntentFocus searchParams={searchParams} />
+          </Suspense>
+        ),
+        membership: (
+          <Suspense
+            fallback={
+              <CommunityMembershipAction
+                locale={locale}
+                community={guestCommunity}
+                viewer="guest"
+                communityPath={communityPath}
+                resumeAction={null}
+                resumeControl={null}
+              />
+            }
+          >
+            <CommunityViewerMembership
+              locale={locale}
+              community={guestCommunity}
+              communityPath={communityPath}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        ),
+        status: (
+          <Suspense fallback={null}>
+            <CommunityViewerStatus
+              locale={locale}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        ),
+        contribute: (
+          <Suspense fallback={null}>
+            <CommunityViewerContribution locale={locale} slug={slug} />
+          </Suspense>
+        ),
+        firstRunAction: (
+          <Suspense
+            fallback={
+              <CommunityFirstRunAction locale={locale} canContribute={false} />
+            }
+          >
+            <CommunityViewerFirstRunAction locale={locale} slug={slug} />
+          </Suspense>
+        ),
+        safety: (item) => (
+          <Suspense
+            fallback={
+              <CommunitySafetyActions
+                locale={locale}
+                item={item}
+                viewer="guest"
+                community={guestCommunity}
+                communityPath={communityPath}
+                resumeAction={null}
+                resumeControl={null}
+              />
+            }
+          >
+            <CommunityViewerSafety
+              locale={locale}
+              community={guestCommunity}
+              item={item}
+              communityPath={communityPath}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        ),
+        moderator: (
+          <Suspense fallback={null}>
+            <CommunityViewerModerator locale={locale} slug={slug} />
+          </Suspense>
+        ),
+      }}
+    />
+  );
+}
+
+/**
+ * The community with a query of its own, at request time: the `/q` twin. It
+ * reads the viewer here as the page always did, behind the twin's own
+ * boundary (`[locale]/q/loading.tsx`).
+ */
+export async function renderCommunityForRequest(
+  locale: PublicLocale,
+  slug: string,
+  queryParams: Record<string, string | string[] | undefined>,
+) {
+  const viewerScope = await currentViewerScope();
   const request = normalizePublicCommunityViewRequest(queryParams);
   const [community, directory] = await Promise.all([
     loadCommunityPage(
       slug,
-      localeParam,
+      locale,
       viewerScope,
       request.query,
       request.kind === "all" ? "all" : request.kind,
@@ -123,24 +315,17 @@ export default async function CommunityDetailRoute({
     // The rail's "other communities" (Digg's Discover panel). It is the same
     // cached directory read `/communities` makes, so a reader who came from
     // the list pays nothing for it.
-    viewerScope
-      ? listPublicCommunities(viewerScope)
-      : readPublicCommunityDirectory(),
+    readPublicCommunityDirectory(),
   ]);
   if (!community) return notFound();
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
-    buildPublicCommunityDiscoverySource(localeParam, community),
+    buildPublicCommunityDiscoverySource(locale, community),
   );
-  const surface = buildCommunitySurface(
-    localeParam,
-    slug,
-    community,
-    discovery,
-  );
+  const surface = buildCommunitySurface(locale, slug, community, discovery);
 
   return (
     <PublicCommunityView
-      locale={localeParam}
+      locale={locale}
       community={community}
       viewer={viewerScope ? "member" : "guest"}
       request={request}

@@ -50,6 +50,33 @@ export const PUBLIC_QUERY_TWINS: ReadonlyMap<string, readonly string[]> =
   ]);
 
 /**
+ * The addresses whose path carries a name — a gardener's handle, a
+ * community's slug — so a table keyed by path cannot hold them. Each twin is
+ * mounted at the same dynamic route under `/q`, and reads only these keys.
+ */
+const PUBLIC_COMMUNITY_PATH = /^\/communities\/[a-z0-9][a-z0-9-]{1,63}$/u;
+
+export const PUBLIC_QUERY_TWIN_PATTERNS: ReadonlyArray<{
+  readonly route: string;
+  readonly matches: (basePath: string) => boolean;
+  readonly keys: readonly string[];
+}> = [
+  {
+    route: "[profileHandle]",
+    matches: (basePath) => matchPublicProfilePath(basePath) !== null,
+    keys: ["tab"],
+  },
+  {
+    // The community's own facets and its paging position; a membership
+    // result or a resumed sign-in intent is read by the page's request-time
+    // regions and keeps the static document.
+    route: "communities/[slug]",
+    matches: (basePath) => PUBLIC_COMMUNITY_PATH.test(basePath),
+    keys: ["q", "kind", "cursor"],
+  },
+];
+
+/**
  * Where a request with a query string renders, as a canonical path under the
  * locale — or `null` when the static document is the right one.
  */
@@ -60,7 +87,7 @@ export function publicQueryTwinPath(
   const basePath = stripLocalePrefix(pathname).path;
   const keys =
     PUBLIC_QUERY_TWINS.get(basePath) ??
-    (matchPublicProfilePath(basePath) ? ["tab"] : undefined);
+    PUBLIC_QUERY_TWIN_PATTERNS.find((twin) => twin.matches(basePath))?.keys;
   if (!keys || !search) return null;
 
   const params =

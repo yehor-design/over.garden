@@ -308,6 +308,25 @@ function largestPhotographOnTheFirstScreen() {
   return candidates[0] ?? null;
 }
 
+/**
+ * The gate database's live communities, as addresses.
+ *
+ * `filtered` adds the facet view, which renders from the `/q` twin: that twin
+ * is request-time content behind its own boundary, so it is not part of what a
+ * reader without JavaScript sees — the same limit the catalog's filters have.
+ */
+async function activeCommunityPaths(pool: Pool, filtered = false) {
+  const community = await pool.query<{ slug: string }>(
+    `select slug from communities
+      where lifecycle_state = 'active' order by slug limit 1`,
+  );
+  return community.rows.flatMap((row) =>
+    filtered
+      ? [`/communities/${row.slug}`, `/communities/${row.slug}?kind=plant`]
+      : [`/communities/${row.slug}`],
+  );
+}
+
 test.describe("a public page is a static document", () => {
   // One fixture, one worker: every test below reads the same entry and card.
   test.describe.configure({ mode: "serial" });
@@ -536,6 +555,54 @@ test.describe("a public page is a static document", () => {
     ).toBe(404);
   });
 
+  test("communities serve their list and a community's evidence in the served bytes", async ({
+    request,
+  }) => {
+    const community = await pool.query<{ slug: string }>(
+      `select slug from communities
+        where lifecycle_state = 'active' order by slug limit 1`,
+    );
+    const slug = community.rows[0]?.slug;
+    expect(slug, "the gate database has no active community").toBeTruthy();
+    for (const address of [
+      "/communities",
+      "/bg/communities",
+      "/ru/communities",
+      `/communities/${slug}`,
+      `/bg/communities/${slug}`,
+      `/ru/communities/${slug}`,
+      // A membership result and a resumed sign-in are the regions' to read;
+      // the community itself stays the static document.
+      `/communities/${slug}?communityAction=joined`,
+      `/communities/${slug}?authIntent=follow`,
+    ]) {
+      for (const attempt of [1, 2]) {
+        const { status, html } = await getDocument(request, address);
+        expect(status, `${address}: ${attempt}`).toBe(200);
+        const served = readStaticDocument(html);
+        expect(served.titleInHead, address).toBe(true);
+        expect(served.heading?.hidden, address).toBe(false);
+        if (served.image) expect(served.image.hidden, address).toBe(false);
+        expect(served.skeleton, address).toBe(false);
+        expect(served.visibleText.length, address).toBeGreaterThan(600);
+      }
+    }
+    // The community's own facets render from the twin, at the same address…
+    const filtered = await getDocument(
+      request,
+      `/communities/${slug}?kind=plant`,
+    );
+    expect(filtered.status).toBe(200);
+    expect(filtered.html).toContain(`data-public-community="${slug}"`);
+    // …and the twin itself is not an address.
+    expect(
+      (await getDocument(request, `/q/communities/${slug}?kind=plant`)).status,
+    ).toBe(404);
+    expect(
+      (await getDocument(request, "/communities/no-such-community")).status,
+    ).toBe(404);
+  });
+
   test("catalog directories serve every result and control outside hidden segments", async ({
     request,
   }) => {
@@ -704,6 +771,8 @@ test.describe("a public page is a static document", () => {
         `/@${fixture.handle}`,
         fixture.passportPath,
         `/species/${fixture.organism.speciesSlug}`,
+        "/communities",
+        ...(await activeCommunityPaths(pool)),
       ]) {
         await page.goto(address, { waitUntil: "load" });
         await expect(page.locator("h1").first(), address).toBeVisible();
@@ -746,6 +815,8 @@ test.describe("a public page is a static document", () => {
       `/@${fixture.handle}?tab=entries`,
       fixture.passportPath,
       `/species/${fixture.organism.speciesSlug}`,
+      "/communities",
+      ...(await activeCommunityPaths(pool, true)),
     ]) {
       await page.setViewportSize({ width: 1_440, height: 900 });
       await page.goto(address, { waitUntil: "load" });

@@ -1,7 +1,7 @@
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedCommunityMetadata,
-  renderCommunityDirectory,
+  renderStaticCommunityDirectory,
 } from "@/app/[locale]/communities/page";
 
 export function generateMetadata() {
@@ -25,5 +25,5 @@ export function generateMetadata() {
  * and `hreflang` is how a crawler does.
  */
 export default async function RootCommunityDirectoryRoute() {
-  return renderCommunityDirectory(DEFAULT_PUBLIC_LOCALE);
+  return renderStaticCommunityDirectory(DEFAULT_PUBLIC_LOCALE);
 }

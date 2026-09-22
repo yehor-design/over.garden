@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listPublicCommunities: vi.fn(),
@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
   notFound: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
   redirect: mocks.redirect,
   notFound: mocks.notFound,
   // `FilterBar` navigates through the router once hydrated; on the server it
@@ -66,8 +67,15 @@ const communityPage = {
 };
 
 describe("community public routes", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // The community pages are static documents: without a database in the
+    // environment they defer to the request and render their skeleton.
+    vi.stubEnv("DATABASE_URL", "postgresql://unit.test/x");
     mocks.getCurrentSession.mockResolvedValue(null);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.listPublicCommunities.mockResolvedValue([directoryCommunity]);
@@ -77,23 +85,32 @@ describe("community public routes", () => {
   it("renders the localized directory and detail guest-open with indexable metadata", async () => {
     const { default: Directory, generateMetadata: directoryMetadata } =
       await import("@/app/[locale]/communities/page");
-    const { default: Detail, generateMetadata: detailMetadata } =
-      await import("@/app/[locale]/communities/[slug]/page");
+    const {
+      default: Detail,
+      generateMetadata: detailMetadata,
+      renderCommunityForRequest,
+    } = await import("@/app/[locale]/communities/[slug]/page");
 
     const directoryHtml = renderToStaticMarkup(
       await Directory({ params: Promise.resolve({ locale: "bg" }) }),
     );
-    const detailHtml = renderToStaticMarkup(
+    const staticHtml = renderToStaticMarkup(
       await Detail({
         params: Promise.resolve({
           locale: "bg",
           slug: "observation-and-care",
         }),
-        searchParams: Promise.resolve({
-          kind: "plant",
-          q: "домати",
-          cursor: "eyJpZCI6IjEifQ",
-        }),
+      }),
+    );
+    expect(staticHtml).toContain(
+      'data-public-community="observation-and-care"',
+    );
+    // A filtered view renders from the `/q` twin, at request time.
+    const detailHtml = renderToStaticMarkup(
+      await renderCommunityForRequest("bg", "observation-and-care", {
+        kind: "plant",
+        q: "домати",
+        cursor: "eyJpZCI6IjEifQ",
       }),
     );
 
@@ -154,14 +171,15 @@ describe("community public routes", () => {
     });
     expect(listingMeta).toMatchObject({
       robots: { index: true, follow: true },
-      alternates: { canonical: "https://over.garden/bg/communities/observation-and-care" },
+      alternates: {
+        canonical: "https://over.garden/bg/communities/observation-and-care",
+      },
     });
   });
 
   it("gives an empty community the first-run state, and keeps it out of the index", async () => {
-    const { default: Detail, generateMetadata: detailMetadata } = await import(
-      "@/app/[locale]/communities/[slug]/page"
-    );
+    const { default: Detail, generateMetadata: detailMetadata } =
+      await import("@/app/[locale]/communities/[slug]/page");
     mocks.getPublicCommunityPage.mockResolvedValue({
       ...communityPage,
       activeMemberCount: 0,
