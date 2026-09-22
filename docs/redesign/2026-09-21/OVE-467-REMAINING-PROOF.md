@@ -95,21 +95,29 @@ explicit language cookie):
 ## Performance
 
 Lighthouse CLI 13.5.0, default mobile configuration, production, three samples
-per method (`ove-467-remaining/production-before-*.json.gz`,
-`production-before-samples.json`). Before the change:
+per method, before on `a5d475a9`/`b4cde76b` and after on the released
+`ff347966` (`ove-467-remaining/production-{before,after}-*.json.gz` and
+`production-{before,after}-samples.json`). Medians:
 
-| Surface | Applied LCP (median) | Simulated LCP (median) | Max CLS |
+| Surface | Applied LCP | Simulated LCP | Max CLS |
 | --- | --- | --- | --- |
-| `/knowledge` | 3,218 ms | 4,725 ms | 0 |
-| `/topics/plants` | 5,079 ms | 3,965 ms | 0.1215 |
-| `/guides/start-a-living-plant-record` | 3,069 ms | 3,361 ms | 0.1215 |
-| `/blog` | 3,069 ms | 4,859 ms | 0 |
-| `/markets/ukraine` | 3,076 ms | 4,708 ms | 0.1834 |
-| `/privacy` | 3,077 ms | 3,371 ms | 0 |
+| `/knowledge` | 3,218 → 3,120 ms | 4,725 → 3,362 ms | 0 → 0 |
+| `/topics/plants` | 5,079 → 5,180 ms | 3,965 → 5,239 ms | 0.1215 → 0 |
+| `/guides/start-a-living-plant-record` | 3,069 → 3,080 ms | 3,361 → 3,364 ms | 0.1215 → 0 |
+| `/blog` | 3,069 → 3,094 ms | 4,859 → 3,386 ms | 0 → 0 |
+| `/markets/ukraine` | 3,076 → 3,078 ms | 4,708 → 3,373 ms | 0.1834 → 0 |
+| `/privacy` | 3,077 → 3,101 ms | 3,371 → 4,412 ms | 0 → 0 |
 
-The after-release medians, measured the same way on the released build, are
-in the Linear receipt. The production budget (`LCP ≤ 2.0 s`) is OVE-469's
-acceptance; no speedup is claimed here.
+Layout shift is gone on every measured surface (CLS ≤ 0.02 met). Applied LCP
+is flat at about 3.1 s and the topic page about 5.2 s: the production budget
+(`LCP ≤ 2.0 s`) is **not** met and is OVE-469's acceptance; no speedup is
+claimed here.
+
+After release (`seo-production-after.json`, `served-bytes-after.json`): 27 of
+30 pages have byte-identical title, sorted SEO tags and JSON-LD; the three topic
+pages gained their title and 18 tags in `<head>`. Fifteen surfaces answer 200
+through `x-vercel-cache: HIT` with the `<h1>` outside every hidden segment, the
+title in `<head>` and no skeleton.
 
 ## Not claimed
 
