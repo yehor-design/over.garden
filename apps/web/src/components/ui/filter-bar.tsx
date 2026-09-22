@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState } from "react";
+import { useId, useRef, useState, useTransition } from "react";
 import { SlidersHorizontalIcon as SlidersHorizontal } from "@/components/icons/SlidersHorizontal";
+import { XIcon } from "@/components/icons/X";
 
 import { Button } from "@/components/ui/button";
 import { Chip, FilterChip } from "@/components/ui/chip";
@@ -10,55 +11,47 @@ import { Field } from "@/components/ui/field";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Link } from "@/components/ui/link";
 import { Select } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
 /**
- * The faceted filter bar every large catalogue on the web ships, and none of
- * the four this was drawn from puts an Apply button on desktop (DESIGN.md §5.1,
- * ADR-0031 D6).
+ * The discovery bar every public listing shares (DESIGN.md §5.1, `OVE-482`).
+ *
+ * Three tiers, never six equally loud controls:
+ *
+ * 1. **Search** — the caller's field and its own submit, the widest control.
+ * 2. **Modes** — the one primary split of a listing (plants and animals, say),
+ *    as plain links with `aria-current`. It lives here and nowhere else, so a
+ *    reader never finds the same choice twice.
+ * 3. **Filters (n)** — every secondary facet behind one button that states
+ *    how many are applied. The panel is a *draft*: nothing changes until
+ *    "Show results"; Close (and Escape, and a tap outside) discards the draft
+ *    and leaves the committed view exactly as it was. "Clear filters" removes
+ *    the secondary facets only, and keeps the query, the mode and the sort.
+ *
+ * Sort stays its own control and applies on change.
  *
  * ## The URL vocabulary
  *
  * **One query parameter per facet, named for the facet, repeated for
  * multi-select, plus `sort` and `page`. Absent means unset.** No packed or
- * encoded composite parameter, ever: a filter that works but is absent from the
- * URL passes every interaction test and fails the moment a reader shares the
- * link, which is the actual job of a directory page. `OVE-451` reuses this
- * contract for the organism catalogue, so it is written here once.
+ * encoded composite parameter: a filter absent from the URL fails the moment a
+ * reader shares the link.
  *
- * ## The three things that make it work without JavaScript
+ * ## Why it works without JavaScript
  *
- * 1. Every control lives inside one `<form method="get">` with a **real
- *    submit**. That is the mechanism; on-change is the enhancement layered
- *    over it. A crawler and a scripts-off reader get a working search page.
- *    The submit is the caller's search button — always present, at every
- *    width, and submitting the form submits the facets with it — plus the
- *    sheet's own Apply below `lg`. There is deliberately no `<noscript>`
- *    button and no submit that appears and then vanishes on hydration: the
- *    first risks a hydration mismatch inside an element the browser parses as
- *    text, and the second flashes a control at every reader on every load.
- * 2. After hydration a change to a facet or to the sort navigates through the
- *    router rather than submitting the form. That keeps the document — which
- *    is what lets the result count's live region announce the new number, since
- *    a region that arrives with a fresh document announces nothing. A caller
- *    with query-dependent Proxy rewrites opts into document navigation so the
- *    server resolves the correct route tree. Chip removals remain client links.
- * 3. The search field is **not** part of that: it submits on `Enter`. Pushing
- *    on every keystroke would announce a count per letter, and a live region
- *    that re-announces on every letter is worse than no count at all.
+ * The panel is a native `popover`, opened by `popovertarget` — the browser
+ * opens and closes it with no bundle, and it stays where it is in the DOM, so
+ * its controls belong to a real `<form method="get">`. Two forms, siblings:
  *
- * Below `lg` the whole bar collapses into one button labelled with the active
- * count, opening a `Sheet` with Apply and Clear — the one place Apply earns its
- * keep, because a sheet hides the results it is filtering.
+ * - the **bar** form carries the search field, the sort, the mode and the
+ *   *committed* facet values as hidden fields, so searching never drops a
+ *   filter;
+ * - the **panel** form carries the draft facets plus the committed query,
+ *   mode and sort, so applying never drops a search.
+ *
+ * Hydrated, every change goes through the router (or a document navigation for
+ * a listing whose query view is a `/q` twin, ADR-0032), which keeps the count's
+ * live region in the document so the new number is announced.
  */
 
 export interface FilterBarOption {
@@ -66,14 +59,7 @@ export interface FilterBarOption {
   label: string;
   /** How many results this option would leave. Omitted when unknown. */
   count?: number;
-  /**
-   * That number in the reader's own language — `65 832`, not `65832`.
-   *
-   * The bar formats nothing (DESIGN.md §4.2.5): a component that formatted a
-   * number would need the reader's locale, and then every consumer would have
-   * to agree about where that comes from. It matters at catalogue scale, where
-   * a six-figure count with no grouping is unreadable.
-   */
+  /** That number in the reader's own language; the bar formats nothing. */
   countLabel?: string;
 }
 
@@ -98,17 +84,35 @@ export interface FilterBarChip {
   removeLabel: string;
 }
 
+export interface FilterBarMode {
+  label: string;
+  /** The listing with this mode, the other parameters kept and `page` dropped. */
+  href: string;
+  current: boolean;
+  /** How many results the mode holds, in the reader's language. */
+  countLabel?: string;
+}
+
 export interface FilterBarLabels {
-  /** Names the whole bar. */
+  /** Names the panel and the bar. */
   filters: string;
-  /** "Фільтри (3)" — the caller formats the number into its own language. */
+  /** "Фільтри (2)": the caller formats the applied count into its language. */
   openFilters: string;
   sheetDescription: string;
+  /** The panel's submit: "Show results". */
   apply: string;
+  /** The panel's Close. Discards the draft; never a reset. */
+  close: string;
+  /** Removes the secondary facets and keeps query, mode and sort. */
   clear: string;
+  /** Beside the chips: removes everything, the query included. */
   clearAll: string;
   activeFilters: string;
   sort: string;
+  /** Names the modes navigation. */
+  modes?: string;
+  /** Announced while a hydrated change is on its way. */
+  pending?: string;
 }
 
 export interface FilterBarProps {
@@ -116,32 +120,33 @@ export interface FilterBarProps {
   action: string;
   /** Let Proxy resolve a query-dependent route tree on the server. */
   documentNavigation?: boolean;
+  /** The secondary facets, behind "Filters (n)". */
   facets: readonly FilterBarFacet[];
+  /** The listing's primary split, as links. */
+  modes?: readonly FilterBarMode[];
   sort?: {
     key: string;
     value: string;
     options: readonly FilterBarOption[];
-    /**
-     * The order this listing is in when nobody has chosen one. It is dropped
-     * from the URL, because absent means unset and a default written out gives
-     * one view two addresses.
-     *
-     * The caller computes it from the *current* request, which matters when a
-     * listing's default depends on another parameter — the journals directory
-     * orders a search by relevance and a browse by recency. A reader who types
-     * a query without submitting it and then changes the sort gets an explicit
-     * `sort=recent`, which is a real view rather than a wrong one.
-     */
+    /** Dropped from the URL, because a default written out gives one view two addresses. */
     defaultValue?: string;
   };
   /** The active filters, above the results. */
   chips?: readonly FilterBarChip[];
-  /** Where "Clear all" leads. Absent hides it. */
+  /** Where "Clear all" beside the chips leads. Absent hides it. */
   clearAllHref?: string;
-  /** The search control, which the caller owns — see rule 3 above. */
+  /** Where the panel's "Clear filters" leads: query, mode and sort kept. */
+  clearFiltersHref?: string;
+  /** The search control, which the caller owns. It submits on Enter. */
   search?: React.ReactNode;
-  /** Fields the form must carry that are not facets, e.g. `q`. */
+  /** Fields both forms carry that are not facets, e.g. the mode or a letter. */
   hidden?: Readonly<Record<string, string>>;
+  /**
+   * Committed values the panel form must carry and the bar form already has
+   * as a control — the query. Without it, applying a filter with scripts off
+   * would drop the search.
+   */
+  carry?: Readonly<Record<string, string>>;
   labels: FilterBarLabels;
   className?: string;
 }
@@ -150,134 +155,144 @@ function FilterBar({
   action,
   documentNavigation = false,
   facets,
+  modes = [],
   sort,
   chips = [],
   clearAllHref,
+  clearFiltersHref,
   search,
   hidden = {},
+  carry = {},
   labels,
   className,
 }: FilterBarProps) {
   const router = useRouter();
-  const formRef = useRef<HTMLFormElement | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const barFormRef = useRef<HTMLFormElement | null>(null);
+  const panelFormRef = useRef<HTMLFormElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [pending, startTransition] = useTransition();
+  const [navigating, setNavigating] = useState(false);
   const id = useId();
-  const activeCount = chips.length;
+  const panelId = `${id}-filters`;
+  const panelFormId = `${id}-filters-form`;
+  const titleId = `${id}-filters-title`;
+  const appliedCount = facets.filter((facet) => facet.value.length > 0).length;
+  const busy = pending || navigating;
 
-  /**
-   * A facet changed, and the page is hydrated: navigate.
-   *
-   * Read off the form rather than from the event, so one handler serves every
-   * control and the values it sends are exactly the ones the form would have
-   * submitted. `page` is dropped, because the first page of a new filter is
-   * the only page that exists yet.
-   */
-  const applyFromForm = (form: HTMLFormElement) => {
-    const params = new URLSearchParams();
-    for (const [key, value] of new FormData(form).entries()) {
-      if (typeof value !== "string" || value === "") continue;
-      if (sort && key === sort.key && value === sort.defaultValue) continue;
-      params.append(key, value);
-    }
+  const navigate = (params: URLSearchParams) => {
     params.delete("page");
+    if (sort && params.get(sort.key) === sort.defaultValue) {
+      params.delete(sort.key);
+    }
     const query = params.toString();
     const target = query ? `${action}?${query}` : action;
     // A query twin changes the route tree. The client may otherwise reuse
     // the static document without asking Proxy which tree serves this query.
-    if (documentNavigation) window.location.assign(target);
-    else router.push(target);
+    if (documentNavigation) {
+      setNavigating(true);
+      window.location.assign(target);
+      return;
+    }
+    startTransition(() => router.push(target));
+  };
+
+  const paramsFrom = (form: HTMLFormElement) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of new FormData(form).entries()) {
+      if (typeof value !== "string" || value === "") continue;
+      params.append(key, value);
+    }
+    return params;
+  };
+
+  /**
+   * Close without applying: put every draft control back to the committed
+   * value, so the next open shows what the results actually reflect.
+   */
+  const discardDraft = () => {
+    const form = panelFormRef.current;
+    if (!form) return;
+    for (const element of Array.from(form.elements)) {
+      if (element instanceof HTMLSelectElement) {
+        for (const option of Array.from(element.options)) {
+          option.selected = option.defaultSelected;
+        }
+      } else if (
+        element instanceof HTMLInputElement &&
+        element.type === "checkbox"
+      ) {
+        element.checked = element.defaultChecked;
+      }
+    }
   };
 
   return (
     <div
       data-slot="filter-bar"
-      data-filter-bar-active={activeCount}
+      data-filter-bar-active={appliedCount}
+      data-filter-bar-pending={busy ? "true" : undefined}
+      aria-busy={busy || undefined}
       className={cn("grid gap-3", className)}
     >
       <form
-        ref={formRef}
+        ref={barFormRef}
         method="get"
         action={action}
         data-filter-bar-form="true"
         className="grid gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          navigate(paramsFrom(event.currentTarget));
+        }}
       >
         {Object.entries(hidden).map(([key, value]) =>
           value ? <HiddenField key={key} name={key} value={value} /> : null,
         )}
+        {facets.flatMap((facet) =>
+          facet.value.map((value) => (
+            <HiddenField
+              key={`${facet.key}=${value}`}
+              name={facet.key}
+              value={value}
+            />
+          )),
+        )}
 
         {search ? <div className="min-w-0">{search}</div> : null}
 
-        {/* Above `lg` the facets are inline and apply on change.
-            Two columns rather than three: at 704 px three gave each select
-            about 213 px, and "Усі публічні регіони" and "Усі ідентичності"
-            both truncated — the Cyrillic budget of DESIGN.md §2.6 is that a
-            label survives +40 % without truncating, and these did not. */}
-        <div className="hidden gap-3 lg:grid lg:grid-cols-2 lg:items-end">
-          {facets.map((facet) => (
-            <FacetControl
-              key={facet.key}
-              facet={facet}
-              idPrefix={id}
-              onChange={() => {
-                if (formRef.current) applyFromForm(formRef.current);
-              }}
-            />
-          ))}
-        </div>
+        {modes.length > 0 ? (
+          <nav
+            aria-label={labels.modes ?? labels.filters}
+            data-filter-bar-modes="true"
+          >
+            {/* Wraps rather than scrolls: a long Bulgarian label must never
+                hide the next mode behind a scrollbar. */}
+            <ul className="flex list-none flex-wrap gap-2">
+              {modes.map((mode) => (
+                <li key={mode.href}>
+                  <ModeLink mode={mode} document={documentNavigation} />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        ) : null}
 
-        <div className="flex flex-wrap items-end gap-3">
-          {/* Below `lg` one button, and the facets move into the sheet. */}
-          <div className="min-w-0 flex-1 lg:hidden">
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-              <SheetTrigger
-                render={
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    data-filter-bar-open="true"
-                  >
-                    <SlidersHorizontal aria-hidden="true" />
-                    {labels.openFilters}
-                  </Button>
-                }
-              />
-              <SheetContent side="bottom" closeLabel={labels.clear}>
-                <SheetHeader>
-                  <SheetTitle>{labels.filters}</SheetTitle>
-                  <SheetDescription>{labels.sheetDescription}</SheetDescription>
-                </SheetHeader>
-                <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4">
-                  {facets.map((facet) => (
-                    <FacetControl
-                      key={facet.key}
-                      facet={facet}
-                      idPrefix={`${id}-sheet`}
-                    />
-                  ))}
-                </div>
-                <SheetFooter>
-                  {clearAllHref ? (
-                    <Link
-                      href={clearAllHref}
-                      variant="quiet"
-                      className="inline-flex min-h-11 items-center justify-center rounded-md px-3 text-body-sm font-medium"
-                    >
-                      {labels.clear}
-                    </Link>
-                  ) : null}
-                  {/* The one Apply the system keeps: a sheet hides the
-                      results, so a reader needs to say when they are done. */}
-                  <Button type="submit">{labels.apply}</Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {facets.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              popoverTarget={panelId}
+              aria-haspopup="dialog"
+              data-filter-bar-open="true"
+            >
+              <SlidersHorizontal aria-hidden="true" />
+              {labels.openFilters}
+            </Button>
+          ) : null}
 
-          {/* Sort is its own control on its own right-aligned row, and never
-              inside the filter sheet (DESIGN.md §5.1). It carries `aria-label`
-              rather than a `Field`: it is a control in a bar with no room for
-              a label above it, which is the one case `Field`'s own contract
-              sends elsewhere. */}
+          {/* Sort is its own control and never inside the filters. It carries
+              `aria-label`: a bar has no room for a label above it. */}
           {sort ? (
             <div className="ml-auto w-full min-w-0 sm:w-56">
               <Select
@@ -288,7 +303,7 @@ function FilterBar({
                 data-filter-bar-sort="true"
                 onChange={(event) => {
                   const form = event.currentTarget.form;
-                  if (form) applyFromForm(form);
+                  if (form) navigate(paramsFrom(form));
                 }}
               >
                 {sort.options.map((option) => (
@@ -300,7 +315,107 @@ function FilterBar({
             </div>
           ) : null}
         </div>
+
+        {facets.length > 0 ? (
+          <div
+            ref={panelRef}
+            id={panelId}
+            popover="auto"
+            role="dialog"
+            aria-labelledby={titleId}
+            data-slot="filter-panel"
+            onToggle={(event) => {
+              if ((event as unknown as ToggleEvent).newState === "closed") {
+                discardDraft();
+              }
+            }}
+            className={cn(
+              "fixed inset-x-0 top-auto bottom-0 m-0 max-h-svh w-full max-w-none flex-col gap-0 border-0 border-t border-border bg-surface p-0 text-body-sm text-text shadow-overlay open:flex",
+              "lg:inset-x-auto lg:top-0 lg:right-0 lg:bottom-0 lg:h-dvh lg:max-h-none lg:max-w-sm lg:border-t-0 lg:border-l",
+              "backdrop:bg-surface-inverse/30",
+            )}
+          >
+            <div className="flex items-start justify-between gap-3 p-4">
+              <div className="grid gap-1">
+                <h2 id={titleId} className="text-h3 text-text-heading">
+                  {labels.filters}
+                </h2>
+                <p className="text-body-sm text-text-muted">
+                  {labels.sheetDescription}
+                </p>
+              </div>
+              <button
+                type="button"
+                popoverTarget={panelId}
+                popoverTargetAction="hide"
+                aria-label={labels.close}
+                data-filter-bar-close="true"
+                className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-text-muted outline-none hover:bg-surface-hover hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
+              >
+                <XIcon aria-hidden="true" className="size-5" />
+              </button>
+            </div>
+            <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-4 pb-4">
+              {facets.map((facet) => (
+                <FacetControl
+                  key={facet.key}
+                  facet={facet}
+                  idPrefix={`${id}-panel`}
+                  form={panelFormId}
+                />
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border p-4">
+              {clearFiltersHref ? (
+                <Link
+                  href={clearFiltersHref}
+                  variant="quiet"
+                  data-filter-bar-clear="true"
+                  className="mr-auto inline-flex min-h-11 items-center justify-center rounded-md px-3 text-body-sm font-medium"
+                >
+                  {labels.clear}
+                </Link>
+              ) : null}
+              <Button type="submit" form={panelFormId}>
+                {labels.apply}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </form>
+
+      {facets.length > 0 ? (
+        <form
+          ref={panelFormRef}
+          id={panelFormId}
+          method="get"
+          action={action}
+          data-filter-bar-panel-form="true"
+          hidden
+          onSubmit={(event) => {
+            event.preventDefault();
+            panelRef.current?.hidePopover?.();
+            navigate(paramsFrom(event.currentTarget));
+          }}
+        >
+          {Object.entries({ ...hidden, ...carry }).map(([key, value]) =>
+            value ? <HiddenField key={key} name={key} value={value} /> : null,
+          )}
+          {sort && sort.value !== sort.defaultValue ? (
+            <HiddenField name={sort.key} value={sort.value} />
+          ) : null}
+        </form>
+      ) : null}
+
+      {busy && labels.pending ? (
+        <p
+          role="status"
+          data-filter-bar-status="pending"
+          className="text-body-sm text-text-muted"
+        >
+          {labels.pending}
+        </p>
+      ) : null}
 
       {chips.length > 0 ? (
         <div
@@ -308,13 +423,9 @@ function FilterBar({
           aria-label={labels.activeFilters}
           className="flex flex-wrap items-center gap-2"
         >
-          {/* A real `<a href>`, so a chip removes its filter with the bundle
-              absent and a reader can open the narrowed view in a new tab —
-              and a *client* navigation once hydrated, which is what lets the
-              count's live region announce the new number. A plain anchor
-              replaces the document, and a live region that arrives with a
-              fresh document announces nothing: measured, and it is why this
-              is `Link` rather than `<a>`. */}
+          {/* A real `<a href>`, so a chip removes its filter unhydrated, and a
+              client navigation once hydrated, which keeps the count's live
+              region in the document. */}
           {chips.map((chip) => (
             <Link
               key={chip.key}
@@ -340,14 +451,58 @@ function FilterBar({
   );
 }
 
+/**
+ * One mode. A listing whose query views are `/q` twins gets a plain anchor: a
+ * client navigation could reuse the static document without asking Proxy
+ * which route tree serves the query (ADR-0032).
+ */
+function ModeLink({
+  mode,
+  document,
+}: {
+  mode: FilterBarMode;
+  document: boolean;
+}) {
+  const className = cn(
+    "inline-flex min-h-11 items-center rounded-full border px-4 text-body-sm font-medium outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring",
+    mode.current
+      ? "border-action bg-action-subtle text-action-subtle-text"
+      : "border-border-control text-text hover:bg-surface-hover",
+  );
+  const shared = {
+    "aria-current": mode.current ? ("page" as const) : undefined,
+    "data-filter-bar-mode": mode.current ? "current" : "other",
+    className,
+  };
+  const content = (
+    <>
+      {mode.label}
+      {mode.countLabel ? (
+        <span className="ml-2 text-caption text-text-muted tabular-nums">
+          {mode.countLabel}
+        </span>
+      ) : null}
+    </>
+  );
+  return document ? (
+    <a href={mode.href} {...shared}>
+      {content}
+    </a>
+  ) : (
+    <Link href={mode.href} variant="quiet" {...shared}>
+      {content}
+    </Link>
+  );
+}
+
 function FacetControl({
   facet,
   idPrefix,
-  onChange,
+  form,
 }: {
   facet: FilterBarFacet;
   idPrefix: string;
-  onChange?: () => void;
+  form: string;
 }) {
   const controlId = `${idPrefix}-${facet.key}`;
   if (facet.multiple) {
@@ -360,13 +515,13 @@ function FacetControl({
           {facet.options.map((option) => (
             <FilterChip
               key={option.value}
+              form={form}
               name={facet.key}
               value={option.value}
               label={option.label}
               count={option.count}
               countLabel={option.countLabel}
               defaultChecked={facet.value.includes(option.value)}
-              onChange={onChange}
             />
           ))}
         </div>
@@ -378,10 +533,10 @@ function FacetControl({
     <Field label={facet.label} id={controlId} className="min-w-0">
       <Select
         id={controlId}
+        form={form}
         name={facet.key}
         defaultValue={facet.value[0] ?? ""}
         data-filter-bar-facet={facet.key}
-        onChange={onChange}
       >
         <option value="">{facet.anyLabel ?? facet.label}</option>
         {facet.options.map((option) => (

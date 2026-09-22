@@ -66,8 +66,9 @@ first-space value; filter dismissal is named Close. Setup/visibility assertions 
 before `test.fail`, so missing controls or broken authentication are not expected
 failures. Run with `REDESIGN_ENFORCE_BASELINES=1` to record ordinary failures.
 
-Until OVE-486, OVE-483/486 and OVE-482 correct their respective behavior, these
-three annotated failures are intentionally visible in gate output. A correction
+Until OVE-486 and OVE-483/486 correct their respective behavior, their annotated
+failures are intentionally visible in gate output. OVE-482 removed its annotation:
+the filter panel's dismissal is now asserted as Close with no expected failure. A correction
 producing an unexpected pass fails CI: remove the annotation and migrate the
 locator to the shipped control in that correction. Never replace the assertion
 with a snapshot of the old bug or skip it because the UI moved.

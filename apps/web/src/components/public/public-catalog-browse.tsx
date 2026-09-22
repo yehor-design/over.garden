@@ -33,6 +33,7 @@ import {
   type PublicCatalogBrowseRequest,
 } from "@/lib/public-catalog-browse";
 import type { PublicCatalogBrowseCopy } from "@/lib/public-catalog-browse-copy";
+import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
@@ -94,6 +95,9 @@ export function PublicCatalogBrowse({
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
   const listingPath = catalogBrowseBasePath(locale);
   const chips = buildActiveFilterChips(locale, copy, request);
+  const chrome = getFilterBarChromeCopy(locale);
+  const filterFacets = buildFilterFacets(locale, copy, request, facets);
+  const kingdomModes = buildKingdomModes(locale, copy, request, facets);
   const countLabel =
     state === "ready" || state === "empty" ? copy.resultCount(page.total) : "";
   const contextModules = buildPublicCatalogContextModules(
@@ -152,7 +156,10 @@ export function PublicCatalogBrowse({
             </Button>
           </div>
         }
-        facets={buildFilterFacets(locale, copy, request, facets)}
+        facets={filterFacets}
+        /* The kingdom is the catalogue's one primary split — plants,
+           animals, fungi — so it is a mode, in one place (OVE-482). */
+        modes={kingdomModes}
         sort={{
           key: "sort",
           value: request.sort,
@@ -164,19 +171,37 @@ export function PublicCatalogBrowse({
         }}
         chips={chips}
         clearAllHref={listingPath}
-        /* The letter is a facet of the same listing, so it travels with the
-           form rather than being dropped the moment a reader changes a
-           select — the defect the journals directory shipped once. */
-        hidden={request.initial ? { letter: request.initial } : {}}
+        clearFiltersHref={buildPublicCatalogBrowseHref(locale, {
+          ...request,
+          ranks: [],
+          registers: [],
+          grown: false,
+          page: 1,
+        })}
+        /* The letter and the kingdom travel with both forms rather than being
+           dropped the moment a reader changes a filter — the defect the
+           journals directory shipped once. */
+        hidden={{
+          ...(request.initial ? { letter: request.initial } : {}),
+          ...(request.kingdoms.length === 1
+            ? { kingdom: catalogKingdomSlug(request.kingdoms[0]!) }
+            : {}),
+        }}
+        carry={{ q: request.query }}
         labels={{
           filters: copy.filtersLabel,
-          openFilters: copy.filtersWithCount(chips.length),
-          sheetDescription: copy.filterSheetDescription,
-          apply: copy.applyFilters,
-          clear: copy.resetFilters,
+          openFilters: chrome.filtersWithCount(
+            filterFacets.filter((facet) => facet.value.length > 0).length,
+          ),
+          sheetDescription: chrome.panelDescription,
+          apply: chrome.showResults,
+          close: chrome.close,
+          clear: chrome.clearFilters,
           clearAll: copy.resetFilters,
           activeFilters: copy.activeFiltersLabel,
           sort: copy.sortLabel,
+          modes: chrome.modes,
+          pending: chrome.pending,
         }}
       />
 
@@ -480,6 +505,45 @@ function CatalogAlphabetIndex({
   );
 }
 
+/**
+ * All, then each kingdom that has something in it. A request naming two
+ * kingdoms is still honoured by the server; it simply has no current mode.
+ */
+function buildKingdomModes(
+  locale: PublicLocale,
+  copy: PublicCatalogBrowseCopy,
+  request: PublicCatalogBrowseRequest,
+  facets: CatalogBrowseFacetCounts,
+) {
+  const kingdoms = CATALOG_BROWSE_KINGDOMS.filter(
+    (kingdom) =>
+      (facets.kingdoms[kingdom] ?? 0) > 0 || request.kingdoms.includes(kingdom),
+  );
+  return [
+    {
+      label: copy.anyKingdom,
+      href: buildPublicCatalogBrowseHref(locale, {
+        ...request,
+        kingdoms: [],
+        page: 1,
+      }),
+      current: request.kingdoms.length === 0,
+    },
+    ...kingdoms.map((kingdom) => ({
+      label: copy.kingdom[kingdom],
+      href: buildPublicCatalogBrowseHref(locale, {
+        ...request,
+        kingdoms: [kingdom],
+        page: 1,
+      }),
+      current: request.kingdoms.length === 1 && request.kingdoms[0] === kingdom,
+      // Counted against the rest of the filters, so choosing Plantae never
+      // makes Animalia read zero.
+      countLabel: (facets.kingdoms[kingdom] ?? 0).toLocaleString(locale),
+    })),
+  ];
+}
+
 function buildFilterFacets(
   locale: PublicLocale,
   copy: PublicCatalogBrowseCopy,
@@ -491,22 +555,6 @@ function buildFilterFacets(
   // the reader's own language from here (DESIGN.md §4.2.5).
   const format = (total: number) => total.toLocaleString(locale);
   return [
-    {
-      key: "kingdom",
-      label: copy.kingdomFacet,
-      value: request.kingdoms.map(catalogKingdomSlug),
-      anyLabel: copy.anyKingdom,
-      options: CATALOG_BROWSE_KINGDOMS.filter(
-        (kingdom) =>
-          (facets.kingdoms[kingdom] ?? 0) > 0 ||
-          request.kingdoms.includes(kingdom),
-      ).map((kingdom) => ({
-        value: catalogKingdomSlug(kingdom),
-        label: copy.kingdom[kingdom],
-        count: facets.kingdoms[kingdom] ?? 0,
-        countLabel: format(facets.kingdoms[kingdom] ?? 0),
-      })),
-    },
     {
       key: "rank",
       label: copy.rankFacet,

@@ -31,7 +31,6 @@ export interface PublicCatalogBrowseCopy {
   readonly resultCount: (total: number) => string;
   readonly filtersLabel: string;
   readonly filtersWithCount: (count: number) => string;
-  readonly filterSheetDescription: string;
   readonly applyFilters: string;
   readonly resetFilters: string;
   readonly activeFiltersLabel: string;
@@ -86,7 +85,6 @@ const UK: PublicCatalogBrowseCopy = {
   resultCount: (total) => `${total.toLocaleString("uk-UA")} організмів`,
   filtersLabel: "Фільтри каталогу",
   filtersWithCount: (count) => (count > 0 ? `Фільтри (${count})` : "Фільтри"),
-  filterSheetDescription: "Звузьте каталог і натисніть «Застосувати».",
   applyFilters: "Застосувати",
   resetFilters: "Скинути",
   activeFiltersLabel: "Активні фільтри",
@@ -138,8 +136,7 @@ const BG: PublicCatalogBrowseCopy = {
   description:
     "Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.",
   firstHandHeading: "За какво вече са писали градинарите",
-  firstHandDescription:
-    "Картите с поне един публичен запис от първа ръка.",
+  firstHandDescription: "Картите с поне един публичен запис от първа ръка.",
   kingdomsHeading: "По царства",
   registersHeading: "Сортове в държавните регистри",
   organismCount: (total) => `${total.toLocaleString("bg-BG")} организма`,
@@ -157,7 +154,6 @@ const BG: PublicCatalogBrowseCopy = {
   resultCount: (total) => `${total.toLocaleString("bg-BG")} организма`,
   filtersLabel: "Филтри на каталога",
   filtersWithCount: (count) => (count > 0 ? `Филтри (${count})` : "Филтри"),
-  filterSheetDescription: "Стеснете каталога и натиснете «Приложи».",
   applyFilters: "Приложи",
   resetFilters: "Изчисти",
   activeFiltersLabel: "Активни филтри",
@@ -228,7 +224,6 @@ const RU: PublicCatalogBrowseCopy = {
   resultCount: (total) => `${total.toLocaleString("ru-RU")} организмов`,
   filtersLabel: "Фильтры каталога",
   filtersWithCount: (count) => (count > 0 ? `Фильтры (${count})` : "Фильтры"),
-  filterSheetDescription: "Сузьте каталог и нажмите «Применить».",
   applyFilters: "Применить",
   resetFilters: "Сбросить",
   activeFiltersLabel: "Активные фильтры",

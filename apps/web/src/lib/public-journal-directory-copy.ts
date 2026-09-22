@@ -29,7 +29,6 @@ export interface PublicJournalDirectoryCopy {
   applyFilters: string;
   /** "Фільтри (3)" below `lg`, and "Фільтри" when nothing is set. */
   filtersWithCount: (count: number) => string;
-  filterSheetDescription: string;
   resultsTitle: string;
   /** "18 записів" — pluralised here, because `FilterBar` carries no locale. */
   resultCount: (count: number) => string;
@@ -113,8 +112,6 @@ const COPY = {
     },
     applyFilters: "Застосувати",
     filtersWithCount: (count) => (count > 0 ? `Фільтри (${count})` : "Фільтри"),
-    filterSheetDescription:
-      "Виберіть фільтри й застосуйте їх — результати під ними.",
     resultsTitle: "Знайдені журнали",
     resultCount: (count) =>
       `${count} ${slavicPlural(count, "запис", "записи", "записів")}`,
@@ -186,8 +183,6 @@ const COPY = {
     },
     applyFilters: "Прилагане",
     filtersWithCount: (count) => (count > 0 ? `Филтри (${count})` : "Филтри"),
-    filterSheetDescription:
-      "Изберете филтри и ги приложете — резултатите са под тях.",
     resultsTitle: "Намерени дневници",
     resultCount: (count) => `${count} ${count === 1 ? "запис" : "записа"}`,
     activeFiltersLabel: "Активни филтри",
@@ -258,8 +253,6 @@ const COPY = {
     },
     applyFilters: "Применить",
     filtersWithCount: (count) => (count > 0 ? `Фильтры (${count})` : "Фильтры"),
-    filterSheetDescription:
-      "Выберите фильтры и примените их — результаты под ними.",
     resultsTitle: "Найденные журналы",
     resultCount: (count) =>
       `${count} ${slavicPlural(count, "запись", "записи", "записей")}`,

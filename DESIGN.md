@@ -624,11 +624,26 @@ Loading: the button keeps its width, swaps the label for a spinner, sets
 
 ### 5.1 Filters
 
-The current `/journals` screen is the anti-pattern: six `<select>`s stacked
-above the results with an "Apply" button. Etsy, Walmart, Tripadvisor and
-Selfridges all do the opposite, and so do we.
+Six equally loud `<select>`s above the results was the anti-pattern the audit
+found (OG-UX-010/011). Every public listing now has **three tiers**, in one
+component, `FilterBar` (`OVE-482`):
 
-- Filters apply **on change**. There is no Apply button on desktop.
+1. **Search** — the widest control, scoped to the listing it sits on and never
+   merged with the owned-destination search of the composer.
+2. **Modes** — the listing's one primary split (plants / animals, a kingdom),
+   as plain links with `aria-current="page"`. It lives here and nowhere else.
+3. **Filters (n)** — every secondary facet behind one button that states how
+   many are applied. At every width it opens one labelled panel: a bottom
+   sheet below `lg`, a side panel above it. The panel is a native `popover`,
+   so it opens, closes and submits with the bundle absent.
+
+The panel is a **draft**. Nothing changes until "Show results"; **Close**
+(named Close, never Reset), Escape and a tap outside discard the draft and
+leave the committed view exactly as it was. **Clear filters** removes the
+secondary facets and keeps the query, the mode and the sort. "Clear all",
+beside the chips, is the only control that also clears the query. An empty
+filtered result offers Clear filters, not a reset that erases the words typed.
+
 - A chip that changes what a list shows is a `<button type="submit">` inside a
   `<form method="get">`, never a link. `aria-pressed` is what tells a reader
   whether a filter is on, it is valid on a button and an **ARIA error on a
@@ -640,8 +655,10 @@ Selfridges all do the opposite, and so do we.
   when more than one is set.
 - The result count is always visible and updates with the filters.
 - Sort is a separate control, right-aligned, never mixed in with filters.
-- Below `lg`, filters collapse into one "Filters (3)" button opening a sheet;
-  the sheet has Apply and Clear because a sheet hides the results.
+- Sort is the one control besides a mode that applies on change.
+- A hydrated change shows "Updating results…" as a status while it is on its
+  way; a slow search, an empty result, a degraded search and a failure are four
+  different states and each keeps the query.
 - Every filter is in the URL, in the vocabulary of
   `src/lib/public-listing-filters.ts`: **one query parameter per facet, named
   for the facet, repeated for multi-select, plus `sort` and `page`; absent
@@ -654,10 +671,16 @@ Selfridges all do the opposite, and so do we.
   goes through the router, and a chip's removal is a `Link` rather than an
   `<a>`: both keep a real href for the unhydrated case and keep the DOM for the
   announcement. Measured, after a chip built as a plain anchor silently
-  announced nothing.
-- **One `<form method="get">` with a real submit is still the mechanism.** The
-  search control's own submit is that button; on-change is the enhancement
-  layered over it. There is no `<noscript>` block and no submit that appears
+  announced nothing. The exception is a listing whose query views are `/q`
+  twins (ADR-0032): it navigates the document so Proxy picks the route tree,
+  and its new count arrives in the served bytes of the new page, next to the
+  results heading, rather than being announced into the old one.
+- **Two sibling `<form method="get">`s are the mechanism.** The bar's form
+  carries the search, the sort, the mode and the *committed* facets as hidden
+  fields, so a search never drops a filter; the panel's form carries the draft
+  facets plus the committed query, mode and sort, so applying never drops a
+  search. The router or a document navigation is the enhancement over both.
+  There is no `<noscript>` block and no submit that appears
   and then vanishes on hydration — the first risks a mismatch inside an element
   the browser parses as text, the second flashes a control at every reader.
 

@@ -75,13 +75,9 @@ test("OVE-482: filter dismiss is named Close rather than Reset", async ({
   const trigger = page.locator('[data-filter-bar-open="true"]:visible');
   await waitForHydration(trigger);
   await trigger.click();
-  const dialog = page.locator('[data-slot="sheet-content"]');
+  const dialog = page.locator('[data-slot="filter-panel"]:popover-open');
   await expect(dialog).toBeVisible();
-  const close = dialog.locator('[data-slot="sheet-close"]');
+  const close = dialog.locator('[data-filter-bar-close="true"]');
   await expect(close).toBeVisible();
-  test.fail(
-    !process.env.REDESIGN_ENFORCE_BASELINES,
-    "Known filter dismiss label; corrected in OVE-482",
-  );
   await expect(close).toHaveAccessibleName(/Закрити/);
 });

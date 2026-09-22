@@ -79,7 +79,9 @@ function render(
       page={page}
       facets={FACETS}
       kingdomTotals={{ Plantae: 65_832, Animalia: 21_844 }}
-      registerHubs={[{ slug: "solanum-lycopersicum", name: "Томати", total: 9 }]}
+      registerHubs={[
+        { slug: "solanum-lycopersicum", name: "Томати", total: 9 },
+      ]}
       state={state}
     />,
   );
@@ -104,9 +106,12 @@ describe("the catalogue's one door", () => {
     expect(html).toContain('action="/catalog"');
 
     // Every facet the listing speaks is a named parameter of its own.
-    for (const name of ["q", "kingdom", "rank", "register", "grown", "sort"]) {
+    for (const name of ["q", "rank", "register", "grown", "sort"]) {
       expect(html, `no control for ${name}`).toContain(`name="${name}"`);
     }
+    // The kingdom is the listing's one mode: links, in one place (OVE-482).
+    expect(html).toContain('data-filter-bar-modes="true"');
+    expect(html).toContain('href="/catalog?kingdom=plantae"');
 
     // The alphabet is a list of anchors, not a row of buttons: a crawler
     // walks it and a keyboard reaches it without 27 tab stops in a toolbar.
@@ -161,7 +166,11 @@ describe("the catalogue's one door", () => {
       grown: "1",
       q: "amanita",
     });
-    const html = render(request, { cards: [], total: 0, pageCount: 1 }, "empty");
+    const html = render(
+      request,
+      { cards: [], total: 0, pageCount: 1 },
+      "empty",
+    );
 
     expect(html).toContain('data-public-catalog-state="empty"');
     // Something does exist and the filters excluded it, so the state carries
@@ -233,9 +242,7 @@ describe("the catalogue's one door", () => {
       pageCount: 1_694,
     });
 
-    const regions = [
-      ...html.matchAll(/data-catalog-result-count="true"/gu),
-    ];
+    const regions = [...html.matchAll(/data-catalog-result-count="true"/gu)];
     expect(regions).toHaveLength(1);
     expect(html).toMatch(
       /data-catalog-result-count="true"[^>]*aria-live="polite"/u,

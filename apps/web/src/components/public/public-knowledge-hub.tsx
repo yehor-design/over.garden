@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
+import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { FilterBar } from "@/components/ui/filter-bar";
 import { Link } from "@/components/ui/link";
 import { ListRow } from "@/components/ui/list-row";
@@ -63,6 +64,7 @@ export function PublicKnowledgeHub({
   state: PublicKnowledgeHubState;
   jsonLd?: Record<string, unknown> | null;
 }) {
+  const chrome = getFilterBarChromeCopy(locale);
   const contextModules = buildPublicKnowledgeContextModules(
     locale,
     copy,
@@ -89,10 +91,11 @@ export function PublicKnowledgeHub({
       <PageHeader title={copy.heading} description={copy.intro} />
 
       {/* The same bar `/journals` and `/catalog` use, so a reader who has
-          filtered one has filtered all three: apply on change, one parameter
-          per facet, chips above the results, a sheet below `lg`
-          (DESIGN.md §5.1). */}
+          filtered one has filtered all three: search, one mode, a draft
+          filter panel and chips above the results (DESIGN.md §5.1). */}
       <FilterBar
+        /* A query view may be a `/q` twin (ADR-0032): let Proxy decide. */
+        documentNavigation
         action={buildPublicKnowledgeHref(locale, {
           query: "",
           type: "all",
@@ -128,16 +131,20 @@ export function PublicKnowledgeHub({
               .filter(([value]) => value !== "all")
               .map(([value, label]) => ({ value, label })),
           },
-          {
-            key: "kind",
-            label: copy.kindLabel,
-            value: request.kind === "all" ? [] : [request.kind],
-            anyLabel: copy.filters.kinds.all,
-            options: Object.entries(copy.filters.kinds)
-              .filter(([value]) => value !== "all")
-              .map(([value, label]) => ({ value, label })),
-          },
         ]}
+        /* Plants or animals is the hub's one primary split: a mode, in one
+           place (OVE-482). */
+        modes={(["all", "plant", "animal"] as const).map((kind) => ({
+          label: copy.filters.kinds[kind],
+          href: buildPublicKnowledgeHref(locale, { ...request, kind }),
+          current: request.kind === kind,
+        }))}
+        hidden={request.kind === "all" ? {} : { kind: request.kind }}
+        carry={{ q: request.query }}
+        clearFiltersHref={buildPublicKnowledgeHref(locale, {
+          ...request,
+          type: "all",
+        })}
         chips={buildKnowledgeChips(locale, copy, request)}
         clearAllHref={buildPublicKnowledgeHref(locale, {
           query: "",
@@ -146,13 +153,16 @@ export function PublicKnowledgeHub({
         })}
         labels={{
           filters: copy.filtersLabel,
-          openFilters: copy.filtersLabel,
-          sheetDescription: copy.intro,
-          apply: copy.applyFilters,
-          clear: copy.resetFilters,
+          openFilters: chrome.filtersWithCount(request.type === "all" ? 0 : 1),
+          sheetDescription: chrome.panelDescription,
+          apply: chrome.showResults,
+          close: chrome.close,
+          clear: chrome.clearFilters,
           clearAll: copy.resetFilters,
           activeFilters: copy.filtersLabel,
           sort: copy.typeLabel,
+          modes: chrome.modes,
+          pending: chrome.pending,
         }}
       />
 

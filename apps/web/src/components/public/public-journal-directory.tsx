@@ -22,6 +22,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
@@ -59,11 +60,11 @@ const KIND_ICONS = {
 /**
  * The journals directory, as the faceted pattern rather than as a form.
  *
- * Six `<select>`s stacked above the results behind an "Застосувати" button
- * became a `FilterBar`: filters apply on change, the active ones sit above the
- * results as removable chips, the count is always visible and announced once
- * per settled change, sort is its own right-aligned control, and below `lg` it
- * all collapses into one button opening a sheet (DESIGN.md §5.1).
+ * Six equally loud `<select>`s became three tiers (DESIGN.md §5.1, OVE-482):
+ * the search, plants-or-animals as the one mode, and every other facet behind
+ * one "Filters (n)" button whose panel is a draft until "Show results". The
+ * active filters sit above the results as removable chips, the count is always
+ * visible and announced, and sort is its own control.
  *
  * The page stays a full, crawlable, no-JavaScript search page — it is one of
  * the product's main index surfaces (ADR-0022 D3) — which is why the bar is a
@@ -93,6 +94,15 @@ export function PublicJournalDirectory({
     facets,
   );
   const activeFilters = buildActiveFilters(copy, page.request, facets, locale);
+  const chrome = getFilterBarChromeCopy(locale);
+  const filterFacets = buildFilterFacets(copy, page.request, facets, locale);
+  const appliedFacetCount = filterFacets.filter(
+    (facet) => facet.value.length > 0,
+  ).length;
+  const clearFiltersHref = buildPublicJournalDirectoryHref(
+    locale,
+    clearSecondaryFilters(page.request),
+  );
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
   const listingPath = localizedPath(locale, "/journals");
   const firstPhotograph = firstPhotographIndex(
@@ -125,13 +135,10 @@ export function PublicJournalDirectory({
       <FilterBar
         documentNavigation
         action={listingPath}
-        /* The search field and its own submit. The submit is not an "Apply
-           filters" button — the facets apply on change (DESIGN.md §5.1) — it
-           is the search control's own action, the shape Etsy and Tripadvisor
-           both ship. It is also the **real submit** criterion 7 asks the form
-           to keep: pressing it sends the facets with the query, which is what
-           makes this page filter for a crawler and for a reader whose bundle
-           never arrived. */
+        /* The search field and its own submit, the real submit of the bar's
+           GET form: it sends the committed filters with the query, which is
+           what makes this page search for a crawler and for a reader whose
+           bundle never arrived. */
         search={
           <div className="flex items-end gap-2">
             <Field
@@ -152,7 +159,20 @@ export function PublicJournalDirectory({
             </Button>
           </div>
         }
-        facets={buildFilterFacets(copy, page.request, facets, locale)}
+        facets={filterFacets}
+        /* Plants or animals is the directory's one primary split, so it is a
+           mode here and nowhere else — not a sixth select (OVE-482). */
+        modes={(["all", "plant", "animal"] as const).map((kind) => ({
+          label: copy.kinds[kind],
+          href: buildPublicJournalDirectoryHref(locale, {
+            ...page.request,
+            kind,
+            page: 1,
+          }),
+          current: page.request.kind === kind,
+        }))}
+        hidden={page.request.kind === "all" ? {} : { kind: page.request.kind }}
+        carry={{ q: page.request.query }}
         sort={{
           key: "sort",
           value: page.request.sort,
@@ -172,15 +192,19 @@ export function PublicJournalDirectory({
           removeLabel: `${copy.removeFilter}: ${filter.label}`,
         }))}
         clearAllHref={listingPath}
+        clearFiltersHref={clearFiltersHref}
         labels={{
           filters: copy.filtersLabel,
-          openFilters: copy.filtersWithCount(activeFilters.length),
-          sheetDescription: copy.filterSheetDescription,
-          apply: copy.applyFilters,
-          clear: copy.resetFilters,
+          openFilters: chrome.filtersWithCount(appliedFacetCount),
+          sheetDescription: chrome.panelDescription,
+          apply: chrome.showResults,
+          close: chrome.close,
+          clear: chrome.clearFilters,
           clearAll: copy.resetFilters,
           activeFilters: copy.activeFiltersLabel,
           sort: copy.sortLabel,
+          modes: chrome.modes,
+          pending: chrome.pending,
         }}
       />
 
@@ -230,8 +254,10 @@ export function PublicJournalDirectory({
         <DirectoryEmpty
           locale={locale}
           copy={copy}
+          chrome={chrome}
           filters={activeFilters}
           listingPath={listingPath}
+          clearFiltersHref={appliedFacetCount > 0 ? clearFiltersHref : null}
         />
       ) : null}
 
@@ -300,16 +326,6 @@ function buildFilterFacets(
   locale: PublicLocale,
 ): FilterBarFacet[] {
   return [
-    {
-      key: "kind",
-      label: copy.kindLabel,
-      anyLabel: copy.kinds.all,
-      value: request.kind === "all" ? [] : [request.kind],
-      options: [
-        { value: "plant", label: copy.kinds.plant },
-        { value: "animal", label: copy.kinds.animal },
-      ],
-    },
     {
       key: "catalog",
       label: copy.catalogLabel,
@@ -494,13 +510,18 @@ function DirectoryLoading({ label }: { label: string }) {
 function DirectoryEmpty({
   locale,
   copy,
+  chrome,
   filters,
   listingPath,
+  clearFiltersHref,
 }: {
   locale: PublicLocale;
   copy: PublicJournalDirectoryCopy;
+  chrome: ReturnType<typeof getFilterBarChromeCopy>;
   filters: ReturnType<typeof buildActiveFilters>;
   listingPath: string;
+  /** Null when no secondary filter is on, and only the search narrowed it. */
+  clearFiltersHref: string | null;
 }) {
   if (filters.length === 0) {
     return (
@@ -529,15 +550,40 @@ function DirectoryEmpty({
         <Chip key={filter.key} label={filter.label} />
       ))}
       action={
-        <Link
-          href={listingPath}
-          className={buttonVariants({ variant: "secondary" })}
-        >
-          {copy.resetFilters}
-        </Link>
+        /* Clearing the filters keeps the words the reader typed: erasing a
+           query they did not ask to erase is how a search gets retyped. Only
+           a search with no filters offers to start over (OVE-482). */
+        clearFiltersHref ? (
+          <Link
+            href={clearFiltersHref}
+            className={buttonVariants({ variant: "secondary" })}
+          >
+            {chrome.clearFilters}
+          </Link>
+        ) : (
+          <Link
+            href={listingPath}
+            className={buttonVariants({ variant: "secondary" })}
+          >
+            {copy.resetFilters}
+          </Link>
+        )
       }
     />
   );
+}
+
+function clearSecondaryFilters(
+  request: PublicJournalDirectoryRequest,
+): PublicJournalDirectoryRequest {
+  return {
+    ...request,
+    catalog: null,
+    topic: null,
+    season: "all",
+    region: null,
+    page: 1,
+  };
 }
 
 export function buildPublicJournalDirectoryContextModules(
