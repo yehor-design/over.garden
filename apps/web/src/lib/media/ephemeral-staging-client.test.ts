@@ -104,17 +104,15 @@ describe("BrowserEphemeralMediaStager (OVE-372 session contract)", () => {
   it("prepares the session ahead of the first photo and renews it near expiry", async () => {
     let nowMs = 1_000_000_000_000;
     const nowSeconds = () => Math.floor(nowMs / 1_000);
-    const fetcher = vi
-      .fn<typeof fetch>()
-      .mockImplementation(async (url) => {
-        if (String(url) === "/api/media/staging/sessions") {
-          return sessionResponse(nowSeconds() + 900);
-        }
-        if (String(url).endsWith("/touch")) {
-          return Response.json({ status: "touched" });
-        }
-        return stagedResponse("r".repeat(40), "d".repeat(40));
-      });
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (url) => {
+      if (String(url) === "/api/media/staging/sessions") {
+        return sessionResponse(nowSeconds() + 900);
+      }
+      if (String(url).endsWith("/touch")) {
+        return Response.json({ status: "touched" });
+      }
+      return stagedResponse("r".repeat(40), "d".repeat(40));
+    });
     const stager = new BrowserEphemeralMediaStager({
       fetcher,
       now: () => nowMs,
@@ -123,7 +121,9 @@ describe("BrowserEphemeralMediaStager (OVE-372 session contract)", () => {
     await stager.prepare(SESSION);
     await stager.touch(SESSION);
     expect(
-      fetcher.mock.calls.filter(([url]) => String(url) === "/api/media/staging/sessions"),
+      fetcher.mock.calls.filter(
+        ([url]) => String(url) === "/api/media/staging/sessions",
+      ),
     ).toHaveLength(1);
     expect(fetcher.mock.calls.at(-1)![0]).toBe(
       `https://media-stage.over.garden/v1/staging/${SESSION}/touch`,
@@ -133,7 +133,9 @@ describe("BrowserEphemeralMediaStager (OVE-372 session contract)", () => {
     nowMs += (900 - 100) * 1_000;
     await stager.touch(SESSION);
     expect(
-      fetcher.mock.calls.filter(([url]) => String(url) === "/api/media/staging/sessions"),
+      fetcher.mock.calls.filter(
+        ([url]) => String(url) === "/api/media/staging/sessions",
+      ),
     ).toHaveLength(2);
   });
 
@@ -258,5 +260,58 @@ describe("BrowserEphemeralMediaStager (OVE-372 session contract)", () => {
 
     await rejection;
     vi.useRealTimers();
+  });
+
+  /**
+   * The default path, with no injected fetcher, is the one production runs.
+   * A browser's `fetch` refuses any receiver but the global one ("Illegal
+   * invocation"); this stand-in refuses the same way, so a stager that calls
+   * `fetch` as its own method fails here as it failed for every gardener.
+   */
+  it("calls the global fetch without handing it the stager as its receiver", async () => {
+    const calls: string[] = [];
+    const strictFetch = function (
+      this: unknown,
+      input: RequestInfo | URL,
+    ): Promise<Response> {
+      if (this !== undefined && this !== globalThis) {
+        return Promise.reject(
+          new TypeError(
+            "Failed to execute 'fetch' on 'Window': Illegal invocation",
+          ),
+        );
+      }
+      calls.push(String(input));
+      return Promise.resolve(
+        String(input) === "/api/media/staging/sessions"
+          ? sessionResponse()
+          : stagedResponse("r".repeat(40), "d".repeat(40)),
+      );
+    };
+    vi.stubGlobal("fetch", strictFetch);
+    try {
+      const stager = new BrowserEphemeralMediaStager({});
+      await stager.prepare(SESSION);
+      await expect(
+        stager.stage({
+          stagingSessionId: SESSION,
+          mediaAssetId: ID,
+          generation: 1,
+          blob: new Blob([new Uint8Array([82, 73, 70, 70])], {
+            type: "image/webp",
+          }),
+          sha256: SHA,
+          width: 2560,
+          height: 1920,
+          signal: new AbortController().signal,
+        }),
+      ).resolves.toMatchObject({ stagingReceipt: "r".repeat(40) });
+      expect(calls).toEqual([
+        "/api/media/staging/sessions",
+        `https://media-stage.over.garden/v1/staging/${SESSION}/${ID}/1`,
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

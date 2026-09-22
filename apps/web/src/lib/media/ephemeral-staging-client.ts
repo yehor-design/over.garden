@@ -138,7 +138,10 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
     );
     try {
       const response = await this.fetcher(
-        new URL(`/v1/staging/${stagingSessionId}/touch`, this.stagingOrigin).toString(),
+        new URL(
+          `/v1/staging/${stagingSessionId}/touch`,
+          this.stagingOrigin,
+        ).toString(),
         {
           method: "POST",
           redirect: "error",
@@ -214,7 +217,8 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
     const cached = this.sessions.get(stagingSessionId);
     if (
       cached &&
-      cached.expiresAt - nowSeconds > EPHEMERAL_MEDIA_SESSION_RENEW_AHEAD_SECONDS
+      cached.expiresAt - nowSeconds >
+        EPHEMERAL_MEDIA_SESSION_RENEW_AHEAD_SECONDS
     ) {
       return cached.promise;
     }
@@ -279,8 +283,20 @@ export class BrowserEphemeralMediaStager implements LocalJournalMediaStager {
     }
   }
 
-  private get fetcher() {
-    return this.options.fetcher ?? fetch;
+  /**
+   * The global `fetch` is called through a plain function, never as this
+   * stager's method. `this.fetcher(url)` hands the stager to `fetch` as its
+   * receiver, and every browser refuses that with "Illegal invocation" before
+   * a request is made — which is how every photograph a gardener added failed
+   * after its WebP was ready, with no request ever reaching the session route
+   * or the Worker. Every unit test injects a fetcher, so none of them could
+   * see it; the browser proof of `OVE-487` did.
+   */
+  private get fetcher(): typeof fetch {
+    return (
+      this.options.fetcher ??
+      ((input: RequestInfo | URL, init?: RequestInit) => fetch(input, init))
+    );
   }
 
   private get stagingOrigin() {
