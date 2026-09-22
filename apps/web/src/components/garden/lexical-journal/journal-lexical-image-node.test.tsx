@@ -7,10 +7,17 @@ import {
   $createOverGardenImageNode,
   OverGardenImageNode,
 } from "./journal-lexical-nodes";
-import { JournalImagePreviewProvider } from "./journal-lexical-image-node";
+import {
+  JournalImagePreviewProvider,
+  journalImageName,
+  type JournalImagePreviewContextValue,
+} from "./journal-lexical-image-node";
 
+const editorUpdate = vi.fn();
 vi.mock("@lexical/react/LexicalComposerContext", () => ({
-  useLexicalComposerContext: () => [{ update: vi.fn() }],
+  useLexicalComposerContext: () => [
+    { update: editorUpdate, getRootElement: () => null },
+  ],
 }));
 
 describe("OverGarden Lexical image controls", () => {
@@ -229,27 +236,25 @@ describe("OverGarden Lexical image controls", () => {
     });
 
     expect(renderer!.root.findByProps({ role: "alert" }).children).toContain(
-      "Photo failed",
+      "Try again or choose another file.",
     );
     const buttons = renderer!.root.findAllByType("button");
-    expect(buttons.map((button) => button.children.join(""))).toEqual(
-      expect.arrayContaining([
-        "Retry photo",
-        "Replace photo",
-        "Remove photo",
-        "Use as cover",
-      ]),
-    );
-    await act(async () =>
-      buttons
-        .find((button) => button.children.join("") === "Retry photo")!
-        .props.onClick(),
-    );
-    await act(async () =>
-      buttons
-        .find((button) => button.children.join("") === "Use as cover")!
-        .props.onClick(),
-    );
+    const byAction = (action: string) =>
+      buttons.find(
+        (button) => button.props["data-journal-image-action"] === action,
+      )!;
+    expect(
+      ["retry", "replace", "remove", "cover"].map(
+        (action) => byAction(action).props["aria-label"],
+      ),
+    ).toEqual([
+      "Retry photo: 1",
+      "Replace photo: 1",
+      "Remove photo: 1",
+      "Use as cover: 1",
+    ]);
+    await act(async () => byAction("retry").props.onClick());
+    await act(async () => byAction("cover").props.onClick());
     expect(onRetry).toHaveBeenCalledWith(
       "00000000-0000-4000-8000-000000000002",
     );
@@ -321,7 +326,9 @@ describe("OverGarden Lexical image controls", () => {
 
     const remove = renderer!.root
       .findAllByType("button")
-      .find((button) => button.children.join("") === "Remove failed photo")!;
+      .find(
+        (button) => button.props["data-journal-image-action"] === "remove",
+      )!;
     expect(remove.props.disabled).toBe(false);
     await act(async () => remove.props.onClick());
     expect(onRemove).toHaveBeenCalledWith(
@@ -329,5 +336,178 @@ describe("OverGarden Lexical image controls", () => {
       "00000000-0000-4000-8000-000000000003",
     );
     await act(async () => renderer!.unmount());
+  });
+
+  /**
+   * `OVE-487` criterion 4: a remove button named "Remove" leaves a
+   * screen-reader user guessing which of five photographs goes. Every control
+   * says which one it acts on — by position, and by the start of the caption
+   * the gardener wrote.
+   */
+  it("names every control with the photograph it acts on, and keeps moves inside the story", async () => {
+    const editor = createEditor({
+      namespace: "journal-named-image",
+      nodes: [OverGardenImageNode],
+    });
+    let decorated: JSX.Element | null = null;
+    editor.update(
+      () => {
+        const image = $createOverGardenImageNode({
+          blockId: "image-second",
+          mediaAssetId: "00000000-0000-4000-8000-000000000012",
+          caption: "Жовті плями на нижньому листі після зливи",
+        });
+        $getRoot().clear().append(image);
+        decorated = image.decorate();
+      },
+      { discrete: true },
+    );
+    const value: JournalImagePreviewContextValue = {
+      disabled: false,
+      imageOrder: [
+        "00000000-0000-4000-8000-000000000011",
+        "00000000-0000-4000-8000-000000000012",
+      ],
+      // The photograph is the story's last block: it can go up, not down.
+      blockOrder: ["paragraph-1", "image-first", "image-second"],
+      coverMediaAssetId: "00000000-0000-4000-8000-000000000012",
+      getState: () => ({
+        status: "ready",
+        previewUrl: "blob:exact-final-webp",
+        failureCode: null,
+        source: "staged",
+      }),
+      labels: {
+        processing: "Обробка фото…",
+        phase: {
+          decoding: "Читаємо фото на пристрої…",
+          encoding: "Стискаємо у WebP на пристрої…",
+          staging: "Надсилаємо в тимчасове сховище…",
+        },
+        failureReason: { fallback: "Спробуйте ще раз." },
+        failed: "Фото не вдалося підготувати.",
+        retry: "Повторити",
+        replace: "Замінити",
+        remove: "Прибрати",
+        setCover: "Обкладинка",
+        caption: "Опис фото",
+        captionPlaceholder: "Що видно на фото",
+        name: "Фото {index}",
+        actionName: "{action}: {photo}",
+        moveUp: "Вище",
+        moveDown: "Нижче",
+        ready: "Готове. З’явиться разом із записом після публікації.",
+        moved: "{type} переміщено на позицію {position} з {total}",
+      },
+      onRemove: vi.fn(),
+      onRetry: vi.fn(),
+      onReplace: vi.fn(),
+      onSetCover: vi.fn(),
+    };
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <JournalImagePreviewProvider value={value}>
+          {decorated}
+        </JournalImagePreviewProvider>,
+      );
+    });
+    const buttons = renderer!.root.findAllByType("button");
+    const byAction = (action: string) =>
+      buttons.find(
+        (button) => button.props["data-journal-image-action"] === action,
+      )!;
+    expect(byAction("remove").props["aria-label"]).toBe(
+      "Прибрати: Фото 2 — Жовті плями на нижньому листі після зливи",
+    );
+    // Its cover state is a value, said with `aria-pressed`, not a colour.
+    expect(byAction("cover").props["aria-pressed"]).toBe(true);
+    expect(byAction("move-up").props.disabled).toBe(false);
+    expect(byAction("move-down").props.disabled).toBe(true);
+    // Ready to publish, never "uploaded": nothing is public before Publish.
+    expect(
+      renderer!.root.findByProps({ "data-journal-image-ready": "true" })
+        .children,
+    ).toEqual(["Готове. З’явиться разом із записом після публікації."]);
+
+    editorUpdate.mockClear();
+    await act(async () => byAction("move-up").props.onClick());
+    expect(editorUpdate).toHaveBeenCalledTimes(1);
+    await act(async () => renderer!.unmount());
+  });
+
+  it("says nothing about publishing for a photograph that already is published", async () => {
+    const editor = createEditor({
+      namespace: "journal-existing-image",
+      nodes: [OverGardenImageNode],
+    });
+    let decorated: JSX.Element | null = null;
+    editor.update(
+      () => {
+        const image = $createOverGardenImageNode({
+          blockId: "image-existing",
+          mediaAssetId: "00000000-0000-4000-8000-000000000021",
+        });
+        $getRoot().clear().append(image);
+        decorated = image.decorate();
+      },
+      { discrete: true },
+    );
+    let renderer: ReactTestRenderer;
+    await act(async () => {
+      renderer = create(
+        <JournalImagePreviewProvider
+          value={{
+            disabled: false,
+            imageOrder: ["00000000-0000-4000-8000-000000000021"],
+            blockOrder: ["image-existing"],
+            getState: () => ({
+              status: "ready",
+              previewUrl: "https://media.over.garden/existing.webp",
+              failureCode: null,
+              source: "existing",
+            }),
+            labels: {
+              processing: "Processing",
+              phase: {
+                decoding: "Reading",
+                encoding: "Encoding",
+                staging: "Staging",
+              },
+              failureReason: { fallback: "Try again." },
+              failed: "Failed",
+              retry: "Retry",
+              replace: "Replace",
+              remove: "Remove",
+              setCover: "Cover",
+              caption: "Caption",
+              captionPlaceholder: "What it shows",
+              ready: "Ready to publish",
+            },
+            onRemove: vi.fn(),
+            onRetry: vi.fn(),
+            onReplace: vi.fn(),
+            onSetCover: vi.fn(),
+          }}
+        >
+          {decorated}
+        </JournalImagePreviewProvider>,
+      );
+    });
+    expect(
+      renderer!.root.findAllByProps({ "data-journal-image-ready": "true" }),
+    ).toHaveLength(0);
+    await act(async () => renderer!.unmount());
+  });
+
+  it("names a photograph by position and the start of its caption", () => {
+    expect(journalImageName("Фото {index}", 3, "")).toBe("Фото 3");
+    expect(journalImageName("Снимка {index}", 1, "  Листа   с петна ")).toBe(
+      "Снимка 1 — Листа с петна",
+    );
+    const long = "а".repeat(80);
+    expect(journalImageName("Фото {index}", 2, long)).toBe(
+      `Фото 2 — ${"а".repeat(47)}…`,
+    );
   });
 });

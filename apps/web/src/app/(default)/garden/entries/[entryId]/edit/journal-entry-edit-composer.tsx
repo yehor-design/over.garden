@@ -12,6 +12,10 @@ import {
 import { LocalJournalComposerStatus } from "@/components/garden/local-journal-composer-status";
 import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
+import {
+  JournalMediaReadiness,
+  summarizeJournalMediaReadiness,
+} from "@/components/garden/journal-media-readiness";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { FocalPointControl } from "@/components/media/focal-point-control";
 import type { JournalImageUiState } from "@/components/garden/lexical-journal/journal-lexical-image-node";
@@ -146,6 +150,7 @@ export function JournalEntryEditComposer({
           status: "ready" as const,
           previewUrl: media.previewUrl,
           failureCode: null,
+          source: "existing" as const,
         },
       ]),
     );
@@ -154,12 +159,19 @@ export function JournalEntryEditComposer({
         status: item.status,
         previewUrl: item.previewUrl,
         failureCode: item.failureCode,
+        source: item.source,
       });
     }
     return states;
   }, [existingMedia, local.media.items]);
   const inlineIds = listJournalDocumentImageMediaIds(document);
   const selectedCoverId = selectedCoverMediaAssetId(cover);
+  const readiness = summarizeJournalMediaReadiness(
+    selectedCoverId && !inlineIds.includes(selectedCoverId)
+      ? [...inlineIds, selectedCoverId]
+      : inlineIds,
+    imageStates,
+  );
   const focalTargetId = selectedCoverId ?? inlineIds[0] ?? null;
   const focalTarget = focalTargetId
     ? {
@@ -301,6 +313,11 @@ export function JournalEntryEditComposer({
           composerRef={composerRef}
           imageInsertionMode="immediate"
           imageStates={imageStates}
+          coverMediaAssetId={
+            cover.mode === "automatic"
+              ? (inlineIds[0] ?? null)
+              : selectedCoverId
+          }
           onDocumentChange={setDocument}
           onSelectImageFile={async (file, blockId, mediaAssetId) => {
             const selected = local.selectImage(file, blockId, mediaAssetId);
@@ -398,6 +415,8 @@ export function JournalEntryEditComposer({
           />
         ) : null}
       </fieldset>
+
+      <JournalMediaReadiness summary={readiness} labels={labels} />
 
       <div className="flex flex-wrap items-center gap-3">
         <Button

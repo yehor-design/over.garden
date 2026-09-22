@@ -22,3 +22,22 @@ export function publicMediaAltText(
   if (altText) return altText;
   return entryTitle.trim();
 }
+
+/**
+ * A photograph on a card, beside the entry's own linked title (OG-UX-029).
+ *
+ * The title is right there, as the card's link: an `alt` that repeats it made
+ * a screen reader say the title twice and described nothing about the
+ * photograph. So a card's photograph carries the gardener's own description
+ * when there is one — "Жовті плями на нижньому листі" is an observation the
+ * title does not make — and is otherwise decorative (`alt=""`): the card's
+ * text already names the entry, and the photograph adds nothing a reader
+ * could be told. The entry's own page keeps `publicMediaAltText`, where the
+ * photograph is the content rather than a preview of it.
+ */
+export function publicCardMediaAltText(media: {
+  altText?: string | null;
+  caption?: string | null;
+}): string {
+  return media.caption?.trim() || media.altText?.trim() || "";
+}

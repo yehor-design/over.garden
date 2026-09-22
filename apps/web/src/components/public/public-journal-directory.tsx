@@ -33,7 +33,7 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { publicMediaAltText } from "@/lib/public-media-alt";
+import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import type {
@@ -420,7 +420,7 @@ function DirectoryResultCard({
           ? {
               src: sourceSet.src,
               srcSet: sourceSet.srcSet,
-              alt: publicMediaAltText({}, card.title),
+              alt: publicCardMediaAltText(cover),
               placeholderDataUri: cover.placeholderDataUri,
               focalX: cover.focalX,
               focalY: cover.focalY,

@@ -31,6 +31,7 @@ import {
   JOURNAL_BLOCK_COMMANDS,
   type JournalBlockCommandId,
 } from "./journal-block-commands";
+import { JOURNAL_BLOCK_COMMAND_ICONS } from "./journal-block-command-icons";
 import type { JournalBlockCommandCopy } from "@/components/garden/structured-journal-composer";
 import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import { cn } from "@/lib/utils";
@@ -322,27 +323,32 @@ export function JournalSlashMenu({
             {copy.noResults}
           </p>
         ) : (
-          options.map((command, index) => (
-            <div
-              key={command.id}
-              id={`${listboxId}-${command.id}`}
-              role="option"
-              aria-selected={index === activeIndex}
-              data-journal-slash-option={command.id}
-              className={cn(
-                "flex min-h-10 cursor-default items-center rounded-sm px-2.5 py-2 text-body-sm",
-                index === activeIndex && "bg-action-subtle text-action-subtle-text",
-              )}
-              onMouseEnter={() => setActiveIndex(index)}
-              onMouseDown={(event) => {
-                // Keep the caret where it is; the command needs that selection.
-                event.preventDefault();
-                select(command.id);
-              }}
-            >
-              {copy.commands[command.id]}
-            </div>
-          ))
+          options.map((command, index) => {
+            const Icon = JOURNAL_BLOCK_COMMAND_ICONS[command.id];
+            return (
+              <div
+                key={command.id}
+                id={`${listboxId}-${command.id}`}
+                role="option"
+                aria-selected={index === activeIndex}
+                data-journal-slash-option={command.id}
+                className={cn(
+                  "flex min-h-10 cursor-default items-center gap-2 rounded-sm px-2.5 py-2 text-body-sm",
+                  index === activeIndex &&
+                    "bg-action-subtle text-action-subtle-text",
+                )}
+                onMouseEnter={() => setActiveIndex(index)}
+                onMouseDown={(event) => {
+                  // Keep the caret where it is; the command needs that selection.
+                  event.preventDefault();
+                  select(command.id);
+                }}
+              >
+                <Icon aria-hidden="true" className="size-4" />
+                {copy.commands[command.id]}
+              </div>
+            );
+          })
         )}
       </div>
       <FileDrop

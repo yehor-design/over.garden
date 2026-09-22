@@ -52,4 +52,35 @@ describe("structured journal composer copy", () => {
     );
     expect(new Set(keys).size).toBe(keys.length);
   });
+
+  it("names the tool row, every photograph and the readiness line in every locale", () => {
+    for (const locale of PUBLIC_LOCALES) {
+      const labels = getStructuredJournalComposerLabels(locale);
+      for (const value of [
+        labels.composerTools.label,
+        labels.composerTools.addPhoto,
+        labels.composerTools.blocks,
+        labels.imageMoveUp,
+        labels.imageMoveDown,
+        labels.imageReady,
+      ]) {
+        expect(value, locale).toBeTruthy();
+      }
+      expect(labels.imageName, locale).toContain("{index}");
+      expect(labels.imageActionName, locale).toContain("{action}");
+      expect(labels.imageActionName, locale).toContain("{photo}");
+      expect(labels.imageLimit, locale).toContain("{max}");
+      expect(labels.readiness.preparing, locale).toContain("{ready}");
+      expect(labels.readiness.preparing, locale).toContain("{total}");
+      expect(labels.readiness.ready, locale).toContain("{total}");
+      expect(labels.readiness.failed, locale).toContain("{photos}");
+      // A failed editor keeps the text on the screen; there is no draft to
+      // have saved (ADR-0022 D3), so the copy may not claim one.
+      expect(labels.failureBody, locale).not.toMatch(
+        /чернетк|чернов|збережено|запазен|сохранён/iu,
+      );
+      // Text first: the first line does not open with the slash command.
+      expect(labels.blocks.placeholderFirst, locale).not.toContain("/");
+    }
+  });
 });

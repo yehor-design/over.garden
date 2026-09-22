@@ -6,7 +6,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     loading: "Завантаження редактора…",
     failureTitle: "Редактор тимчасово недоступний",
     failureBody:
-      "Чернетку збережено. Оновіть сторінку, щоб продовжити без втрати тексту й фото.",
+      "Текст залишився на цьому екрані. Натисніть «Спробувати знову», щоб продовжити редагування.",
     retry: "Спробувати знову",
     silentLoss:
       "Збереження зупинено: частина блоку зникла під час серіалізації.",
@@ -14,9 +14,9 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageUploading: "Обробка фото…",
     imageFailed: "Фото не вдалося підготувати. Запис ще не опубліковано.",
     imagePhase: {
-      decoding: "Читаємо фото…",
-      encoding: "Готуємо варіанти…",
-      staging: "Завантажуємо…",
+      decoding: "Читаємо фото на пристрої…",
+      encoding: "Стискаємо у WebP на пристрої…",
+      staging: "Надсилаємо в тимчасове сховище…",
     },
     imageFailureReason: {
       operation_aborted: "Підготовку фото зупинено.",
@@ -32,14 +32,33 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       "Не вдається продовжити зберігання завантажених фото. Опублікуйте зараз, щоб не втратити їх.",
     imageTooLarge: "Фото завелике. Оберіть фото до 50 MiB.",
     imageUnsupported: "Оберіть фото JPEG, PNG, WebP або HEIC.",
-    imageRetry: "Повторити фото",
-    imageReplace: "Замінити фото",
-    imageSetCover: "Використати як обкладинку",
-    imageCaption: "Підпис до фото",
-    imageCaptionPlaceholder: "Що на фото — одним реченням",
-    imageRemove: "Прибрати фото",
+    imageRetry: "Повторити",
+    imageReplace: "Замінити",
+    imageSetCover: "Обкладинка",
+    imageCaption: "Опис фото",
+    imageCaptionPlaceholder:
+      "Що видно на фото — напр., жовті плями на нижньому листі",
+    imageRemove: "Прибрати",
     imageRejectRemote:
       "Можна лише файл з пристрою. Посилання й віддалені зображення відхилено.",
+    imageName: "Фото {index}",
+    imageActionName: "{action}: {photo}",
+    imageMoveUp: "Вище",
+    imageMoveDown: "Нижче",
+    imageReady: "Готове. З’явиться разом із записом після публікації.",
+    imageLimit: "В одному записі може бути до {max} фото.",
+    composerTools: {
+      label: "Інструменти запису",
+      addPhoto: "Фото",
+      blocks: "Блок",
+    },
+    readiness: {
+      preparing:
+        "Готуємо фото: {ready} з {total}. «Опублікувати» зачекає на решту.",
+      ready: "Фото готові: {total}. Опубліковуються лише разом із записом.",
+      failed:
+        "Не вдалося підготувати: {photos}. Повторіть або приберіть, щоб опублікувати.",
+    },
     unavailableTitle: "Вміст недоступний",
     unavailableBody: "Цей запис не вдалося безпечно показати.",
     titleLabel: "Заголовок",
@@ -96,7 +115,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       duplicatedAnnouncement: "Блок продубльовано: {type}",
       noResults: "Нічого не знайдено",
       placeholder: "Напишіть щось або натисніть «/» для команд",
-      placeholderFirst: "Як минув день у саду? Натисніть «/» для команд",
+      placeholderFirst: "Як минув день у саду?",
       commands: {
         paragraph: "Текст",
         heading1: "Заголовок 1",
@@ -117,7 +136,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     loading: "Зареждане на редактора…",
     failureTitle: "Редакторът временно не е наличен",
     failureBody:
-      "Черновата е запазена. Обновете страницата, за да продължите без загуба на текст и снимки.",
+      "Текстът остава на този екран. Натиснете „Опитай отново“, за да продължите да редактирате.",
     retry: "Опитай отново",
     silentLoss: "Записът е спрян: част от блок изчезна при сериализация.",
     imageChoose: "Добави снимка",
@@ -125,9 +144,9 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     imageFailed:
       "Снимката не можа да бъде подготвена. Записът не е публикуван.",
     imagePhase: {
-      decoding: "Четем снимката…",
-      encoding: "Подготвяме вариантите…",
-      staging: "Качваме…",
+      decoding: "Четем снимката на устройството…",
+      encoding: "Компресираме до WebP на устройството…",
+      staging: "Изпращаме във временното хранилище…",
     },
     imageFailureReason: {
       operation_aborted: "Подготовката на снимката е спряна.",
@@ -142,14 +161,34 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       "Съхранението на качените снимки не може да бъде подновено. Публикувайте сега, за да не ги загубите.",
     imageTooLarge: "Снимката е твърде голяма. Изберете снимка до 50 MiB.",
     imageUnsupported: "Изберете снимка JPEG, PNG, WebP или HEIC.",
-    imageRetry: "Опитай снимката отново",
-    imageReplace: "Замени снимката",
-    imageSetCover: "Използвай за корица",
-    imageCaption: "Надпис към снимката",
-    imageCaptionPlaceholder: "Какво се вижда — с едно изречение",
-    imageRemove: "Премахни снимка",
+    imageRetry: "Опитай отново",
+    imageReplace: "Замени",
+    imageSetCover: "Корица",
+    imageCaption: "Описание на снимката",
+    imageCaptionPlaceholder:
+      "Какво се вижда — напр. жълти петна по долните листа",
+    imageRemove: "Премахни",
     imageRejectRemote:
       "Само файл от устройството. Връзки и отдалечени изображения са отхвърлени.",
+    imageName: "Снимка {index}",
+    imageActionName: "{action}: {photo}",
+    imageMoveUp: "По-нагоре",
+    imageMoveDown: "По-надолу",
+    imageReady: "Готова. Ще се появи заедно със записа след публикуване.",
+    imageLimit: "В един запис може да има до {max} снимки.",
+    composerTools: {
+      label: "Инструменти за записа",
+      addPhoto: "Снимка",
+      blocks: "Блок",
+    },
+    readiness: {
+      preparing:
+        "Подготвяме снимките: {ready} от {total}. „Публикувай“ ще изчака останалите.",
+      ready:
+        "Снимките са готови: {total}. Публикуват се само заедно със записа.",
+      failed:
+        "Не успяхме да подготвим: {photos}. Опитайте отново или ги премахнете, за да публикувате.",
+    },
     unavailableTitle: "Съдържанието е недостъпно",
     unavailableBody: "Този запис не може да бъде показан безопасно.",
     titleLabel: "Заглавие",
@@ -206,7 +245,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       duplicatedAnnouncement: "Блокът е дублиран: {type}",
       noResults: "Нищо не е намерено",
       placeholder: "Напишете нещо или натиснете «/» за команди",
-      placeholderFirst: "Как мина денят в градината? Натиснете «/» за команди",
+      placeholderFirst: "Как мина денят в градината?",
       commands: {
         paragraph: "Текст",
         heading1: "Заглавие 1",
@@ -227,16 +266,16 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
     loading: "Загрузка редактора…",
     failureTitle: "Редактор временно недоступен",
     failureBody:
-      "Черновик сохранён. Обновите страницу, чтобы продолжить без потери текста и фото.",
+      "Текст остался на этом экране. Нажмите «Попробовать снова», чтобы продолжить редактирование.",
     retry: "Попробовать снова",
     silentLoss: "Сохранение остановлено: часть блока исчезла при сериализации.",
     imageChoose: "Добавить фото",
     imageUploading: "Обработка фото…",
     imageFailed: "Фото не удалось подготовить. Запись ещё не опубликована.",
     imagePhase: {
-      decoding: "Читаем фото…",
-      encoding: "Готовим варианты…",
-      staging: "Загружаем…",
+      decoding: "Читаем фото на устройстве…",
+      encoding: "Сжимаем в WebP на устройстве…",
+      staging: "Отправляем во временное хранилище…",
     },
     imageFailureReason: {
       operation_aborted: "Подготовка фото остановлена.",
@@ -252,14 +291,33 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       "Не удаётся продлить хранение загруженных фото. Опубликуйте сейчас, чтобы не потерять их.",
     imageTooLarge: "Фото слишком большое. Выберите фото до 50 MiB.",
     imageUnsupported: "Выберите фото JPEG, PNG, WebP или HEIC.",
-    imageRetry: "Повторить фото",
-    imageReplace: "Заменить фото",
-    imageSetCover: "Использовать как обложку",
-    imageCaption: "Подпись к фото",
-    imageCaptionPlaceholder: "Что на фото — одним предложением",
-    imageRemove: "Убрать фото",
+    imageRetry: "Повторить",
+    imageReplace: "Заменить",
+    imageSetCover: "Обложка",
+    imageCaption: "Описание фото",
+    imageCaptionPlaceholder:
+      "Что видно на фото — напр., жёлтые пятна на нижних листьях",
+    imageRemove: "Убрать",
     imageRejectRemote:
       "Только файл с устройства. Ссылки и удалённые изображения отклонены.",
+    imageName: "Фото {index}",
+    imageActionName: "{action}: {photo}",
+    imageMoveUp: "Выше",
+    imageMoveDown: "Ниже",
+    imageReady: "Готово. Появится вместе с записью после публикации.",
+    imageLimit: "В одной записи может быть до {max} фото.",
+    composerTools: {
+      label: "Инструменты записи",
+      addPhoto: "Фото",
+      blocks: "Блок",
+    },
+    readiness: {
+      preparing:
+        "Готовим фото: {ready} из {total}. «Опубликовать» подождёт остальные.",
+      ready: "Фото готовы: {total}. Публикуются только вместе с записью.",
+      failed:
+        "Не удалось подготовить: {photos}. Повторите или уберите, чтобы опубликовать.",
+    },
     unavailableTitle: "Содержимое недоступно",
     unavailableBody: "Эту запись нельзя безопасно показать.",
     titleLabel: "Заголовок",
@@ -316,7 +374,7 @@ const LABELS: Record<PublicLocale, StructuredJournalComposerLabels> = {
       duplicatedAnnouncement: "Блок продублирован: {type}",
       noResults: "Ничего не найдено",
       placeholder: "Напишите что-нибудь или нажмите «/» для команд",
-      placeholderFirst: "Как прошёл день в саду? Нажмите «/» для команд",
+      placeholderFirst: "Как прошёл день в саду?",
       commands: {
         paragraph: "Текст",
         heading1: "Заголовок 1",

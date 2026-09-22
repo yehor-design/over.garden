@@ -289,12 +289,14 @@ function largestPhotographOnTheFirstScreen() {
     if (box.width < 96 || box.height < 96 || width <= 0 || height <= 0)
       return [];
     // Neither is an empty state's illustration. It is decorative app art —
-    // `alt=""`, 144 px, shipped with the code (DESIGN.md §2.9) — and it is
-    // lazy on purpose. On a listing with nothing in it, it is nevertheless the
+    // 144 px, shipped with the code (DESIGN.md §2.9) — and it is lazy on
+    // purpose. On a listing with nothing in it, it is nevertheless the
     // largest image on the first screen, which is how this rule came to fail
-    // on a gate database whose feed had been emptied. A photograph of a
-    // gardener's own plant always carries a real name.
-    if ((image.getAttribute("alt") ?? "") === "") return [];
+    // on a gate database whose feed had been emptied. It is told apart by
+    // what it is, not by an empty `alt`: a card's photograph with no caption
+    // is `alt=""` too (OG-UX-029), and it is still the photograph LCP waits
+    // for.
+    if (image.closest('[data-slot="illustration"]')) return [];
     return [
       {
         visibleArea: Math.round(width * height),

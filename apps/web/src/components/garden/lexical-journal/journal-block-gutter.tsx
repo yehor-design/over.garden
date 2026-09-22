@@ -46,6 +46,7 @@ import {
   removeJournalBlockById,
 } from "./journal-block-order";
 import { JournalInsertionLine } from "./journal-insertion-line";
+import { JOURNAL_BLOCK_COMMAND_ICONS } from "./journal-block-command-icons";
 import {
   Menu,
   MenuContent,
@@ -569,7 +570,7 @@ export function JournalBlockGutter({
   const position = activeIndex >= 0 ? activeIndex + 1 : 0;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-sticky">
+    <div className="pointer-events-none absolute inset-0 z-sticky hidden sm:block">
       <JournalInsertionLine top={indicatorTop} purpose="reorder" />
       <div
         ref={gutterRef}
@@ -635,15 +636,19 @@ export function JournalBlockGutter({
           aria-label={copy.add}
           className="max-h-80 overflow-y-auto"
         >
-          {JOURNAL_BLOCK_COMMANDS.map((command) => (
-            <MenuItem
-              key={command.id}
-              onClick={() => insertBelow(command.id)}
-              data-journal-insert-command={command.id}
-            >
-              {copy.commands[command.id]}
-            </MenuItem>
-          ))}
+          {JOURNAL_BLOCK_COMMANDS.map((command) => {
+            const Icon = JOURNAL_BLOCK_COMMAND_ICONS[command.id];
+            return (
+              <MenuItem
+                key={command.id}
+                onClick={() => insertBelow(command.id)}
+                data-journal-insert-command={command.id}
+              >
+                <Icon aria-hidden="true" className="size-4" />
+                {copy.commands[command.id]}
+              </MenuItem>
+            );
+          })}
         </MenuContent>
       </Menu>
 
@@ -688,16 +693,20 @@ export function JournalBlockGutter({
               controlled, trigger-less menu, and one list is simpler anyway. */}
           <MenuGroup>
             <MenuGroupLabel>{copy.turnInto}</MenuGroupLabel>
-            {JOURNAL_TURN_INTO_COMMAND_IDS.map((commandId) => (
-              <MenuItem
-                key={commandId}
-                onClick={() => turnInto(commandId)}
-                data-journal-turn-into={commandId}
-                disabled={activeItem?.commandId === commandId}
-              >
-                {copy.commands[commandId]}
-              </MenuItem>
-            ))}
+            {JOURNAL_TURN_INTO_COMMAND_IDS.map((commandId) => {
+              const Icon = JOURNAL_BLOCK_COMMAND_ICONS[commandId];
+              return (
+                <MenuItem
+                  key={commandId}
+                  onClick={() => turnInto(commandId)}
+                  data-journal-turn-into={commandId}
+                  disabled={activeItem?.commandId === commandId}
+                >
+                  <Icon aria-hidden="true" className="size-4" />
+                  {copy.commands[commandId]}
+                </MenuItem>
+              );
+            })}
           </MenuGroup>
         </MenuContent>
       </Menu>

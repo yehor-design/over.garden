@@ -13,7 +13,6 @@ import { getSpaceSetupCopy } from "@/lib/space-setup-copy";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CloudArrowUpIcon as UploadCloud } from "@/components/icons/CloudArrowUp";
-import { XIcon as X } from "@/components/icons/X";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +27,11 @@ import {
   LocalJournalPublicationDisclosure,
 } from "@/components/garden/local-journal-composer-status";
 import { UnpublishedWorkGuard } from "@/components/garden/unpublished-work-guard";
+import {
+  JournalMediaReadiness,
+  journalMediaReadinessText,
+  summarizeJournalMediaReadiness,
+} from "@/components/garden/journal-media-readiness";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import type { PlantObjectKind } from "@/db/schema";
@@ -58,7 +62,6 @@ import type {
   JournalMentionSuggestion,
 } from "@/lib/garden/journal-mentions";
 import { objectKindAfterPickerSelection } from "@/lib/garden/catalog-object-kind";
-import { COMPOSER_PHOTO_ACCEPT } from "@/lib/garden/composer-photo-selection";
 import {
   LocalJournalComposerError,
   useLocalJournalComposer,
@@ -89,7 +92,6 @@ import { recordCatalogSearchMissAction } from "./catalog-search-miss-actions";
 import { JournalObjectKindSelector } from "./journal-object-kind-selector";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Field } from "@/components/ui/field";
-import { FileDrop } from "@/components/ui/file-drop";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 
@@ -141,7 +143,6 @@ export function FirstEntryComposer({
   const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
     null,
   );
-  const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [draft, setDraft] = useState<FirstEntryDraftFields>({
     spaceId: initialSpace?.id ?? null,
     spaceName: initialSpace?.displayName ?? "",
@@ -178,20 +179,24 @@ export function FirstEntryComposer({
   >([]);
   const [mentionStatus, setMentionStatus] =
     useState<MentionTypeaheadStatus>("idle");
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [primaryMediaAssetId, setPrimaryMediaAssetId] = useState<string | null>(
-    null,
-  );
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(atomicCopy.localOnly);
   const [disclosureAccepted, setDisclosureAccepted] = useState(false);
+  const labels = getStructuredJournalComposerLabels(locale);
+  const storyImageIds = listJournalDocumentImageMediaIds(
+    draft.contentDocument ?? createEmptyJournalDocument(),
+  );
+  const separateCoverId =
+    coverSelection.mode === "separate"
+      ? (coverSelection.mediaAssetId ?? null)
+      : null;
+  const hasPhoto = storyImageIds.length > 0 || separateCoverId !== null;
   const dirty = Boolean(
     draft.plantName ||
     draft.title ||
     draft.body ||
     draft.contentDocument?.blocks.length ||
-    photoFile ||
+    separateCoverId ||
     catalogSelection,
   );
   const local = useLocalJournalComposer({
@@ -208,6 +213,7 @@ export function FirstEntryComposer({
             status: item.status,
             previewUrl: item.previewUrl,
             failureCode: item.failureCode,
+            source: item.source,
           },
         ]),
       ),
@@ -265,13 +271,13 @@ export function FirstEntryComposer({
     };
   }, [activeMentionToken, documentMutation]);
 
-  const photoHelp = localizedAtomicPhotoHelp(atomicCopy, {
-    fileName: photoFile?.name ?? null,
-    photoError,
-    ready: primaryMediaAssetId !== null,
-  });
-
-  const hasSelectedPhoto = Boolean(photoFile || primaryMediaAssetId);
+  // Every photograph Publish will send: the story's, then a cover of its own.
+  const readiness = summarizeJournalMediaReadiness(
+    separateCoverId && !storyImageIds.includes(separateCoverId)
+      ? [...storyImageIds, separateCoverId]
+      : storyImageIds,
+    imageStates,
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -279,9 +285,12 @@ export function FirstEntryComposer({
 
     beginLocaleMutation();
     try {
-      if (photoError) {
+      // A photograph that failed is retried or removed before anything is
+      // sent: Publish would otherwise wait on it and then fail as a whole.
+      if (readiness.failedMediaAssetIds.length > 0) {
         setSubmitState("failed");
-        setMessage(photoError);
+        setMessage(journalMediaReadinessText(readiness, labels) ?? "");
+        focusPhotoAction(readiness.failedMediaAssetIds[0]!, "retry");
         return;
       }
 
@@ -523,58 +532,14 @@ export function FirstEntryComposer({
     }).catch(() => undefined);
   }
 
-  function handlePhotoChange(file: File | undefined) {
-    if (isComposerPersistenceFrozen()) return;
-    setPhotoError(null);
-
-    if (!file) {
-      clearPhotoSelection(false);
-      return;
-    }
-
-    try {
-      const selected = primaryMediaAssetId
-        ? local.replaceImage(primaryMediaAssetId, file)
-        : local.selectImage(file, `cover_${crypto.randomUUID()}`);
-      setPhotoFile(file);
-      setPrimaryMediaAssetId(selected.mediaAssetId);
-      setCoverSelection({
-        mode: "separate",
-        mediaAssetId: selected.mediaAssetId,
-        previewUrl: null,
-      });
-      setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
-      void selected.ready.catch(() => {
-        setPhotoError(atomicCopy.photoFailed);
-      });
-    } catch {
-      setPhotoFile(null);
-      setPhotoError(atomicCopy.photoFailed);
-      resetPhotoInput();
-      setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
-    }
-  }
-
-  function clearPhotoSelection(resetInput = true) {
-    if (isComposerPersistenceFrozen()) return;
-    if (primaryMediaAssetId) void local.removeImage(primaryMediaAssetId);
-    setPhotoFile(null);
-    setPrimaryMediaAssetId(null);
-    if (
-      coverSelection.mode === "separate" &&
-      coverSelection.mediaAssetId === primaryMediaAssetId
-    ) {
-      setCoverSelection({ mode: "automatic" });
-    }
-    setPhotoError(null);
-    if (resetInput) resetPhotoInput();
-    setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
-  }
-
-  function resetPhotoInput() {
-    if (photoInputRef.current) {
-      photoInputRef.current.value = "";
-    }
+  function focusPhotoAction(mediaAssetId: string, action: string) {
+    window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(
+          `[data-journal-image-action="${action}"][data-media-asset-id="${mediaAssetId}"]`,
+        )
+        ?.focus();
+    });
   }
 
   function isComposerPersistenceFrozen() {
@@ -600,7 +565,7 @@ export function FirstEntryComposer({
       objectLabel: nextDraft.plantName,
       catalogLabel,
       body: nextDraft.body,
-      hasPhoto: options.hasPhoto ?? Boolean(photoFile || primaryMediaAssetId),
+      hasPhoto: options.hasPhoto ?? hasPhoto,
     });
 
     return {
@@ -614,6 +579,8 @@ export function FirstEntryComposer({
   }
 
   function changeCover(next: JournalCoverSelectionState) {
+    // A cover photograph of its own is in no block, so leaving it for another
+    // choice is the one moment it can be let go of.
     if (
       coverSelection.mode === "separate" &&
       coverSelection.mediaAssetId &&
@@ -621,10 +588,6 @@ export function FirstEntryComposer({
         next.mediaAssetId !== coverSelection.mediaAssetId)
     ) {
       void local.removeImage(coverSelection.mediaAssetId);
-      if (primaryMediaAssetId === coverSelection.mediaAssetId) {
-        setPrimaryMediaAssetId(null);
-        setPhotoFile(null);
-      }
     }
     setCoverSelection(next);
   }
@@ -817,13 +780,17 @@ export function FirstEntryComposer({
           <HiddenField name="body" value={draft.body} required />
           <StructuredJournalComposer
             locale={locale}
-            labels={getStructuredJournalComposerLabels(locale)}
+            labels={labels}
             initialDocument={draft.contentDocument ?? undefined}
             bindingReady
             disabled={persistenceFrozen}
             composerRef={structuredComposerRef}
             imageInsertionMode="immediate"
             imageStates={imageStates}
+            coverMediaAssetId={selectedCoverMediaAssetId(
+              coverSelection,
+              draft.contentDocument ?? createEmptyJournalDocument(),
+            )}
             onDocumentChange={(document) => {
               const plain = extractJournalDocumentPlainText(document);
               setDraft((current) => ({
@@ -919,51 +886,6 @@ export function FirstEntryComposer({
             onSelect={selectMentionSuggestion}
             onRemove={removeMentionSelection}
           />
-        </div>
-
-        <div className="flex flex-col gap-2 border-y border-border py-3">
-          <span className="text-body-sm font-medium text-text">
-            {copy.composer.fields.optionalPhoto}
-          </span>
-          <FileDrop
-            ref={photoInputRef}
-            accept={COMPOSER_PHOTO_ACCEPT}
-            capture="environment"
-            label={copy.composer.photo.choose}
-            onChange={(event) =>
-              handlePhotoChange(event.currentTarget.files?.[0])
-            }
-          />
-          <Button
-            type="button"
-            variant="secondary"
-            className="self-start"
-            data-photo-picker-control="true"
-            onClick={() => photoInputRef.current?.click()}
-          >
-            <UploadCloud className="size-4" />
-            {copy.composer.photo.choose}
-          </Button>
-          {hasSelectedPhoto ? (
-            <Button
-              type="button"
-              variant="secondary"
-              className="self-start"
-              onClick={() => clearPhotoSelection()}
-            >
-              <X className="size-4" />
-              {copy.composer.fields.removePhoto}
-            </Button>
-          ) : null}
-          <p
-            className={
-              photoError
-                ? "text-caption leading-5 text-danger-text"
-                : "text-caption leading-5 text-text-muted"
-            }
-          >
-            {photoHelp}
-          </p>
         </div>
 
         <details className="group min-w-0 border-y border-border py-3">
@@ -1102,6 +1024,8 @@ export function FirstEntryComposer({
         </p>
       ) : null}
 
+      <JournalMediaReadiness summary={readiness} labels={labels} />
+
       {/* What Publish does, beside the control that does it (`OVE-458` AC3).
           The product has no drafts: an entry is public and indexable the
           moment it lands, and that belonged next to the decision rather than
@@ -1138,24 +1062,6 @@ export function FirstEntryComposer({
       </div>
     </form>
   );
-}
-
-function localizedAtomicPhotoHelp(
-  copy: ReturnType<typeof getAtomicJournalCreateCopy>,
-  {
-    fileName,
-    photoError,
-    ready,
-  }: {
-    fileName: string | null;
-    photoError: string | null;
-    ready: boolean;
-  },
-) {
-  if (photoError) return photoError;
-  if (ready) return copy.photoReady;
-  if (!fileName) return copy.photoEmpty;
-  return copy.photoPreparing;
 }
 
 function selectedCoverMediaAssetId(

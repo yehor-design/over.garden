@@ -61,6 +61,11 @@ export interface PublicFeedMedia {
   placeholderDataUri: string | null;
   /** Long edges of the promoted variants; [] on pre-0047 rows. */
   variantLongEdges: number[];
+  /**
+   * The gardener's own description of the photograph, when they wrote one —
+   * a card's `alt`, never the entry's title again (OG-UX-029).
+   */
+  caption?: string | null;
 }
 
 export interface PublicFeedTopic {
@@ -144,6 +149,7 @@ export interface PublicFeedMediaRow {
   focalY: number | null;
   intrinsicWidth: number | null;
   intrinsicHeight: number | null;
+  caption?: string | null;
 }
 
 export interface PublicFeedTopicRow {
@@ -392,6 +398,7 @@ export function buildPublicFeedMediaQuery(
       "media_assets.focal_y as focal_y",
       "media_assets.intrinsic_width as intrinsic_width",
       "media_assets.intrinsic_height as intrinsic_height",
+      "media_assets.caption as caption",
       sql<number>`row_number() over (
         partition by ${sql.ref("media_assets.journal_entry_id")}
         order by
@@ -447,6 +454,7 @@ export function buildPublicFeedMediaQuery(
       "ranked_media.focal_y as focalY",
       "ranked_media.intrinsic_width as intrinsicWidth",
       "ranked_media.intrinsic_height as intrinsicHeight",
+      "ranked_media.caption as caption",
     ])
     .where("ranked_media.media_rank", "<=", MAX_PUBLIC_FEED_MEDIA_PER_ENTRY)
     .orderBy("ranked_media.entry_id", "asc")
@@ -620,6 +628,7 @@ export function serializePublicFeedPage(input: {
             input.mediaExtras?.get(media.id)?.placeholderDataUri ?? null,
           variantLongEdges:
             input.mediaExtras?.get(media.id)?.variantLongEdges ?? [],
+          caption: media.caption?.trim() || null,
         })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,

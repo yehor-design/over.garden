@@ -110,6 +110,8 @@ export interface PublicJournalDirectoryCard {
     placeholderDataUri: string | null;
     /** Long edges of the promoted variants; [] on pre-0047 rows. */
     variantLongEdges: number[];
+    /** The gardener's description of the photograph (OG-UX-029). */
+    caption?: string | null;
   }>;
   topics: Array<{ slug: string; label: string }>;
 }
@@ -447,6 +449,7 @@ export function serializePublicJournalDirectoryPage(
         placeholderDataUri:
           mediaExtras?.get(media.id)?.placeholderDataUri ?? null,
         variantLongEdges: mediaExtras?.get(media.id)?.variantLongEdges ?? [],
+        caption: media.caption?.trim() || null,
       })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,

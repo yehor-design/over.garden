@@ -67,3 +67,40 @@ describe("composer command coverage", () => {
     ).toBe(false);
   });
 });
+
+/**
+ * ADR-0028 D3 as amended 2026-09-21 and `OVE-487` criterion 1: the slash menu
+ * and the gutter stay, but neither is the only way in. The tool row under the
+ * text carries Add photo, the basic marks, a list, and every block in the
+ * registry through one ordinary button, each block with its Phosphor glyph.
+ */
+describe("the composer's ordinary tool row", () => {
+  it("reaches every block and the basic marks from plain buttons", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { fileURLToPath } = await import("node:url");
+    const source = await readFile(
+      fileURLToPath(new URL("./journal-composer-tools.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(source).toContain("JOURNAL_BLOCK_COMMANDS.map(");
+    for (const tool of ["photo", "bulletList", "blocks"]) {
+      expect(source).toContain(`data-journal-tool="${tool}"`);
+    }
+    expect(source).toMatch(/format: "bold"[\s\S]*format: "italic"/u);
+    expect(source).toContain("multiple");
+    const client = await readFile(
+      fileURLToPath(new URL("./journal-lexical-client.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(client).toContain("<JournalComposerTools");
+  });
+
+  it("gives every block command a Phosphor glyph", async () => {
+    const { JOURNAL_BLOCK_COMMAND_ICONS } = await import(
+      "./journal-block-command-icons"
+    );
+    for (const id of JOURNAL_BLOCK_COMMAND_IDS) {
+      expect(typeof JOURNAL_BLOCK_COMMAND_ICONS[id], id).toBe("function");
+    }
+  });
+});

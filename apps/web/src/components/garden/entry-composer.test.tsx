@@ -108,8 +108,13 @@ describe("the one entry composer (OVE-486)", () => {
       expect(html).toContain('value="2026-07-16"');
       expect(html).toContain(expected.publish);
       expect(html).toContain(expected.moreDetails);
-      expect(html).toContain(expected.choosePhoto);
-      expect(html).toContain('data-photo-picker-control="true"');
+      // Text first (`OVE-487`): photographs are added inside the story from
+      // the composer's own tool row, and the cover is not a question until
+      // there is a photograph to choose — no separate photo section and no
+      // cover section on an empty note.
+      expect(html).not.toContain(expected.choosePhoto);
+      expect(html).not.toContain("data-photo-picker-control");
+      expect(html).not.toContain("data-journal-cover-controls");
       // A contextual launch does not ask where again.
       expect(html).not.toContain("data-owned-destination-picker");
       expect(html).not.toMatch(

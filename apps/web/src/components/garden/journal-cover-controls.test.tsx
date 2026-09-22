@@ -120,3 +120,36 @@ describe("journal cover copy", () => {
     }
   });
 });
+
+/**
+ * `OVE-487` criterion 3: a cover is a choice between photographs, so the
+ * section is not on the screen until there is one to choose.
+ */
+describe("the cover section's arrival", () => {
+  it("is absent from a note without a photograph", () => {
+    const html = renderToStaticMarkup(
+      <JournalCoverControls
+        copy={copy}
+        selection={{ mode: "automatic" }}
+        eligibleInline={[]}
+        onChange={() => undefined}
+      />,
+    );
+    expect(html).toBe("");
+  });
+
+  it("arrives with the first photograph, and stays for a cover of its own", () => {
+    expect(markup({ mode: "automatic" })).toContain(
+      'data-journal-cover-controls="true"',
+    );
+    const separateOnly = renderToStaticMarkup(
+      <JournalCoverControls
+        copy={copy}
+        selection={{ mode: "separate", mediaAssetId: "media-9" }}
+        eligibleInline={[]}
+        onChange={() => undefined}
+      />,
+    );
+    expect(separateOnly).toContain('data-journal-cover-controls="true"');
+  });
+});

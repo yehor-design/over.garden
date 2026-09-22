@@ -99,7 +99,9 @@ describe("first entry composer localization", () => {
       expect(html).toContain(expected.firstUpdate);
       expect(html).toContain(expected.saveOnline);
       expect(html).toContain(expected.region);
-      expect(html).toContain(expected.choosePhoto);
+      // Photographs go into the story from the composer's tool row
+      // (`OVE-487`); there is no separate photo section to choose one from.
+      expect(html).not.toContain(expected.choosePhoto);
       // The name field is the picker (ADR-0026 D7): one control, under the
       // name label, not a plain input above a second one collapsed inside
       // "more details" — which is where the graph was unreachable from.
@@ -113,9 +115,8 @@ describe("first entry composer localization", () => {
       expect(html).toContain(expected.keepWithoutMatch);
       const details = html.slice(html.indexOf("<details"));
       expect(details).not.toContain('data-catalog-picker="true"');
-      expect(html).toContain('type="file"');
-      expect(html).toContain('class="hidden"');
-      expect(html).toContain('data-photo-picker-control="true"');
+      expect(html).not.toContain("data-photo-picker-control");
+      expect(html).not.toContain("data-journal-cover-controls");
       expect(html).toMatch(
         /data-composer-details-content="true" class="mt-4 grid min-w-0 gap-4"/,
       );
