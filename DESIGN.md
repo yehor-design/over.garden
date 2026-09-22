@@ -925,6 +925,12 @@ and the consequences belong on the screen rather than in the reader's memory.
   activation with the exact object/space. A global launch with multiple choices
   opens the all-owned-destinations picker immediately; selection goes straight
   to writing. Changing destination preserves in-memory text, media and date.
+  It is `components/garden/entry-composer.tsx`, at `/garden/new` for the
+  global Write and inline on an object's page and a space's journal
+  (`OVE-486`). The date is the reader's own calendar date, not the server's UTC
+  day; a space entry asks which of the space's own objects it mentions, because
+  the server requires one to twelve; and a publish refused for an ended session
+  keeps the text and offers sign-in in a new tab rather than navigating away.
 - **One readable responsive canvas.** Use the main content cap and fluid inner
   padding. Keep advanced block controls in a focusable menu on narrow screens;
   the old fixed 56 px gutter must not steal writing space. Slash commands and

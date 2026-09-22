@@ -9,8 +9,7 @@ describe("shared journal composer integration", () => {
   it("routes every journal mode through one lazy Lexical owner", () => {
     for (const file of [
       "app/(default)/garden/first-entry-composer.tsx",
-      "app/(default)/garden/space-entry-composer.tsx",
-      "app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "components/garden/entry-composer.tsx",
       "app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
@@ -30,8 +29,7 @@ describe("shared journal composer integration", () => {
   it("binds local-only create owners immediately without durable browser or server drafts", () => {
     for (const file of [
       "app/(default)/garden/first-entry-composer.tsx",
-      "app/(default)/garden/space-entry-composer.tsx",
-      "app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "components/garden/entry-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
       expect(source).toContain("useLocalJournalComposer({");

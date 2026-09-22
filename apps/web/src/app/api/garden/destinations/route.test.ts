@@ -53,6 +53,6 @@ it("refuses malformed cursors before querying and passes authenticated ownership
   ).toBe(200);
   expect(mocks.list).toHaveBeenCalledWith(
     { userId: "owner" },
-    { q: "rose", filter: "all", cursor: null },
+    { q: "rose", filter: "all", space: null, cursor: null },
   );
 });

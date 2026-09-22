@@ -164,7 +164,7 @@ test.describe("the three-column shell", () => {
       // returns to the composer rather than to the workspace around it.
       const href = visible[0]!.href ?? "";
       expect(href).toContain("/auth/sign-in?next=");
-      expect(decodeURIComponent(href)).toContain("inventory");
+      expect(decodeURIComponent(href)).toContain("/garden/new");
       expect(visible[0]!.inBanner || visible[0]!.inTabBar).toBe(true);
       expect(visible[0]!.inBanner && visible[0]!.inTabBar).toBe(false);
       expect(visible[0]!.inBanner).toBe(width >= 1024);
@@ -391,7 +391,7 @@ test("guest and member shell stays centered across locales and mobile widths", a
             ).toHaveCount(1);
             await expect(
               page.locator('[data-site-shell-action="new-entry"]:visible'),
-            ).toHaveAttribute("href", "/garden#inventory");
+            ).toHaveAttribute("href", "/garden/new");
           }
           await page.evaluate(async () => {
             scrollTo(0, 0);

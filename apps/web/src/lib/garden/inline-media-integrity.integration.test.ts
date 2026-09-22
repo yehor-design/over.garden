@@ -9,8 +9,7 @@ describe("OVE-243 vertical inline-media integration", () => {
   it("routes every create composer through the shared atomic selection owner", () => {
     for (const file of [
       "app/(default)/garden/first-entry-composer.tsx",
-      "app/(default)/garden/space-entry-composer.tsx",
-      "app/(default)/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "components/garden/entry-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
       expect(source).toContain("<StructuredJournalComposer");

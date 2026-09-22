@@ -87,6 +87,8 @@ const ROUTE_PATTERNS = [
   /^\/garden$/,
   /^\/garden\/objects\/[0-9a-f-]{36}$/,
   /^\/garden\/(?:profile|lineage\/claims|lineage\/invitations\/claim)$/,
+  // The one composer and the two setups (OVE-484, OVE-485, OVE-486).
+  /^\/garden\/(?:new|spaces\/new|objects\/new)$/,
 ] as const;
 const ACTION_TARGET_KINDS: Record<
   AuthIntentAction,
@@ -177,6 +179,8 @@ function buildAuthIntentResumeAnchor(
 ) {
   if (action === "create_entry" && pathname === "/garden" && !control)
     return "inventory";
+  // The composer is the whole page; there is nothing to scroll to.
+  if (action === "create_entry" && pathname === "/garden/new") return "";
 
   if (
     action === "save" &&

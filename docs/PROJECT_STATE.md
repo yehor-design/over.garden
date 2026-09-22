@@ -61,6 +61,15 @@ approval. The dated audit and execution program are in `docs/audits/2026-09-21-p
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
 
+**One entry composer (OVE-486):** every "New entry" opens
+`components/garden/entry-composer.tsx` — the global Write at `/garden/new`
+(owned-destination picker first), an object's page and a space's journal (the
+destination named). Destination, local date and public visibility come first;
+changing the destination keeps text, date and photos; a space entry asks which
+of its objects it mentions (the server's 1–12 rule); an ended session keeps the
+text and offers sign-in in a new tab. The first-entry composer remains the
+atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
+
 **Progressive space and object setup (OVE-484, OVE-485):** `/garden/spaces/new`
 and `/garden/objects/new` ask only what `spaces` and `plant_objects` store, one
 question at a time, and each writes one acknowledged record per intent through

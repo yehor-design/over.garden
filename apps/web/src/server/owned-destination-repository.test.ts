@@ -11,9 +11,20 @@ describe("owned destination boundaries", () => {
     expect(
       parseDestinationQuery(new URLSearchParams({ q: "  Томат  " })).q,
     ).toBe("Томат");
+    // A space's own objects: the space implies the object filter, and a
+    // malformed space is refused rather than widened to every object.
+    const inSpace = parseDestinationQuery(
+      new URLSearchParams({
+        space: "1C2D3E4F-5A6B-4C7D-8E9F-0A1B2C3D4E5F",
+        kind: "space",
+      }),
+    );
+    expect(inSpace.filter).toBe("object");
+    expect(inSpace.space).toBe("1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f");
     const invalid: Record<string, string>[] = [
       { q: "a".repeat(121) },
       { kind: "catalogue" },
+      { space: "not-a-uuid" },
       { cursor: "not-json" },
       {
         cursor: Buffer.from(
