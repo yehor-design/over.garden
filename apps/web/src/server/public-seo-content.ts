@@ -56,6 +56,8 @@ export interface BlogPostContent {
   title: string;
   description: string;
   excerpt: string;
+  /** Who signs it, in the reader's language. */
+  author: string;
   publishedDate: string;
   sections: PublicContentSection[];
   relatedLinks: PublicContentLink[];
@@ -195,20 +197,32 @@ export interface AnswerPageContent {
   media?: PublicKnowledgeMedia;
 }
 
+/**
+ * A country's page (`OVE-499`): who OverGarden is for there, what a gardener
+ * can do with it today, what is true of it, and where to start — existing
+ * pages only. It sells nothing and locates no one: no prices, no orders, no
+ * delivery, no place finer than a region.
+ */
 export interface MarketLandingContent {
   kind: "marketing_landing";
   market: MarketLandingMarket;
   path: string;
+  /** The country, as the eyebrow names it. */
+  eyebrow: string;
   title: string;
   description: string;
-  localAudience: string;
-  promise: string;
-  proofPlan: string[];
+  /** Who the page is for. */
+  audience: string;
+  /** What a gardener can do here today, in one paragraph. */
+  purpose: string;
+  /** What a newcomer should know about OverGarden, each a plain fact. */
+  facts: string[];
   localizationHandoff: {
     locale: "uk" | "bg";
     plannedPath: string;
     owningIssue: "OVE-117";
   };
+  /** Where to start: pages that exist, in the reader's language. */
   relatedLinks: PublicContentLink[];
 }
 
@@ -262,24 +276,25 @@ const BLOG_POSTS: BlogPostContent[] = [
     kind: "editorial_blog",
     slug: "ai-garden-advice-vs-real-garden-proof",
     path: "/blog/ai-garden-advice-vs-real-garden-proof",
-    title: "AI garden advice is not the same as dated garden proof",
+    title: "Advice from AI is not the same as a dated record of your own plant",
     description:
-      "Why OverGarden starts with living plant records before public recommendations.",
+      "Why a dated record of your own plant tells you more than a general answer, and how to start one.",
     excerpt:
-      "A general answer can be useful, but a dated record of what happened to a real plant is the proof layer gardeners can compare season after season.",
+      "A general answer can help, but a dated record shows what happened to your own plant, and you can compare it with the next season.",
+    author: "OverGarden editorial",
     publishedDate: "2026-07-03",
     sections: [
       {
-        heading: "Advice disappears. Records compound.",
-        body: "A chat answer can explain what should work. A dated plant record shows what changed, when it changed, and whether the gardener came back after the first fix. That published history becomes the useful evidence gardeners can compare over time.",
+        heading: "Advice disappears. Records add up.",
+        body: "A dated record shows what changed and whether the next thing you did helped. Publish observations about the same object to follow how it grows over time.",
       },
       {
-        heading: "Public pages must earn trust before they earn traffic.",
-        body: "OverGarden will not index empty catalog stubs, transient composer text, or account-only data as search bait. Published journal entries are public and eligible for search-engine indexing.",
+        heading: "Everyone can read what you publish",
+        body: "Published journals are open to everyone and to search engines. Write so the entry helps other gardeners, and leave out anything you do not want to share.",
       },
       {
-        heading: "The first publication is intentional.",
-        body: "The path is simple: choose one living object, compose one observation in the current tab, review exactly what will be public, and publish it in one atomic action. Canceling creates no durable record; a successful Publish creates the dated public history.",
+        heading: "Publishing is a deliberate choice.",
+        body: "Choose your object, describe the observation and press Publish. The entry is public at once. Until it is published the text stays only in this tab; there are no saved drafts.",
       },
     ],
     relatedLinks: [
@@ -287,13 +302,13 @@ const BLOG_POSTS: BlogPostContent[] = [
         label: "Start a plant record",
         href: "/garden",
         description:
-          "Open the gated workspace and save the first dated observation.",
+          "Choose your object, describe the observation and press Publish.",
       },
       {
-        label: "Read the starter guide",
+        label: "Guide: how to start a living plant record",
         href: "/guides/start-a-living-plant-record",
         description:
-          "A minimal process for recording one plant without turning the garden into a spreadsheet.",
+          "One plant, one dated note and one return visit, without turning the garden into a spreadsheet.",
       },
     ],
   },
@@ -468,78 +483,79 @@ const ANSWER_PAGES: AnswerPageContent[] = [
   },
 ];
 
+const MARKET_START_LINKS: PublicContentLink[] = [
+  {
+    label: "Gardeners' journals",
+    href: "/journals",
+    description:
+      "Dated entries about plants and animals, by species, topic and season.",
+  },
+  {
+    label: "Catalogue",
+    href: "/catalog",
+    description: "Find a plant or an animal by its common or scientific name.",
+  },
+  {
+    label: "Knowledge",
+    href: "/knowledge",
+    description:
+      "Answers to gardening questions, with their sources, and help with OverGarden.",
+  },
+  {
+    label: "Guide: how to start a living plant record",
+    href: "/guides/start-a-living-plant-record",
+    description: "The first record in a few minutes.",
+  },
+];
+
 const MARKET_LANDINGS: MarketLandingContent[] = [
   {
     kind: "marketing_landing",
     market: "ukraine",
     path: "/markets/ukraine",
+    eyebrow: "Ukraine",
     title: "OverGarden for gardeners in Ukraine",
     description:
-      "A public landing page for Ukrainian gardeners who need a public plant journal and dated observations.",
-    localAudience:
+      "A public garden journal in Ukrainian: dated records of your plants and animals, other gardeners' records, and a catalogue with the varieties of the Ukrainian State Register.",
+    audience:
       "Gardeners growing on balconies, dachas, village plots, greenhouses, and small household spaces in Ukraine.",
-    promise:
-      "Publish dated observations about your plants without adding a precise location. Every published entry is public.",
-    proofPlan: [
-      "The first public entry and follow-up observations build the history of the same object.",
-      "Public pages use authored guidance now and real public entries only after explicit publication.",
-      "Location stays hidden or coarse-region only; precise coordinates stay out of product surfaces.",
+    purpose:
+      "Record what happens to your plants and animals, with a date and a photo if you want one; read what other gardeners write; and look plants and animals up in a catalogue that includes the varieties of the Ukrainian State Register of Plant Varieties.",
+    facts: [
+      "Every published entry is open to everyone and can appear in search.",
+      "OverGarden shows no precise location: a place is hidden, or shown only as a region.",
+      "The interface speaks Ukrainian, Bulgarian and Russian; gardeners' entries are shown in the language they were written in.",
     ],
     localizationHandoff: {
       locale: "uk",
       plannedPath: "/markets/ukraine",
       owningIssue: "OVE-117",
     },
-    relatedLinks: [
-      {
-        label: "Create a public entry",
-        href: "/garden",
-        description:
-          "Publish your first observation. Unpublished writing exists only in the current tab; there are no saved drafts.",
-      },
-      {
-        label: "Read the first-record guide",
-        href: "/guides/start-a-living-plant-record",
-        description:
-          "Use one plant and one dated observation as the first OverGarden action.",
-      },
-    ],
+    relatedLinks: MARKET_START_LINKS,
   },
   {
     kind: "marketing_landing",
     market: "bulgaria",
     path: "/markets/bulgaria",
+    eyebrow: "Bulgaria",
     title: "OverGarden for gardeners in Bulgaria",
     description:
-      "A public landing page for Bulgarian gardeners who need a public plant journal and dated observations.",
-    localAudience:
+      "A public garden journal in Bulgarian: dated records of your plants and animals, other gardeners' records, and a catalogue with the varieties of the EU Common Catalogue.",
+    audience:
       "Gardeners growing in gardens, yards, greenhouses, terraces, villas, and small household spaces in Bulgaria.",
-    promise:
-      "Publish dated observations about your plants without adding a precise location. Every published entry is public.",
-    proofPlan: [
-      "The first public entry and follow-up observations build the history of the same object.",
-      "Market content starts authored and sparse until real public records make aggregation useful.",
-      "Language-specific copy and hreflang are reserved for the localization foundation.",
+    purpose:
+      "Record what happens to your plants and animals, with a date and a photo if you want one; read what other gardeners write; and look plants and animals up in a catalogue that includes the varieties of the EU Common Catalogue.",
+    facts: [
+      "Every published entry is open to everyone and can appear in search.",
+      "OverGarden shows no precise location: a place is hidden, or shown only as a region.",
+      "The interface speaks Bulgarian, Ukrainian and Russian; gardeners' entries are shown in the language they were written in.",
     ],
     localizationHandoff: {
       locale: "bg",
       plannedPath: "/bg/markets/bulgaria",
       owningIssue: "OVE-117",
     },
-    relatedLinks: [
-      {
-        label: "Create a public entry",
-        href: "/garden",
-        description:
-          "Publish your first observation. Unpublished writing exists only in the current tab; there are no saved drafts.",
-      },
-      {
-        label: "Read the first-record guide",
-        href: "/guides/start-a-living-plant-record",
-        description:
-          "Use one plant and one dated observation as the first OverGarden action.",
-      },
-    ],
+    relatedLinks: MARKET_START_LINKS,
   },
 ];
 
@@ -625,6 +641,7 @@ export function blogPostVisibleText(post: BlogPostContent) {
     post.title,
     post.description,
     post.excerpt,
+    post.author,
     ...post.sections.flatMap((section) => [section.heading, section.body]),
     ...post.relatedLinks.flatMap((link) => [link.label, link.description]),
   ];
@@ -703,11 +720,12 @@ export function knowledgeRelatedPaths(
 
 export function marketLandingVisibleText(landing: MarketLandingContent) {
   return [
+    landing.eyebrow,
     landing.title,
     landing.description,
-    landing.localAudience,
-    landing.promise,
-    ...landing.proofPlan,
+    landing.audience,
+    landing.purpose,
+    ...landing.facts,
     ...landing.relatedLinks.flatMap((link) => [link.label, link.description]),
   ];
 }

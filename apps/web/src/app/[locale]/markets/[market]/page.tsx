@@ -68,7 +68,7 @@ export async function generateMetadata({
       resolveUnresolvedPublicSurfaceDiscovery("localized_market").decision;
 
     return {
-      title: `${getLocalizedRouteChrome(localeParam).marketEyebrow} | OverGarden`,
+      title: "OverGarden",
       robots: missingState.robots,
     };
   }

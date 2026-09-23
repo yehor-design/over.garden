@@ -156,9 +156,12 @@ export function LocalizedBlogIndexPage({
             title={post.title}
             description={post.excerpt}
             meta={
-              <time dateTime={new Date(post.publishedDate).toISOString()}>
-                {formatDate(post.publishedDate, locale)}
-              </time>
+              <>
+                <time dateTime={post.publishedDate}>
+                  {formatDate(post.publishedDate, locale)}
+                </time>
+                {` · ${post.author}`}
+              </>
             }
           />
         ))}
@@ -183,6 +186,12 @@ export function LocalizedBlogIndexPage({
   );
 }
 
+/**
+ * One editorial note (`OVE-499`): what it is and who signs it before the
+ * text, the text in the reading column, and one list of what to read next,
+ * which is also the way into the workspace. It says nothing about search
+ * engines' traffic; that was the team's plan, not the reader's.
+ */
 export function LocalizedBlogPostPage({
   locale,
   post,
@@ -195,29 +204,41 @@ export function LocalizedBlogPostPage({
   availableLocales: readonly PublicLocale[];
   jsonLd?: Record<string, unknown> | null;
 }) {
+  const relatedId = "related-paths";
   return (
     <PublicArticle
       locale={locale}
       dataset={{ "data-public-blog-post": "true" }}
       backHref={localizedPath(locale, "/blog")}
       backLabel={chrome.fieldNotesBack}
-      eyebrow={formatDate(post.publishedDate, locale)}
+      eyebrow={chrome.noteEyebrow}
       title={post.title}
       description={post.description}
-      contentsLabel={chrome.relatedPathsTitle}
+      meta={[
+        { label: chrome.authorLabel, value: post.author },
+        {
+          label: chrome.publishedLabel,
+          value: (
+            <time dateTime={post.publishedDate}>
+              {formatDate(post.publishedDate, locale)}
+            </time>
+          ),
+        },
+      ]}
+      contentsLabel={chrome.contentsTitle}
       sections={post.sections.map((section, index) => ({
         id: articleSectionId("blog", section.heading, index),
         heading: section.heading,
         body: section.body,
       }))}
+      contentsAfter={[{ id: relatedId, heading: chrome.relatedPathsTitle }]}
       jsonLd={jsonLd}
     >
       <RelatedLinks
+        id={relatedId}
         locale={locale}
         title={chrome.relatedPathsTitle}
         links={post.relatedLinks}
-        showWorkspaceCta={true}
-        workspaceCta={chrome.privateRecordCta}
       />
     </PublicArticle>
   );
@@ -559,6 +580,11 @@ function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
   };
 }
 
+/**
+ * A country's page (`OVE-499`): who OverGarden is for there, what a gardener
+ * can do with it today, what is true of it, and where to start. Every link is
+ * a page that exists; nothing is for sale and nobody is located.
+ */
 export function LocalizedMarketLandingPage({
   locale,
   landing,
@@ -571,6 +597,7 @@ export function LocalizedMarketLandingPage({
   availableLocales: readonly PublicLocale[];
   jsonLd?: Record<string, unknown> | null;
 }) {
+  const startId = "market-start";
   return (
     <PublicArticle
       locale={locale}
@@ -578,35 +605,36 @@ export function LocalizedMarketLandingPage({
       eyebrow={
         <span className="inline-flex items-center gap-2">
           <Globe2 className="size-4" aria-hidden="true" />
-          {chrome.marketEyebrow}
+          {landing.eyebrow}
         </span>
       }
       title={landing.title}
       description={landing.description}
-      contentsLabel={chrome.relatedPathsTitle}
+      contentsLabel={chrome.contentsTitle}
       sections={[
         {
           id: "market-audience",
           heading: chrome.marketAudienceTitle,
-          body: landing.localAudience,
+          body: landing.audience,
         },
         {
-          id: "market-promise",
-          heading: chrome.marketPromiseTitle,
-          body: landing.promise,
+          id: "market-purpose",
+          heading: chrome.marketPurposeTitle,
+          body: landing.purpose,
         },
         {
-          id: "market-proof",
-          heading: chrome.marketProofTitle,
+          id: "market-facts",
+          heading: chrome.marketFactsTitle,
           body: (
-            <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
-              {landing.proofPlan.map((item) => (
-                <li key={item}>{item}</li>
+            <ul className="grid list-disc gap-2 pl-5">
+              {landing.facts.map((fact) => (
+                <li key={fact}>{fact}</li>
               ))}
             </ul>
           ),
         },
       ]}
+      contentsAfter={[{ id: startId, heading: chrome.marketStartTitle }]}
       jsonLd={jsonLd}
     >
       <NextLink
@@ -617,45 +645,36 @@ export function LocalizedMarketLandingPage({
         {chrome.privateRecordCta}
       </NextLink>
       <RelatedLinks
+        id={startId}
         locale={locale}
-        title={chrome.relatedPathsTitle}
+        title={chrome.marketStartTitle}
         links={landing.relatedLinks}
       />
     </PublicArticle>
   );
 }
 
+/** The one list of where to go next, under a heading the contents name. */
 function RelatedLinks({
+  id,
   locale,
   title,
   links,
-  showWorkspaceCta,
-  workspaceCta,
 }: {
+  id: string;
   locale: PublicLocale;
   title: string;
   links: PublicContentLink[];
-  showWorkspaceCta?: boolean;
-  workspaceCta?: string;
 }) {
   return (
     <Section
-      id="related-paths"
+      id={id}
       className="border-t border-border pt-6"
       level={2}
       title={title}
       headingClassName="text-h3"
     >
       <LinkGrid locale={locale} links={links} />
-      {showWorkspaceCta && workspaceCta ? (
-        <NextLink
-          href="/garden"
-          className={buttonVariants({ className: "w-fit" })}
-        >
-          <Sprout aria-hidden="true" />
-          {workspaceCta}
-        </NextLink>
-      ) : null}
     </Section>
   );
 }
@@ -700,6 +719,10 @@ function localizePublicHref(locale: PublicLocale, href: string) {
     "/markets",
     "/privacy",
     "/first-publication-disclosure",
+    "/journals",
+    "/catalog",
+    "/knowledge",
+    "/topics",
   ];
 
   return localizablePrefixes.some(

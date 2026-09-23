@@ -70,6 +70,7 @@ export const BROWSER_GATE_SPECS = [
   "organism-card.spec.ts",
   "organism-pages.spec.ts",
   "knowledge-pages.spec.ts",
+  "reading-pages.spec.ts",
   "editorial-surfaces.spec.ts",
   "communities.spec.ts",
 ] as const;

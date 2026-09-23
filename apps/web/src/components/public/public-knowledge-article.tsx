@@ -83,7 +83,11 @@ export function KnowledgeAboutSection({
         {copy.aboutTitle}
       </h2>
       <dl className="grid max-w-prose gap-4 text-body text-text">
-        <AboutRow label={copy.bylineLabel}>{editorial.author}</AboutRow>
+        {/* A piece with no author (news, ADR-0027 D2) has no author row,
+            not an empty one. */}
+        {editorial.author ? (
+          <AboutRow label={copy.bylineLabel}>{editorial.author}</AboutRow>
+        ) : null}
         <AboutRow label={copy.subjectLabel}>{copy.subjects[subject]}</AboutRow>
         <AboutRow label={copy.basisLabel}>{editorial.basis}</AboutRow>
         <AboutRow label={copy.sourcesLabel}>

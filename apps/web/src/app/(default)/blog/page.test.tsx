@@ -14,7 +14,13 @@ describe("/blog", () => {
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
     expect(metadata.alternates).toMatchObject({ canonical: "https://over.garden/blog" });
-    expect(html).toContain("Корисні публічні сторінки");
+    // What a gardener finds here, not the team's plan for search traffic
+    // (`OVE-499`, OG-UX-034).
+    expect(html).toMatch(/<h1[^>]*>Нотатки OverGarden<\/h1>/u);
+    expect(html).toContain("навіщо записувати сад");
+    expect(html).not.toMatch(/Корисні публічні сторінки|тонкими|пошуковим системам/u);
+    expect(html).toContain("Редакція OverGarden");
+    expect(html).toContain("Перейти в Мій сад");
     expect(html).toContain("/blog/ai-garden-advice-vs-real-garden-proof");
     expect(html).not.toContain("Български");
     expect(html).not.toContain("Русский");
