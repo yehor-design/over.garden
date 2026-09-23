@@ -53,6 +53,8 @@ function card(overrides: Partial<CatalogBrowseCard> = {}): CatalogBrowseCard {
     kingdom: "Plantae",
     registers: [],
     hasFirstHandContent: false,
+    speciesName: null,
+    publicSlug: "solanum-lycopersicum",
     ...overrides,
   };
 }
@@ -246,6 +248,72 @@ describe("the catalogue's one door", () => {
     expect(regions).toHaveLength(1);
     expect(html).toMatch(
       /data-catalog-result-count="true"[^>]*aria-live="polite"/u,
+    );
+  });
+  it("names the species a form belongs to, and offers what a gardener keeps to their garden", () => {
+    // `OVE-496`: a cultivar called "Де Барао" says nothing on its own, and a
+    // plant or an animal found here can be added through object setup, which
+    // first offers the objects of that organism the gardener already keeps.
+    const html = render(normalizePublicCatalogBrowseRequest({ q: "де" }), {
+      cards: [
+        card({
+          id: "de-barao",
+          name: "Де Барао",
+          rank: "cultivar",
+          vernacularName: null,
+          speciesName: "томат",
+          publicSlug: "de-barao",
+        }),
+        card({
+          id: "chanterelle",
+          name: "Cantharellus cibarius",
+          kingdom: "Fungi",
+          vernacularName: "Лисичка",
+          publicSlug: "cantharellus-cibarius",
+        }),
+      ],
+      total: 2,
+      pageCount: 1,
+    });
+
+    expect(html).toContain(
+      '<span data-catalog-card-species="true">Сорт виду «томат»</span>',
+    );
+    expect(html).toMatch(
+      /<a href="\/garden\/objects\/new\?catalog=de-barao" data-catalog-add-to-garden="true" rel="nofollow" aria-label="Додати в мій сад: Де Барао"/u,
+    );
+    // Nobody keeps a fungus in a garden here.
+    expect(html).not.toContain("catalog=cantharellus-cibarius");
+    // A species is its own species.
+    expect(
+      render(normalizePublicCatalogBrowseRequest({ q: "solanum" }), {
+        cards: [card({ speciesName: "томат" })],
+        total: 1,
+        pageCount: 1,
+      }),
+    ).not.toContain("data-catalog-card-species");
+  });
+
+  it("offers the same search across every kingdom when the chosen one has none", () => {
+    const html = render(
+      normalizePublicCatalogBrowseRequest({ q: "бджола", kingdom: "plantae" }),
+      { cards: [], total: 0, pageCount: 1 },
+      "empty",
+    );
+    // The kingdom counts ignore the kingdom filter, so they are that number.
+    expect(html).toContain('data-catalog-search-everywhere="true"');
+    expect(html).toContain("Шукати в усьому каталозі (93");
+    expect(html).toContain(`href="/catalog?q=${encodeURIComponent("бджола")}"`);
+  });
+
+  it("is one step from the door", () => {
+    const html = render(normalizePublicCatalogBrowseRequest({ letter: "s" }), {
+      cards: [card()],
+      total: 1,
+      pageCount: 1,
+    });
+    expect(html).toMatch(
+      /<a[^>]*href="\/catalog"[^>]*data-catalog-door-link="true"|data-catalog-door-link="true"[^>]*href="\/catalog"/u,
     );
   });
 });

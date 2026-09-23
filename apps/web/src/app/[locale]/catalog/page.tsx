@@ -5,8 +5,10 @@ import {
   PublicCatalogBrowse,
   type PublicCatalogBrowseState,
 } from "@/components/public/public-catalog-browse";
+import { PublicCatalogDoor } from "@/components/public/public-catalog-door";
 import {
   buildPublicCatalogBrowseHref,
+  EMPTY_PUBLIC_CATALOG_BROWSE_REQUEST,
   isUnfilteredCatalogBrowseRequest,
   normalizePublicCatalogBrowseRequest,
   type PublicCatalogBrowseRequest,
@@ -21,6 +23,7 @@ import {
   readCatalogBrowseFacets,
   readCatalogBrowseKingdoms,
   readCatalogBrowsePage,
+  readCatalogFirstHandOrganisms,
   readCatalogRegisterHubSpecies,
 } from "@/server/public-cache";
 import {
@@ -45,8 +48,6 @@ import {
 } from "@/server/static-public-page";
 
 type SearchParams = Record<string, string | string[] | undefined>;
-
-type RegisterHubSpecies = { slug: string; name: string; total: number };
 
 interface PublicCatalogRouteProps {
   params: Promise<{ locale: string }>;
@@ -112,26 +113,24 @@ export async function renderPublicCatalogPage(
 ) {
   await deferStaticRenderWithoutDatabase(phase);
   const request = normalizePublicCatalogBrowseRequest(searchParams);
-  const unfiltered = isUnfilteredCatalogBrowseRequest(request);
-  const [kingdomsResult, registerHubsResult, pageResult, facetsResult] =
-    await Promise.allSettled([
-      readCatalogBrowseKingdoms(),
-      unfiltered
-        ? readCatalogRegisterHubSpecies().then((rows) => [...rows].slice(0, 24))
-        : Promise.resolve<RegisterHubSpecies[]>([]),
-      readCatalogBrowsePage(request, locale),
-      readCatalogBrowseFacets(request),
-    ]);
+  // The catalogue's own address is its door; any filter, letter, sort or
+  // search is the register (`OVE-496`).
+  if (isUnfilteredCatalogBrowseRequest(request)) {
+    return renderPublicCatalogDoor(locale, phase);
+  }
+  const [kingdomsResult, pageResult, facetsResult] = await Promise.allSettled([
+    readCatalogBrowseKingdoms(),
+    readCatalogBrowsePage(request, locale),
+    readCatalogBrowseFacets(request),
+  ]);
   if (
-    [kingdomsResult, registerHubsResult, pageResult, facetsResult].some(
+    [kingdomsResult, pageResult, facetsResult].some(
       (result) => result.status === "rejected",
     )
   )
     deferStaticRenderAfterFailure(phase);
   const kingdoms =
     kingdomsResult.status === "fulfilled" ? kingdomsResult.value : [];
-  const registerHubs =
-    registerHubsResult.status === "fulfilled" ? registerHubsResult.value : [];
   const page = pageResult.status === "fulfilled" ? pageResult.value : null;
   const facets =
     facetsResult.status === "fulfilled" ? facetsResult.value : null;
@@ -157,8 +156,56 @@ export async function renderPublicCatalogPage(
       kingdomTotals={Object.fromEntries(
         kingdoms.map((summary) => [summary.kingdom, summary.total]),
       )}
-      registerHubs={registerHubs}
       state={state}
+      jsonLd={surface.jsonLd}
+    />
+  );
+}
+
+/**
+ * The door (`OVE-496`): four reads, each settled on its own, so a failure
+ * hides one section and the search — which reads nothing — is always there.
+ */
+async function renderPublicCatalogDoor(
+  locale: PublicLocale,
+  phase: PublicRenderPhase,
+) {
+  const [kingdomsResult, registerHubsResult, firstHandResult, facetsResult] =
+    await Promise.allSettled([
+      readCatalogBrowseKingdoms(),
+      readCatalogRegisterHubSpecies().then((rows) => [...rows].slice(0, 24)),
+      readCatalogFirstHandOrganisms(locale),
+      readCatalogBrowseFacets(EMPTY_PUBLIC_CATALOG_BROWSE_REQUEST),
+    ]);
+  const results = [
+    kingdomsResult,
+    registerHubsResult,
+    firstHandResult,
+    facetsResult,
+  ];
+  const failed = results.some((result) => result.status === "rejected");
+  if (failed) deferStaticRenderAfterFailure(phase);
+  const kingdoms =
+    kingdomsResult.status === "fulfilled" ? kingdomsResult.value : [];
+  const surface = buildCatalogSurface(locale, kingdoms);
+
+  return (
+    <PublicCatalogDoor
+      locale={locale}
+      copy={getPublicCatalogBrowseCopy(locale)}
+      kingdomTotals={Object.fromEntries(
+        kingdoms.map((summary) => [summary.kingdom, summary.total]),
+      )}
+      firstHand={
+        firstHandResult.status === "fulfilled" ? firstHandResult.value : null
+      }
+      facets={facetsResult.status === "fulfilled" ? facetsResult.value : null}
+      registerHubs={
+        registerHubsResult.status === "fulfilled"
+          ? registerHubsResult.value
+          : null
+      }
+      state={failed ? "partial" : "ready"}
       jsonLd={surface.jsonLd}
     />
   );
@@ -185,13 +232,13 @@ export function renderStaticPublicCatalogPage(locale: PublicLocale) {
   return renderStaticPublicPage({
     render: (phase) => renderPublicCatalogPage(locale, {}, phase),
     fallback: (
-      <PublicCatalogBrowse
+      <PublicCatalogDoor
         locale={locale}
         copy={getPublicCatalogBrowseCopy(locale)}
-        request={normalizePublicCatalogBrowseRequest()}
-        page={{ cards: [], total: 0, pageCount: 1 }}
-        facets={EMPTY_FACETS}
         kingdomTotals={{}}
+        firstHand={null}
+        facets={null}
+        registerHubs={null}
         state="loading"
       />
     ),

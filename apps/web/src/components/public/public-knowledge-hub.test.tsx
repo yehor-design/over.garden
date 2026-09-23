@@ -76,6 +76,16 @@ describe("PublicKnowledgeHub", () => {
     expect(html).toContain("/guides/visual-seasonal-observation");
     expect(html).toContain("/topics/care-checks");
     expect(html).toContain('data-site-shell-context="route-owned"');
+    // The way into the catalogue says what its door does (`OVE-496`): a
+    // reader asking what something is has a name, not a kingdom.
+    const catalogue = html.slice(
+      html.indexOf('data-catalog-front-door="true"'),
+    );
+    expect(
+      /<a [^>]*data-catalog-front-door="true"[^>]*>/u.exec(html)?.[0],
+    ).toContain('href="/catalog"');
+    expect(catalogue).toContain("Знайдіть рослину чи тварину");
+    expect(catalogue).toContain("За звичною чи науковою назвою");
     expect(html).not.toContain("/garden");
     // Nothing here reaches for the pre-redesign palette any more.
     expect(html).not.toContain("text-muted-foreground");

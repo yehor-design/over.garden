@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Chip, FilterChip } from "@/components/ui/chip";
 import { Field } from "@/components/ui/field";
 import { HiddenField } from "@/components/ui/hidden-field";
-import { Link } from "@/components/ui/link";
+import { DocumentLink, Link } from "@/components/ui/link";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -120,6 +120,15 @@ export interface FilterBarProps {
   action: string;
   /** Let Proxy resolve a query-dependent route tree on the server. */
   documentNavigation?: boolean;
+  /**
+   * The chips and the clear links navigate the document as well. For a
+   * listing whose static document the shell links from every page — the
+   * catalogue — the client router always holds that document's route, and a
+   * client link into any query view can be predicted onto it and change only
+   * the URL (`public-query-twin.ts`). The count then arrives in the new
+   * page's bytes rather than being announced (DESIGN.md §5.1).
+   */
+  documentLinks?: boolean;
   /** The secondary facets, behind "Filters (n)". */
   facets: readonly FilterBarFacet[];
   /** The listing's primary split, as links. */
@@ -154,6 +163,7 @@ export interface FilterBarProps {
 function FilterBar({
   action,
   documentNavigation = false,
+  documentLinks = false,
   facets,
   modes = [],
   sort,
@@ -178,6 +188,7 @@ function FilterBar({
   const titleId = `${id}-filters-title`;
   const appliedCount = facets.filter((facet) => facet.value.length > 0).length;
   const busy = pending || navigating;
+  const BarLink = documentLinks ? DocumentLink : Link;
 
   const navigate = (params: URLSearchParams) => {
     params.delete("page");
@@ -367,14 +378,14 @@ function FilterBar({
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border p-4">
               {clearFiltersHref ? (
-                <Link
+                <BarLink
                   href={clearFiltersHref}
                   variant="quiet"
                   data-filter-bar-clear="true"
                   className="mr-auto inline-flex min-h-11 items-center justify-center rounded-md px-3 text-body-sm font-medium"
                 >
                   {labels.clear}
-                </Link>
+                </BarLink>
               ) : null}
               <Button type="submit" form={panelFormId}>
                 {labels.apply}
@@ -425,9 +436,10 @@ function FilterBar({
         >
           {/* A real `<a href>`, so a chip removes its filter unhydrated, and a
               client navigation once hydrated, which keeps the count's live
-              region in the document. */}
+              region in the document — unless `documentLinks`, where only
+              the document is sure to reach the view. */}
           {chips.map((chip) => (
-            <Link
+            <BarLink
               key={chip.key}
               href={chip.removeHref}
               variant="quiet"
@@ -435,15 +447,15 @@ function FilterBar({
               className="rounded-full"
             >
               <Chip label={chip.label} />
-            </Link>
+            </BarLink>
           ))}
           {chips.length > 1 && clearAllHref ? (
-            <Link
+            <BarLink
               href={clearAllHref}
               className="inline-flex min-h-8 items-center rounded-md px-2 text-body-sm font-medium"
             >
               {labels.clearAll}
-            </Link>
+            </BarLink>
           ) : null}
         </div>
       ) : null}

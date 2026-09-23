@@ -16,9 +16,13 @@ import {
   type CatalogBrowseRegister,
   type PublicCatalogBrowseRequest,
 } from "@/lib/public-catalog-browse";
+import { normalizeCatalogName } from "@/lib/catalog/normalize-name";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
-import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
+import {
+  catalogSpeciesNameSql,
+  catalogSpeciesSlugSql,
+} from "@/server/catalog-address-sql";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -47,7 +51,10 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export interface CatalogBrowseKingdomSummary {
   readonly kingdom: CatalogBrowseKingdom;
   readonly total: number;
-  readonly initials: readonly { initial: CatalogBrowseInitial; total: number }[];
+  readonly initials: readonly {
+    initial: CatalogBrowseInitial;
+    total: number;
+  }[];
 }
 
 export interface CatalogBrowseCard {
@@ -61,6 +68,14 @@ export interface CatalogBrowseCard {
   /** The market registers this organism is attached to. */
   readonly registers: readonly CatalogBrowseRegister[];
   readonly hasFirstHandContent: boolean;
+  /**
+   * The species a cultivar, variety, subspecies or breed belongs to, in the
+   * reader's language when the catalogue holds it (`OVE-496`). Null for a
+   * species, and for a form with no species yet.
+   */
+  readonly speciesName: string | null;
+  /** The organism's own slug: what adding it to a garden carries. */
+  readonly publicSlug: string;
 }
 
 export interface CatalogBrowsePage {
@@ -81,6 +96,35 @@ export interface CatalogBrowseFacetCounts {
 const KINGDOM_SET = new Set<string>(CATALOG_BROWSE_KINGDOMS);
 
 /**
+ * Runs one catalogue read with JIT compilation off (`OVE-496`).
+ *
+ * The planner prices a name search — a prefix on the organism or on any of its
+ * names — far above what it costs, which crosses Postgres' JIT threshold
+ * (`jit_above_cost`, 100 000, production's too), and compiling then costs
+ * more than the read. Measured in production (114 669 catalogue rows;
+ * read-only `EXPLAIN ANALYZE`): the count behind a search for «томат» among
+ * plants took 933 ms with JIT and 58 ms without, the whole search 1 188 ms
+ * against 189 ms. Reads without a name stay under the threshold and are
+ * unchanged; they come through here as well, so no read has to be sorted
+ * into one kind or the other. `set local` ends with the transaction, so a
+ * pooled connection carries nothing over; inside a caller's transaction it is
+ * set there.
+ */
+async function withoutJit<T>(
+  executor: QueryExecutor,
+  read: (executor: QueryExecutor) => Promise<T>,
+): Promise<T> {
+  if (executor.isTransaction) {
+    await sql`set local jit = off`.execute(executor);
+    return read(executor);
+  }
+  return executor.transaction().execute(async (trx) => {
+    await sql`set local jit = off`.execute(trx);
+    return read(trx);
+  });
+}
+
+/**
  * The rows any catalogue view may show, before the reader's own filters.
  *
  * `$if` rather than a string of `where`s so the predicate set is exactly the
@@ -90,7 +134,9 @@ const KINGDOM_SET = new Set<string>(CATALOG_BROWSE_KINGDOMS);
 function catalogBrowseBase(
   executor: QueryExecutor,
   request: PublicCatalogBrowseRequest,
-  options: { ignore?: "kingdom" | "rank" | "register" | "grown" | "letter" } = {},
+  options: {
+    ignore?: "kingdom" | "rank" | "register" | "grown" | "letter";
+  } = {},
 ) {
   const initial = request.initial;
   return executor
@@ -103,16 +149,18 @@ function catalogBrowseBase(
     .$if(request.ranks.length > 0 && options.ignore !== "rank", (query) =>
       query.where("catalog_items.rank", "in", [...request.ranks]),
     )
-    .$if(request.registers.length > 0 && options.ignore !== "register", (query) =>
-      query.where((eb) =>
-        eb.or(
-          request.registers.map((register) =>
-            register === "ua"
-              ? eb("catalog_items.registered_ua", "=", true)
-              : eb("catalog_items.registered_eu", "=", true),
+    .$if(
+      request.registers.length > 0 && options.ignore !== "register",
+      (query) =>
+        query.where((eb) =>
+          eb.or(
+            request.registers.map((register) =>
+              register === "ua"
+                ? eb("catalog_items.registered_ua", "=", true)
+                : eb("catalog_items.registered_eu", "=", true),
+            ),
           ),
         ),
-      ),
     )
     .$if(request.grown && options.ignore !== "grown", (query) =>
       query.where((eb) =>
@@ -165,9 +213,16 @@ function catalogBrowseBase(
     );
 }
 
-function normalizedSearchPrefix(query: string) {
-  return query
-    .toLowerCase()
+/**
+ * The query in the form every stored name is in (`catalog_normalize_name`,
+ * ADR-0026 D3), so an apostrophe, a diacritic or ё/ґ typed one way finds a name
+ * stored the other. It used to be lower-cased only: «м’ята» with a typographic
+ * apostrophe found nothing, and neither did «помидор» spelled with ё, while
+ * the typeahead found both (`OVE-496`). The wildcards are removed after
+ * normalizing, because the prefix is a `like` pattern.
+ */
+export function normalizedSearchPrefix(query: string) {
+  return normalizeCatalogName(query.slice(0, 240))
     .replaceAll("%", "")
     .replaceAll("_", "")
     .trim()
@@ -179,6 +234,16 @@ export async function listCatalogBrowsePage(
   request: PublicCatalogBrowseRequest,
   locale: PublicLocale,
   executor: QueryExecutor = db,
+): Promise<CatalogBrowsePage> {
+  return withoutJit(executor, (trx) =>
+    readCatalogBrowsePage(trx, request, locale),
+  );
+}
+
+async function readCatalogBrowsePage(
+  executor: QueryExecutor,
+  request: PublicCatalogBrowseRequest,
+  locale: PublicLocale,
 ): Promise<CatalogBrowsePage> {
   const counted = await catalogBrowseBase(executor, request)
     .select(({ fn }) => fn.count<string>("catalog_items.id").as("total"))
@@ -201,17 +266,14 @@ export async function listCatalogBrowsePage(
       "catalog_items.indexable_override as indexableOverride",
       catalogKindSql("catalog_items").as("catalogKind"),
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
+      catalogSpeciesNameSql("catalog_items", locale).as("speciesName"),
       // The reader's own language, when the catalogue holds a name in it.
       // One correlated subquery rather than a join, because a join on a table
       // with several names per organism multiplies the page.
       eb
         .selectFrom("catalog_item_names")
         .select("catalog_item_names.display_name")
-        .whereRef(
-          "catalog_item_names.catalog_item_id",
-          "=",
-          "catalog_items.id",
-        )
+        .whereRef("catalog_item_names.catalog_item_id", "=", "catalog_items.id")
         .where("catalog_item_names.locale", "=", locale)
         .orderBy("catalog_item_names.is_primary", "desc")
         .orderBy("catalog_item_names.weight", "desc")
@@ -219,6 +281,37 @@ export async function listCatalogBrowsePage(
         .limit(1)
         .as("vernacularName"),
     ])
+    // A search is answered by relevance before the chosen order (`OVE-496`):
+    // the name typed exactly, then species before their forms, then what a
+    // gardener here has actually written about. Alphabetical alone put
+    // "1001" and every "Tomato 'X'" cultivar above the tomato itself. None of
+    // it is popularity: each tier is a fact about the row.
+    .$if(request.query.length > 0, (query) => {
+      const exact = normalizedSearchPrefix(request.query);
+      return query
+        .orderBy(
+          sql<boolean>`(
+            catalog_items.normalized_name = ${exact}
+            or exists (
+              select 1 from catalog_item_names as exact_name
+              where exact_name.catalog_item_id = catalog_items.id
+                and exact_name.normalized_name = ${exact}
+            )
+          )`,
+          "desc",
+        )
+        .orderBy(
+          sql<boolean>`(catalog_items.rank is not distinct from 'species')`,
+          "desc",
+        )
+        .orderBy(
+          sql<boolean>`(
+            catalog_items.first_hand_content_at is not null
+            or catalog_items.indexable_override is true
+          )`,
+          "desc",
+        );
+    })
     .$if(request.sort === "written", (query) =>
       query
         .orderBy("catalog_items.first_hand_content_at", "desc")
@@ -249,6 +342,8 @@ export async function listCatalogBrowsePage(
       ],
       hasFirstHandContent:
         row.firstHandContentAt !== null || row.indexableOverride === true,
+      speciesName: row.speciesName ?? null,
+      publicSlug: row.publicSlug!,
       path: publicCatalogEvidencePath({
         catalogKind: row.catalogKind ?? "plant_variety",
         publicSlug: row.publicSlug!,
@@ -270,59 +365,73 @@ export async function countCatalogBrowseFacets(
   request: PublicCatalogBrowseRequest,
   executor: QueryExecutor = db,
 ): Promise<CatalogBrowseFacetCounts> {
+  // Six counts, each its own statement on its own connection, as before —
+  // and each with JIT off, which is most of what they used to cost.
   const [kingdomRows, rankRows, initialRows, registerRow, grownRow, totalRow] =
     await Promise.all([
-      catalogBrowseBase(executor, request, { ignore: "kingdom" })
-        .select(({ fn }) => [
-          "catalog_items.kingdom as kingdom",
-          fn.count<string>("catalog_items.id").as("total"),
-        ])
-        .groupBy("catalog_items.kingdom")
-        .execute(),
-      catalogBrowseBase(executor, request, { ignore: "rank" })
-        .select(({ fn }) => [
-          "catalog_items.rank as rank",
-          fn.count<string>("catalog_items.id").as("total"),
-        ])
-        .groupBy("catalog_items.rank")
-        .execute(),
-      catalogBrowseBase(executor, request, { ignore: "letter" })
-        .select(({ fn }) => [
-          sql<string>`lower(left(catalog_items.canonical_name, 1))`.as(
-            "initial",
-          ),
-          fn.count<string>("catalog_items.id").as("total"),
-        ])
-        .groupBy(sql`lower(left(catalog_items.canonical_name, 1))`)
-        .execute(),
-      catalogBrowseBase(executor, request, { ignore: "register" })
-        .select(({ fn }) => [
-          fn
-            .count<string>("catalog_items.id")
-            .filterWhere("catalog_items.registered_ua", "=", true)
-            .as("ua"),
-          fn
-            .count<string>("catalog_items.id")
-            .filterWhere("catalog_items.registered_eu", "=", true)
-            .as("eu"),
-        ])
-        .executeTakeFirst(),
-      catalogBrowseBase(executor, request, { ignore: "grown" })
-        .select(({ fn, eb }) =>
-          fn
-            .count<string>("catalog_items.id")
-            .filterWhere(
-              eb.or([
-                eb("catalog_items.first_hand_content_at", "is not", null),
-                eb("catalog_items.indexable_override", "=", true),
-              ]),
-            )
-            .as("grown"),
-        )
-        .executeTakeFirst(),
-      catalogBrowseBase(executor, request)
-        .select(({ fn }) => fn.count<string>("catalog_items.id").as("total"))
-        .executeTakeFirst(),
+      withoutJit(executor, (trx) =>
+        catalogBrowseBase(trx, request, { ignore: "kingdom" })
+          .select(({ fn }) => [
+            "catalog_items.kingdom as kingdom",
+            fn.count<string>("catalog_items.id").as("total"),
+          ])
+          .groupBy("catalog_items.kingdom")
+          .execute(),
+      ),
+      withoutJit(executor, (trx) =>
+        catalogBrowseBase(trx, request, { ignore: "rank" })
+          .select(({ fn }) => [
+            "catalog_items.rank as rank",
+            fn.count<string>("catalog_items.id").as("total"),
+          ])
+          .groupBy("catalog_items.rank")
+          .execute(),
+      ),
+      withoutJit(executor, (trx) =>
+        catalogBrowseBase(trx, request, { ignore: "letter" })
+          .select(({ fn }) => [
+            sql<string>`lower(left(catalog_items.canonical_name, 1))`.as(
+              "initial",
+            ),
+            fn.count<string>("catalog_items.id").as("total"),
+          ])
+          .groupBy(sql`lower(left(catalog_items.canonical_name, 1))`)
+          .execute(),
+      ),
+      withoutJit(executor, (trx) =>
+        catalogBrowseBase(trx, request, { ignore: "register" })
+          .select(({ fn }) => [
+            fn
+              .count<string>("catalog_items.id")
+              .filterWhere("catalog_items.registered_ua", "=", true)
+              .as("ua"),
+            fn
+              .count<string>("catalog_items.id")
+              .filterWhere("catalog_items.registered_eu", "=", true)
+              .as("eu"),
+          ])
+          .executeTakeFirst(),
+      ),
+      withoutJit(executor, (trx) =>
+        catalogBrowseBase(trx, request, { ignore: "grown" })
+          .select(({ fn, eb }) =>
+            fn
+              .count<string>("catalog_items.id")
+              .filterWhere(
+                eb.or([
+                  eb("catalog_items.first_hand_content_at", "is not", null),
+                  eb("catalog_items.indexable_override", "=", true),
+                ]),
+              )
+              .as("grown"),
+          )
+          .executeTakeFirst(),
+      ),
+      withoutJit(executor, (trx) =>
+        catalogBrowseBase(trx, request)
+          .select(({ fn }) => fn.count<string>("catalog_items.id").as("total"))
+          .executeTakeFirst(),
+      ),
     ]);
 
   const kingdoms: Partial<Record<CatalogBrowseKingdom, number>> = {};
@@ -333,7 +442,10 @@ export async function countCatalogBrowseFacets(
   }
   const ranks: Partial<Record<CatalogBrowseRank, number>> = {};
   for (const row of rankRows) {
-    if (row.rank && (CATALOG_BROWSE_RANKS as readonly string[]).includes(row.rank)) {
+    if (
+      row.rank &&
+      (CATALOG_BROWSE_RANKS as readonly string[]).includes(row.rank)
+    ) {
       ranks[row.rank as CatalogBrowseRank] = Number(row.total);
     }
   }
@@ -365,21 +477,23 @@ export async function countCatalogBrowseFacets(
 export async function listCatalogBrowseKingdoms(
   executor: QueryExecutor = db,
 ): Promise<CatalogBrowseKingdomSummary[]> {
-  const rows = await executor
-    .selectFrom("catalog_items")
-    .select(({ fn }) => [
-      "catalog_items.kingdom as kingdom",
-      sql<string>`lower(left(catalog_items.canonical_name, 1))`.as("initial"),
-      fn.count<string>("catalog_items.id").as("total"),
-    ])
-    .where("catalog_items.public_slug", "is not", null)
-    .where("catalog_items.merged_into_catalog_item_id", "is", null)
-    .where("catalog_items.kingdom", "in", [...CATALOG_BROWSE_KINGDOMS])
-    .groupBy([
-      "catalog_items.kingdom",
-      sql`lower(left(catalog_items.canonical_name, 1))`,
-    ])
-    .execute();
+  const rows = await withoutJit(executor, (trx) =>
+    trx
+      .selectFrom("catalog_items")
+      .select(({ fn }) => [
+        "catalog_items.kingdom as kingdom",
+        sql<string>`lower(left(catalog_items.canonical_name, 1))`.as("initial"),
+        fn.count<string>("catalog_items.id").as("total"),
+      ])
+      .where("catalog_items.public_slug", "is not", null)
+      .where("catalog_items.merged_into_catalog_item_id", "is", null)
+      .where("catalog_items.kingdom", "in", [...CATALOG_BROWSE_KINGDOMS])
+      .groupBy([
+        "catalog_items.kingdom",
+        sql`lower(left(catalog_items.canonical_name, 1))`,
+      ])
+      .execute(),
+  );
 
   const byKingdom = new Map<
     CatalogBrowseKingdom,

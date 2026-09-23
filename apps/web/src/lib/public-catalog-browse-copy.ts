@@ -58,6 +58,28 @@ export interface PublicCatalogBrowseCopy {
   readonly errorReference: string;
   readonly retry: string;
   readonly loadingLabel: string;
+  /**
+   * The door (`OVE-496`): finding a living thing comes before browsing a
+   * register of 114 669 names, and the register is one explicit step away.
+   */
+  readonly doorTitle: string;
+  readonly doorDescription: string;
+  readonly scopeLegend: string;
+  readonly scopeAll: string;
+  readonly firstHandAll: (total: number) => string;
+  readonly firstHandEmpty: string;
+  readonly legendTitle: string;
+  /** Species, form and a gardener's own object, told apart in a sentence each. */
+  readonly legend: readonly { term: string; description: string }[];
+  readonly allHeading: string;
+  readonly allDescription: (total: number) => string;
+  /** "Сорт виду «томат»": a form named by the species it belongs to. */
+  readonly speciesOf: (rank: string, species: string) => string;
+  readonly addToGarden: string;
+  readonly addToGardenLabel: (name: string) => string;
+  /** The same search across every kingdom, when the chosen one has none. */
+  readonly searchEverywhere: (total: number) => string;
+  readonly doorPartial: string;
 }
 
 const UK: PublicCatalogBrowseCopy = {
@@ -67,7 +89,7 @@ const UK: PublicCatalogBrowseCopy = {
     "Рослини, тварини, гриби й інші організми, про які ведуть журнали в OverGarden — за царствами й за першою літерою назви.",
   firstHandHeading: "Про що вже писали садівники",
   firstHandDescription:
-    "Картки, у яких є хоча б один публічний запис із першоджерела.",
+    "Організми, про які тут є хоча б один публічний запис садівника.",
   kingdomsHeading: "За царствами",
   registersHeading: "Сорти в державних реєстрах",
   organismCount: (total) => `${total.toLocaleString("uk-UA")} організмів`,
@@ -118,6 +140,41 @@ const UK: PublicCatalogBrowseCopy = {
   errorReference: "Код звернення:",
   retry: "Спробувати ще раз",
   loadingLabel: "Завантажуємо каталог",
+  doorTitle: "Знайдіть рослину чи тварину",
+  doorDescription:
+    "За звичною чи науковою назвою — томат або Solanum lycopersicum. Кожна картка каже, що це за організм і чи писали про нього садівники.",
+  scopeLegend: "Що шукаєте",
+  scopeAll: "Усе",
+  firstHandAll: (total) =>
+    `Усі, про які писали: ${total.toLocaleString("uk-UA")}`,
+  firstHandEmpty: "Поки ніхто тут не писав про жоден організм із каталогу.",
+  legendTitle: "Вид, сорт і ваша рослина",
+  legend: [
+    {
+      term: "Вид",
+      description:
+        "Організм, як його знає наука: томат — це вид Solanum lycopersicum.",
+    },
+    {
+      term: "Сорт або порода",
+      description:
+        "Форма виду, виведена людьми: «Де Барао» — сорт томата. Картка сорту чи породи називає свій вид.",
+    },
+    {
+      term: "Ваша рослина чи тварина",
+      description:
+        "Окремий запис у вашому саду. Її можна прив'язати до виду, сорту чи породи — а можна й ні.",
+    },
+  ],
+  allHeading: "Увесь каталог",
+  allDescription: (total) =>
+    `${total.toLocaleString("uk-UA")} організмів — за царствами й за першою літерою латинської назви.`,
+  speciesOf: (rank, species) => `${rank} виду «${species}»`,
+  addToGarden: "Додати в мій сад",
+  addToGardenLabel: (name) => `Додати в мій сад: ${name}`,
+  searchEverywhere: (total) =>
+    `Шукати в усьому каталозі (${total.toLocaleString("uk-UA")})`,
+  doorPartial: "Частину каталогу зараз не вдалося показати. Пошук працює.",
   kingdom: {
     Plantae: "Рослини",
     Animalia: "Тварини",
@@ -136,7 +193,8 @@ const BG: PublicCatalogBrowseCopy = {
   description:
     "Растения, животни, гъби и други организми, за които се водят дневници в OverGarden — по царства и по първа буква на името.",
   firstHandHeading: "За какво вече са писали градинарите",
-  firstHandDescription: "Картите с поне един публичен запис от първа ръка.",
+  firstHandDescription:
+    "Организми, за които тук има поне един публичен запис на градинар.",
   kingdomsHeading: "По царства",
   registersHeading: "Сортове в държавните регистри",
   organismCount: (total) => `${total.toLocaleString("bg-BG")} организма`,
@@ -187,6 +245,41 @@ const BG: PublicCatalogBrowseCopy = {
   errorReference: "Код на обръщението:",
   retry: "Опитайте отново",
   loadingLabel: "Зареждаме каталога",
+  doorTitle: "Намерете растение или животно",
+  doorDescription:
+    "По обичайното или научното име — домат или Solanum lycopersicum. Всяка карта казва какъв е организмът и дали градинарите са писали за него.",
+  scopeLegend: "Какво търсите",
+  scopeAll: "Всичко",
+  firstHandAll: (total) =>
+    `Всички, за които са писали: ${total.toLocaleString("bg-BG")}`,
+  firstHandEmpty: "Засега никой тук не е писал за организъм от каталога.",
+  legendTitle: "Вид, сорт и вашето растение",
+  legend: [
+    {
+      term: "Вид",
+      description:
+        "Организмът, както го познава науката: доматът е видът Solanum lycopersicum.",
+    },
+    {
+      term: "Сорт или порода",
+      description:
+        "Форма на вида, създадена от хората: „Де Барао“ е сорт домат. Картата на сорта или породата назовава своя вид.",
+    },
+    {
+      term: "Вашето растение или животно",
+      description:
+        "Отделен запис във вашата градина. Може да го свържете с вид, сорт или порода — или не.",
+    },
+  ],
+  allHeading: "Целият каталог",
+  allDescription: (total) =>
+    `${total.toLocaleString("bg-BG")} организма — по царства и по първа буква на латинското име.`,
+  speciesOf: (rank, species) => `${rank} на вида „${species}“`,
+  addToGarden: "Добавяне в моята градина",
+  addToGardenLabel: (name) => `Добавяне в моята градина: ${name}`,
+  searchEverywhere: (total) =>
+    `Търсене в целия каталог (${total.toLocaleString("bg-BG")})`,
+  doorPartial: "Част от каталога не можа да се покаже сега. Търсенето работи.",
   kingdom: {
     Plantae: "Растения",
     Animalia: "Животни",
@@ -206,7 +299,7 @@ const RU: PublicCatalogBrowseCopy = {
     "Растения, животные, грибы и другие организмы, о которых ведут журналы в OverGarden — по царствам и по первой букве названия.",
   firstHandHeading: "О чём уже писали садоводы",
   firstHandDescription:
-    "Карточки, где есть хотя бы одна публичная запись из первых рук.",
+    "Организмы, о которых здесь есть хотя бы одна публичная запись садовода.",
   kingdomsHeading: "По царствам",
   registersHeading: "Сорта в государственных реестрах",
   organismCount: (total) => `${total.toLocaleString("ru-RU")} организмов`,
@@ -257,6 +350,42 @@ const RU: PublicCatalogBrowseCopy = {
   errorReference: "Код обращения:",
   retry: "Попробовать ещё раз",
   loadingLabel: "Загружаем каталог",
+  doorTitle: "Найдите растение или животное",
+  doorDescription:
+    "По привычному или научному названию — томат или Solanum lycopersicum. Каждая карточка говорит, что это за организм и писали ли о нём садоводы.",
+  scopeLegend: "Что ищете",
+  scopeAll: "Всё",
+  firstHandAll: (total) =>
+    `Все, о которых писали: ${total.toLocaleString("ru-RU")}`,
+  firstHandEmpty:
+    "Пока никто здесь не писал ни об одном организме из каталога.",
+  legendTitle: "Вид, сорт и ваше растение",
+  legend: [
+    {
+      term: "Вид",
+      description:
+        "Организм, как его знает наука: томат — это вид Solanum lycopersicum.",
+    },
+    {
+      term: "Сорт или порода",
+      description:
+        "Форма вида, выведенная людьми: «Де Барао» — сорт томата. Карточка сорта или породы называет свой вид.",
+    },
+    {
+      term: "Ваше растение или животное",
+      description:
+        "Отдельная запись в вашем саду. Её можно привязать к виду, сорту или породе — а можно и нет.",
+    },
+  ],
+  allHeading: "Весь каталог",
+  allDescription: (total) =>
+    `${total.toLocaleString("ru-RU")} организмов — по царствам и по первой букве латинского названия.`,
+  speciesOf: (rank, species) => `${rank} вида «${species}»`,
+  addToGarden: "Добавить в мой сад",
+  addToGardenLabel: (name) => `Добавить в мой сад: ${name}`,
+  searchEverywhere: (total) =>
+    `Искать во всём каталоге (${total.toLocaleString("ru-RU")})`,
+  doorPartial: "Часть каталога сейчас не удалось показать. Поиск работает.",
   kingdom: {
     Plantae: "Растения",
     Animalia: "Животные",

@@ -70,6 +70,35 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**The catalogue's door (OVE-496):** `/catalog` with no query is a door, not
+page one of the A–Z register (DESIGN.md §5.17). Any filter, letter, sort or
+search is the register behind it (the `/q` twin, unchanged), which keeps every
+facet.
+- The door leads with a `GET` search whose scope is said out loud (plants by
+  default, animals, everything). Then it shows what gardeners here wrote about,
+  with the count and nothing claimed beyond it; a one-sentence legend for
+  species, form and your own object; the register hubs; and the whole
+  register by kingdom and letter. It has no context rail, which would only
+  repeat those sections.
+- Search matches the stored form (`normalizeCatalogName`: apostrophes, ё,
+  ґ, no wildcards) and ranks an exact name, then a species, then first-hand,
+  before the sort.
+- A form's row names its species ("Сорт виду «…»"). A plant or animal row
+  offers "Add to my garden": object setup, which offers the reader's own
+  matching objects first. An empty search among plants offers "search
+  everywhere" with the count.
+- Every catalogue read runs with `jit = off`. Production compiled every name
+  search: «томат» took 1,188 ms with JIT and 189 ms without (read-only
+  `EXPLAIN ANALYZE`). Reads without a name never crossed the threshold.
+- Every link into a view of the register is a document navigation, from the
+  door or from another view: letters, "search everywhere", chips and clear
+  links (`DocumentLink`; `FilterBar`'s `documentLinks`). Next 16.2 predicts
+  an unfetched view's route from the door's, which the shell prefetches on
+  every page, so a client link changed only the URL on a slow connection
+  (`public-query-twin.ts`).
+
+See `docs/redesign/2026-09-21/OVE-496-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

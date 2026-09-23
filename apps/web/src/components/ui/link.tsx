@@ -40,5 +40,28 @@ function Link({ className, variant = "inline", ...props }: LinkProps) {
   );
 }
 
-export { Link, linkVariants };
-export type { LinkProps };
+type DocumentLinkProps = React.ComponentProps<"a"> &
+  VariantProps<typeof linkVariants>;
+
+/**
+ * `Link`'s look on a plain `<a>`, which the browser follows as a document
+ * navigation. It exists for the one destination the client router cannot be
+ * trusted to reach: a listing's query view, which it may predict onto the
+ * listing's static document (`public-query-twin.ts`). Anywhere else, `Link`.
+ */
+function DocumentLink({
+  className,
+  variant = "inline",
+  ...props
+}: DocumentLinkProps) {
+  return (
+    <a
+      data-slot="link"
+      className={cn(linkVariants({ variant }), className)}
+      {...props}
+    />
+  );
+}
+
+export { DocumentLink, Link, linkVariants };
+export type { DocumentLinkProps, LinkProps };

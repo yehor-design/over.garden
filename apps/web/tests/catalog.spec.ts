@@ -211,8 +211,25 @@ test.describe("the catalogue's one door", () => {
     // Inspect the actual form action and its server response. The plain
     // listing's visible no-JavaScript document is held separately by
     // static-documents.spec.ts; the query twin is request-time content.
+    // The door (`OVE-496`) asks with its own GET form — a scope and a name —
+    // before it shows any register.
+    const door = await request.get(new URL("/catalog", baseURL).toString(), {
+      headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
+    });
+    expect(door.status()).toBe(200);
+    const doorHtml = await door.text();
+    const search = /<form[^>]*data-catalog-search-form="true"[^>]*>/u.exec(
+      doorHtml,
+    )?.[0];
+    expect(search, "the door renders no search form").toBeTruthy();
+    expect(search).toContain('method="get"');
+    expect(search).toContain('action="/catalog"');
+    expect(doorHtml).toMatch(/<input type="radio"[^>]*name="kingdom"/u);
+    expect(doorHtml).toContain('name="q"');
+
+    // The register behind it keeps every facet the door used to open on.
     const document = await request.get(
-      new URL("/catalog", baseURL).toString(),
+      new URL("/catalog?kingdom=plantae", baseURL).toString(),
       {
         headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
       },
@@ -280,24 +297,29 @@ test.describe("the catalogue's one door", () => {
     await page.goto("/catalog", { waitUntil: "load" });
 
     // The static document has one visible alphabet; exercise the hydrated link
-    // so a cached default tree cannot pass merely by changing the URL.
+    // so a cached default tree cannot pass merely by changing the URL. On the
+    // door (`OVE-496`) each letter is a document navigation into the register:
+    // a client one could change the URL over the door itself
+    // (`public-query-twin.ts`; the slow-connection case is in
+    // catalog-door.spec.ts).
     const index = page.locator('nav[aria-label="За літерою"]');
     const letters = index.locator("a");
     await expect(letters.first()).toBeVisible();
 
-    // The whole alphabet is always rendered — 26 letters, the digit bucket
-    // and "all letters" — because an index that appears and disappears with
-    // the data is an index a reader cannot learn. A letter nothing is filed
-    // under is a disabled span rather than a link to an empty page, so how
-    // many are *links* depends on what the database holds; what must not
-    // depend on that is the shape.
-    await expect(index.locator("li")).toHaveCount(28);
+    // The whole alphabet is always rendered — 26 letters and the digit bucket
+    // — because an index that appears and disappears with the data is an
+    // index a reader cannot learn. On the door there is no "all letters": the
+    // door is all of them (`OVE-496`); the register adds it back. A letter
+    // nothing is filed under is a disabled span rather than a link to an
+    // empty page, so how many are *links* depends on what the database holds;
+    // what must not depend on that is the shape.
+    await expect(index.locator("li")).toHaveCount(27);
     const linkCount = await letters.count();
-    expect(linkCount, "no letter is reachable at all").toBeGreaterThan(1);
+    expect(linkCount, "no letter is reachable at all").toBeGreaterThan(0);
 
     // Every one is a real anchor with a real href — this is the crawl path —
     // and focus moves through them by Tab without a roving tabindex to learn.
-    const first = letters.nth(1);
+    const first = letters.first();
     await waitForHydration(first);
     await first.focus();
     await expect(first).toBeFocused();
@@ -318,6 +340,10 @@ test.describe("the catalogue's one door", () => {
         .locator('[data-filter-bar-form]:visible input[name="letter"]')
         .first(),
     ).toHaveValue(chosen);
+    // The register's own alphabet has "all letters" back.
+    await expect(
+      page.locator('nav[aria-label="За літерою"]:visible li'),
+    ).toHaveCount(28);
   });
 
   test("axe reports nothing on the door, a listing and an empty view", async ({

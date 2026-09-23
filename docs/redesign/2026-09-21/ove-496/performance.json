@@ -1,0 +1,483 @@
+{
+  "measuredAt": "2026-09-23",
+  "method": "The repository functions themselves (listCatalogBrowsePage, countCatalogBrowseFacets, listCatalogBrowseFirstHandOrganisms, listCatalogBrowseKingdoms), JIT on and off: \"on\" rewrites the repository`s own `set local jit = off` on the wire and nothing else differs. Local: wall time, a fresh pool per mode, one first run then the median of five. Production: the same statements, captured locally, as EXPLAIN (ANALYZE, FORMAT JSON), each in a read-only transaction with statement_timeout 15s, after one warm-up pass; planning plus execution time.",
+  "local": {
+    "database": {
+      "jit": "on",
+      "jit_above_cost": "100000",
+      "server_version": "18.4",
+      "catalog_items": "119412"
+    },
+    "reads": {
+      "search «томат», plants": {
+        "jit_on": {
+          "first_ms": 640,
+          "median_ms": 551,
+          "samples_ms": [
+            551,
+            557,
+            551,
+            576,
+            551
+          ]
+        },
+        "jit_off": {
+          "first_ms": 45,
+          "median_ms": 33,
+          "samples_ms": [
+            36,
+            34,
+            33,
+            33,
+            33
+          ]
+        },
+        "result": {
+          "total": 3,
+          "pageCount": 1,
+          "first": [
+            "Solanum lycopersicum L. (помідор їстивний)",
+            "Помідор чері (Помідор чері)",
+            "Томатіна (Томатіна)"
+          ]
+        }
+      },
+      "search «м'ята», everything": {
+        "jit_on": {
+          "first_ms": 483,
+          "median_ms": 455,
+          "samples_ms": [
+            455,
+            456,
+            453,
+            457,
+            455
+          ]
+        },
+        "jit_off": {
+          "first_ms": 41,
+          "median_ms": 31,
+          "samples_ms": [
+            32,
+            33,
+            30,
+            30,
+            31
+          ]
+        },
+        "result": {
+          "total": 16,
+          "pageCount": 1,
+          "first": [
+            "Mentha aquatica (м'ята водяна)",
+            "Mentha arvensis (м'ята польова)",
+            "Mentha longifolia (м'ята довголиста)"
+          ]
+        }
+      },
+      "plants, page 1": {
+        "jit_on": {
+          "first_ms": 126,
+          "median_ms": 65,
+          "samples_ms": [
+            64,
+            69,
+            64,
+            65,
+            65
+          ]
+        },
+        "jit_off": {
+          "first_ms": 75,
+          "median_ms": 64,
+          "samples_ms": [
+            67,
+            65,
+            64,
+            64,
+            63
+          ]
+        },
+        "result": {
+          "total": 65832,
+          "pageCount": 1098,
+          "first": [
+            "+ Crataegomespilus dardarii",
+            "+ Laburnocytisus adamii",
+            "+ Laburnocytisus sp."
+          ]
+        }
+      },
+      "letter S, page 1": {
+        "jit_on": {
+          "first_ms": 77,
+          "median_ms": 57,
+          "samples_ms": [
+            56,
+            57,
+            58,
+            57,
+            56
+          ]
+        },
+        "jit_off": {
+          "first_ms": 68,
+          "median_ms": 55,
+          "samples_ms": [
+            56,
+            56,
+            54,
+            55,
+            54
+          ]
+        },
+        "result": {
+          "total": 6896,
+          "pageCount": 115,
+          "first": [
+            "SG Anser",
+            "SG Eider",
+            "SGSR Picor"
+          ]
+        }
+      },
+      "facets, the door (unfiltered)": {
+        "jit_on": {
+          "first_ms": 70,
+          "median_ms": 56,
+          "samples_ms": [
+            64,
+            58,
+            56,
+            56,
+            55
+          ]
+        },
+        "jit_off": {
+          "first_ms": 78,
+          "median_ms": 57,
+          "samples_ms": [
+            56,
+            57,
+            72,
+            67,
+            56
+          ]
+        },
+        "result": {
+          "total": 95863
+        }
+      },
+      "facets, «томат» in plants": {
+        "jit_on": {
+          "first_ms": 415,
+          "median_ms": 297,
+          "samples_ms": [
+            267,
+            297,
+            245,
+            302,
+            298
+          ]
+        },
+        "jit_off": {
+          "first_ms": 38,
+          "median_ms": 24,
+          "samples_ms": [
+            25,
+            24,
+            24,
+            28,
+            24
+          ]
+        },
+        "result": {
+          "total": 3
+        }
+      },
+      "first-hand, the door": {
+        "jit_on": {
+          "first_ms": 75,
+          "median_ms": 60,
+          "samples_ms": [
+            64,
+            63,
+            60,
+            58,
+            55
+          ]
+        },
+        "jit_off": {
+          "first_ms": 62,
+          "median_ms": 53,
+          "samples_ms": [
+            54,
+            53,
+            54,
+            53,
+            53
+          ]
+        },
+        "result": {
+          "rows": 12
+        }
+      },
+      "kingdoms": {
+        "jit_on": {
+          "first_ms": 71,
+          "median_ms": 42,
+          "samples_ms": [
+            43,
+            42,
+            42,
+            43,
+            42
+          ]
+        },
+        "jit_off": {
+          "first_ms": 53,
+          "median_ms": 43,
+          "samples_ms": [
+            44,
+            43,
+            45,
+            42,
+            43
+          ]
+        },
+        "result": {
+          "rows": 8
+        }
+      }
+    }
+  },
+  "production": {
+    "hostClass": "digitalocean-managed",
+    "connectionSource": "DATABASE_URL",
+    "settings": {
+      "jit": "on",
+      "jit_above_cost": "100000",
+      "server_version": "18.6",
+      "catalog_items": "114669"
+    },
+    "leftoverProbeSessions": 0,
+    "reads": {
+      "search «томат», plants": {
+        "jit_on": {
+          "total_ms": 1188,
+          "jit_ms": 256,
+          "statements": [
+            {
+              "planning_ms": 0.511,
+              "execution_ms": 932.655,
+              "jit_ms": 142.75
+            },
+            {
+              "planning_ms": 1.839,
+              "execution_ms": 252.67,
+              "jit_ms": 113.037
+            }
+          ]
+        },
+        "jit_off": {
+          "total_ms": 189,
+          "jit_ms": 0,
+          "statements": [
+            {
+              "planning_ms": 0.57,
+              "execution_ms": 57.747,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 1.788,
+              "execution_ms": 128.969,
+              "jit_ms": null
+            }
+          ]
+        }
+      },
+      "search «м'ята», everything": {
+        "jit_on": {
+          "total_ms": 334,
+          "jit_ms": 78,
+          "statements": [
+            {
+              "planning_ms": 0.351,
+              "execution_ms": 152.116,
+              "jit_ms": 14.703
+            },
+            {
+              "planning_ms": 3.869,
+              "execution_ms": 177.811,
+              "jit_ms": 62.912
+            }
+          ]
+        },
+        "jit_off": {
+          "total_ms": 238,
+          "jit_ms": 0,
+          "statements": [
+            {
+              "planning_ms": 0.47,
+              "execution_ms": 127.61,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 1.945,
+              "execution_ms": 108.119,
+              "jit_ms": null
+            }
+          ]
+        }
+      },
+      "facets, «томат» in plants": {
+        "jit_on": {
+          "total_ms": 712,
+          "jit_ms": 150,
+          "statements": [
+            {
+              "planning_ms": 0.451,
+              "execution_ms": 115.589,
+              "jit_ms": 16.419
+            },
+            {
+              "planning_ms": 0.542,
+              "execution_ms": 91.761,
+              "jit_ms": 22.608
+            },
+            {
+              "planning_ms": 1.689,
+              "execution_ms": 153.402,
+              "jit_ms": 43.278
+            },
+            {
+              "planning_ms": 0.565,
+              "execution_ms": 80.165,
+              "jit_ms": 19.585
+            },
+            {
+              "planning_ms": 0.751,
+              "execution_ms": 98.214,
+              "jit_ms": 24.552
+            },
+            {
+              "planning_ms": 0.518,
+              "execution_ms": 168.636,
+              "jit_ms": 23.73
+            }
+          ]
+        },
+        "jit_off": {
+          "total_ms": 430,
+          "jit_ms": 0,
+          "statements": [
+            {
+              "planning_ms": 0.523,
+              "execution_ms": 97.567,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.558,
+              "execution_ms": 66.007,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.511,
+              "execution_ms": 60.059,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.572,
+              "execution_ms": 70.837,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.555,
+              "execution_ms": 63.777,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 3.224,
+              "execution_ms": 65.826,
+              "jit_ms": null
+            }
+          ]
+        }
+      },
+      "facets, the door (unfiltered)": {
+        "jit_on": {
+          "total_ms": 537,
+          "jit_ms": 0,
+          "statements": [
+            {
+              "planning_ms": 0.161,
+              "execution_ms": 76.22,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.186,
+              "execution_ms": 58.694,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.146,
+              "execution_ms": 89.343,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.173,
+              "execution_ms": 76.594,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.214,
+              "execution_ms": 90.392,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.216,
+              "execution_ms": 144.405,
+              "jit_ms": null
+            }
+          ]
+        },
+        "jit_off": {
+          "total_ms": 669,
+          "jit_ms": 0,
+          "statements": [
+            {
+              "planning_ms": 0.206,
+              "execution_ms": 102.075,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.148,
+              "execution_ms": 99.38,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.149,
+              "execution_ms": 73.327,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.172,
+              "execution_ms": 128.71,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.171,
+              "execution_ms": 92.8,
+              "jit_ms": null
+            },
+            {
+              "planning_ms": 0.221,
+              "execution_ms": 171.202,
+              "jit_ms": null
+            }
+          ]
+        }
+      }
+    }
+  }
+}
