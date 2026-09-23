@@ -1274,6 +1274,27 @@ export async function proxy(request: NextRequest) {
       );
     }
     if (lookup.status === "not_found") {
+      // A handle its gardener has since changed (`OVE-503`): the entry is the
+      // same entry under the handle they go by now, one 308 away — the "one
+      // prefix rule" ADR-0029 left for the day handles could change. Read only
+      // when the address missed, so the ordinary request pays nothing for it.
+      const moved = await resolveMovedHandleEntry(
+        numberedEntry.handle,
+        numberedEntry.entryNumber,
+      ).catch(() => null);
+      if (moved) {
+        const url = request.nextUrl.clone();
+        url.pathname = publicJournalEntryPath(moved.handle, moved.entryNumber);
+        url.search = sanitizeInterfaceRouteSearch(
+          url.pathname,
+          request.nextUrl.searchParams,
+        );
+        return withAppRouteContract(
+          NextResponse.redirect(url, { status: 308 }),
+          request,
+          localization,
+        );
+      }
       return withAppRouteContract(
         notFoundDocument(
           renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
@@ -1511,6 +1532,27 @@ export async function proxy(request: NextRequest) {
   return withAppRouteContract(response, request, localization, {
     passThrough: true,
   });
+}
+
+/**
+ * Where an entry lives now when the handle in its address was retired: the
+ * same number under the handle its gardener goes by today, if that entry is
+ * there. `null` otherwise — the address then answers as it always has.
+ */
+async function resolveMovedHandleEntry(handle: string, entryNumber: number) {
+  const [
+    { resolveRetiredPublicHandle },
+    { getPublicJournalEntryLifecycleLookup },
+  ] = await Promise.all([
+    import("@/server/public-profile-repository"),
+    import("@/server/journal-repository"),
+  ]);
+  const current = await resolveRetiredPublicHandle(handle);
+  if (!current) return null;
+  const lookup = await getPublicJournalEntryLifecycleLookup(
+    publicJournalEntryNumberKey(current, entryNumber),
+  );
+  return lookup.status === "active" ? { handle: current, entryNumber } : null;
 }
 
 async function resolvePublicProfileViewer(

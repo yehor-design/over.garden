@@ -5,6 +5,7 @@ import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
 import { WorkspaceShell } from "@/components/garden/workspace-state";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { AccountSections } from "@/app/(default)/account/account-sections";
 
 export const GARDEN_PROFILE_PATH = "/garden/profile";
 
@@ -13,37 +14,23 @@ export const COPY = {
     title: "Мій публічний профіль",
     back: "До мого саду",
     open: "Відкрити публічний профіль",
-    blockedTitle: "Заблоковані профілі",
-    blockedEmpty: "Заблокованих профілів немає.",
-    unblock: "Розблокувати",
-    blocked: "Профіль заблоковано.",
-    unblocked: "Профіль розблоковано.",
   },
   bg: {
     title: "Моят публичен профил",
     back: "Към моята градина",
     open: "Отвори публичния профил",
-    blockedTitle: "Блокирани профили",
-    blockedEmpty: "Няма блокирани профили.",
-    unblock: "Разблокирай",
-    blocked: "Профилът е блокиран.",
-    unblocked: "Профилът е разблокиран.",
   },
   ru: {
     title: "Мой публичный профиль",
     back: "К моему саду",
     open: "Открыть публичный профиль",
-    blockedTitle: "Заблокированные профили",
-    blockedEmpty: "Заблокированных профилей нет.",
-    unblock: "Разблокировать",
-    blocked: "Профиль заблокирован.",
-    unblocked: "Профиль разблокирован.",
   },
 } as const;
 
 /**
  * The profile shell, shared by this page, its `loading.tsx`, and the signed-out
- * state, so the heading and the way back never move (ADR-0023).
+ * state, so the heading, the way back and the row of account pages never move
+ * (ADR-0023, `OVE-503`).
  */
 export function ProfileShell({
   locale,
@@ -75,6 +62,7 @@ export function ProfileShell({
           </Link>
         }
       >
+        <AccountSections locale={locale} current="profile" />
         {children}
       </WorkspaceShell>
     </div>

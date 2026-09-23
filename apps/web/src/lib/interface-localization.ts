@@ -86,6 +86,9 @@ export interface InterfaceCopy {
     /** The account menu's two groups, above the owner's (ADR-0022 D7). */
     accountPagesSection: string;
     accountSettingsSection: string;
+    /** The account's settings and its sign-in page (`OVE-503`). */
+    accountSettings: string;
+    accountSecurity: string;
     erasureRequest: string;
     /** The chrome's own answer when the session store could not be reached. */
     sessionUnavailable: string;
@@ -182,6 +185,8 @@ const INTERFACE_COPY = {
       sessionUnavailableRetry: "Спробувати ще раз",
       accountPagesSection: "Мої сторінки",
       accountSettingsSection: "Налаштування",
+      accountSettings: "Налаштування",
+      accountSecurity: "Вхід і безпека",
       erasureRequest: "Видалення даних",
       exploreSection: "Огляд",
       mySection: "Моє",
@@ -298,6 +303,8 @@ const INTERFACE_COPY = {
       sessionUnavailableRetry: "Опитай отново",
       accountPagesSection: "Моите страници",
       accountSettingsSection: "Настройки",
+      accountSettings: "Настройки",
+      accountSecurity: "Вход и сигурност",
       erasureRequest: "Изтриване на данни",
       exploreSection: "Разглеждане",
       mySection: "Моето",
@@ -414,6 +421,8 @@ const INTERFACE_COPY = {
       sessionUnavailableRetry: "Попробовать снова",
       accountPagesSection: "Мои страницы",
       accountSettingsSection: "Настройки",
+      accountSettings: "Настройки",
+      accountSecurity: "Вход и безопасность",
       erasureRequest: "Удаление данных",
       exploreSection: "Обзор",
       mySection: "Моё",

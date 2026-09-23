@@ -42,6 +42,10 @@ import { fileURLToPath } from "node:url";
 export const WORKSPACE_RENDER_ROOTS = [
   "src/app/(default)/garden",
   "src/components/garden",
+  // The account's own pages (`OVE-503`): settings and sign-in, carved out of
+  // the public profile's editor and held to the same rule.
+  "src/app/(default)/account/settings",
+  "src/app/(default)/account/security",
 ] as const;
 
 /** The one function that turns a rejection into a rendered value. */

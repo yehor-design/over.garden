@@ -17,8 +17,6 @@ import {
   ensureUserPublicProfile,
   buildPublicProfileFollowerCountQuery,
   buildPublicProfileFollowingCountQuery,
-  getPublicProfileEvidencePreviewByUserId,
-  type PublicProfileEvidencePage,
   type PublicProfileLanguage,
 } from "@/server/public-profile-repository";
 import type { RequestScope } from "@/server/request-scope";
@@ -28,6 +26,12 @@ import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eli
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const BIO_MAX_LENGTH = 600;
+
+const AVATAR_FALLBACK_ALT: Record<PublicLocale, string> = {
+  uk: "Фото профілю",
+  bg: "Снимка на профила",
+  ru: "Фото профиля",
+};
 const PROFILE_LANGUAGE_LIMIT = 4;
 const PROFILE_LANGUAGES = new Set<PublicProfileLanguage>([
   "uk",
@@ -98,10 +102,8 @@ export interface OwnerProfileWorkspace {
     nextEligibleAt: Date | string | null;
     canRename: boolean;
   };
-  preview: PublicProfileEvidencePage;
   avatarOptions: OwnerProfileAvatarOption[];
   relationshipCounts: { followers: number; following: number };
-  blockedProfiles: BlockedProfileSummary[];
 }
 
 export type OwnerPublicProfileUpdateResult =
@@ -200,30 +202,25 @@ export async function getOwnerProfileWorkspace(
   executor: QueryExecutor = db,
 ): Promise<OwnerProfileWorkspace> {
   const profile = await ensureUserPublicProfile(scope, executor);
-  const [
-    preview,
-    blockedProfiles,
-    avatarRows,
-    followerRow,
-    followingRow,
-    handleClaim,
-  ] = await Promise.all([
-    getPublicProfileEvidencePreviewByUserId(scope.userId, locale, executor),
-    buildBlockedProfileSummariesQuery(executor, scope).execute(),
-    buildOwnerAvatarOptionsQuery(executor, scope).execute(),
-    buildPublicProfileFollowerCountQuery(
-      executor,
-      scope.userId,
-    ).executeTakeFirst(),
-    buildPublicProfileFollowingCountQuery(
-      executor,
-      scope.userId,
-    ).executeTakeFirst(),
-    buildOwnerCurrentHandleClaimQuery(executor, scope).executeTakeFirst(),
-  ]);
+  // The editor's preview is the profile's header, drawn from the form itself,
+  // so the whole public page — every entry, object and photograph — is not
+  // read here any more; the blocked list is the settings page's (`OVE-503`).
+  const [avatarRows, followerRow, followingRow, handleClaim] =
+    await Promise.all([
+      buildOwnerAvatarOptionsQuery(executor, scope).execute(),
+      buildPublicProfileFollowerCountQuery(
+        executor,
+        scope.userId,
+      ).executeTakeFirst(),
+      buildPublicProfileFollowingCountQuery(
+        executor,
+        scope.userId,
+      ).executeTakeFirst(),
+      buildOwnerCurrentHandleClaimQuery(executor, scope).executeTakeFirst(),
+    ]);
 
-  if (!preview || !handleClaim) {
-    throw new Error("Owner public profile preview is unavailable.");
+  if (!handleClaim) {
+    throw new Error("Owner public profile handle is unavailable.");
   }
 
   const nextEligibleAt = finiteDateOrNull(handleClaim.nextEligibleAt);
@@ -245,17 +242,17 @@ export async function getOwnerProfileWorkspace(
       canRename:
         nextEligibleAt === null || nextEligibleAt.getTime() <= Date.now(),
     },
-    preview,
     avatarOptions: avatarRows.map((row) => ({
       mediaAssetId: row.mediaAssetId,
       publicUrl: getPublicDerivativeUrl(row.derivativeKey),
-      alt: row.altText?.trim() || "Profile photo",
+      // The gardener's own description of the photograph, or the reader's
+      // word for one — never an English placeholder in a Bulgarian form.
+      alt: row.altText?.trim() || AVATAR_FALLBACK_ALT[locale],
     })),
     relationshipCounts: {
       followers: numericCount(followerRow?.count),
       following: numericCount(followingRow?.count),
     },
-    blockedProfiles,
   };
 }
 
@@ -381,6 +378,17 @@ export function buildOwnerAvatarOptionsQuery(
     .orderBy("id", "asc")
     .limit(OWNER_AVATAR_OPTION_LIMIT)
     .$narrowType<{ derivativeKey: string }>();
+}
+
+/**
+ * The profiles this member has blocked, for the account's settings page
+ * (`OVE-503`): a safety list, not part of the public profile's editor.
+ */
+export async function listBlockedProfiles(
+  scope: RequestScope,
+  executor: QueryExecutor = db,
+): Promise<BlockedProfileSummary[]> {
+  return buildBlockedProfileSummariesQuery(executor, scope).execute();
 }
 
 export function buildBlockedProfileSummariesQuery(

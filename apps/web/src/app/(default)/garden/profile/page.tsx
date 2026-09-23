@@ -2,21 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
-import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 
 import {
   WorkspaceSectionError,
   WorkspaceSectionSkeleton,
 } from "@/components/garden/workspace-state";
-import { SignOutControl } from "@/components/auth/sign-out-control";
-import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  getLocalizedOAuthErrorMessage,
-  getTrustSurfaceCopy,
-} from "@/lib/trust-surface-copy";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getOwnerProfileWorkspace } from "@/server/owner-profile-repository";
 import type { RequestScope } from "@/server/request-scope";
@@ -25,13 +18,9 @@ import {
   settleSection,
   workspaceSectionDeadlineMs,
 } from "@/server/workspace-failure";
-import { getCurrentAccountMethodProjection } from "@/server/auth/account-methods";
-import { AccountMethodsPanel } from "../account-methods-panel";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { unblockProfileAction } from "./actions";
 import { OwnerProfileEditor } from "./owner-profile-editor";
 import { COPY, GARDEN_PROFILE_PATH, ProfileShell } from "./profile-shell";
-import { HiddenField } from "@/components/ui/hidden-field";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestInterfaceLocale();
@@ -88,7 +77,14 @@ export default async function GardenPublicProfilePage({
   );
 }
 
-/** The owner workspace read and the account-method projection, both settled. */
+/**
+ * The owner's public identity, settled (`OVE-503`).
+ *
+ * Only what the public profile shows is edited here. How the member signs in,
+ * signs out and whom they have blocked are account pages of their own
+ * (`/account/security`, `/account/settings`), so changing a bio never walks
+ * past a sign-in method, and a handle change is its own form below the rest.
+ */
 async function ProfileSections({
   locale,
   params,
@@ -99,19 +95,14 @@ async function ProfileSections({
   scope: RequestScope;
 }) {
   const copy = COPY[locale];
-  const signOutCopy = getTrustSurfaceCopy(locale).signOut;
-  const [workspace, accountMethods] = await Promise.all([
-    settleSection(() => getOwnerProfileWorkspace(scope, locale), {
+  const workspace = await settleSection(
+    () => getOwnerProfileWorkspace(scope, locale),
+    {
       deadlineMs: workspaceSectionDeadlineMs(3),
       surface: "profile",
       section: "owner-workspace",
-    }),
-    settleSection(() => getCurrentAccountMethodProjection(), {
-      deadlineMs: workspaceSectionDeadlineMs(2),
-      surface: "profile",
-      section: "account-methods",
-    }),
-  ]);
+    },
+  );
 
   if (workspace.status === "error") {
     return (
@@ -124,7 +115,6 @@ async function ProfileSections({
   }
 
   const publicPath = publicProfilePath(locale, workspace.value.editor.handle);
-  const relationshipStatus = firstParam(params.relationshipStatus);
 
   return (
     <>
@@ -143,91 +133,6 @@ async function ProfileSections({
         locale={locale}
         status={firstParam(params.status) ?? null}
       />
-
-      <section className="border-t border-border pt-7">
-        {accountMethods.status === "ready" ? (
-          <AccountMethodsPanel
-            initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
-            locale={locale}
-            {...accountMethods.value}
-          />
-        ) : (
-          <WorkspaceSectionError
-            locale={locale}
-            failure={accountMethods}
-            retryHref={GARDEN_PROFILE_PATH}
-          />
-        )}
-      </section>
-
-      <section
-        id="account-security"
-        className="grid gap-4 border-t border-border pt-7"
-      >
-        <div className="grid gap-1.5">
-          <h2 className="text-h2 text-text-heading">
-            {signOutCopy.accountSectionTitle}
-          </h2>
-          <p className="max-w-2xl text-body-sm leading-6 text-text-muted">
-            {signOutCopy.accountSectionDescription}
-          </p>
-        </div>
-        <div>
-          <SignOutControl presentation="profile" />
-        </div>
-      </section>
-
-      <section
-        id="blocked-profiles"
-        className="grid gap-4 border-t border-border pt-7"
-      >
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="size-5 text-text-muted" aria-hidden="true" />
-          <h2 className="text-h2 text-text-heading">{copy.blockedTitle}</h2>
-        </div>
-        {relationshipStatus === "blocked" ||
-        relationshipStatus === "unblocked" ? (
-          <p
-            role="status"
-            className="rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text"
-          >
-            {relationshipStatus === "blocked" ? copy.blocked : copy.unblocked}
-          </p>
-        ) : null}
-        {workspace.value.blockedProfiles.length > 0 ? (
-          <ul className="divide-y divide-border border-y border-border">
-            {workspace.value.blockedProfiles.map((profile) => (
-              <li
-                key={profile.blockId}
-                className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-h4 text-text-heading">
-                    {profile.displayName ?? `@${profile.handle}`}
-                  </p>
-                  <p className="truncate text-caption text-text-muted">
-                    @{profile.handle}
-                  </p>
-                </div>
-                <OwnerScopedProgressiveForm action={unblockProfileAction}>
-                  <HiddenField name="blockId" value={profile.blockId} />
-                  <button
-                    type="submit"
-                    className={buttonVariants({
-                      variant: "secondary",
-                      size: "sm",
-                    })}
-                  >
-                    {copy.unblock}
-                  </button>
-                </OwnerScopedProgressiveForm>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-body-sm text-text-muted">{copy.blockedEmpty}</p>
-        )}
-      </section>
     </>
   );
 }

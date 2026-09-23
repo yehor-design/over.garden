@@ -156,7 +156,7 @@ describe("public handle profile actions", () => {
     formData.set("coarseRegionCode", "UA-32");
     formData.set("relationshipVisibility", "counts");
 
-    await updatePublicProfileAction(undefined, formData);
+    const answer = await updatePublicProfileAction({ status: null }, formData);
 
     expect(mocks.updateOwnerPublicProfile).toHaveBeenCalledWith(
       {
@@ -176,9 +176,10 @@ describe("public handle profile actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/@green_thumb");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/bg/@green_thumb");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/ru/@green_thumb");
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/garden/profile?status=updated#public-profile-editor",
-    );
+    // The form is answered in place (`OVE-503`): a redirect would mount the
+    // editor afresh and lose what the gardener typed.
+    expect(answer).toEqual({ status: "updated" });
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
   it("unblocks only through signed-in owner scope", async () => {
@@ -196,7 +197,7 @@ describe("public handle profile actions", () => {
       "00000000-0000-4000-8000-000000000222",
     );
     expect(mocks.redirect).toHaveBeenCalledWith(
-      "/garden/profile?relationshipStatus=unblocked#blocked-profiles",
+      "/account/settings?relationshipStatus=unblocked#blocked-profiles",
     );
   });
 });

@@ -833,7 +833,14 @@ describe("the sealed owner's links", () => {
       '[data-site-shell-account-settings="true"]',
     );
     expect(settings).not.toBeNull();
-    expect(hrefsOf(settings!)).toEqual(["/privacy", "/erasure"]);
+    // The account's settings and its sign-in, then privacy and erasure
+    // (`OVE-503`): the pages the public profile's editor used to carry.
+    expect(hrefsOf(settings!)).toEqual([
+      "/account/settings",
+      "/account/security",
+      "/privacy",
+      "/erasure",
+    ]);
 
     const operator = menu.querySelector<HTMLElement>(
       '[data-site-shell-operator-menu="true"]',
