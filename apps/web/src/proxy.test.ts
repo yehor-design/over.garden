@@ -51,6 +51,7 @@ const mocks = vi.hoisted(() => ({
     status: "active",
   }),
   isPublicProfilePageBeyondTheEnd: vi.fn().mockResolvedValue(false),
+  resolveRetiredPublicHandle: vi.fn().mockResolvedValue(null),
   getPublicCommunityLifecycleLookup: vi.fn().mockResolvedValue({
     status: "found",
   }),
@@ -93,6 +94,7 @@ vi.mock("@/server/journal-repository", () => ({
 vi.mock("@/server/public-profile-repository", () => ({
   getPublicProfileLifecycleLookup: mocks.getPublicProfileLifecycleLookup,
   isPublicProfilePageBeyondTheEnd: mocks.isPublicProfilePageBeyondTheEnd,
+  resolveRetiredPublicHandle: mocks.resolveRetiredPublicHandle,
 }));
 
 vi.mock("@/server/community-repository", () => ({
@@ -2146,6 +2148,44 @@ describe("author-scoped addresses reach their lifecycle blocks", () => {
     expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(response.headers.get("x-middleware-rewrite")).toBeNull();
     expect(await response.text()).toContain("Запис не знайдено");
+  });
+
+  // ADR-0029's "one prefix rule", for the day handles could change (`OVE-503`).
+  it("308s an entry under a handle its gardener gave up, to the handle they go by now", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    mocks.resolveRetiredPublicHandle.mockResolvedValueOnce("olena_new");
+    const response = await responseFor(
+      "/@olena_old/post/7?utm_source=mail",
+      document,
+    );
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://over.garden/@olena_new/post/7",
+    );
+    expect(mocks.resolveRetiredPublicHandle).toHaveBeenCalledWith("olena_old");
+    // The same number under the new handle is what was asked for.
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenLastCalledWith(
+      { kind: "number", authorHandle: "olena_new", entryNumber: 7 },
+    );
+  });
+
+  it("still 404s when the handle was never retired, and asks nothing more", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    mocks.resolveRetiredPublicHandle.mockClear();
+    mocks.resolveRetiredPublicHandle.mockResolvedValueOnce(null);
+    const response = await responseFor("/@nobody/post/3", document);
+    expect(response.status).toBe(404);
+    expect(mocks.resolveRetiredPublicHandle).toHaveBeenCalledOnce();
+
+    // An entry the address found reads nothing about retired handles.
+    mocks.resolveRetiredPublicHandle.mockClear();
+    const found = await responseFor("/@yehor/post/12", document);
+    expect(found.status).toBe(200);
+    expect(mocks.resolveRetiredPublicHandle).not.toHaveBeenCalled();
   });
 
   // A deleted entry keeps its number for ever — it is never handed to the

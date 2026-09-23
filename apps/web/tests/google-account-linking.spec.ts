@@ -42,7 +42,7 @@ test.describe("OVE-295 explicit Google account linking", () => {
     const verificationIdsBefore = await readVerificationIds(pool);
     let userId: string | null = null;
     let accountLock: PoolClient | null = null;
-    let providerReturnUrl = `${baseURL}/garden/profile`;
+    let providerReturnUrl = `${baseURL}/account/security`;
 
     await page.route("https://accounts.google.com/**", async (route) => {
       await route.fulfill({
@@ -72,7 +72,7 @@ test.describe("OVE-295 explicit Google account linking", () => {
         await linkButton.focus();
         await expect(linkButton).toBeFocused();
 
-        providerReturnUrl = `${baseURL}/garden/profile?error=oauth_error&error_description=cancelled&source=${locale}#account-security`;
+        providerReturnUrl = `${baseURL}/account/security?error=oauth_error&error_description=cancelled&source=${locale}#account-methods`;
         await page.keyboard.press("Enter");
         await page.waitForFunction(
           () => window.location.hostname === "accounts.google.com",
@@ -83,13 +83,13 @@ test.describe("OVE-295 explicit Google account linking", () => {
           await insertSyntheticGoogleAccount(pool, userId);
         }
         await page.locator("#return-to-profile").click();
-        await page.waitForURL(/\/garden\/profile/u);
+        await page.waitForURL(/\/account\/security/u);
         await expect
           .poll(() => callbackMarkers(page))
           .toEqual({
             error: false,
             errorDescription: false,
-            hash: "#account-security",
+            hash: "#account-methods",
             source: locale,
           });
 
@@ -115,9 +115,9 @@ test.describe("OVE-295 explicit Google account linking", () => {
       await selectLocale(context, baseURL, "ru");
       accountLock = await lockAccountReads(pool);
       const initialTimeoutStartedAt = performance.now();
-      const timeoutNavigation = page.goto("/garden/profile");
+      const timeoutNavigation = page.goto("/account/security");
       await page.waitForTimeout(100);
-      await expect(page.getByTestId("profile-return-navigation")).toBeVisible();
+      await expect(page.getByTestId("account-return-navigation")).toBeVisible();
       await expect(
         page.locator('[data-sign-out-control="profile"]'),
       ).toBeEnabled();
@@ -140,7 +140,7 @@ test.describe("OVE-295 explicit Google account linking", () => {
 
       const retryStartedAt = performance.now();
       await page.getByTestId("account-method-retry-button").click();
-      await expect(page.getByTestId("profile-return-navigation")).toBeVisible();
+      await expect(page.getByTestId("account-return-navigation")).toBeVisible();
       await expect(
         page.locator('[data-sign-out-control="profile"]'),
       ).toBeEnabled();
@@ -242,7 +242,7 @@ async function selectLocale(
 }
 
 async function openProfile(page: Page) {
-  const response = await page.goto("/garden/profile");
+  const response = await page.goto("/account/security");
   expect(response?.status()).toBe(200);
   await expect(page.getByTestId("account-methods-panel")).toBeVisible();
 }

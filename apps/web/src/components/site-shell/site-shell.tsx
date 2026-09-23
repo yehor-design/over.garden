@@ -829,7 +829,7 @@ function AccountRegion({
         <MenuGroup data-site-shell-account-pages="true">
           <MenuGroupLabel>{copy.shell.accountPagesSection}</MenuGroupLabel>
           <AccountMenuLink href="/garden/profile">
-            {copy.navigation.profile}
+            {copy.navigation.publicProfile}
           </AccountMenuLink>
           {navigation.utilityItems
             .filter((item) => ACCOUNT_MENU_PERSONAL_KEYS.has(item.key))
@@ -842,6 +842,15 @@ function AccountRegion({
         <MenuSeparator />
         <MenuGroup data-site-shell-account-settings="true">
           <MenuGroupLabel>{copy.shell.accountSettingsSection}</MenuGroupLabel>
+          {/* The account's own settings and its sign-in, each a page of its
+              own since `OVE-503` — they used to sit under the public profile's
+              form, below the handle and the avatar. */}
+          <AccountMenuLink href="/account/settings">
+            {copy.shell.accountSettings}
+          </AccountMenuLink>
+          <AccountMenuLink href="/account/security">
+            {copy.shell.accountSecurity}
+          </AccountMenuLink>
           <AccountMenuLink href={privacyHref}>
             {copy.shell.privacy}
           </AccountMenuLink>

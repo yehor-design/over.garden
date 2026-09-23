@@ -110,8 +110,10 @@ export async function blockProfileAction(
 
   if (handle) revalidateProfilePaths(handle);
   redirect(
+    // A block is confirmed where the blocked list is kept: the account's
+    // settings page since `OVE-503`, where it can be undone.
     result === "blocked"
-      ? "/garden/profile?relationshipStatus=blocked#blocked-profiles"
+      ? "/account/settings?relationshipStatus=blocked#blocked-profiles"
       : profileActionHref(
           requestedLocale(formData),
           handle,
@@ -158,5 +160,5 @@ function revalidateProfilePaths(handle: string) {
   for (const locale of PUBLIC_LOCALES) {
     revalidatePath(publicProfilePath(locale, handle));
   }
-  revalidatePath("/garden/profile");
+  revalidatePath("/account/settings");
 }

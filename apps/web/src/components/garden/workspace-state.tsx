@@ -32,6 +32,8 @@ export type WorkspaceSurface =
   | "object"
   | "entry-edit"
   | "profile"
+  | "account-settings"
+  | "account-security"
   | "lineage-claims"
   | "lineage-questions"
   | "lineage-invitation-claim"

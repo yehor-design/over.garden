@@ -80,11 +80,9 @@ vi.mock("./owner-profile-editor", () => ({
   OwnerProfileEditor: ({
     workspace,
   }: {
-    workspace: { preview: { mention: string } };
+    workspace: { editor: { handle: string } };
   }) => (
-    <section data-owner-profile-editor="v2">
-      {workspace.preview.mention}
-    </section>
+    <section data-owner-profile-editor="v4">@{workspace.editor.handle}</section>
   ),
 }));
 vi.mock("./actions", () => ({
@@ -107,16 +105,8 @@ const WORKSPACE = {
     nextEligibleAt: "2026-07-18T00:00:00.000Z",
     canRename: true,
   },
-  preview: { mention: "@green_thumb" },
   avatarOptions: [],
   relationshipCounts: { followers: 0, following: 0 },
-  blockedProfiles: [
-    {
-      blockId: "00000000-0000-4000-8000-000000000222",
-      handle: "blocked_keeper",
-      displayName: "Blocked Keeper",
-    },
-  ],
 };
 
 describe("/garden/profile", () => {
@@ -139,7 +129,7 @@ describe("/garden/profile", () => {
     });
   });
 
-  it("loads the scoped owner workspace and exact preview", async () => {
+  it("is the public identity alone, with the account's other pages one press away (OVE-503)", async () => {
     const { default: Page } = await import("./page");
     const html = await renderServerHtml(
       await Page({ searchParams: Promise.resolve({}) }),
@@ -152,31 +142,21 @@ describe("/garden/profile", () => {
       },
       "uk",
     );
-    expect(html).toContain('data-owner-profile-editor="v2"');
+    expect(html).toContain('data-owner-profile-editor="v4"');
     expect(html).toContain('href="/@green_thumb"');
-    expect(html).toContain("Blocked Keeper");
-    expect(html).toContain("Account sign-in methods");
-    expect(html).toContain('data-account-methods="ready:true:true:false"');
-    expect(mocks.getCurrentAccountMethodProjection).toHaveBeenCalledOnce();
-    expect(html).toContain("Обліковий запис і безпека");
-    expect(html).toContain('data-sign-out-control="profile"');
-    expect(html).toContain("Вийти з облікового запису");
-    expect(html).toContain('class="w-full"');
-    expect(html).not.toMatch(/email|provider|session-1|quarantine|token/i);
-  });
-
-  it("localizes blocked-state management", async () => {
-    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
-    const { default: Page } = await import("./page");
-    const html = await renderServerHtml(
-      await Page({
-        searchParams: Promise.resolve({ relationshipStatus: "unblocked" }),
-      }),
+    // The row of account pages, this one current.
+    expect(html).toContain('data-account-sections="true"');
+    expect(html).toMatch(
+      /<a(?=[^>]*href="\/garden\/profile")(?=[^>]*aria-current="page")[^>]*>/u,
     );
-
-    expect(html).toContain("Блокирани профили");
-    expect(html).toContain("Профилът е разблокиран.");
-    expect(html).toContain("Профил и сигурност");
+    expect(html).toContain('href="/account/settings"');
+    expect(html).toContain('href="/account/security"');
+    // Sign-in methods, sign-out and the blocked list live there, not here.
+    expect(mocks.getCurrentAccountMethodProjection).not.toHaveBeenCalled();
+    expect(html).not.toContain("Account sign-in methods");
+    expect(html).not.toContain("data-sign-out-control");
+    expect(html).not.toContain("blocked-profiles");
+    expect(html).not.toMatch(/email|provider|session-1|quarantine|token/i);
   });
 
   it("shows auth without creating an owner workspace when signed out", async () => {
@@ -188,7 +168,6 @@ describe("/garden/profile", () => {
 
     expect(html).toContain("Sign in prompt");
     expect(mocks.getOwnerProfileWorkspace).not.toHaveBeenCalled();
-    expect(mocks.getCurrentAccountMethodProjection).not.toHaveBeenCalled();
     expect(html).toContain('data-garden-profile-auth-shell="guest"');
   });
 

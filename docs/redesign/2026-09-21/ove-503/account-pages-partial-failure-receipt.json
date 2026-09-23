@@ -1,0 +1,21 @@
+{
+  "issue": "OVE-503",
+  "proof": "account-pages-partial-failure",
+  "baseUrl": "http://127.0.0.1:3181",
+  "settings": {
+    "hardLoadStatus": 200,
+    "blockedFailure": "query_timeout",
+    "languageOfferedDuringFailure": true,
+    "dataLinksDuringFailure": 2,
+    "skeletonLeft": false,
+    "blockedListedAfterRetry": 1
+  },
+  "security": {
+    "hardLoadStatus": 200,
+    "methodsFailure": "query_timeout",
+    "signOutDuringFailure": true,
+    "skeletonLeft": false
+  },
+  "elapsedMs": 4223,
+  "passed": true
+}

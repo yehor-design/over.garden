@@ -70,6 +70,16 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**The account's pages (OVE-503):** `/garden/profile` is the public identity
+alone — how others see you, each field saying who sees it and every region in
+the reader's language, then the public address with what a new one changes —
+and its forms answer in place, so a refused name keeps its words. The sign-in
+methods and sign-out moved to `/account/security`; the interface language, the
+blocked list and the way to privacy and erasure to `/account/settings`; the
+account menu and a row of links on each page lead between them. A renamed
+handle's entries now answer one 308 to the new handle (ADR-0029, amendment
+2026-09-23). See `docs/redesign/2026-09-21/OVE-503-PROOF.md`.
+
 **Public profiles (OVE-494):** `/@handle` is who the gardener is — the name
 with nothing above it, the handle, the picture beside them, the whole bio,
 region and languages in the reader's language, relationship counts in words,

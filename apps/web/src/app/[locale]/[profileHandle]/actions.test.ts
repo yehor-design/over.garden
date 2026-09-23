@@ -98,7 +98,7 @@ describe("localized public profile actions", () => {
       "demo_olena",
     );
     expect(mocks.redirect).toHaveBeenCalledWith(
-      "/garden/profile?relationshipStatus=blocked#blocked-profiles",
+      "/account/settings?relationshipStatus=blocked#blocked-profiles",
     );
   });
 

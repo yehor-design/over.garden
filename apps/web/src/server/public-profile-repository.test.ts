@@ -29,6 +29,7 @@ import {
   buildPublicProfileLifecycleQuery,
   buildPublicProfileObjectEvidenceQuery,
   buildPublicProfileObjectMediaEvidenceQuery,
+  buildRetiredPublicHandleQuery,
   classifyPublicProfileLifecycle,
   normalizePublicHandleInput,
   serializePublicProfileEvidencePage,
@@ -326,6 +327,22 @@ describe("public profile handle contracts", () => {
     expect(`${followers.sql}\n${following.sql}`).not.toMatch(
       /handle|display_name|email|avatar|bio/,
     );
+  });
+
+  it("maps a retired handle to the one its gardener goes by now, and nothing else (OVE-503)", () => {
+    const compiled = buildRetiredPublicHandleQuery(
+      testDb,
+      "olena_old",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "user_handle_registry" as "retired"');
+    expect(compiled.sql).toContain(
+      'inner join "user_handle_registry" as "current" on "current"."user_id" = "retired"."user_id" and "current"."lifecycle_state" = $1',
+    );
+    expect(compiled.sql).toContain('"retired"."lifecycle_state" = $');
+    expect(compiled.parameters).toEqual(["current", "olena_old", "retired", 1]);
+    // A handle, not a person: no profile, session or account field is read.
+    expect(compiled.sql).not.toMatch(forbiddenPublicProfilePattern);
   });
 
   it("classifies lifecycle from the handle registry and public-safe profile eligibility fields", () => {

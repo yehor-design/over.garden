@@ -442,6 +442,17 @@ entry in production already holds a number.
   link.
 - Entry addresses couple to the handle. Handles cannot change today; when they
   can, the rename is one prefix rule.
+
+  **Amendment 2026-09-23 (`OVE-503`).** Handles can change (once at once, then
+  every 30 days), and the rule now exists: when `/@{handle}/post/{n}` finds no
+  entry, the proxy asks the handle registry whether `{handle}` was retired and
+  by whom, and answers one 308 to `/@{current}/post/{n}` when that entry is
+  live (`resolveRetiredPublicHandle`, `resolveMovedHandleEntry` in
+  `proxy.ts`). A retired handle names one gardener for ever
+  (`normalized_handle` is the registry's primary key), so the redirect can
+  never land on somebody else's work. It is read only on a miss. The
+  profile's own old address stays the 410 tombstone; only the gardener's work
+  follows them, as passports already did through their slug history.
 - The proxy does one more bounded lookup on more route families. The catalog
   lookup's budget (400 ms statement deadline, ADR-0026) is the precedent.
 - Phase 1 changes response codes on paths that currently redirect. Shared

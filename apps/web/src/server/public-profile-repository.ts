@@ -451,25 +451,6 @@ export async function getPublicProfileEvidencePageByHandle(
   return loadPublicProfileEvidencePage(profile, locale, request, executor);
 }
 
-export async function getPublicProfileEvidencePreviewByUserId(
-  userId: string,
-  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
-  executor: QueryExecutor = db,
-): Promise<PublicProfileEvidencePage | null> {
-  const profile = await buildPublicProfilePreviewByUserIdQuery(
-    executor,
-    userId,
-  ).executeTakeFirst();
-  if (!profile) return null;
-
-  return loadPublicProfileEvidencePage(
-    profile,
-    locale,
-    FIRST_PUBLIC_PROFILE_PAGES,
-    executor,
-  );
-}
-
 export async function getPublicProfileLifecycleLookup(
   rawHandle: string,
   viewerUserId: string | null = null,
@@ -485,6 +466,48 @@ export async function getPublicProfileLifecycleLookup(
   ).executeTakeFirst();
 
   return classifyPublicProfileLifecycle(row);
+}
+
+/**
+ * The handle a gardener goes by now, given one they have given up
+ * (`OVE-503`). `null` for a handle that was never retired — current, unknown
+ * or malformed.
+ *
+ * A handle is never handed to a second person (`normalized_handle` is the
+ * registry's primary key), so a retired handle names exactly one gardener,
+ * for ever. That is what lets an entry's old address — `/@{old}/post/{n}` —
+ * answer one 308 to `/@{new}/post/{n}`: the "one prefix rule" ADR-0029 left
+ * for the day handles could change. The profile's own old address stays a
+ * 410; only the gardener's work follows them.
+ */
+export async function resolveRetiredPublicHandle(
+  rawHandle: string,
+  executor: QueryExecutor = db,
+): Promise<string | null> {
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return null;
+  const row = await buildRetiredPublicHandleQuery(
+    executor,
+    parsed.normalizedHandle,
+  ).executeTakeFirst();
+  return row?.handle ?? null;
+}
+
+export function buildRetiredPublicHandleQuery(
+  executor: QueryExecutor,
+  normalizedHandle: string,
+) {
+  return executor
+    .selectFrom("user_handle_registry as retired")
+    .innerJoin("user_handle_registry as current", (join) =>
+      join
+        .onRef("current.user_id", "=", "retired.user_id")
+        .on("current.lifecycle_state", "=", "current"),
+    )
+    .select("current.normalized_handle as handle")
+    .where("retired.normalized_handle", "=", normalizedHandle)
+    .where("retired.lifecycle_state", "=", "retired")
+    .limit(1);
 }
 
 export function classifyPublicProfileLifecycle(
@@ -949,29 +972,6 @@ export function buildPublicProfileByNormalizedHandleQuery(
       "relationship_visibility as relationshipVisibility",
     ])
     .where("normalized_handle", "=", normalizedHandle)
-    .where("profile_lifecycle_state", "=", "active")
-    .where("removed_at", "is", null);
-}
-
-export function buildPublicProfilePreviewByUserIdQuery(
-  executor: QueryExecutor,
-  userId: string,
-) {
-  return executor
-    .selectFrom("user_public_profiles")
-    .select([
-      "user_id as userId",
-      "handle",
-      "display_name as displayName",
-      "avatar_url as avatarUrl",
-      "avatar_media_asset_id as avatarMediaAssetId",
-      "bio",
-      "languages",
-      "location_visibility as locationVisibility",
-      "coarse_region_code as coarseRegionCode",
-      "relationship_visibility as relationshipVisibility",
-    ])
-    .where("user_id", "=", userId)
     .where("profile_lifecycle_state", "=", "active")
     .where("removed_at", "is", null);
 }

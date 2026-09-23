@@ -463,8 +463,8 @@ describe("account methods panel", () => {
     expect(mocks.linkSocial).toHaveBeenCalledWith(
       {
         provider: "google",
-        callbackURL: "/garden/profile",
-        errorCallbackURL: "/garden/profile",
+        callbackURL: "/account/security",
+        errorCallbackURL: "/account/security",
         disableRedirect: true,
       },
       {

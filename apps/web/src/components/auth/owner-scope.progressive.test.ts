@@ -50,11 +50,29 @@ const PROGRESSIVE_SURFACES = [
   "app/(default)/garden/objects/[objectId]/provenance-section.tsx",
   "app/(default)/garden/objects/[objectId]/catalog-resolve-control.tsx",
   "app/(default)/garden/objects/[objectId]/location-privacy-control.tsx",
-  "app/(default)/garden/profile/page.tsx",
-  "app/(default)/garden/profile/owner-profile-editor.tsx",
+  // `OVE-503`: the unblock form moved with the blocked list to the account's
+  // settings page; the profile page itself holds no owner form any more.
+  "app/(default)/account/settings/page.tsx",
   // `OVE-459`: the last one. Comment moderation was the thirty-third call
   // site, and the closure form is deleted with it.
   "app/(default)/account/moderation/comments/page.tsx",
+] as const;
+
+/**
+ * Owner forms that must render their own answer — a refused field, a pending
+ * press — and so hold `useActionState` themselves rather than through
+ * `OwnerScopedProgressiveForm`, which keeps its state to itself. The same
+ * guarantee, checked directly: a bare Server Action reference handed to
+ * `useActionState`, its `formAction` on the form, and the owner id inside it.
+ */
+const STATEFUL_OWNER_FORMS = [
+  {
+    file: "app/(default)/garden/profile/owner-profile-editor.tsx",
+    forms: [
+      { action: "updatePublicProfileAction", formAction: "profileFormAction" },
+      { action: "updatePublicHandleAction", formAction: "handleFormAction" },
+    ],
+  },
 ] as const;
 
 const PROGRESSIVE_ACTIONS = [
@@ -138,6 +156,27 @@ describe("owner forms that decide before hydration", () => {
         // An arrow function or a `.bind` here would be a client closure.
         expect(match[1]?.trim(), relative).toMatch(/^[A-Za-z_$][\w$]*$/u);
       }
+    }
+  });
+
+  it("gives every stateful owner form a bare reference and the owner id", async () => {
+    for (const { file, forms } of STATEFUL_OWNER_FORMS) {
+      const source = await readFile(join(ROOT, file), "utf8");
+      expect(source, file).not.toMatch(/<OwnerScopedActionForm\b/u);
+      for (const { action, formAction } of forms) {
+        expect(source, `${file}: ${action}`).toMatch(
+          new RegExp(
+            `\\[\\w+, ${formAction}, \\w+\\] = useActionState\\(\\s*${action},`,
+            "u",
+          ),
+        );
+        expect(source, `${file}: ${formAction}`).toMatch(
+          new RegExp(`<form\\s+action=\\{${formAction}\\}`, "u"),
+        );
+      }
+      expect(source.match(/<OwnerUserIdField \/>/gu), file).toHaveLength(
+        forms.length,
+      );
     }
   });
 

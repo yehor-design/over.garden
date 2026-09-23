@@ -637,6 +637,6 @@ export function AccountMethodsPanel({
 }
 
 function currentOAuthCallbackPath() {
-  if (typeof window === "undefined") return "/garden/profile";
+  if (typeof window === "undefined") return "/account/security";
   return oauthCallbackPath(window.location);
 }

@@ -73,23 +73,32 @@ function finiteIsoDate(value: Date | string | null): string | null {
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
+export interface PublicProfileActionState {
+  /** `updated`, `unchanged`, or the field the server refused. */
+  status: string | null;
+  mutationScope?: MutationScopeCode;
+}
+
 /**
- * `(previousState, formData)` — the shape `useActionState` calls, and the one
- * that lets `OwnerScopedProgressiveForm` hand React a Server Action reference
- * rather than a client closure. React answers a closure with
- * `action="javascript:throw …"`, a placeholder it replaces on hydration and
- * never before, so the control did nothing until the bundle ran (ADR-0024 D3,
- * `OVE-457`). The first argument is the previous result and is unused here.
+ * Save the public profile's fields, and answer with what happened
+ * (`OVE-503`).
+ *
+ * It answers the form instead of redirecting to `?status=…`. A redirect is a
+ * navigation, the App Router keys a page by its search parameters, and so the
+ * editor was mounted afresh — a display name the policy refused came back as
+ * the stored one, and the gardener's words were gone. Answering in place keeps
+ * them, and the form still works before hydration: React renders a progressive
+ * `useActionState` form's answer into the page it posts to.
  */
 export async function updatePublicProfileAction(
-  _previousState: unknown,
+  _previousState: PublicProfileActionState,
   formData: FormData,
-) {
+): Promise<PublicProfileActionState> {
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
-    return { mutationScope: admission.code };
+    return { ..._previousState, mutationScope: admission.code };
   }
   const scope = admission.scope;
   const result = await updateOwnerPublicProfile(scope, {
@@ -112,9 +121,7 @@ export async function updatePublicProfileAction(
     }),
     "update",
   );
-  redirect(
-    `/garden/profile?status=${encodeURIComponent(result.status)}#public-profile-editor`,
-  );
+  return { status: result.status };
 }
 
 export async function unblockProfileAction(
@@ -131,8 +138,9 @@ export async function unblockProfileAction(
   const blockId = String(formData.get("blockId") ?? "");
   const result = await unblockProfileByBlockId(scope, blockId);
 
-  revalidatePath("/garden/profile");
-  redirect(`/garden/profile?relationshipStatus=${result}#blocked-profiles`);
+  // The blocked list lives on the account's settings page since `OVE-503`.
+  revalidatePath("/account/settings");
+  redirect(`/account/settings?relationshipStatus=${result}#blocked-profiles`);
 }
 
 function revalidateProfilePaths(handle: string) {

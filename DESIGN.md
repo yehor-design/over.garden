@@ -847,6 +847,35 @@ widening the page at 320 px.
   address to the page each panel was drawn at, so a reload shows the list the
   reader was looking at.
 
+### 5.7.1 The account's pages
+
+Three pages, one row of links between them (`AccountSections`, `OVE-503`):
+**Публічний профіль** (`/garden/profile`), **Налаштування**
+(`/account/settings`) and **Вхід і безпека** (`/account/security`). Each holds
+its own forms and nothing of the others', so changing a bio never walks past a
+handle migration or a sign-in method.
+
+- **The public profile's editor says who sees what.** One sentence above the
+  form names the page it writes to (`over.garden/@handle`, seen by anyone), and
+  every field carries its own "Видно всім …" description; the region says it
+  is only ever a region (a city narrowed to its country) and names every region
+  in the reader's language.
+- **A consequential change comes after the routine ones, and says what it
+  changes before it changes it.** The public address is its own form below
+  the profile's, with the list of what moves: the profile's address, the links
+  to entries and objects (one 308 each), the old handle never reused, the next
+  change in 30 days.
+- **A form answers in place.** A refused field keeps the words typed into it,
+  focused, with its own error; a saved form says so inside itself. A redirect
+  to `?status=` would mount the page afresh and lose the words, because the
+  App Router keys a page by its search parameters.
+- **The preview is optional and read-only**: the profile's header, drawn from
+  the form, behind a closed disclosure with nothing in it that acts.
+- **Settings** hold the interface language (one real form per language), the
+  blocked list with its undo, and the way to your data and its deletion — the
+  erasure request described as what it is, a request an operator reviews.
+  **Sign-in and security** hold the sign-in methods and sign-out.
+
 ### 5.8 One listing per thing
 
 A product with two listings over one graph has two of everything: two result
