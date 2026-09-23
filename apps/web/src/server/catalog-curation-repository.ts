@@ -10,6 +10,7 @@ import {
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
+import type { CurationBlock } from "@/lib/catalog/curation-queue";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -52,30 +53,36 @@ export async function applyCatalogQueueItem(
   return { actionId, subjectCatalogItemIds: await readActionSubjects(actionId, executor) };
 }
 
-/** No, with the owner's decision recorded on the item. */
+/**
+ * No, with the owner's decision recorded on the item. `changed` is false when
+ * the item was no longer open — decided in another tab — so the page can say
+ * that rather than claim a decision it did not make (`OVE-506`).
+ */
 export async function rejectCatalogQueueItem(
   input: { queueItemId: string; actorUserId: string },
   executor: QueryExecutor = db,
-): Promise<void> {
-  await sql`
+): Promise<{ changed: boolean }> {
+  const result = await sql`
     update catalog_curation_queue
     set state = 'rejected', decided_by_user_id = ${input.actorUserId}::uuid,
         decided_at = now(), updated_at = now()
     where id = ${input.queueItemId}::uuid and state = 'open'
   `.execute(executor);
+  return { changed: Number(result.numAffectedRows ?? 0) > 0 };
 }
 
 /** Later: the item leaves the stream without a decision either way. */
 export async function skipCatalogQueueItem(
   input: { queueItemId: string; actorUserId: string },
   executor: QueryExecutor = db,
-): Promise<void> {
-  await sql`
+): Promise<{ changed: boolean }> {
+  const result = await sql`
     update catalog_curation_queue
     set state = 'skipped', decided_by_user_id = ${input.actorUserId}::uuid,
         decided_at = now(), updated_at = now()
     where id = ${input.queueItemId}::uuid and state = 'open'
   `.execute(executor);
+  return { changed: Number(result.numAffectedRows ?? 0) > 0 };
 }
 
 export async function revertCatalogAction(
@@ -230,6 +237,23 @@ export interface CuratedNodeSummary {
   identifiers: { scheme: string; value: string }[];
 }
 
+/**
+ * Why Accept cannot succeed for an open item, read from the same conditions
+ * `catalog_apply_queue_item` refuses on (migration `0056`), or null when it
+ * can (`OVE-506`).
+ *
+ * - `no_target` — nothing to attach to or merge into: a search miss the owner
+ *   queued has a name and no card, and a merge needs two distinct nodes;
+ * - `target_inactive` — the card it names has since been merged or retired;
+ * - `not_applied_here` — a split is reviewed on the card, never applied by
+ *   the function.
+ *
+ * The page used to offer Accept for all of them, and each press ended on the
+ * error page. It is not a new rule: it is the function's refusal, said before
+ * the press instead of after.
+ */
+export type { CurationBlock };
+
 export interface CurationQueueItem {
   id: string;
   itemType: "label_link" | "node_merge" | "source_link" | "split_review";
@@ -243,6 +267,7 @@ export interface CurationQueueItem {
   target: CuratedNodeSummary | null;
   labelObjectCount: number;
   sourceSlug: string | null;
+  blockedBy: CurationBlock | null;
 }
 
 export interface AppliedCurationAction {
@@ -297,6 +322,60 @@ const NODE_SUMMARY_SQL = sql`
 `;
 
 /**
+ * `CurationBlock`, in SQL: the preconditions `catalog_apply_queue_item`
+ * checks before it changes anything, in the same order. A merge names its
+ * survivor as `proposal.survivor_id`; a label is linked to
+ * `proposal.catalog_item_id`, or failing that to its subject.
+ */
+const CURATION_BLOCK_SQL = sql`
+  case
+    when queue.item_type = 'label_link' then (
+      case
+        when queue.subject_label is null
+          or coalesce(
+            (queue.proposal->>'catalog_item_id')::uuid,
+            queue.subject_catalog_item_id
+          ) is null
+          then 'no_target'
+        when not exists (
+          select 1 from catalog_items as apply_target
+          where apply_target.id = coalesce(
+              (queue.proposal->>'catalog_item_id')::uuid,
+              queue.subject_catalog_item_id
+            )
+            and apply_target.identity_state = 'active'
+        ) then 'target_inactive'
+      end
+    )
+    when queue.item_type = 'node_merge' then (
+      case
+        when queue.subject_catalog_item_id is null
+          or queue.proposal->>'survivor_id' is null
+          or (queue.proposal->>'survivor_id')::uuid = queue.subject_catalog_item_id
+          then 'no_target'
+        when (
+          select count(*) from catalog_items as merge_node
+          where merge_node.id in (
+              queue.subject_catalog_item_id,
+              (queue.proposal->>'survivor_id')::uuid
+            )
+            and merge_node.identity_state = 'active'
+        ) < 2 then 'target_inactive'
+      end
+    )
+    when queue.item_type = 'source_link' then (
+      case
+        when queue.subject_catalog_item_id is null
+          or queue.proposal->>'source_slug' is null
+          or queue.proposal->>'source_snapshot_id' is null
+          then 'no_target'
+      end
+    )
+    else 'not_applied_here'
+  end
+`;
+
+/**
  * The open queue, highest impact first (ADR-0026 D10). One statement: each
  * item carries both sides of the decision, so the page shows two cards
  * without a second round trip per item.
@@ -324,12 +403,17 @@ export const DECIDABLE_CURATION_ITEM_TYPES = [
 export function buildCurationQueueStatement(input: {
   itemType?: string | null;
   limit?: number;
+  /** One open decision by id, whatever its rank (`readOpenCurationQueueItem`). */
+  itemId?: string | null;
 }) {
   const typeFilter = input.itemType
     ? sql`and queue.item_type = ${input.itemType}`
     : sql`and queue.item_type = any(${sql.val(
         DECIDABLE_CURATION_ITEM_TYPES as readonly string[],
       )}::text[])`;
+  const itemFilter = input.itemId
+    ? sql`and queue.id = ${input.itemId}::uuid`
+    : sql``;
   return sql<{
     id: string;
     itemType: CurationQueueItem["itemType"];
@@ -342,6 +426,7 @@ export function buildCurationQueueStatement(input: {
     target: CuratedNodeSummary | null;
     labelObjectCount: number;
     sourceSlug: string | null;
+    blockedBy: CurationBlock | null;
   }>`
     select
       queue.id,
@@ -371,17 +456,19 @@ export function buildCurationQueueStatement(input: {
                 = catalog_normalize_name(queue.subject_label)
         )
       end as "labelObjectCount",
-      queue.proposal->>'source_slug' as "sourceSlug"
+      queue.proposal->>'source_slug' as "sourceSlug",
+      ${CURATION_BLOCK_SQL} as "blockedBy"
     from catalog_curation_queue as queue
     where queue.state = 'open'
       ${typeFilter}
+      ${itemFilter}
     order by queue.impact_score desc, queue.created_at asc
     limit ${Math.max(1, Math.min(input.limit ?? 20, 100))}
   `;
 }
 
 export async function listOpenCurationQueue(
-  input: { itemType?: string | null; limit?: number } = {},
+  input: { itemType?: string | null; limit?: number; itemId?: string | null } = {},
   executor: QueryExecutor = db,
 ): Promise<CurationQueueItem[]> {
   const result = await buildCurationQueueStatement(input).execute(executor);
@@ -397,7 +484,148 @@ export async function listOpenCurationQueue(
     target: row.target,
     labelObjectCount: Number(row.labelObjectCount ?? 0),
     sourceSlug: row.sourceSlug,
+    blockedBy: row.blockedBy ?? null,
   }));
+}
+
+/**
+ * One open decision, whatever its rank (`OVE-506`). The page lists the top
+ * twenty; a link to a decision below them — a search miss is queued at impact
+ * 1 — used to fall back to the top item, and the owner's next press decided a
+ * proposal they had not opened.
+ */
+export async function readOpenCurationQueueItem(
+  queueItemId: string,
+  executor: QueryExecutor = db,
+): Promise<CurationQueueItem | null> {
+  const [item] = await listOpenCurationQueue(
+    { itemId: queueItemId, limit: 1 },
+    executor,
+  );
+  return item ?? null;
+}
+
+/**
+ * One item as the owner last left it, whatever its state — what an outcome
+ * notice names after a decision (`OVE-506`). The page reads the state back
+ * from the record rather than trusting the redirect that brought it there:
+ * "accepted" is said only of an item the database holds as accepted.
+ */
+export interface CurationQueueItemSummary {
+  id: string;
+  itemType: string;
+  state: string;
+  subjectLabel: string | null;
+  /** The node a merge folds away — whose objects a confirmation counts. */
+  subjectCatalogItemId: string | null;
+  subjectName: string | null;
+  targetName: string | null;
+  /** Who decided it and when — so a decision can recognise itself. */
+  decidedByUserId: string | null;
+  decidedAt: Date | string | null;
+}
+
+export async function readCurationQueueItemSummary(
+  queueItemId: string,
+  executor: QueryExecutor = db,
+): Promise<CurationQueueItemSummary | null> {
+  const result = await sql<CurationQueueItemSummary>`
+    select
+      queue.id::text as id,
+      queue.item_type as "itemType",
+      queue.state as state,
+      queue.subject_label as "subjectLabel",
+      queue.subject_catalog_item_id::text as "subjectCatalogItemId",
+      (select node.canonical_name from catalog_items as node
+        where node.id = queue.subject_catalog_item_id) as "subjectName",
+      (
+        select node.canonical_name from catalog_items as node
+        where node.id = coalesce(
+          (queue.proposal->>'survivor_id')::uuid,
+          (queue.proposal->>'catalog_item_id')::uuid
+        )
+          and node.id is distinct from queue.subject_catalog_item_id
+      ) as "targetName",
+      queue.decided_by_user_id::text as "decidedByUserId",
+      queue.decided_at as "decidedAt"
+    from catalog_curation_queue as queue
+    where queue.id = ${queueItemId}::uuid
+  `.execute(executor);
+  return result.rows[0] ?? null;
+}
+
+/** One action as it stands now: what it touched and whether it was undone. */
+export interface CurationActionSummary {
+  actionId: string;
+  reverted: boolean;
+  subjectNames: string[];
+  /** The cards it touched — what an undo must expire. */
+  subjectCatalogItemIds: string[];
+  /** Who undid it and when, read from the revert's own row. */
+  revertedByUserId: string | null;
+  revertedAt: Date | string | null;
+}
+
+export async function readCurationActionSummary(
+  actionId: string,
+  executor: QueryExecutor = db,
+): Promise<CurationActionSummary | null> {
+  const result = await sql<{
+    actionId: string;
+    reverted: boolean;
+    subjectNames: string[] | null;
+    subjectCatalogItemIds: string[] | null;
+    revertedByUserId: string | null;
+    revertedAt: Date | null;
+  }>`
+    select
+      action.id::text as "actionId",
+      action.reverted_by_action_id is not null as reverted,
+      coalesce(action.subject_catalog_item_ids::text[], array[]::text[])
+        as "subjectCatalogItemIds",
+      coalesce((
+        select array_agg(node.canonical_name order by node.canonical_name)
+        from catalog_items as node
+        where node.id = any(action.subject_catalog_item_ids)
+      ), array[]::text[]) as "subjectNames",
+      revert.performed_by_user_id::text as "revertedByUserId",
+      revert.performed_at as "revertedAt"
+    from catalog_curation_actions as action
+    left join catalog_curation_actions as revert
+      on revert.id = action.reverted_by_action_id
+    where action.id = ${actionId}::uuid
+  `.execute(executor);
+  const row = result.rows[0];
+  return row
+    ? {
+        actionId: row.actionId,
+        reverted: row.reverted,
+        subjectNames: row.subjectNames ?? [],
+        subjectCatalogItemIds: row.subjectCatalogItemIds ?? [],
+        revertedByUserId: row.revertedByUserId ?? null,
+        revertedAt: row.revertedAt ?? null,
+      }
+    : null;
+}
+
+/**
+ * The cards the latest decision on a queue item touched. A decision
+ * recognised after its reply was lost never had the subjects handed back by
+ * the apply function, and its public cards still have to be expired.
+ */
+export async function readQueueItemActionSubjects(
+  queueItemId: string,
+  executor: QueryExecutor = db,
+): Promise<string[]> {
+  const result = await sql<{ subjects: string[] | null }>`
+    select coalesce(action.subject_catalog_item_ids::text[], array[]::text[]) as subjects
+    from catalog_curation_actions as action
+    where action.queue_item_id = ${queueItemId}::uuid
+      and action.action_type <> 'revert'
+    order by action.performed_at desc, action.id desc
+    limit 1
+  `.execute(executor);
+  return result.rows[0]?.subjects ?? [];
 }
 
 export async function countOpenCurationQueue(
@@ -474,7 +702,18 @@ export async function listRecentAutomaticActions(
   }));
 }
 
-export interface CatalogSourceCard {
+/**
+ * A source as the owner identifies it: its newest accepted snapshot, and the
+ * state of its refresh job (`OVE-506`).
+ *
+ * This used to be one statement with every count in it, so a single slow
+ * source — EPPO's link count, on production — timed the whole list out and
+ * the page said nothing about any source. The identity is cheap and read
+ * first; each source's counts are their own read
+ * (`readCatalogSourceCoverage`), so one that is slow fails beside its own
+ * name and the rest are still counted.
+ */
+export interface CatalogSourceSummary {
   sourceSlug: string;
   sourceName: string;
   sourceVersion: string;
@@ -482,83 +721,145 @@ export interface CatalogSourceCard {
   license: string;
   licenseUrl: string | null;
   attributionText: string | null;
+  /** The snapshot the counts are read from. */
+  snapshotId: string;
   fetchedAt: Date | string;
-  status: string;
+  verifiedAt: Date | string;
+  /** A newer snapshot than this one was rejected; when it was fetched. */
+  rejectedAfterAt: Date | string | null;
+  refresh: {
+    status: "pending" | "processing" | "done" | "failed" | "dead";
+    queuedAt: Date | string;
+    updatedAt: Date | string;
+  } | null;
+}
+
+export function buildCatalogSourcesStatement() {
+  return sql<CatalogSourceSummary & { refreshStatus: string | null; refreshQueuedAt: Date | null; refreshUpdatedAt: Date | null }>`
+    with current_snapshot as (
+      -- The newest imported snapshot is what the catalogue holds; a newer
+      -- rejected one is reported beside it rather than counted.
+      select distinct on (snapshot.source_slug)
+        snapshot.id, snapshot.source_slug, snapshot.source_name, snapshot.source_version,
+        snapshot.source_url, snapshot.license, snapshot.license_url, snapshot.attribution_text,
+        snapshot.fetched_at, snapshot.verified_at
+      from catalog_source_snapshots as snapshot
+      order by snapshot.source_slug,
+               (snapshot.status = 'imported') desc,
+               snapshot.fetched_at desc,
+               snapshot.id
+    )
+    select
+      current_snapshot.source_slug as "sourceSlug",
+      current_snapshot.source_name as "sourceName",
+      current_snapshot.source_version as "sourceVersion",
+      current_snapshot.source_url as "sourceUrl",
+      current_snapshot.license as "license",
+      current_snapshot.license_url as "licenseUrl",
+      current_snapshot.attribution_text as "attributionText",
+      current_snapshot.id::text as "snapshotId",
+      current_snapshot.fetched_at as "fetchedAt",
+      current_snapshot.verified_at as "verifiedAt",
+      (
+        select max(rejected.fetched_at) from catalog_source_snapshots as rejected
+        where rejected.source_slug = current_snapshot.source_slug
+          and rejected.status = 'rejected'
+          and rejected.fetched_at > current_snapshot.fetched_at
+      ) as "rejectedAfterAt",
+      -- The refresh button enqueues under one idempotency key per source
+      -- (buildEnqueueCatalogSourceRefreshJobQuery), so its row is found by
+      -- the unique index rather than by scanning the queue's payloads.
+      job.status as "refreshStatus",
+      job.created_at as "refreshQueuedAt",
+      job.updated_at as "refreshUpdatedAt"
+    from current_snapshot
+    left join job_queue as job
+      on job.idempotency_key = 'matching:catalog_source_refresh:' || current_snapshot.source_slug
+    order by current_snapshot.source_name, current_snapshot.source_slug
+  `;
+}
+
+const REFRESH_STATUSES = new Set([
+  "pending",
+  "processing",
+  "done",
+  "failed",
+  "dead",
+]);
+
+export async function listCatalogSources(
+  executor: QueryExecutor = db,
+): Promise<CatalogSourceSummary[]> {
+  const result = await buildCatalogSourcesStatement().execute(executor);
+  return result.rows.map((row) => ({
+    sourceSlug: row.sourceSlug,
+    sourceName: row.sourceName,
+    sourceVersion: row.sourceVersion,
+    sourceUrl: row.sourceUrl,
+    license: row.license,
+    licenseUrl: row.licenseUrl,
+    attributionText: row.attributionText,
+    snapshotId: row.snapshotId,
+    fetchedAt: row.fetchedAt,
+    verifiedAt: row.verifiedAt,
+    rejectedAfterAt: row.rejectedAfterAt ?? null,
+    refresh:
+      row.refreshStatus && REFRESH_STATUSES.has(row.refreshStatus)
+        ? {
+            status: row.refreshStatus as NonNullable<
+              CatalogSourceSummary["refresh"]
+            >["status"],
+            queuedAt: row.refreshQueuedAt ?? row.refreshUpdatedAt ?? new Date(0),
+            updatedAt: row.refreshUpdatedAt ?? row.refreshQueuedAt ?? new Date(0),
+          }
+        : null,
+  }));
+}
+
+/** What one snapshot holds, and how much of it reached the graph. */
+export interface CatalogSourceCoverage {
   recordCount: number;
   linkedCount: number;
   identifierCount: number;
   assertionCount: number;
-  lastRefreshQueuedAt: Date | string | null;
-  lastRefreshStatus: string | null;
 }
 
-/**
- * One card per source, from its newest snapshot, with the counts the owner
- * decides by: what the source holds, how much of it is linked to a node, and
- * whether a refresh is queued.
- */
-export function buildCatalogSourceCardsStatement() {
-  return sql<CatalogSourceCard>`
-    with newest as (
-      select distinct on (snapshot.source_slug)
-        snapshot.id, snapshot.source_slug, snapshot.source_name, snapshot.source_version,
-        snapshot.source_url, snapshot.license, snapshot.license_url, snapshot.attribution_text,
-        snapshot.fetched_at, snapshot.status
-      from catalog_source_snapshots as snapshot
-      order by snapshot.source_slug, snapshot.fetched_at desc, snapshot.id
-    )
+export function buildCatalogSourceCoverageStatement(snapshotId: string) {
+  return sql<CatalogSourceCoverage>`
     select
-      newest.source_slug as "sourceSlug",
-      newest.source_name as "sourceName",
-      newest.source_version as "sourceVersion",
-      newest.source_url as "sourceUrl",
-      newest.license as "license",
-      newest.license_url as "licenseUrl",
-      newest.attribution_text as "attributionText",
-      newest.fetched_at as "fetchedAt",
-      newest.status as "status",
-      (select count(*)::int from catalog_source_records where source_snapshot_id = newest.id) as "recordCount",
+      (select count(*)::int from catalog_source_records
+        where source_snapshot_id = ${snapshotId}::uuid) as "recordCount",
+      -- Records with a link, not links: one record can link to two cards
+      -- after a merge, and the page says how many records reached a card.
       (
-        select count(*)::int from catalog_source_links as link
+        select count(distinct link.source_record_id)::int
+        from catalog_source_links as link
         join catalog_source_records as record on record.id = link.source_record_id
-        where record.source_snapshot_id = newest.id
+        where record.source_snapshot_id = ${snapshotId}::uuid
       ) as "linkedCount",
       (
         select count(*)::int from catalog_item_identifiers as identifier
         join catalog_source_assertions as assertion on assertion.id = identifier.assertion_id
-        where assertion.source_snapshot_id = newest.id
+        where assertion.source_snapshot_id = ${snapshotId}::uuid
       ) as "identifierCount",
-      (select count(*)::int from catalog_source_assertions where source_snapshot_id = newest.id) as "assertionCount",
-      (
-        select job.created_at from job_queue as job
-        where job.queue_name = 'matching'
-          and job.payload->>'kind' = 'catalog_source_refresh'
-          and job.payload->>'source_slug' = newest.source_slug
-        order by job.created_at desc limit 1
-      ) as "lastRefreshQueuedAt",
-      (
-        select job.status from job_queue as job
-        where job.queue_name = 'matching'
-          and job.payload->>'kind' = 'catalog_source_refresh'
-          and job.payload->>'source_slug' = newest.source_slug
-        order by job.created_at desc limit 1
-      ) as "lastRefreshStatus"
-    from newest
-    order by newest.source_name, newest.source_slug
+      (select count(*)::int from catalog_source_assertions
+        where source_snapshot_id = ${snapshotId}::uuid) as "assertionCount"
   `;
 }
 
-export async function listCatalogSourceCards(
+export async function readCatalogSourceCoverage(
+  snapshotId: string,
   executor: QueryExecutor = db,
-): Promise<CatalogSourceCard[]> {
-  const result = await buildCatalogSourceCardsStatement().execute(executor);
-  return result.rows.map((row) => ({
-    ...row,
-    recordCount: Number(row.recordCount),
-    linkedCount: Number(row.linkedCount),
-    identifierCount: Number(row.identifierCount),
-    assertionCount: Number(row.assertionCount),
-  }));
+): Promise<CatalogSourceCoverage> {
+  const result =
+    await buildCatalogSourceCoverageStatement(snapshotId).execute(executor);
+  const row = result.rows[0];
+  return {
+    recordCount: Number(row?.recordCount ?? 0),
+    linkedCount: Number(row?.linkedCount ?? 0),
+    identifierCount: Number(row?.identifierCount ?? 0),
+    assertionCount: Number(row?.assertionCount ?? 0),
+  };
 }
 
 /** How many gardener objects a merge would move; over fifty asks for a confirmation. */

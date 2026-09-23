@@ -74,6 +74,18 @@ const SURFACES = [
     loading: () => import("./privacy/erasure-requests/loading"),
     heading: "Запити на видалення",
   },
+  // `OVE-506`: the owner's two catalogue work queues stood on the product's
+  // generic skeleton until the owner check answered.
+  {
+    surface: "catalog-queue",
+    loading: () => import("./catalog/queue/loading"),
+    heading: "Черга рішень каталогу",
+  },
+  {
+    surface: "catalog-sources",
+    loading: () => import("./catalog/sources/loading"),
+    heading: "Джерела каталогу",
+  },
 ] as const;
 
 describe("/garden route states", () => {
@@ -113,6 +125,24 @@ describe("/garden route states", () => {
 
       expect(html).toContain(`lang="${locale}"`);
       expect(html).toContain('data-workspace-surface="garden-home"');
+    },
+  );
+
+  it.each([
+    ["catalog-queue", () => import("./catalog/queue/loading")],
+    ["catalog-sources", () => import("./catalog/sources/loading")],
+  ] as const)(
+    "the %s frame claims no access before the owner check answers",
+    async (surface, loading) => {
+      // The frame stands in for a member's page as much as the owner's: it
+      // must not publish `allowed`, which a proof could read before the real
+      // answer, nor offer the way to the other owner page (`OVE-506`).
+      const { default: Loading } = await loading();
+      const html = await renderServerHtml(await Loading());
+
+      expect(html).toContain(`data-operator-surface="${surface}"`);
+      expect(html).toContain('data-operator-access-state="checking"');
+      expect(html).not.toContain("data-operator-cross-link");
     },
   );
 

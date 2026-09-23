@@ -1,0 +1,106 @@
+{
+  "issue": "OVE-506",
+  "proof": "catalog-queues-failure",
+  "baseUrl": "http://localhost:3179",
+  "faults": [
+    {
+      "lockedTable": "catalog_source_records",
+      "path": "/garden/catalog/sources",
+      "hardLoadStatus": 200,
+      "failedParts": [
+        {
+          "name": "source counts (2 of 2)",
+          "state": "failed"
+        }
+      ],
+      "readableParts": [
+        {
+          "name": "sources",
+          "state": "ready"
+        },
+        {
+          "name": "health",
+          "state": "ready"
+        },
+        {
+          "name": "misses",
+          "state": "ready"
+        },
+        {
+          "name": "precision",
+          "state": "ready"
+        },
+        {
+          "name": "unplaced",
+          "state": "ready"
+        }
+      ],
+      "failureClasses": [
+        "query_timeout"
+      ],
+      "retryHrefs": [
+        "/garden/catalog/sources"
+      ],
+      "skeletonLeft": false,
+      "freshnessBesideFailure": true,
+      "contentAfterRetry": true,
+      "passed": true
+    },
+    {
+      "lockedTable": "catalog_curation_actions",
+      "path": "/garden/catalog/queue",
+      "hardLoadStatus": 200,
+      "failedParts": [
+        {
+          "name": "automatic decisions",
+          "state": "failed"
+        }
+      ],
+      "readableParts": [
+        {
+          "name": "open decisions",
+          "state": "ready"
+        }
+      ],
+      "failureClasses": [
+        "query_timeout"
+      ],
+      "retryHrefs": [
+        "/garden/catalog/queue"
+      ],
+      "skeletonLeft": false,
+      "freshnessBesideFailure": null,
+      "contentAfterRetry": true,
+      "passed": true
+    },
+    {
+      "lockedTable": "catalog_curation_queue",
+      "path": "/garden/catalog/queue",
+      "hardLoadStatus": 200,
+      "failedParts": [
+        {
+          "name": "open decisions",
+          "state": "failed"
+        }
+      ],
+      "readableParts": [
+        {
+          "name": "automatic decisions",
+          "state": "ready"
+        }
+      ],
+      "failureClasses": [
+        "query_timeout"
+      ],
+      "retryHrefs": [
+        "/garden/catalog/queue"
+      ],
+      "skeletonLeft": false,
+      "freshnessBesideFailure": null,
+      "contentAfterRetry": true,
+      "passed": true
+    }
+  ],
+  "elapsedMs": 14843,
+  "passed": true
+}
