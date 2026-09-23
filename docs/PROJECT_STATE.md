@@ -90,9 +90,11 @@ facet.
 - Every catalogue read runs with `jit = off`. Production compiled every name
   search: «томат» took 1,188 ms with JIT and 189 ms without (read-only
   `EXPLAIN ANALYZE`). Reads without a name never crossed the threshold.
-- The door's links into the register are `DocumentLink`s. A client link
-  changed only the URL over the door on a slow connection, because Next 16.2
-  predicts the unfetched twin's route from the door's
+- Every link into a view of the register is a document navigation, from the
+  door or from another view: letters, "search everywhere", chips and clear
+  links (`DocumentLink`; `FilterBar`'s `documentLinks`). Next 16.2 predicts
+  an unfetched view's route from the door's, which the shell prefetches on
+  every page, so a client link changed only the URL on a slow connection
   (`public-query-twin.ts`).
 
 See `docs/redesign/2026-09-21/OVE-496-PROOF.md`.

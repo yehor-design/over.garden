@@ -1389,11 +1389,16 @@ letter.
   one. Plants and animals only; nobody keeps a fungus or a virus.
 - **An empty search among plants says where it would find something**
   ("search everywhere", with the count) rather than offering a reset.
-- **Every link from the door into the register is a document navigation**
-  (`DocumentLink`). The register is the door's `/q` twin, and Next 16.2
-  predicts a route it has not received from the same path without its query —
-  the door itself, which needs no request — so a client link changed only the
-  URL on a slow connection. This is §5.1's twin exception, for plain links.
+- **Every link into a view of the register is a document navigation**, from
+  the door and from one view to another: the letters, "search everywhere",
+  the chips and the clear links (`DocumentLink`; `FilterBar`'s
+  `documentLinks`). The register is the door's `/q` twin, and Next 16.2
+  predicts a route it has not received from the same path without its query:
+  the door. The shell links the door from every page, so its route is always
+  there to predict from, and its page needs no request. A client link then
+  changed only the URL — on a slow connection, every time. This is §5.1's
+  twin exception carried to plain links, and it costs the catalogue's chips
+  their announcement: the new count arrives with the new page.
 - **Every read is settled on its own.** A failed one hides its section and
   says so; the search, which reads nothing, is always there.
 - **The door has no context rail.** Its kingdoms and register hubs are

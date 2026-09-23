@@ -154,6 +154,10 @@ export function PublicCatalogBrowse({
 
       <FilterBar
         documentNavigation
+        // The shell links the door from every page, so the client router
+        // always holds its route to predict a query view from; a chip or a
+        // clear link would change only the URL (`public-query-twin.ts`).
+        documentLinks
         action={listingPath}
         search={
           <div className="flex items-end gap-2">
@@ -277,7 +281,7 @@ export function PublicCatalogBrowse({
               // A search for «бджола» among plants finds nothing and says
               // where it would (`OVE-496`): the kingdom counts ignore the
               // kingdom filter, so they are that number.
-              <Link
+              <DocumentLink
                 href={buildPublicCatalogBrowseHref(locale, {
                   ...request,
                   kingdoms: [],
@@ -286,7 +290,7 @@ export function PublicCatalogBrowse({
                 data-catalog-search-everywhere="true"
               >
                 {copy.searchEverywhere(elsewhere)}
-              </Link>
+              </DocumentLink>
             ) : chips.length > 0 ? (
               <Link href={listingPath}>{copy.resetFilters}</Link>
             ) : null
@@ -503,6 +507,10 @@ function isKnownRank(
  * it composes with the rest — `?kingdom=fungi&letter=a` is a real view. It is
  * a list of anchors rather than a row of buttons because a crawler walks it
  * and because 27 buttons in a toolbar is 27 tab stops.
+ *
+ * Each is a `DocumentLink`: a letter is a query view, and a client link to
+ * one — from the door or from another view — could change only the URL
+ * (`public-query-twin.ts`).
  */
 export function CatalogAlphabetIndex({
   locale,
@@ -510,7 +518,6 @@ export function CatalogAlphabetIndex({
   request,
   facets,
   omitAll = false,
-  documentNavigation = false,
 }: {
   locale: PublicLocale;
   copy: PublicCatalogBrowseCopy;
@@ -518,20 +525,13 @@ export function CatalogAlphabetIndex({
   facets: CatalogBrowseFacetCounts;
   /** On the door, "all letters" would be the door itself. */
   omitAll?: boolean;
-  /**
-   * On the door, every letter leads into the query twin, which a client
-   * navigation from the static document never reaches
-   * (`public-query-twin.ts`).
-   */
-  documentNavigation?: boolean;
 }) {
-  const IndexLink = documentNavigation ? DocumentLink : Link;
   return (
     <nav aria-label={copy.lettersHeading} className="min-w-0">
       <ul className="flex list-none flex-wrap gap-1">
         {omitAll ? null : (
           <li>
-            <IndexLink
+            <DocumentLink
               href={buildPublicCatalogBrowseHref(locale, {
                 ...request,
                 initial: null,
@@ -547,7 +547,7 @@ export function CatalogAlphabetIndex({
               )}
             >
               {copy.allLetters}
-            </IndexLink>
+            </DocumentLink>
           </li>
         )}
         {CATALOG_BROWSE_INITIALS.map((initial) => {
@@ -567,7 +567,7 @@ export function CatalogAlphabetIndex({
           }
           return (
             <li key={initial}>
-              <IndexLink
+              <DocumentLink
                 href={buildPublicCatalogBrowseHref(locale, {
                   ...request,
                   initial,
@@ -583,7 +583,7 @@ export function CatalogAlphabetIndex({
                 )}
               >
                 {initial}
-              </IndexLink>
+              </DocumentLink>
             </li>
           );
         })}

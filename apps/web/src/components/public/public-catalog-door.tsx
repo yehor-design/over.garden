@@ -253,7 +253,6 @@ export function PublicCatalogDoor({
               request={EMPTY_PUBLIC_CATALOG_BROWSE_REQUEST}
               facets={facets}
               omitAll
-              documentNavigation
             />
           ) : null}
         </Section>

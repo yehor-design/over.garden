@@ -45,9 +45,9 @@ type DocumentLinkProps = React.ComponentProps<"a"> &
 
 /**
  * `Link`'s look on a plain `<a>`, which the browser follows as a document
- * navigation. It exists for the one destination the client router cannot
- * reach: a static document's own query twin (`public-query-twin.ts`).
- * Anywhere else, `Link`.
+ * navigation. It exists for the one destination the client router cannot be
+ * trusted to reach: a listing's query view, which it may predict onto the
+ * listing's static document (`public-query-twin.ts`). Anywhere else, `Link`.
  */
 function DocumentLink({
   className,

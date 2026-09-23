@@ -21,7 +21,7 @@ export interface SiteShellContextRailItem {
   meta?: string;
   /**
    * Leave by a document navigation rather than the client router: a link
-   * from a static document into its own query twin (`public-query-twin.ts`).
+   * into a listing's query view (`public-query-twin.ts`).
    */
   document?: boolean;
 }

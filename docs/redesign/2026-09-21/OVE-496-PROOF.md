@@ -71,17 +71,24 @@ authenticated Linear receipt.
   name search far above what it costs, so Postgres compiled it. See the
   measurements below: in production a search for «томат» took 1,188 ms with
   JIT and 189 ms without.
-- **Links from the door into the register are document navigations**
-  (`DocumentLink` in `components/ui/link.tsx`; context rail items can be
-  `document`). The register is the door's `/q` twin. While a link's route
+- **Every link into a view of the register is a document navigation**, from
+  the door and from one view to another: the letters, "search everywhere",
+  the rail's kingdoms, the chips and the clear links (`DocumentLink` in
+  `components/ui/link.tsx`; `FilterBar`'s new `documentLinks`; rail items can
+  be `document`). The register is the door's `/q` twin. While a link's route
   tree has not arrived, Next 16.2 predicts one from the same path without its
-  query (`deprecated_requestOptimisticRouteCacheEntry`), which here is the
-  door itself. The door's page needs no request, so none was made and only
-  the URL changed. With the prefetch held for three seconds, as on a slow
-  phone, that happened on every click. From one register view to another the
-  server's answer corrects the tree, so those links stay client navigations.
-  The rule is written down in `lib/public-query-twin.ts`, and DESIGN.md §5.1
-  already had it for `FilterBar`.
+  query (`deprecated_requestOptimisticRouteCacheEntry`): the door. The shell
+  links the door from every page, so its route and page are always
+  prefetched, and a page that needs no request gets none. Proxy was never
+  asked and only the URL changed. With the prefetch held for three seconds,
+  as on a slow phone, that happened on every click: from the door, and — as
+  the first CI run of this change showed on "search everywhere" in Bulgarian
+  — from one view to another. The modes, the sort, the forms and the pages
+  were already document navigations (`documentNavigation`, `<a>`). The rule
+  is written down in `lib/public-query-twin.ts`; DESIGN.md §5.1 already had
+  it for `FilterBar`'s controls. The cost is the catalogue's chip
+  announcement: its new count arrives with the new page, as §5.1 describes
+  for twin listings.
 - **The Knowledge page's way into the catalogue says what the door does**:
   "Знайдіть рослину чи тварину — за звичною чи науковою назвою"
   (`catalog-front-door.tsx`), rather than describing a register by kingdom
@@ -110,10 +117,13 @@ reads it until it says so.
    kingdom and letter links into the register, no context rail at 1280 px,
    axe clean.
 2. **On a slow connection.** With every register prefetch held for three
-   seconds, a letter and a kingdom on the door land on the register: its
-   heading, the chosen letter marked current, rows shown; the plants view.
-   Against the previous build, where they were client links, the same test
-   failed as a reader would see it: the door's heading at `?letter=m`.
+   seconds, and the door's own route known first, as it is by the time a
+   reader clicks: a letter and a kingdom on the door land on the register
+   (its heading, the chosen letter marked current, rows shown; the plants
+   view). From the plants view, a letter lands on plants under M, and its
+   chip lands back on all plants. Against builds where these were client
+   links the same test failed as a reader would see it: the door's heading at
+   `?letter=m`, and the door again after the letter among plants.
 3. **Common names typed any way.** "м’ята" with a typographic apostrophe
    finds both mints stored with a straight one, each naming its species. "м'ята
    перцева" puts the peppermint first and not the spearmint. "Mentha spi"
@@ -164,19 +174,22 @@ Unit tests:
   the client router on it;
 - the Knowledge card: the door's words, linking to `/catalog`.
 
-The full unit suite (4,603 passed, 29 skipped), the banned-dependency, icon,
+The full unit suite (4,605 passed, 29 skipped), the banned-dependency, icon,
 design-token, component, browser-spec, settled-read and address guards, the
 type check and lint pass.
 
 The whole browser gate ran on the production build: 329 passed, 1 skipped.
 The one failure was `object-setup.spec.ts` being refused sign-up by Better
 Auth's rate limit (429 four times in the synthetic-gardener helper), a limit
-of the run rather than the page; alone it passes 5/5. The door's rail and the
-Knowledge card changed after that run, so every spec that visits the door or
-Knowledge ran again on the final build and passed: `catalog-door` 9,
+of the run rather than the page; alone it passes 5/5. Three things changed
+after that run: the door's rail, the Knowledge card, and the document
+navigation for links between views of the register, which the first CI run
+of this change asked for. Every spec that visits the door, Knowledge or
+`FilterBar` ran again on the final build and passed: `catalog-door` 9,
 `catalog` 8, `static-documents` 18, `site-shell` 9, `editorial-surfaces` 6,
-`mobile-shell` 23, `public-hydration` 7, `analytics-consent` 5 and
-`accessibility` 8.
+`journals-directory` 7 and `public-feed-cards` 7; before the navigation fix
+also `mobile-shell` 23, `public-hydration` 7, `analytics-consent` 5 and
+`accessibility` 8. The whole gate runs again in CI on the tested commit.
 
 ### What JIT cost
 

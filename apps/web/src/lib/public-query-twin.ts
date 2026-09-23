@@ -18,17 +18,19 @@ import { stripLocalePrefix } from "./public-localization";
  * rewrite, and `/q` is not an address. A request that names it from outside
  * answers 404.
  *
- * **Into a twin, leave by the document.** A link from the static document to
- * one of its own twins must be a plain `<a>`, not a client navigation. While
- * the twin's route tree has not arrived — a prefetch still in flight, or none
- * — Next 16.2 predicts one from the same path without its query
- * (`deprecated_requestOptimisticRouteCacheEntry`): here, the static document
- * itself. Its page is already on screen and needs no request, so none is
- * made, Proxy is never asked, and only the URL changes. On a slow connection
- * that is every click. `FilterBar`'s `documentNavigation` is this rule for a
- * listing's modes and sort; the catalogue's door (`OVE-496`) keeps it for its
- * letters and kingdoms. From one twin to another the navigation does ask the
- * server, whose answer corrects the tree, so a client link is safe there.
+ * **Into a twin, leave by the document.** A link to a query view must be a
+ * plain `<a>`, not a client navigation, wherever the page may hold the
+ * static document's route — and the shell links `/catalog`, `/knowledge` and
+ * `/communities` from every page, so their routes are always prefetched.
+ * While the view's own route tree has not arrived — a prefetch still in
+ * flight, or none — Next 16.2 predicts one from the same path without its
+ * query (`deprecated_requestOptimisticRouteCacheEntry`): the static document.
+ * Its page is prefetched and needs no request, so none is made, Proxy is
+ * never asked, and only the URL changes — from the static page and from
+ * another query view alike. On a slow connection that is every click.
+ * `FilterBar`'s `documentNavigation` (modes, sort, the forms) and
+ * `documentLinks` (chips, clear links) are this rule for a listing's
+ * controls; the catalogue (`OVE-496`) keeps it for every link into a view.
  */
 export const PUBLIC_QUERY_TWIN_SEGMENT = "q";
 

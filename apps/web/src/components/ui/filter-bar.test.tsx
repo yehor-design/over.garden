@@ -9,6 +9,13 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
 }));
+// `next/link` with a mark on it, so a test can tell the client router's link
+// from a document navigation: in the DOM both are the same `<a href>`.
+vi.mock("next/link", () => ({
+  default: (props: React.ComponentProps<"a">) => (
+    <a data-client-link="true" {...props} />
+  ),
+}));
 
 const labels: FilterBarProps["labels"] = {
   filters: "Фільтри журналів",
@@ -39,6 +46,21 @@ const facets: FilterBarProps["facets"] = [
     anyLabel: "Усі теми",
     value: [],
     options: [{ value: "winter-care", label: "Зимовий догляд", count: 4 }],
+  },
+];
+
+const TWO_CHIPS: FilterBarProps["chips"] = [
+  {
+    key: "kind",
+    label: "Рослини",
+    removeHref: "/journals?topic=winter-care",
+    removeLabel: "Зняти фільтр: Рослини",
+  },
+  {
+    key: "topic",
+    label: "Зимовий догляд",
+    removeHref: "/journals?kind=plant",
+    removeLabel: "Зняти фільтр: Зимовий догляд",
   },
 ];
 
@@ -263,6 +285,40 @@ describe("FilterBar", () => {
     expect(
       screen.getByRole("link", { name: "Скинути все" }).getAttribute("href"),
     ).toBe("/journals");
+  });
+
+  it("removes a filter through the router, which keeps the count's live region", () => {
+    renderBar({ chips: TWO_CHIPS, clearAllHref: "/journals" });
+    expect(
+      screen.getByRole("link", { name: "Зняти фільтр: Рослини" }).dataset
+        .clientLink,
+    ).toBe("true");
+  });
+
+  it("leaves the chips and the clear links to the document when a listing asks", () => {
+    // `OVE-496`: the shell links the catalogue's static door from every page,
+    // so a client link into one of its query views could change only the URL.
+    renderBar({
+      documentLinks: true,
+      chips: TWO_CHIPS,
+      clearAllHref: "/journals",
+      clearFiltersHref: "/journals?q=x",
+    });
+    for (const name of [
+      "Зняти фільтр: Рослини",
+      "Зняти фільтр: Зимовий догляд",
+      "Скинути все",
+      "Очистити фільтри",
+    ]) {
+      const link = screen.getByRole("link", { name, hidden: true });
+      expect(link.tagName, name).toBe("A");
+      expect(link.dataset.clientLink, name).toBeUndefined();
+    }
+    expect(
+      screen
+        .getByRole("link", { name: "Зняти фільтр: Рослини" })
+        .getAttribute("href"),
+    ).toBe("/journals?topic=winter-care");
   });
 
   it("offers Clear all only once more than one filter is set", () => {

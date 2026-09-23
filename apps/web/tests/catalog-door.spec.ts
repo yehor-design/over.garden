@@ -393,16 +393,17 @@ test.describe("the catalogue's door (OVE-496)", () => {
     await scanAccessibility(page, testInfo, "door-uk-1280");
   });
 
-  test("its letters and kingdoms reach the register, on a slow connection too", async ({
+  test("every way into a view of the register reaches it, on a slow connection too", async ({
     browser,
     baseURL,
   }) => {
-    // The register is this static page's query twin. While a link's route
-    // tree has not arrived, Next 16.2 predicts one from the same path without
-    // its query — the door itself, whose page is already on screen — so a
-    // client link asked nothing and changed only the URL. A prefetch held
-    // back is a phone on a slow network, which made that every click
-    // (`public-query-twin.ts`).
+    // The register is the door's query twin. While a link's route tree has
+    // not arrived, Next 16.2 predicts one from the same path without its
+    // query — the door, whose page the router already holds — so a client
+    // link asked nothing and changed only the URL. That held from the door
+    // and from one view of the register to another: the shell links the door
+    // from every page. A prefetch held back is a phone on a slow network,
+    // which made it every click (`public-query-twin.ts`).
     const context = await readerContext(browser, baseURL!);
     const page = await context.newPage();
     await page.route(
@@ -454,11 +455,46 @@ test.describe("the catalogue's door (OVE-496)", () => {
     );
     await waitForHydration(plants);
     await plants.scrollIntoViewIfNeeded();
+    known = doorRouteKnown();
     await plants.click();
     await page.waitForURL(/[?&]kingdom=plantae(?:&|$)/u);
+    const plantsView = page.locator(
+      'main[data-catalog-browse-kingdom="plantae"]:visible',
+    );
+    await expect(plantsView).toBeVisible();
+    await known;
+
+    // From that view to another: a letter among plants.
+    const plantLetter = page.locator(
+      'nav[aria-label="За літерою"]:visible a[href="/catalog?kingdom=plantae&letter=m"]',
+    );
+    await waitForHydration(plantLetter);
+    known = doorRouteKnown();
+    await plantLetter.click();
+    await page.waitForURL(/[?&]letter=m(?:&|$)/u);
+    await expect(plantsView).toBeVisible();
     await expect(
-      page.locator('main[data-catalog-browse-kingdom="plantae"]:visible'),
-    ).toBeVisible();
+      page.locator(
+        'nav[aria-label="За літерою"]:visible a[aria-current="true"]',
+      ),
+    ).toHaveText("m");
+    await known;
+
+    // And back out of the letter by its chip, still among plants.
+    const chip = page.getByRole("link", { name: "Прибрати фільтр: M" });
+    await waitForHydration(chip);
+    await chip.click();
+    await page.waitForURL(
+      (url) =>
+        !url.searchParams.has("letter") &&
+        url.searchParams.get("kingdom") === "plantae",
+    );
+    await expect(plantsView).toBeVisible();
+    await expect(
+      page.locator(
+        'nav[aria-label="За літерою"]:visible a[aria-current="true"]',
+      ),
+    ).toHaveText("Усі літери");
   });
 
   test("finds a plant by its common name typed any way, a species before its forms", async ({
