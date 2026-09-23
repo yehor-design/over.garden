@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { AuthSecretConfiguration } from "@/lib/auth-secret";
+import { mintAuthIntentToken } from "../../tests/helpers/auth-intent-token";
 import {
   AuthIntentTokenError,
   createAuthIntentToken,
@@ -237,5 +238,39 @@ describe("auth intent token", () => {
         { secret: SECRET, now: Number.NaN },
       ),
     ).toThrow(AuthIntentTokenError);
+  });
+
+  it("verifies what the browser proof's helper mints, so the two cannot drift (OVE-504)", () => {
+    const intent = {
+      action: "bookmark",
+      returnTo: "/journal/balcony-tomato-check",
+      target: { kind: "journal", ref: "balcony-tomato-check" },
+    };
+    for (const authSecrets of [
+      TWO_KEY_CONFIGURATION,
+      LEGACY_TRANSITION_CONFIGURATION,
+    ]) {
+      const fresh = mintAuthIntentToken(intent, {
+        issuedAt: NOW,
+        configuration: authSecrets,
+      });
+      expect(
+        verifyAuthIntentToken(fresh, { authSecrets, now: NOW }),
+      ).toMatchObject(intent);
+
+      const old = mintAuthIntentToken(intent, {
+        issuedAt: NOW - 16 * 60_000,
+        configuration: authSecrets,
+      });
+      let caught: unknown;
+      try {
+        verifyAuthIntentToken(old, { authSecrets, now: NOW });
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(AuthIntentTokenError);
+      expect((caught as AuthIntentTokenError).code).toBe("expired");
+      expect((caught as AuthIntentTokenError).intent).toMatchObject(intent);
+    }
   });
 });

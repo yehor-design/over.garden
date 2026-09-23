@@ -43,7 +43,9 @@ describe("self-serve auth recovery contract", () => {
     );
   });
 
-  it("returns recovered gardeners to the existing garden workspace", () => {
-    expect(passwordResetSuccessPath()).toBe("/garden");
+  it("sends a recovered gardener to sign in, saying the password changed", () => {
+    expect(passwordResetSuccessPath()).toBe(
+      "/auth/sign-in?notice=password-reset",
+    );
   });
 });

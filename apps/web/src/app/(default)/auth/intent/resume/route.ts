@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import {
   buildAuthIntentResumeHref,
   type AuthIntentPayload,
@@ -20,28 +18,34 @@ export async function GET(request: Request) {
     intent = verifyAuthIntentToken(token);
   } catch (error) {
     const code = tokenErrorCode(error);
-    const authUrl = new URL("/auth/intent", request.url);
-    if (code === "expired" && token) authUrl.searchParams.set("intent", token);
-    authUrl.searchParams.set("state", code);
-    return NextResponse.redirect(authUrl, 303);
+    const query = new URLSearchParams();
+    if (code === "expired" && token) query.set("intent", token);
+    query.set("state", code);
+    return seeOther(`/auth/intent?${query.toString()}`);
   }
 
   const session = await getCurrentSession();
   if (!session?.user?.id) {
-    const authUrl = new URL("/auth/intent", request.url);
-    authUrl.searchParams.set("intent", token);
-    authUrl.searchParams.set("state", "auth-required");
+    const query = new URLSearchParams();
+    query.set("intent", token);
+    query.set("state", "auth-required");
     const oauthError = oauthErrorCodeForRedirect(
       url.searchParams.get("error") ?? undefined,
     );
-    if (oauthError) authUrl.searchParams.set("error", oauthError);
-    return NextResponse.redirect(authUrl, 303);
+    if (oauthError) query.set("error", oauthError);
+    return seeOther(`/auth/intent?${query.toString()}`);
   }
 
-  return NextResponse.redirect(
-    new URL(buildAuthIntentResumeHref(intent), request.url),
-    303,
-  );
+  return seeOther(buildAuthIntentResumeHref(intent));
+}
+
+/**
+ * A relative `Location` (`OVE-504`): `request.url` names the host the server
+ * thinks it has, and an absolute redirect built from it could move the reader
+ * to another origin mid-flow, away from their language and session cookies.
+ */
+function seeOther(path: string) {
+  return new Response(null, { status: 303, headers: { location: path } });
 }
 
 function tokenErrorCode(error: unknown): AuthIntentTokenErrorCode {

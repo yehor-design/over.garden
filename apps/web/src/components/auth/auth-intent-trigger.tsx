@@ -37,7 +37,10 @@ interface AuthIntentTriggerProps {
  * also means it works with JavaScript switched off and with no round trip.
  *
  * Either way the reader comes back to the thing they pressed, not to the page
- * that contains it. The return path is the resume href the intent contract
+ * that contains it. Both carry `data-auth-intent-guest`: a page drawn with a
+ * guest's control as a stand-in for a member's (a community's static shell)
+ * must not have the stand-in focused on return, or Enter starts signing in
+ * again (`OVE-504`). The return path is the resume href the intent contract
  * builds, so `create_entry` lands on the composer at
  * `/garden?authIntent=create_entry#first-entry-composer` and
  * `useScrollToHashOnMount` puts it in front of them. Sending them to `/garden`
@@ -68,6 +71,7 @@ export function AuthIntentTrigger({
           intent: action,
         })}
         data-auth-intent-control={action}
+        data-auth-intent-guest="true"
         className={cn(buttonVariants({ variant, size }), className)}
       >
         {icon}
@@ -89,6 +93,7 @@ export function AuthIntentTrigger({
         autoFocus={autoFocus}
         data-auth-intent-control={action}
         data-auth-intent-control-ref={control}
+        data-auth-intent-guest="true"
         className={cn(buttonVariants({ variant, size }), className)}
       >
         {icon}

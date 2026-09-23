@@ -155,11 +155,17 @@ describe("the anatomy every comparable product ships", () => {
     // HTML attribute names are case-insensitive, so React's `autoComplete`
     // reaches the browser as `autocomplete`; the assertion reads it the way
     // the parser does rather than the way the serializer wrote it.
-    expect(signIn.toLowerCase()).toContain('autocomplete="email"');
+    // `username`, on both screens (`OVE-504`, criterion 3): the token password
+    // managers pair with the password beside it to save and fill the pair.
+    expect(signIn.toLowerCase()).toContain('autocomplete="username"');
     expect(signIn.toLowerCase()).toContain('autocomplete="current-password"');
-    expect(render({ mode: "sign-up" }).toLowerCase()).toContain(
-      'autocomplete="new-password"',
-    );
+    const signUp = render({ mode: "sign-up" }).toLowerCase();
+    expect(signUp).toContain('autocomplete="username"');
+    expect(signUp).toContain('autocomplete="new-password"');
+    // Nothing that blocks a paste or a password manager.
+    for (const html of [signIn, signUp]) {
+      expect(html).not.toMatch(/onpaste|oncopy|autocomplete="off"/u);
+    }
   });
 });
 
@@ -191,10 +197,10 @@ describe("a refusal", () => {
       join(dirname(fileURLToPath(import.meta.url)), "auth-surface.tsx"),
       "utf8",
     );
-    expect(source).toMatch(/<Callout[\s\S]*?live=\{refused \? "assertive"/u);
+    expect(source).toMatch(/<Callout[\s\S]*?live=\{alarming \? "assertive"/u);
     // Above the fields, not under the submit: the Callout comes before the
     // first `<Field` in the form.
-    const form = source.slice(source.indexOf("<form action={formAction}"));
+    const form = source.slice(source.search(/<form\s+action=\{formAction\}/u));
     expect(form.indexOf("<Callout")).toBeLessThan(form.indexOf("<Field"));
     expect(form.indexOf("<Callout")).toBeGreaterThan(0);
   });
@@ -232,6 +238,46 @@ describe("the query contract of the sign-in screens", () => {
     ).toBe("/bookmarks?kind=all");
   });
 
+  it("reads notices, provider errors and verification from closed sets only", () => {
+    expect(
+      readAuthScreenParams({ notice: "password-reset" }, "uk").notice,
+    ).toBe("password-reset");
+    expect(
+      readAuthScreenParams({ notice: "<b>hi</b>" }, "uk").notice,
+    ).toBeNull();
+
+    // A provider code becomes the reader's sentence, never the raw code.
+    const provider = readAuthScreenParams(
+      { error: "account_not_linked" },
+      "uk",
+    ).providerError;
+    expect(provider).toContain("OverGarden");
+    expect(provider).not.toContain("account_not_linked");
+    expect(
+      readAuthScreenParams({ error: "<script>" }, "uk").providerError,
+    ).not.toContain("<script>");
+
+    // A verification link comes back signed in, or with Better Auth's error.
+    expect(readAuthScreenParams({ verified: "1" }, "uk").verification).toBe(
+      "done",
+    );
+    const expired = readAuthScreenParams(
+      { verified: "1", error: "TOKEN_EXPIRED" },
+      "uk",
+    );
+    expect(expired.verification).toBe("expired");
+    // …and that error is the link's, not a provider's.
+    expect(expired.providerError).toBeNull();
+  });
+
+  it("knows whether `next` was given or is only the default", () => {
+    expect(readAuthScreenParams({}, "uk").hasNext).toBe(false);
+    expect(readAuthScreenParams({ next: "/feed" }, "uk").hasNext).toBe(true);
+    expect(
+      readAuthScreenParams({ next: "https://attacker.example" }, "uk").hasNext,
+    ).toBe(false);
+  });
+
   it("only accepts an intent from the closed action set", () => {
     expect(readAuthScreenParams({ intent: "comment" }, "uk").intentPrompt).toBe(
       "Увійдіть, щоб коментувати",
@@ -239,6 +285,112 @@ describe("the query contract of the sign-in screens", () => {
     expect(
       readAuthScreenParams({ intent: "<script>" }, "uk").intentPrompt,
     ).toBeNull();
+  });
+});
+
+describe("the focused screen (OVE-504)", () => {
+  it("names the mode it is in and offers the other, carrying the return path", () => {
+    for (const mode of ["sign-in", "sign-up"] as const) {
+      const html = render({ mode, next: "/communities/tomatoes" });
+      const nav = html.slice(
+        html.indexOf('data-auth-mode-switch="true"'),
+        html.indexOf("</nav>"),
+      );
+      expect(html).toContain('aria-label="Вхід або реєстрація"');
+      expect(nav.match(/aria-current="page"/gu)).toHaveLength(1);
+      expect(nav).toMatch(
+        mode === "sign-in"
+          ? /<a(?=[^>]*aria-current="page")(?=[^>]*href="\/auth\/sign-in\?next=%2Fcommunities%2Ftomatoes")[^>]*>/u
+          : /<a(?=[^>]*aria-current="page")(?=[^>]*href="\/auth\/sign-up\?next=%2Fcommunities%2Ftomatoes")[^>]*>/u,
+      );
+      expect(nav).toContain("/auth/sign-in?next=%2Fcommunities%2Ftomatoes");
+      expect(nav).toContain("/auth/sign-up?next=%2Fcommunities%2Ftomatoes");
+    }
+  });
+
+  it("is one column with one h1, whichever mode", () => {
+    for (const mode of ["sign-in", "sign-up"] as const) {
+      const html = render({ mode });
+      expect(html).toContain(`data-auth-frame="${mode}"`);
+      expect(html.match(/<h1\b/gu)).toHaveLength(1);
+    }
+    expect(render()).toMatch(/<h1[^>]*>Вхід до OverGarden<\/h1>/u);
+    expect(render({ mode: "sign-up" })).toMatch(
+      /<h1[^>]*>Новий обліковий запис<\/h1>/u,
+    );
+  });
+
+  it("says each reason it was opened in its own sentence", () => {
+    const expired = render({ notice: "intent-expired" });
+    expect(expired).toContain('data-auth-notice="intent-expired"');
+    expect(expired).toContain("Минуло понад 15 хвилин");
+
+    const reset = render({ notice: "password-reset" });
+    expect(reset).toMatch(
+      /<div(?=[^>]*data-tone="success")(?=[^>]*data-auth-notice="password-reset")[^>]*>/u,
+    );
+    expect(reset).toContain("Пароль оновлено");
+
+    const tab = render({ notice: "return-to-tab" });
+    expect(tab).toContain(
+      "Неопублікований текст залишився в попередній вкладці",
+    );
+
+    const verification = render({ verificationExpired: true });
+    expect(verification).toContain('data-auth-notice="verification-expired"');
+
+    const provider = render({
+      providerError: "Соціальний вхід не завершився.",
+    });
+    expect(provider).toContain('data-auth-message="provider"');
+    expect(provider).toContain("Соціальний вхід не завершився.");
+  });
+
+  it("keeps the help link and the way back on the reader's path", () => {
+    const html = render({
+      next: "/auth/intent/resume?intent=token",
+      cancelHref: "/journal/first-public-harvest",
+    });
+    expect(html).toContain(
+      'href="/auth/help?next=%2Fauth%2Fintent%2Fresume%3Fintent%3Dtoken"',
+    );
+    // Back goes to the page the action was on, never into the resume route.
+    expect(html).toMatch(
+      /<a(?=[^>]*data-auth-cancel="true")(?=[^>]*href="\/journal\/first-public-harvest")[^>]*>/u,
+    );
+  });
+
+  it("keeps what the reader typed above the boundary a lost request re-mounts", () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "auth-surface.tsx"),
+      "utf8",
+    );
+    const surface = source.slice(
+      source.indexOf("export function AuthSurface"),
+      source.indexOf("function CredentialForm"),
+    );
+    expect(surface).toContain('const [email, setEmail] = useState("")');
+    expect(surface).toContain('const [password, setPassword] = useState("")');
+    expect(surface).toContain("<TransportBoundary");
+    expect(source).toMatch(/value=\{email\}/u);
+    expect(source).toMatch(/value=\{password\}/u);
+  });
+
+  it("announces who signed in, and leaves the other tab's words alone when asked to", () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "auth-surface.tsx"),
+      "utf8",
+    );
+    expect(source).toMatch(
+      /announceSessionSignal\(\{\s*type: "signed_in",\s*ownerUserId: state\.ownerUserId \?\? null,/u,
+    );
+    const effect = source.slice(
+      source.indexOf('if (notice === "return-to-tab")'),
+      source.indexOf("window.location.assign(state.redirectTo)"),
+    );
+    // Returning to the other tab happens before, and instead of, navigating.
+    expect(effect).toContain("onReturnToTab();");
+    expect(effect).toContain("return;");
   });
 });
 

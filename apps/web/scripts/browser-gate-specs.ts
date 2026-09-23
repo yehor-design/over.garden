@@ -36,6 +36,7 @@ export const BROWSER_GATE_SPECS = [
   "command-palette.spec.ts",
   "interface-locale.spec.ts",
   "auth-screen.spec.ts",
+  "auth-intent.spec.ts",
   "auth-provider-retirement.spec.ts",
   // The page families.
   "journals-directory.spec.ts",

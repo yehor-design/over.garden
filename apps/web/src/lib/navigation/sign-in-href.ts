@@ -46,6 +46,12 @@ export function buildSignInHref(
     returnTo?: string | null;
     intent?: string | null;
     signUp?: boolean;
+    /**
+     * Why the reader is here, when it is not an action (`OVE-504`). One line
+     * above the form, from a closed set; like `intent`, it may change what the
+     * screen says and never which fields or providers it has.
+     */
+    notice?: AuthScreenNotice | null;
   } = {},
 ) {
   const params = new URLSearchParams();
@@ -53,10 +59,57 @@ export function buildSignInHref(
   const returnTo = resolveReturnTo(options.returnTo);
   if (returnTo) params.set("next", returnTo);
   if (options.intent) params.set("intent", options.intent);
+  if (options.notice) params.set("notice", options.notice);
 
   const path = options.signUp ? SIGN_UP_PATH : SIGN_IN_PATH;
   const query = params.toString();
   return query ? `${path}?${query}` : path;
+}
+
+/**
+ * The reasons a reader can be sent to the sign-in screen that are not an
+ * action of theirs (`OVE-504`, criterion 5): each is a different sentence,
+ * because each needs a different next step.
+ *
+ * - `intent-expired`: the action they pressed is older than its signed token,
+ *   so signing in returns them to the page and they press it again;
+ * - `intent-invalid`: the action could not be verified at all;
+ * - `password-reset`: a new password was just set, and every session with it;
+ * - `return-to-tab`: unpublished writing lives in the tab that opened this
+ *   one, so signing in here must not send them to an empty composer.
+ */
+export const AUTH_SCREEN_NOTICES = [
+  "intent-expired",
+  "intent-invalid",
+  "password-reset",
+  "return-to-tab",
+] as const;
+
+export type AuthScreenNotice = (typeof AUTH_SCREEN_NOTICES)[number];
+
+export function isAuthScreenNotice(value: unknown): value is AuthScreenNotice {
+  return (
+    typeof value === "string" &&
+    (AUTH_SCREEN_NOTICES as readonly string[]).includes(value)
+  );
+}
+
+/**
+ * Where an email-verification link returns the reader (`OVE-504`).
+ *
+ * Better Auth sends the reader to this address after verifying — signed in —
+ * or to the same address with `error=…` when the link has expired. Pointing it
+ * at the sign-in screen, and not at the destination directly, is what lets an
+ * expired link say so instead of landing on a page that knows nothing about it.
+ * The destination rides along as `next`, so an action begun before signing up
+ * is still where the reader ends up.
+ */
+export function buildEmailVerificationCallbackHref(returnTo?: string | null) {
+  const params = new URLSearchParams();
+  const next = resolveReturnTo(returnTo);
+  if (next) params.set("next", next);
+  params.set("verified", "1");
+  return `${SIGN_IN_PATH}?${params.toString()}`;
 }
 
 export function isSignInPath(pathname: string) {

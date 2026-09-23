@@ -1,16 +1,8 @@
-import { after, NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 
 import { auth } from "@/lib/auth";
 import { denyRetiredSocialProviderRequest } from "@/lib/auth/retired-social-provider";
-import {
-  equalizePasswordResetAdmission,
-  isTrustedPasswordResetOrigin,
-  parsePasswordResetRequest,
-  PASSWORD_RESET_RESPONSE,
-  PASSWORD_RESET_RESPONSE_HEADERS,
-} from "@/server/auth/auth-email-outbox";
-import { drainAuthEmailOutbox } from "@/server/auth/auth-email-outbox-consumer";
+import { handlePasswordResetRequest } from "@/server/auth/password-reset-request";
 import { bridgeLegacyEmailVerificationRequest } from "@/server/auth/legacy-email-verification-bridge";
 import {
   mutationScopeResponse,
@@ -49,7 +41,7 @@ export async function POST(request: Request) {
   if (retiredProviderDenial) return retiredProviderDenial;
 
   if (isPasswordResetRequest(request)) {
-    return await requestPasswordReset(request);
+    return await handlePasswordResetRequest(request);
   }
 
   if (isAuthenticatedAccountMutationRequest(request)) {
@@ -77,37 +69,4 @@ export function isAuthenticatedAccountMutationRequest(
   return AUTHENTICATED_ACCOUNT_MUTATION_PATHS.has(
     new URL(request.url).pathname,
   );
-}
-
-async function requestPasswordReset(request: Request): Promise<Response> {
-  if (!isTrustedPasswordResetOrigin(request)) {
-    return NextResponse.json({ error: "Invalid origin" }, { status: 403 });
-  }
-
-  const body = await request
-    .clone()
-    .json()
-    .catch(() => null);
-  const parsed = parsePasswordResetRequest(body);
-  if (!parsed) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  }
-
-  const betterAuthResponse = await handler.POST(request);
-  if (!betterAuthResponse.ok) return betterAuthResponse;
-
-  await equalizePasswordResetAdmission(parsed.email);
-  after(async () => {
-    try {
-      await drainAuthEmailOutbox();
-    } catch {
-      // The outbox remains durable and the daily Cron fallback will reclaim it.
-      // Do not emit request-, recipient-, or provider-derived error details.
-    }
-  });
-
-  return NextResponse.json(PASSWORD_RESET_RESPONSE, {
-    status: 200,
-    headers: PASSWORD_RESET_RESPONSE_HEADERS,
-  });
 }

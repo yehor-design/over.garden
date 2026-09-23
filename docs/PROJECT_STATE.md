@@ -70,6 +70,36 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**Authentication (OVE-504):** sign-in, sign-up, help and a new password are
+one focused column. Sign-in and sign-up share a mode switch that carries `next`.
+Each reason a reader arrives has its own sentence: an action, an expired
+action, a new password, a provider refusal, an expired verification link, or
+words waiting in another tab. Pending, signed-in, refused, unverified and
+lost-request are distinct states, and a refusal or lost request keeps what was
+typed, even a password manager's silent fill. Somebody already signed in gets
+a state of their own, not a redirect that trapped Back.
+
+Fixes to the held-action flow:
+- An expired action no longer loops between `/auth/intent` and the resume
+  route; it returns to its page.
+- The intent routes redirect relatively.
+- Unprefixed listings (`/journals`, `/feed`, …) are accepted return paths.
+- Save, follow and comment come back focused.
+- Signing in names the account, so a composer tab of the same account whose
+  session ended keeps its words (ADR-0022 D6 reloads only for another
+  account).
+
+The help form is a Server Action through the rate-limited reset route.
+See `docs/redesign/2026-09-21/OVE-504-PROOF.md`.
+
+**Known gap, open:** sign-in and sign-up through the screen are not
+rate-limited. They call `auth.api.*`, which skips the HTTP router where
+Better Auth's limit lives. Measured 2026-09-23: the HTTP endpoint answered
+`401, 401, 401, 429…`, while the screen gave six plain refusals. The gap dates
+from OVE-455. It has no Linear issue (the workspace is at its issue limit);
+the fix is to route the actions through the handler, as the reset request
+already does.
+
 **The account's pages (OVE-503):** `/garden/profile` is the public identity
 alone — how others see you, each field saying who sees it and every region in
 the reader's language, then the public address with what a new one changes —

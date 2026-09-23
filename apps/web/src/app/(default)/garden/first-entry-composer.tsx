@@ -405,6 +405,9 @@ export function FirstEntryComposer({
       setAuthRecoveryUrl(
         buildSignInHref({
           returnTo: `${window.location.pathname}${window.location.search}`,
+          // The words stay in this tab; the one that opens says so and
+          // does not open an empty composer beside them (`OVE-504`).
+          notice: "return-to-tab",
         }),
       );
     }

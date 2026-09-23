@@ -1,14 +1,22 @@
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
+
 export const AUTH_HELP_PATH = "/auth/help";
 export const AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
-export const PASSWORD_RESET_SUCCESS_PATH = "/garden";
 
 export function passwordResetRedirectUrl(baseUrl: string): string {
   const normalizedBase = baseUrl.replace(/\/$/, "");
   return `${normalizedBase}${AUTH_RESET_PASSWORD_PATH}`;
 }
 
+/**
+ * Where a completed password reset goes: the sign-in screen, saying the
+ * password changed. Better Auth ends every session on a reset
+ * (`revokeSessionsOnPasswordReset`), so the workspace it used to open could
+ * only ask the reader to sign in — without telling them the reset had worked
+ * (`OVE-504`).
+ */
 export function passwordResetSuccessPath(): string {
-  return PASSWORD_RESET_SUCCESS_PATH;
+  return buildSignInHref({ notice: "password-reset" });
 }
 
 export type AuthClientErrorKind =

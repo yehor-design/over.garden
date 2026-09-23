@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import {
   buildAuthIntentResumeHref,
   normalizeAuthIntentDraft,
@@ -32,9 +30,7 @@ export async function POST(request: Request) {
   }
 
   const token = createAuthIntentToken(intent);
-  const authUrl = new URL("/auth/intent", request.url);
-  authUrl.searchParams.set("intent", token);
-  return NextResponse.redirect(authUrl, 303);
+  return redirect(request, `/auth/intent?intent=${encodeURIComponent(token)}`);
 }
 
 function stringField(formData: FormData, name: string) {
@@ -42,6 +38,13 @@ function stringField(formData: FormData, name: string) {
   return typeof value === "string" ? value : "";
 }
 
-function redirect(request: Request, path: string) {
-  return NextResponse.redirect(new URL(path, request.url), 303);
+/**
+ * A relative `Location` (`OVE-504`). `request.url` names the host the server
+ * thinks it has — `localhost` under `next start`, whatever a proxy forwarded
+ * elsewhere — and an absolute redirect built from it can move the reader to
+ * another origin mid-flow, where their language and session cookies are not.
+ * The browser resolves a relative one against the address it is actually on.
+ */
+function redirect(_request: Request, path: string) {
+  return new Response(null, { status: 303, headers: { location: path } });
 }

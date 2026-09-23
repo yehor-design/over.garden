@@ -83,7 +83,10 @@ const ROUTE_PATTERNS = [
   /^\/(?:(?:uk|bg|ru)\/)?topics\/[a-z0-9][a-z0-9-]{0,95}$/,
   /^\/(?:(?:uk|bg|ru)\/)?communities\/[a-z0-9][a-z0-9-]{0,95}$/,
   /^\/(?:(?:uk|bg|ru)\/)?communities\/[a-z0-9][a-z0-9-]{0,95}\/discussions\/[0-9a-f-]{36}$/,
-  /^\/(?:uk|bg|ru)\/(?:objects|journals|knowledge|feed|notifications|bookmarks|wishlist)$/,
+  // Unprefixed too: since ADR-0029 and OVE-460 the unprefixed address is the
+  // canonical one and renders in the reader's language, and a held action
+  // pressed on `/journals` was refused as "invalid" (`OVE-504`).
+  /^\/(?:(?:uk|bg|ru)\/)?(?:objects|journals|knowledge|feed|notifications|bookmarks|wishlist)$/,
   /^\/garden$/,
   /^\/garden\/objects\/[0-9a-f-]{36}$/,
   /^\/garden\/(?:profile|lineage\/claims|lineage\/invitations\/claim)$/,

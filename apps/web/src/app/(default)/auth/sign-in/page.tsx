@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { getAuthScreenCopy } from "@/lib/auth-screen-copy";
 import { getCurrentSession } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { AuthSurface } from "../auth-surface";
 import { signInAction, startSocialSignInAction } from "../auth-actions";
+import { resolveAuthCancelHref } from "../cancel-href";
 import { readAuthScreenParams, type AuthScreenSearchParams } from "../params";
+import { SignedInState } from "../signed-in-state";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const copy = getTrustSurfaceCopy(await getRequestInterfaceLocale()).authPanel;
+  const copy = getAuthScreenCopy(await getRequestInterfaceLocale());
   return {
-    title: copy.signInScreenTitle,
+    title: copy.signIn.title,
     robots: { index: false, follow: false },
   };
 }
@@ -29,16 +30,29 @@ export default async function SignInRoute({
   ]);
   const screen = readAuthScreenParams(params, locale);
 
-  // Somebody already signed in does not need this screen; send them on to the
-  // thing they were doing.
-  if (session?.user?.id) redirect(screen.next);
+  // Somebody already signed in gets a state of their own, not a silent
+  // redirect: one that made Back from the destination bounce forward again.
+  if (session?.user?.id) {
+    return (
+      <SignedInState
+        locale={locale}
+        next={screen.next}
+        hasNext={screen.hasNext}
+        verified={screen.verification === "done"}
+      />
+    );
+  }
 
   return (
     <AuthSurface
       mode="sign-in"
       locale={locale}
       next={screen.next}
+      cancelHref={resolveAuthCancelHref(screen.next)}
       intentPrompt={screen.intentPrompt}
+      notice={screen.notice}
+      providerError={screen.providerError}
+      verificationExpired={screen.verification === "expired"}
       googleSignInEnabled={isGoogleSignInEnabled()}
       submit={signInAction}
       startSocial={startSocialSignInAction}

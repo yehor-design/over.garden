@@ -36,7 +36,7 @@ describe("POST /auth/intent/start", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/auth/intent?intent=opaque-intent-token",
+      "/auth/intent?intent=opaque-intent-token",
     );
     expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
       action: "comment",
@@ -65,7 +65,7 @@ describe("POST /auth/intent/start", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/garden?authIntent=create_entry&authControl=composer-first-entry#first-entry-composer-composer-first-entry",
+      "/garden?authIntent=create_entry&authControl=composer-first-entry#first-entry-composer-composer-first-entry",
     );
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
@@ -85,7 +85,7 @@ describe("POST /auth/intent/start", () => {
 
       expect(response.status).toBe(303);
       expect(response.headers.get("location")).toBe(
-        "https://over.garden/auth/intent?intent=opaque-intent-token",
+        "/auth/intent?intent=opaque-intent-token",
       );
       expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
         action,
@@ -104,9 +104,7 @@ describe("POST /auth/intent/start", () => {
     const response = await POST(formRequest(fields));
 
     expect(response.status).toBe(303);
-    expect(response.headers.get("location")).toBe(
-      "https://over.garden/auth/intent?state=invalid",
-    );
+    expect(response.headers.get("location")).toBe("/auth/intent?state=invalid");
     expect(response.headers.get("location")).not.toMatch(
       /attacker|delete|uuid/i,
     );

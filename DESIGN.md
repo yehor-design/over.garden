@@ -755,6 +755,62 @@ Grounded in the Plain, Twenty, Gorgias and Workable references.
   translated. The colour gate stands down for that one file by path, because a
   trademark is the one colour that must never be re-pointed.
 
+### 5.3.1 The authentication screens
+
+Sign-in, sign-up, help and a new password are one focused column in the
+middle of the reading area (`AuthFrame`, `OVE-504`). Each has a heading, one
+sentence, the thing the reader came to do and, under a rule, the ways out. The
+screens stay inside the shell, so a reader who arrived by mistake can leave by
+the ordinary navigation.
+
+- **The mode is named, and the other one is one press away.** A two-link
+  switch under the heading marks the current screen with `aria-current` and
+  carries the return path (`next`) to the other screen.
+- **Why the reader is here is its own sentence.**
+  - An action's heading says which action ("Увійдіть, щоб коментувати") and
+    that signing in returns them to it.
+  - An action older than its fifteen-minute token returns them to the page
+    and says the action will not continue by itself.
+  - A new password says it was set and that every other session ended.
+  - A provider refusal says what the provider answered.
+  - An expired verification link says so and that signing in sends a new one.
+  - Each of these is also the description of the field that takes focus, so a
+    screen reader hears it on arrival.
+- **Every state is distinct:**
+  - pending: the button is busy, a status line says so, and a second press
+    posts nothing;
+  - signed in: "opening the page" until the browser leaves;
+  - a refusal: an alert above the fields that never names the wrong
+    credential;
+  - an unverified address: reached only with the right password, so naming it
+    reveals nothing;
+  - a request that never came back: an alert saying there was no answer.
+- **What the reader typed is kept, whatever happened.**
+  - It is held above the transport boundary.
+  - It is taken at submit, because a password manager may have filled it
+    without an `input` event.
+  - A refusal or a lost request therefore leaves both fields as they were.
+- **A password manager is welcome:** `autocomplete="username"` with
+  `current-password` or `new-password`, no paste blocking, and no puzzles.
+- **Somebody already signed in gets a state of their own:** Continue, and a
+  way to sign out for another account. The screen used to redirect them, which
+  made Back from the destination bounce forward. An email-verification link
+  lands here signed in and says the address is confirmed.
+- **Recovery is two screens:**
+  - the help screen asks for the address in a real form (a Server Action
+    answering through the rate-limited reset route, the same sentence for
+    every address);
+  - the reset screen has its own state for a link Better Auth refused, with
+    the way to a new one, instead of a form that can only fail.
+- **A held action comes back to its control, focused.**
+  - A browser ignores `autofocus` on an address with a fragment, and React
+    does not focus a node it only hydrates. So the control focuses itself, or
+    `AuthIntentFocus` watches for it. It follows a streamed replacement, never
+    takes focus back from where the reader has put it, and never picks a
+    guest's stand-in (`data-auth-intent-guest`).
+  - Every redirect of the flow is relative, so it cannot move the reader to
+    another origin and away from their language and session cookies.
+
 ### 5.4 Empty, loading, error
 
 | State                   | Shape                                                                                                |
@@ -1028,6 +1084,10 @@ and the consequences belong on the screen rather than in the reader's memory.
   current history entry on top while there is work to lose. A save or publish
   refused for an ended session never navigates away: the work exists only in
   the tab, so sign-in opens in another one and the same button works again.
+  The new tab says where the words are, and after signing in it says to go
+  back instead of opening an empty composer. Signing in names the account, so
+  a tab drawn for that same account is not sent home (ADR-0022 D6 reloads
+  only for another account) (`OVE-504`).
 - **Deleting an entry lives in the entry's own menu** (`EntryActionsMenu`,
   OG-UX-045): never beside Save or Publish and never repeated as a form under
   every entry. It asks once, names the entry and what deletion does — gone

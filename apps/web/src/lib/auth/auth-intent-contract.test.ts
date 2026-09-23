@@ -246,6 +246,32 @@ describe("auth intent contract", () => {
     ).toBe("/bg/@demo_olena?authIntent=block#profile-block");
   });
 
+  it.each(["/journals", "/feed", "/objects", "/bg/journals", "/ru/feed"])(
+    "admits the unprefixed canonical listing %s as well as its prefixed twin (OVE-504)",
+    (returnTo) => {
+      expect(
+        normalizeAuthIntentDraft({
+          action: "bookmark",
+          returnTo,
+          target: { kind: "journal", ref: "entry" },
+        }).returnTo,
+      ).toBe(returnTo);
+    },
+  );
+
+  it.each(["/journalsx", "/xx/journals", "/journals/private"])(
+    "still refuses a listing-shaped path it does not know: %s",
+    (returnTo) => {
+      expect(() =>
+        normalizeAuthIntentDraft({
+          action: "bookmark",
+          returnTo,
+          target: { kind: "journal", ref: "entry" },
+        }),
+      ).toThrow(AuthIntentContractError);
+    },
+  );
+
   it.each([
     "https://attacker.example/steal",
     "//attacker.example/steal",
