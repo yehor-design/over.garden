@@ -72,6 +72,13 @@ export interface PublicArticleProps {
   sections: readonly PublicArticleSection[];
   /** The rail's own name, in the reader's language. */
   contentsLabel: string;
+  /**
+   * Headings `children` renders after the body — gardeners' entries, what a
+   * text rests on, what to read next — listed in the contents after the
+   * sections, so the contents are the page's headings and not only the
+   * body's. Each `id` must be on a heading the children render.
+   */
+  contentsAfter?: readonly Pick<PublicArticleSection, "id" | "heading">[];
   /** Anything after the body: evidence, related links, a mention block. */
   children?: React.ReactNode;
   jsonLd?: Record<string, unknown> | null;
@@ -92,6 +99,7 @@ export function PublicArticle({
   backLabel,
   sections,
   contentsLabel,
+  contentsAfter = [],
   children,
   jsonLd,
   dataset = {},
@@ -99,7 +107,10 @@ export function PublicArticle({
 }: PublicArticleProps) {
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
   const shownMeta = meta.filter((entry) => Boolean(entry.value));
-  const contents = buildArticleContextModules(contentsLabel, sections);
+  const contents = buildArticleContextModules(contentsLabel, [
+    ...sections,
+    ...contentsAfter,
+  ]);
 
   return (
     <main
@@ -183,7 +194,7 @@ export function PublicArticle({
           <section key={section.id} className="grid gap-2">
             <h2
               id={section.id}
-              className="text-h2 text-balance text-text-heading"
+              className="scroll-mt-20 text-h2 text-balance text-text-heading"
             >
               {section.ordinal === undefined ? null : (
                 <span className="mr-2 text-text-muted tabular-nums">
@@ -222,7 +233,7 @@ export function PublicArticle({
 /** The article's own headings, as the rail's one module. */
 export function buildArticleContextModules(
   contentsLabel: string,
-  sections: readonly PublicArticleSection[],
+  sections: readonly Pick<PublicArticleSection, "id" | "heading">[],
 ): SiteShellContextRailModule[] {
   return [
     {

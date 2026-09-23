@@ -254,11 +254,12 @@ export async function readPublicKnowledgeTopics() {
 export async function readPublicKnowledgeEvidence(
   rule: Parameters<typeof listPublicKnowledgeEvidence>[0],
   locale: PublicLocale,
+  visibleLimit?: number,
 ) {
   "use cache";
   cacheLife("minutes");
   cacheTag(PUBLIC_CACHE_TAGS.knowledge, PUBLIC_CACHE_TAGS.journals);
-  return listPublicKnowledgeEvidence(rule, locale);
+  return listPublicKnowledgeEvidence(rule, locale, { visibleLimit });
 }
 
 export async function readPublicCommunityDirectory() {

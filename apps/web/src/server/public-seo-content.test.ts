@@ -12,7 +12,12 @@ import {
   listMarketLandings,
   resolveAuthoredPublicSurfaceDiscovery,
 } from "./public-seo-content";
-import { listIndexableLocalizedAuthoredSitemapEntries } from "./public-localized-content";
+import {
+  listIndexableLocalizedAuthoredSitemapEntries,
+  listLocalizedAnswerPages,
+} from "./public-localized-content";
+import { knowledgeCitationNumbers } from "@/lib/knowledge-citations";
+import { SYSTEM_TOPIC_SLUGS } from "@/lib/system-topic-labels";
 
 describe("public SEO/AEO content foundation", () => {
   it("measures every authored candidate before sitemap admission", () => {
@@ -79,11 +84,71 @@ describe("public SEO/AEO content foundation", () => {
         authoredLocale: "uk",
       });
       expect(item.editorial.updatedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(item.editorial.basis.length).toBeGreaterThan(0);
+      expect(item.editorial.qualifications.length).toBeGreaterThan(0);
       expect(item.knowledge.objectKinds.length).toBeGreaterThan(0);
       expect(
         item.knowledge.evidence.topicSlugs.length +
           item.knowledge.evidence.catalogSlugs.length,
       ).toBeGreaterThan(0);
+    }
+  });
+
+  it("rests gardening advice on sources and product help on the product (OVE-498)", () => {
+    for (const item of [...listGuides(), ...listAnswerPages()]) {
+      if (item.knowledge.subject === "gardening") {
+        // Advice cites the works it rests on, each read on a date.
+        expect(item.editorial.sources.length, item.slug).toBeGreaterThan(0);
+        for (const source of item.editorial.sources) {
+          expect(source.url).toMatch(/^https:\/\//u);
+          expect(source.accessedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/u);
+          expect(source.language).toMatch(/^[a-z]{2}$/u);
+        }
+      } else {
+        // Help with OverGarden claims no outside source for itself.
+        expect(item.editorial.sources, item.slug).toEqual([]);
+      }
+      // Nothing says a product principle is the ground for advice.
+      expect(JSON.stringify(item.editorial)).not.toMatch(
+        /principle|proof-first|guidance/iu,
+      );
+    }
+  });
+
+  it("points every citation, in every language, at a source it has", () => {
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      for (const page of listLocalizedAnswerPages(locale)) {
+        const cited = [
+          page.conciseAnswer,
+          ...page.causes,
+          ...page.faqs.map((faq) => faq.answer),
+        ].flatMap(knowledgeCitationNumbers);
+        const sources = page.editorial.sources.length;
+        for (const number of cited) {
+          expect(number, `${locale} ${page.slug}`).toBeGreaterThanOrEqual(1);
+          expect(number, `${locale} ${page.slug}`).toBeLessThanOrEqual(sources);
+        }
+        // And every source is cited: a list of works nobody's sentence rests
+        // on would be decoration.
+        expect(new Set(cited).size, `${locale} ${page.slug}`).toBe(sources);
+        // What a machine reads carries no marks.
+        expect(answerVisibleText(page).join(" ")).not.toMatch(/\[\d+\]/u);
+      }
+    }
+  });
+
+  it("points the gardeners' entries and related topics at topics the product creates", () => {
+    // `watering-and-moisture`, `stress-and-recovery` and `care-checks` were
+    // never created, so the pages counted nothing and said so (OG-UX-033).
+    for (const item of [...listGuides(), ...listAnswerPages()]) {
+      for (const slug of item.knowledge.evidence.topicSlugs) {
+        expect(SYSTEM_TOPIC_SLUGS, `${item.slug}: ${slug}`).toContain(slug);
+      }
+      for (const related of item.knowledge.related) {
+        if (related.kind === "topic") {
+          expect(SYSTEM_TOPIC_SLUGS).toContain(related.slug);
+        }
+      }
     }
   });
 

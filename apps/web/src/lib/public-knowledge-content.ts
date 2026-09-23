@@ -21,6 +21,12 @@ export interface PublicKnowledgeListItem {
   title: string;
   description: string;
   objectKinds: readonly PlantObjectKind[];
+  /**
+   * The words of the piece itself, when it has more than a title: a reader
+   * searching "азот" is looking for the answer that names nitrogen, whatever
+   * its title says (`OVE-498`).
+   */
+  searchText?: string;
 }
 
 type SearchParams = Record<string, string | string[] | undefined>;
@@ -70,7 +76,7 @@ export function filterPublicKnowledgeItems<T extends PublicKnowledgeListItem>(
     }
     if (!query) return true;
 
-    return `${item.title} ${item.description}`
+    return `${item.title} ${item.description} ${item.searchText ?? ""}`
       .toLocaleLowerCase("uk")
       .includes(query);
   });

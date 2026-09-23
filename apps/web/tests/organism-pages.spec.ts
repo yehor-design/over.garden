@@ -503,11 +503,17 @@ test.describe("an organism's pages (OVE-497)", () => {
       expect(response.headers()["x-robots-tag"], view).toBe("noindex, follow");
     }
     // Seven pages of a hundred; the eighth is not a page (ADR-0029 D3). The
-    // register streams, so the answer is the not-found page in the bytes of
-    // a response already kept out of the index.
+    // register streams, so the answer is the not-found page in a response
+    // already kept out of the index: no register is rendered at all. (The
+    // not-found words themselves are in every page's shell, so they prove
+    // nothing.)
+    const last = await get(`${formsPath(organisms.tomato)}?page=7`);
+    expect(await last.text()).toContain('data-public-catalog-register="true"');
     const past = await get(`${formsPath(organisms.tomato)}?page=8`);
     expect(past.headers()["x-robots-tag"]).toBe("noindex, follow");
-    expect(await past.text()).toContain("Сторінку не знайдено");
+    expect(await past.text()).not.toContain(
+      'data-public-catalog-register="true"',
+    );
     // A species with no forms has no register at all.
     expect((await get(formsPath(organisms.fungus))).status()).toBe(404);
   });

@@ -36,6 +36,9 @@ import {
 } from "@/server/static-public-page";
 import { TopicViewerFollow } from "./topic-regions";
 import { publicTopicPath } from "@/lib/garden/public-paths";
+import { listKnowledgeForTopic } from "@/server/public-knowledge-related";
+
+const TOPIC_VISIBLE_ENTRIES = 8;
 
 interface PublicTopicRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -120,9 +123,12 @@ export async function renderTopicPage(
   const returnTo = localizedPath(locale, publicTopicPath(topic.topic.slug));
   const surface = buildTopicSurface(locale, topic);
 
+  // The topic's entries are the page, so it shows as many as the evidence
+  // read lists (eight), and the rest are one link away.
   const evidenceResult = await readPublicKnowledgeEvidence(
     { topicSlugs: [topic.topic.slug], catalogSlugs: [] },
     locale,
+    TOPIC_VISIBLE_ENTRIES,
   ).then(
     (evidence) => ({
       evidence,
@@ -142,6 +148,7 @@ export async function renderTopicPage(
       topic={topic}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
+      related={listKnowledgeForTopic(locale, topic.topic.slug)}
       actions={
         <Suspense
           fallback={
