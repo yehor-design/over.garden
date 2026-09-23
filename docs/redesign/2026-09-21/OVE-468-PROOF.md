@@ -218,11 +218,15 @@ created once, and its dialog is a sibling of the page, not its parent.
   - a synthetic gardener's sign-up got 429 four times;
   - the owner's sign-in got 429 four times.
   The helpers now take `X-Retry-After`, add a jitter so the two workers do not
-  retry in step, and allow six attempts.
+  retry in step, and allow six attempts. On CI one shard later lost
+  `notification-activity.spec.ts` the same way, through a sign-in loop of its
+  own with the old schedule. Five specs carried that loop, and all of them now
+  sign in through the same `postPastRateLimit`.
 - **Browser gate, three consecutive runs**, each on a database of its own,
   in CI's order (create, `bootstrap-db.ts`, build against it, the whole
   gate). Each run: 388 passed, 1 existing skip, no failures and no retries,
-  in 8.6, 8.5 and 8.4 minutes.
+  in 8.6, 8.5 and 8.4 minutes. A fourth fresh run, after the sign-in loops
+  were shared, passed the same way in 8.5 minutes.
 - Two earlier runs, both on one long-lived local database, failed for reasons
   outside this change:
   - One failed on the limiter (above).

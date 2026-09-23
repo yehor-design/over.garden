@@ -33,3 +33,22 @@ export function authRetryDelayMs(
       : fallback;
   return wait + Math.floor(Math.random() * 1_000);
 }
+
+/**
+ * Posts until the limiter lets the request through, waiting as long as each
+ * 429 says. Any other answer — a success, or a refusal that is real — comes
+ * back at once, with every status seen, for the caller to judge.
+ */
+export async function postPastRateLimit<Answer extends AuthResponse>(
+  post: () => Promise<Answer>,
+): Promise<{ response: Answer; statuses: number[] }> {
+  const statuses: number[] = [];
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await post();
+    statuses.push(response.status());
+    if (response.status() !== 429) return { response, statuses };
+    const delay = authRetryDelayMs(response, attempt);
+    if (delay === null) return { response, statuses };
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+}
