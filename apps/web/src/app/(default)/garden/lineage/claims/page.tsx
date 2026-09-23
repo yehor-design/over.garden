@@ -7,7 +7,10 @@ import {
 } from "@/components/garden/workspace-state";
 
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
-import { buttonVariants } from "@/components/ui/button";
+import { ConfirmSubmit } from "@/components/ui/confirm-submit";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { Link } from "@/components/ui/link";
+import { gardenObjectSectionPath } from "@/lib/garden/object-pages";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatOwnerLineageDate,
@@ -17,9 +20,9 @@ import {
 } from "@/lib/owner-lineage-copy";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
+  getLineageClaimRecord,
   listLineageClaimInbox,
   type LineageClaimInboxItem,
-  type LineagePlantObjectOption,
 } from "@/server/lineage-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { resolveWorkspaceViewer } from "@/server/workspace-access";
@@ -27,13 +30,15 @@ import {
   settleSection,
   workspaceSectionDeadlineMs,
 } from "@/server/workspace-failure";
-import { LineageClaimsShell, LINEAGE_CLAIMS_PATH } from "./claims-shell";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import { LineageShell, LINEAGE_CLAIMS_PATH } from "../lineage-shell";
+import { LineageGardener, lineageObjectMeta } from "../lineage-parts";
+import { LineageOutcomeNotice } from "../outcome-notice";
 import {
   confirmLineageClaimAction,
   declineLineageClaimAction,
 } from "./actions";
-import { HiddenField } from "@/components/ui/hidden-field";
+import { readLineageClaimOutcome } from "./outcome";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOwnerLineageCopy(await getRequestInterfaceLocale());
@@ -54,226 +59,320 @@ export default async function LineageClaimInboxPage({
     resolveWorkspaceViewer(),
     getRequestInterfaceLocale(),
   ]);
-  const copy = getOwnerLineageCopy(locale);
-  const invitationStatus = normalizeInvitationStatus(params.invitation);
 
   if (viewer.status === "unavailable") {
     return (
-      <LineageClaimsShell locale={locale}>
+      <LineageShell locale={locale} section="claims">
         <WorkspaceSectionError
           locale={locale}
           failure={viewer.failure}
           retryHref={LINEAGE_CLAIMS_PATH}
         />
-      </LineageClaimsShell>
+      </LineageShell>
     );
   }
 
   if (viewer.status === "sign-in-required") {
     return (
-      <LineageClaimsShell locale={locale}>
-        <SignInPrompt locale={locale} next={"/garden/lineage/claims"} />
-      </LineageClaimsShell>
+      <LineageShell locale={locale} section="claims">
+        <SignInPrompt locale={locale} next={LINEAGE_CLAIMS_PATH} />
+      </LineageShell>
     );
   }
 
   return (
-    <LineageClaimsShell locale={locale}>
-      {invitationStatus ? (
-        <p
-          role="status"
-          className="rounded-md border border-border bg-surface-sunken p-3 text-body-sm text-text"
-        >
-          {invitationStatus === "confirmed"
-            ? copy.claims.confirmedNotice
-            : copy.claims.declinedNotice}
-        </p>
-      ) : null}
+    <LineageShell locale={locale} section="claims">
       <Suspense
         fallback={<WorkspaceSectionSkeleton locale={locale} rows={2} />}
       >
-        <LineageClaimsSection locale={locale} scope={viewer.scope} />
+        <LineageClaimsSection
+          locale={locale}
+          scope={viewer.scope}
+          outcome={readLineageClaimOutcome(params)}
+        />
       </Suspense>
-    </LineageClaimsShell>
+    </LineageShell>
   );
 }
 
 async function LineageClaimsSection({
   locale,
   scope,
+  outcome,
 }: {
   locale: InterfaceLocale;
   scope: RequestScope;
+  outcome: ReturnType<typeof readLineageClaimOutcome>;
 }) {
   const copy = getOwnerLineageCopy(locale);
-  const claims = await settleSection(() => listLineageClaimInbox(scope), {
-    deadlineMs: workspaceSectionDeadlineMs(2),
-    surface: "lineage-claims",
-    section: "inbox",
-  });
-
-  if (claims.status === "error") {
-    return (
-      <WorkspaceSectionError
-        locale={locale}
-        failure={claims}
-        title={copy.claims.title}
-        retryHref={LINEAGE_CLAIMS_PATH}
-      />
-    );
-  }
+  const [claims, answered] = await Promise.all([
+    settleSection(() => listLineageClaimInbox(scope), {
+      deadlineMs: workspaceSectionDeadlineMs(2),
+      surface: "lineage-claims",
+      section: "inbox",
+    }),
+    outcome
+      ? settleSection(() => getLineageClaimRecord(scope, outcome.edgeId), {
+          deadlineMs: workspaceSectionDeadlineMs(1),
+          surface: "lineage-claims",
+          section: "outcome",
+        })
+      : null,
+  ]);
 
   return (
     <>
-      <div className="flex flex-wrap gap-2 text-caption text-text-muted">
-        <span className="rounded-md border border-border px-2 py-1">
-          {formatOwnerLineageTemplate(copy.claims.waiting, {
-            count: claims.value.length,
-          })}
-        </span>
-        <span className="rounded-md border border-border px-2 py-1">
-          {copy.claims.publicChange}
-        </span>
-      </div>
-      {claims.value.length === 0 ? (
+      {outcome && answered?.status === "ready" ? (
+        <ClaimOutcome
+          copy={copy}
+          result={outcome.result}
+          claim={answered.value}
+        />
+      ) : null}
+
+      {claims.status === "error" ? (
+        <WorkspaceSectionError
+          locale={locale}
+          failure={claims}
+          title={copy.claims.title}
+          retryHref={LINEAGE_CLAIMS_PATH}
+        />
+      ) : claims.value.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-body-sm text-text-muted">
           {copy.claims.empty}
         </p>
       ) : (
-        <ol className="grid gap-4">
-          {claims.value.map((claim) => (
-            <LineageClaimCard
-              key={claim.id}
-              claim={claim}
-              copy={copy}
-              locale={locale}
-              writeEnabled
-            />
-          ))}
-        </ol>
+        <section
+          aria-labelledby="lineage-claims-waiting"
+          className="grid gap-4"
+        >
+          <h2
+            id="lineage-claims-waiting"
+            className="text-body-sm font-medium text-text-muted"
+          >
+            {formatOwnerLineageTemplate(copy.claims.waiting, {
+              count: claims.value.length,
+            })}
+          </h2>
+          <ol className="grid gap-4">
+            {claims.value.map((claim) => (
+              <LineageClaimCard
+                key={claim.id}
+                claim={claim}
+                copy={copy}
+                locale={locale}
+              />
+            ))}
+          </ol>
+        </section>
       )}
     </>
   );
 }
 
-function normalizeInvitationStatus(
-  value: string | string[] | undefined,
-): "confirmed" | "declined" | null {
-  const candidate = Array.isArray(value) ? value[0] : value;
-  return candidate === "confirmed" || candidate === "declined"
-    ? candidate
+/**
+ * The answer as stored, not as pressed. `done` with the claim read back
+ * confirmed or declined says so with both names; `stale` says nothing was
+ * written and why — answered before, or gone.
+ */
+function ClaimOutcome({
+  copy,
+  result,
+  claim,
+}: {
+  copy: OwnerLineageCopy;
+  result: "done" | "stale";
+  claim: LineageClaimInboxItem | null;
+}) {
+  const names = claim
+    ? {
+        subject: claim.subjectObject.displayName,
+        source: claim.sourceObject.displayName,
+      }
     : null;
+
+  if (result === "done" && claim && names) {
+    if (claim.consentState === "confirmed") {
+      return (
+        <LineageOutcomeNotice
+          outcome="confirmed"
+          tone="success"
+          title={copy.claims.outcome.confirmedTitle}
+        >
+          {formatOwnerLineageTemplate(copy.claims.outcome.confirmedBody, names)}
+        </LineageOutcomeNotice>
+      );
+    }
+    if (claim.consentState === "declined") {
+      return (
+        <LineageOutcomeNotice
+          outcome="declined"
+          tone="success"
+          title={copy.claims.outcome.declinedTitle}
+        >
+          {formatOwnerLineageTemplate(copy.claims.outcome.declinedBody, names)}
+        </LineageOutcomeNotice>
+      );
+    }
+  }
+
+  if (result === "done") return null;
+
+  return (
+    <LineageOutcomeNotice
+      outcome="stale"
+      tone="warning"
+      title={copy.claims.outcome.staleTitle}
+    >
+      {claim?.consentState === "confirmed"
+        ? copy.claims.outcome.staleConfirmed
+        : claim?.consentState === "declined"
+          ? copy.claims.outcome.staleDeclined
+          : copy.claims.outcome.staleGone}
+    </LineageOutcomeNotice>
+  );
 }
 
 function LineageClaimCard({
   claim,
   copy,
   locale,
-  writeEnabled,
 }: {
   claim: LineageClaimInboxItem;
   copy: OwnerLineageCopy;
   locale: InterfaceLocale;
-  writeEnabled: boolean;
 }) {
-  return (
-    <li className="grid gap-4 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="text-h4 text-text-heading">
-          {lineageClaimTitle(claim, copy)}
-        </h2>
-        <time className="text-caption text-text-muted">
-          {formatOwnerLineageDate(locale, claim.createdAt)}
-        </time>
-      </div>
-
-      <dl className="grid gap-3 text-body-sm text-text-muted sm:grid-cols-2">
-        <div>
-          <dt className="text-caption uppercase">
-            {copy.common.claimedObject}
-          </dt>
-          <dd className="text-text">
-            {lineageObjectOptionLabel(claim.subjectObject, copy)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-caption uppercase">
-            {copy.claims.yourSourceObject}
-          </dt>
-          <dd className="text-text">
-            {lineageObjectOptionLabel(claim.sourceObject, copy)}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-caption uppercase">{copy.common.state}</dt>
-          <dd>{lineageClaimStateLabel(claim, copy)}</dd>
-        </div>
-        <div>
-          <dt className="text-caption uppercase">{copy.common.proposedBy}</dt>
-          <dd>{copy.common.anotherGardener}</dd>
-        </div>
-      </dl>
-
-      {writeEnabled ? (
-        <div className="flex flex-wrap gap-3 border-t border-border pt-3">
-          <OwnerScopedProgressiveForm action={confirmLineageClaimAction}>
-            <HiddenField name="edgeId" value={claim.id} />
-            <button
-              type="submit"
-              className={buttonVariants({ className: "self-start" })}
-            >
-              {copy.claims.confirm}
-            </button>
-          </OwnerScopedProgressiveForm>
-          <OwnerScopedProgressiveForm action={declineLineageClaimAction}>
-            <HiddenField name="edgeId" value={claim.id} />
-            <button
-              type="submit"
-              className={buttonVariants({
-                variant: "secondary",
-                className: "self-start",
-              })}
-            >
-              {copy.claims.decline}
-            </button>
-          </OwnerScopedProgressiveForm>
-        </div>
-      ) : (
-        <p className="rounded-md border border-border p-3 text-caption text-text-muted">
-          {copy.claims.writeGate}
-        </p>
-      )}
-    </li>
-  );
-}
-
-function lineageClaimTitle(
-  claim: LineageClaimInboxItem,
-  copy: OwnerLineageCopy,
-) {
-  return formatOwnerLineageTemplate(copy.claims.claimTitle, {
+  const names = {
     subject: claim.subjectObject.displayName,
     source: claim.sourceObject.displayName,
-  });
-}
+  };
+  const confirmFormId = `lineage-claim-confirm-${claim.id}`;
+  const declineFormId = `lineage-claim-decline-${claim.id}`;
+  const headingId = `lineage-claim-${claim.id}`;
 
-function lineageObjectOptionLabel(
-  option: LineagePlantObjectOption,
-  copy: OwnerLineageCopy,
-) {
-  const variety = option.varietyText ?? copy.common.unknownVariety;
-  return `${option.displayName} · ${variety}`;
-}
+  return (
+    <li className="min-w-0">
+      <article
+        aria-labelledby={headingId}
+        data-lineage-claim={claim.id}
+        className="grid gap-4 rounded-lg border border-border p-4"
+      >
+        <header className="grid gap-1">
+          {/* A sentence with both names: every tomato is "Томат", so the
+              relationship is said, not drawn with an arrow. */}
+          <h3 id={headingId} className="text-h4 break-words text-text-heading">
+            {formatOwnerLineageTemplate(copy.claims.cardTitle, names)}
+          </h3>
+          <p className="flex flex-wrap items-baseline gap-x-2 text-body-sm text-text">
+            <span className="text-text-muted">{copy.claims.claimant}:</span>
+            <LineageGardener identity={claim.proposer} locale={locale} />
+            <span aria-hidden="true" className="text-text-muted">
+              ·
+            </span>
+            <time
+              dateTime={new Date(claim.createdAt).toISOString()}
+              className="text-caption text-text-muted"
+            >
+              {formatOwnerLineageDate(locale, claim.createdAt)}
+            </time>
+          </p>
+        </header>
 
-function lineageClaimStateLabel(
-  claim: LineageClaimInboxItem,
-  copy: OwnerLineageCopy,
-) {
-  if (claim.consentState === "proposed") {
-    return copy.states.proposed;
-  }
+        <dl className="grid gap-3 text-body-sm sm:grid-cols-3">
+          <div className="min-w-0">
+            <dt className="text-caption text-text-muted">
+              {copy.common.claimedObject}
+            </dt>
+            <dd className="font-medium break-words text-text">
+              {claim.subjectObject.displayName}
+            </dd>
+            <dd className="text-caption break-words text-text-muted">
+              {lineageObjectMeta(claim.subjectObject, locale)}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-caption text-text-muted">
+              {copy.common.yourObject}
+            </dt>
+            <dd className="font-medium break-words">
+              <Link
+                href={gardenObjectSectionPath(claim.sourceObject.id)}
+                variant="quiet"
+              >
+                {claim.sourceObject.displayName}
+              </Link>
+            </dd>
+            <dd className="text-caption break-words text-text-muted">
+              {lineageObjectMeta(claim.sourceObject, locale)}
+            </dd>
+          </div>
+          <div className="min-w-0">
+            <dt className="text-caption text-text-muted">
+              {copy.common.status}
+            </dt>
+            <dd className="text-text">{copy.claims.pending}</dd>
+          </div>
+        </dl>
 
-  return claim.consentState === "confirmed"
-    ? copy.states.confirmed
-    : copy.states.declined;
+        {/* What each answer does, before either can be given (criterion 8).
+            Before the bundle runs the buttons post straight away, so this is
+            the only place a reader without scripts is told. */}
+        <section
+          aria-labelledby={`${headingId}-consequences`}
+          className="grid gap-2 rounded-md bg-surface-sunken p-3 text-body-sm text-text"
+        >
+          <h4
+            id={`${headingId}-consequences`}
+            className="font-medium text-text-heading"
+          >
+            {copy.claims.consequencesTitle}
+          </h4>
+          <ul className="grid list-disc gap-1 pl-5">
+            <li>{copy.claims.ifConfirm}</li>
+            <li>{copy.claims.ifDecline}</li>
+          </ul>
+          <p className="text-text-muted">{copy.claims.unchanged}</p>
+        </section>
+
+        <div className="flex flex-wrap gap-3 border-t border-border pt-3">
+          <OwnerScopedProgressiveForm
+            id={confirmFormId}
+            action={confirmLineageClaimAction}
+          >
+            <HiddenField name="edgeId" value={claim.id} />
+            <ConfirmSubmit
+              formId={confirmFormId}
+              variant="primary"
+              label={copy.claims.confirm}
+              title={formatOwnerLineageTemplate(
+                copy.claims.confirmDialogTitle,
+                names,
+              )}
+              description={copy.claims.confirmDialogBody}
+              confirmLabel={copy.claims.confirmDialogAction}
+              cancelLabel={copy.common.cancel}
+            />
+          </OwnerScopedProgressiveForm>
+          <OwnerScopedProgressiveForm
+            id={declineFormId}
+            action={declineLineageClaimAction}
+          >
+            <HiddenField name="edgeId" value={claim.id} />
+            <ConfirmSubmit
+              formId={declineFormId}
+              variant="secondary"
+              label={copy.claims.decline}
+              title={formatOwnerLineageTemplate(
+                copy.claims.declineDialogTitle,
+                names,
+              )}
+              description={copy.claims.declineDialogBody}
+              confirmLabel={copy.claims.declineDialogAction}
+              cancelLabel={copy.common.cancel}
+            />
+          </OwnerScopedProgressiveForm>
+        </div>
+      </article>
+    </li>
+  );
 }

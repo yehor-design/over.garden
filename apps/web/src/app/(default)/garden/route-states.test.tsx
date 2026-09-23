@@ -57,17 +57,17 @@ const SURFACES = [
   {
     surface: "lineage-claims",
     loading: () => import("./lineage/claims/loading"),
-    heading: "Запити щодо походження",
+    heading: "Заявки на походження",
   },
   {
     surface: "lineage-questions",
     loading: () => import("./lineage/questions/loading"),
-    heading: "Оновлення походження",
+    heading: "Запитання про походження",
   },
   {
     surface: "lineage-invitation-claim",
     loading: () => import("./lineage/invitations/claim/loading"),
-    heading: "Запрошення щодо походження",
+    heading: "Запрошення підтвердити походження",
   },
   {
     surface: "erasure-requests",

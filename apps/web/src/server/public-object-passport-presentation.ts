@@ -57,16 +57,27 @@ export function buildPublicObjectPassportPresentation(
     page.object.latestEntryDate,
     locale,
   );
-  const breadcrumbs = [
-    {
-      href: localizedPath(locale, CATALOG_BROWSE_PATH),
-      label: copy.livingObjects,
-    },
-    page.object.catalogPath
-      ? { href: page.object.catalogPath, label: identityValue }
-      : null,
-    { href: null, label: page.object.displayName },
-  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  // Whose object this is, then which of theirs (`OVE-495`, criterion 3). The
+  // crumbs used to run through the catalogue — "Живі об'єкти › Томат
+  // звичайний › Томат на балконі" — as though a gardener's tomato were a
+  // page of the species. The species stays one press away, named, in the
+  // header; the path to this page is the gardener's.
+  const breadcrumbs = page.author
+    ? [
+        { href: page.author.profilePath, label: page.author.displayName },
+        {
+          href: `${page.author.profilePath}?tab=objects`,
+          label: copy.gardenerObjects,
+        },
+        { href: null, label: page.object.displayName },
+      ]
+    : [
+        {
+          href: localizedPath(locale, CATALOG_BROWSE_PATH),
+          label: copy.livingObjects,
+        },
+        { href: null, label: page.object.displayName },
+      ];
   const gallery = uniquePublicMedia(
     page.galleryMedia.length > 0
       ? page.galleryMedia.map((media, index) => ({

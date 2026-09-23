@@ -1220,6 +1220,60 @@ A listing's discovery bar offers plants or animals once: where the kind is a
 mode or a facet, the `plants` and `animals` system topics are not offered
 again as topics. The feed's modes are Latest and Following (`/feed`).
 
+### 5.15 Lineage is a task between two named gardeners
+
+Where a living thing came from concerns two people — the gardener whose object
+it is and the gardener it came from — and every lineage page is a task between
+them, never a technical record (`OVE-495`, OG-UX-019/032/045).
+
+- **Three tasks, three pages.** Questions put to the reader
+  (`/garden/lineage/questions`) and claims that their object is another's
+  source (`/garden/lineage/claims`) are two tabs of one section. An invitation
+  to be named as a source (`/garden/lineage/invitations/claim`) is reached
+  only from the link a gardener sent, and stands alone.
+- **People by their public name.** The other gardener is their display name,
+  opening their profile, with the handle beside it. One with no public profile
+  to show — none, hidden, or a block between the two — is said to be one;
+  never an id, never "another gardener".
+- **A relationship is a sentence with both names.** «Томат» походить від
+  вашого «Томат»: related objects are usually called the same, so each name
+  says whose it is, and the variety and catalogue kind beneath tell two
+  apart. An object with no catalogue match has no kind — never "breed".
+- **What an answer changes is said before it can be given, and it is what the
+  backend does.** A confirmed claim shows on the public passport of the object
+  that came from the other (public lineage walks ancestry), only when both
+  objects have public entries, and lets the two gardeners follow each other's
+  object and ask questions without contact details. A declined claim shows
+  nowhere, and the claimant's record says declined. An invitation never makes
+  anything public. No answer moves an object between gardens, none can be
+  changed afterwards, and "confirmed" is two gardeners' word, never a genetic
+  test.
+- **Asked first, cancelled safely.** Confirm and decline are `ConfirmSubmit`:
+  the consequences are on the card for a reader without scripts, the dialog
+  restates them, and Escape or Cancel leaves the claim untouched with focus on
+  the button.
+- **The outcome is read back.** An answer lands on its page with the record
+  named in the address, and the page says what is stored now — confirmed,
+  declined, or not saved because it was answered already or is gone — in a
+  notice that takes focus, because the pressed control left with its card.
+- **Every invitation answer has its own sentence**: ready; expired, with its
+  thirty days; a link that cannot be verified; withdrawn; answered by you;
+  answered by another account; and your own invitation, which is for the
+  other gardener. The writer's provenance page says an expired link expired
+  instead of offering it, and an answered invitation stops saying "waiting".
+- **A token never shows.** The link's fragment is handed to an `httpOnly`
+  cookie scoped to the claim page and taken off the address; a newer link
+  replaces a held one before the held one can be pressed.
+- **A question has one way to answer.** There is no private reply, so a
+  question card offers an entry about the reader's exact object
+  (`/garden/new?object=…`), which whoever follows the object sees.
+- **The passport** leads with the object's name, whose it is and its
+  photograph, with the catalogue as a named secondary link. Its crumbs are the
+  gardener's — profile › objects › object — not the catalogue's. It shows
+  lineage only when there is some: the confirmed ancestry, each link a
+  sentence with this page's object marked. Its own gardener, signed in, gets a
+  write to exactly this object, in a region that streams for them alone.
+
 ---
 
 ## 6. Language and locale

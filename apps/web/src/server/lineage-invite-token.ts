@@ -77,17 +77,40 @@ export function verifyLineageInviteToken(
   token: string | null | undefined,
   options: VerifyLineageInviteTokenOptions = {},
 ): LineageInviteVerification | null {
-  if (!token || typeof token !== "string") return null;
+  const inspection = inspectLineageInviteToken(token, options);
+  return inspection.state === "valid" ? inspection.verification : null;
+}
+
+export type LineageInviteInspection =
+  | { state: "valid"; verification: LineageInviteVerification }
+  | { state: "expired"; verification: LineageInviteVerification }
+  | { state: "invalid" };
+
+/**
+ * What a token is, not only whether it may be used (`OVE-495`, criterion 9).
+ *
+ * A signed token whose time has run out is a different answer from one that
+ * was never ours: the first means "ask for a new invitation", the second "this
+ * link is broken". Only a token whose signature verifies can be expired — an
+ * unsigned body's `exp` is not evidence of anything.
+ */
+export function inspectLineageInviteToken(
+  token: string | null | undefined,
+  options: VerifyLineageInviteTokenOptions = {},
+): LineageInviteInspection {
+  if (!token || typeof token !== "string") return { state: "invalid" };
   const parts = token.split(".");
   const isLegacy = parts.length === 3 && parts[0] === LEGACY_TOKEN_VERSION;
   const isCurrent = parts.length === 4 && parts[0] === CURRENT_TOKEN_VERSION;
-  if (!isLegacy && !isCurrent) return null;
+  if (!isLegacy && !isCurrent) return { state: "invalid" };
 
   const keyVersion = isCurrent ? parseVersion(parts[1]!) : null;
-  if (isCurrent && keyVersion === null) return null;
+  if (isCurrent && keyVersion === null) return { state: "invalid" };
   const body = parts[isCurrent ? 2 : 1];
   const signature = parts[isCurrent ? 3 : 2];
-  if (!body || !signature || !/^[A-Za-z0-9_-]+$/.test(body)) return null;
+  if (!body || !signature || !/^[A-Za-z0-9_-]+$/.test(body)) {
+    return { state: "invalid" };
+  }
 
   const secret =
     keyVersion === null
@@ -96,27 +119,30 @@ export function verifyLineageInviteToken(
           keyVersion,
           options.authSecrets ?? resolveAuthSecretConfiguration(),
         )?.value;
-  if (!secret) return null;
+  if (!secret) return { state: "invalid" };
 
   const signed = parts.slice(0, isCurrent ? 3 : 2).join(".");
   const expectedSignature = sign(signed, secret);
-  if (!safeEqual(signature, expectedSignature)) return null;
+  if (!safeEqual(signature, expectedSignature)) return { state: "invalid" };
 
   const payload = decodePayload(body);
-  if (!payload) return null;
-  if (!isBoundedTokenId(payload.p) || !isBoundedTokenId(payload.e)) return null;
+  if (!payload) return { state: "invalid" };
+  if (!isBoundedTokenId(payload.p) || !isBoundedTokenId(payload.e)) {
+    return { state: "invalid" };
+  }
   if (typeof payload.exp !== "number" || !Number.isFinite(payload.exp)) {
-    return null;
+    return { state: "invalid" };
   }
 
-  const nowSeconds = Math.floor((options.now ?? Date.now()) / 1000);
-  if (payload.exp <= nowSeconds) return null;
-
-  return {
+  const verification = {
     pendingIdentityId: payload.p,
     edgeId: payload.e,
     expiresAt: payload.exp,
   };
+  const nowSeconds = Math.floor((options.now ?? Date.now()) / 1000);
+  return payload.exp <= nowSeconds
+    ? { state: "expired", verification }
+    : { state: "valid", verification };
 }
 
 /**

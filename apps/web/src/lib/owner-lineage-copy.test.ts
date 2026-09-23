@@ -27,26 +27,57 @@ describe("owner lineage copy", () => {
     }
   });
 
-  it("localizes claims, invitation handoff, questions, and every consent state", () => {
-    expect(getOwnerLineageCopy("uk").claims.title).toBe(
-      "Запити щодо походження",
-    );
+  it("names the three lineage tasks and every invitation answer", () => {
+    expect(getOwnerLineageCopy("uk").claims.title).toBe("Заявки на походження");
+    expect(getOwnerLineageCopy("uk").nav.questions).toBe("Запитання");
     expect(getOwnerLineageCopy("bg").invitation.handoff.retry).toBe("Нов опит");
-    expect(getOwnerLineageCopy("ru").updates.questionsTitle).toBe(
-      "Вопросы для вас",
+    expect(getOwnerLineageCopy("ru").questions.title).toBe(
+      "Вопросы о происхождении",
     );
-    expect(getOwnerLineageCopy("uk").states.confirmed).toContain(
-      "підтверджено",
+    expect(getOwnerLineageCopy("ru").invitation.states.expiredTitle).toContain(
+      "истёк",
     );
-    expect(getOwnerLineageCopy("bg").states.declined).toContain("отказан");
-    expect(getOwnerLineageCopy("ru").states.expired).toContain("истёк");
+    // Distinct sentences, not one "unavailable, expired or already handled".
+    const states = getOwnerLineageCopy("uk").invitation.states;
+    const titles = [
+      states.expiredTitle,
+      states.invalidTitle,
+      states.withdrawnTitle,
+      states.confirmedByYouTitle,
+      states.declinedByYouTitle,
+      states.answeredByOtherTitle,
+      states.ownTitle,
+    ];
+    expect(new Set(titles).size).toBe(titles.length);
+  });
+
+  it("says what each answer changes, and that nothing moves between gardens", () => {
+    for (const locale of LOCALES) {
+      const copy = getOwnerLineageCopy(locale);
+      // A confirmed claim is public only with public entries on both sides.
+      expect(copy.claims.ifConfirm.length).toBeGreaterThan(60);
+      // An invitation never makes anything public.
+      expect(copy.invitation.ready.unchanged.length).toBeGreaterThan(60);
+    }
+    expect(getOwnerLineageCopy("uk").claims.unchanged).toContain(
+      "не генетичний аналіз",
+    );
+    expect(getOwnerLineageCopy("uk").invitation.ready.unchanged).toContain(
+      "Публічно не з'явиться нічого",
+    );
+    expect(getOwnerLineageCopy("bg").claims.unchanged).toContain(
+      "не генетичен анализ",
+    );
+    expect(getOwnerLineageCopy("ru").claims.unchanged).toContain(
+      "не генетический анализ",
+    );
   });
 
   it("preserves authored object, variety, pending-identity, and question values", () => {
     const subject = "Cherokee Purple — Балкон № 3";
     const source = "Maria saved seeds";
     const sentence = formatOwnerLineageTemplate(
-      getOwnerLineageCopy("bg").claims.claimTitle,
+      getOwnerLineageCopy("bg").claims.cardTitle,
       { subject, source },
     );
 

@@ -147,33 +147,12 @@ export function LivingObjectPassportOverview({
             }
           />
 
-          {/* A status is a word before it is a colour (DESIGN.md §8). */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">
-              <ObjectKindIcon kind={passport.objectKind} />
-              {passport.status.label}
-            </Badge>
-            <Badge tone="info">{passport.identity.state}</Badge>
-            {passport.status.latestDate ? (
-              <span className="text-caption text-text-muted">
-                {copy.latestObservation}:{" "}
-                <time
-                  dateTime={dateTimeValue(passport.status.latestDate)}
-                  className="tabular-nums"
-                >
-                  {formatLivingObjectPassportDate(
-                    passport.status.latestDate,
-                    locale,
-                  )}
-                </time>
-              </span>
-            ) : null}
-          </div>
-
-          {/* On the owner's own page the caretaker is always "you": the
+          {/* Whose it is comes right after what it is (`OVE-495`,
+              criterion 1): a reader meets the gardener before the badges.
+              On the owner's own page the caretaker is always "you": the
               line says nothing there, so only a reader sees it (`OVE-491`). */}
           {passport.audience === "public" ? (
-            <div className="flex min-w-0 items-center gap-3 border-t border-border pt-4">
+            <div className="flex min-w-0 items-center gap-3">
               <Avatar
                 src={passport.caretaker.avatarUrl}
                 name={passport.caretaker.displayName}
@@ -202,6 +181,28 @@ export function LivingObjectPassportOverview({
               </div>
             </div>
           ) : null}
+          {/* A status is a word before it is a colour (DESIGN.md §8). */}
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone="neutral">
+              <ObjectKindIcon kind={passport.objectKind} />
+              {passport.status.label}
+            </Badge>
+            <Badge tone="info">{passport.identity.state}</Badge>
+            {passport.status.latestDate ? (
+              <span className="text-caption text-text-muted">
+                {copy.latestObservation}:{" "}
+                <time
+                  dateTime={dateTimeValue(passport.status.latestDate)}
+                  className="tabular-nums"
+                >
+                  {formatLivingObjectPassportDate(
+                    passport.status.latestDate,
+                    locale,
+                  )}
+                </time>
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -329,17 +330,24 @@ export function buildLivingObjectPassportContextModules(
           ? copy.noOwnerEntries
           : copy.noPublicEntries,
     },
-    {
-      key: "passport-provenance",
-      title: passport.provenance.label,
-      items: [
-        {
-          href: passport.provenance.href ?? "#passport-provenance",
-          label: passport.provenance.label,
-          meta: String(passport.provenance.count),
-        },
-      ],
-    },
+    // A reader is not shown a count of nothing: with no confirmed
+    // provenance the public page has no provenance section to point at
+    // (`OVE-495`, criterion 2). The owner still sees where to add one.
+    ...(passport.audience === "owner" || passport.provenance.count > 0
+      ? [
+          {
+            key: "passport-provenance",
+            title: passport.provenance.label,
+            items: [
+              {
+                href: passport.provenance.href ?? "#passport-provenance",
+                label: passport.provenance.label,
+                meta: String(passport.provenance.count),
+              },
+            ],
+          },
+        ]
+      : []),
   ];
 }
 

@@ -9,14 +9,8 @@ const mocks = vi.hoisted(() => ({
   cookieDelete: vi.fn(),
   unsealLineageClaimToken: vi.fn(),
   createAuthIntentToken: vi.fn(),
-  getRequestInterfaceLocale: vi.fn(),
   resolveMutationScope: vi.fn(),
-  resolveLineageInvitationClaim: vi.fn(async () => ({
-    edge: {
-      subject_plant_object_id: "00000000-0000-4000-8000-000000000101",
-    },
-    decision: "confirmed",
-  })),
+  resolveLineageInvitationClaim: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -35,15 +29,27 @@ vi.mock("@/server/mutation-scope", () => ({
 vi.mock("@/server/auth-intent-token", () => ({
   createAuthIntentToken: mocks.createAuthIntentToken,
 }));
-vi.mock("@/server/interface-localization", () => ({
-  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
 vi.mock("@/server/lineage-claim-cookie", () => ({
   unsealLineageClaimToken: mocks.unsealLineageClaimToken,
 }));
-vi.mock("@/server/lineage-repository", () => ({
-  resolveLineageInvitationClaim: mocks.resolveLineageInvitationClaim,
-}));
+vi.mock("@/server/lineage-repository", async () => {
+  class LineageDecisionUnavailableError extends Error {
+    constructor(readonly subject: "claim" | "invitation") {
+      super("unavailable");
+    }
+  }
+  return {
+    resolveLineageInvitationClaim: mocks.resolveLineageInvitationClaim,
+    LineageDecisionUnavailableError,
+    isLineageDecisionUnavailableError: (error: unknown) =>
+      error instanceof LineageDecisionUnavailableError,
+  };
+});
+
+const SCOPE = {
+  userId: "00000000-0000-4000-8000-000000000777",
+  sessionId: "session-1",
+};
 
 describe("/garden/lineage/invitations/claim actions", () => {
   beforeEach(() => {
@@ -57,57 +63,57 @@ describe("/garden/lineage/invitations/claim actions", () => {
       "v1.private-payload.private-signature",
     );
     mocks.createAuthIntentToken.mockReturnValue("opaque-claim-intent");
-    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.resolveMutationScope.mockResolvedValue({
       status: "admitted",
-      scope: {
-        userId: "00000000-0000-4000-8000-000000000777",
-        sessionId: "session-1",
+      scope: SCOPE,
+    });
+    mocks.resolveLineageInvitationClaim.mockResolvedValue({
+      edge: {
+        subject_plant_object_id: "00000000-0000-4000-8000-000000000101",
       },
+      decision: "confirmed",
     });
     mocks.redirect.mockImplementation((url: string) => {
       throw new Error(`NEXT_REDIRECT:${url}`);
     });
   });
 
-  it("confirms using only the server-readable encrypted cookie", async () => {
+  it("confirms using only the server-readable encrypted cookie, then reads the answer back", async () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
       confirmLineageInvitationClaimAction(undefined, new FormData()),
     ).rejects.toThrow(
-      "NEXT_REDIRECT:/garden/lineage/claims?invitation=confirmed",
+      "NEXT_REDIRECT:/garden/lineage/invitations/claim?result=done",
     );
 
     expect(mocks.resolveMutationScope).toHaveBeenCalledOnce();
-    expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(
-      {
-        userId: "00000000-0000-4000-8000-000000000777",
-        sessionId: "session-1",
-      },
-      {
-        token: "v1.private-payload.private-signature",
-        decision: "confirmed",
-      },
-    );
-    expect(mocks.cookieDelete).toHaveBeenCalledWith({
-      name: "overgarden-lineage-claim",
-      path: "/garden/lineage/invitations/claim",
+    expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(SCOPE, {
+      token: "v1.private-payload.private-signature",
+      decision: "confirmed",
     });
-    expect(mocks.updateTag).toHaveBeenCalledWith("catalog");
-    expect(mocks.updateTag).toHaveBeenCalledWith("profiles");
+    // The cookie stays: the page reads "you confirmed" from the record, and
+    // the record is no longer pending, so the token cannot be used twice.
+    expect(mocks.cookieDelete).not.toHaveBeenCalled();
+    // Nothing public changes; the writer's provenance page does.
+    expect(mocks.updateTag).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/lineage/invitations/claim",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/objects/00000000-0000-4000-8000-000000000101/provenance",
     );
   });
 
   it("declines without accepting a token from form data", async () => {
     const { declineLineageInvitationClaimAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("token", "v1.forged.from-form");
 
     await expect(
-      declineLineageInvitationClaimAction(undefined, new FormData()),
+      declineLineageInvitationClaimAction(undefined, formData),
     ).rejects.toThrow(
-      "NEXT_REDIRECT:/garden/lineage/claims?invitation=declined",
+      "NEXT_REDIRECT:/garden/lineage/invitations/claim?result=done",
     );
 
     expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(
@@ -117,19 +123,47 @@ describe("/garden/lineage/invitations/claim actions", () => {
         decision: "declined",
       },
     );
-    expect(mocks.cookieDelete).toHaveBeenCalledOnce();
   });
 
-  it("fails closed when the handoff cookie is absent or invalid", async () => {
+  it("writes nothing and says so when the handoff cookie is absent or invalid", async () => {
     mocks.unsealLineageClaimToken.mockReturnValueOnce(null);
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(
       confirmLineageInvitationClaimAction(undefined, new FormData()),
-    ).rejects.toThrow("Запрошення щодо походження недоступне.");
+    ).rejects.toThrow(
+      "NEXT_REDIRECT:/garden/lineage/invitations/claim?result=stale",
+    );
 
     expect(mocks.resolveLineageInvitationClaim).not.toHaveBeenCalled();
-    expect(mocks.cookieDelete).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing and says so when the invitation can no longer be answered", async () => {
+    const { LineageDecisionUnavailableError } =
+      await import("@/server/lineage-repository");
+    mocks.resolveLineageInvitationClaim.mockRejectedValueOnce(
+      new LineageDecisionUnavailableError("invitation"),
+    );
+    const { confirmLineageInvitationClaimAction } = await import("./actions");
+
+    await expect(
+      confirmLineageInvitationClaimAction(undefined, new FormData()),
+    ).rejects.toThrow(
+      "NEXT_REDIRECT:/garden/lineage/invitations/claim?result=stale",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("lets an unexpected failure reach the error boundary", async () => {
+    mocks.resolveLineageInvitationClaim.mockRejectedValueOnce(
+      new Error("pool closed"),
+    );
+    const { confirmLineageInvitationClaimAction } = await import("./actions");
+
+    await expect(
+      confirmLineageInvitationClaimAction(undefined, new FormData()),
+    ).rejects.toThrow("pool closed");
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 

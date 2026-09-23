@@ -1,6 +1,7 @@
 import {
   LineageInteractionPanel,
   ViewerLineageInteraction,
+  PassportOwnerBar,
   PassportViewerEngagement,
 } from "./passport-regions";
 import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
@@ -24,7 +25,6 @@ import {
 } from "@/components/living-object-passport/living-object-passport";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Link as TextLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
@@ -178,45 +178,37 @@ export async function renderPassport(
         locale={locale}
       />
       <LivingObjectPassportOverview passport={presentation} locale={locale} />
+      <Suspense fallback={null}>
+        <PassportOwnerBar
+          plantObjectId={passport.object.plantObjectId}
+          locale={locale}
+        />
+      </Suspense>
       <PublicLivingObjectPassportTimeline
         passport={presentation}
         locale={locale}
       />
 
-      <Section
-        id="passport-provenance"
-        className="border-t border-border pt-6"
-        level={2}
-        title={
-          <span className="inline-flex items-center gap-2">
-            <GitBranch className="size-5" aria-hidden="true" />
-            {getPublicSurfaceCopy(locale).passport.publicLineage}
-          </span>
-        }
-        description={
-          getPublicSurfaceCopy(locale).passport.publicLineageDescription
-        }
-        /* Only confirmed edges are ever listed here, and the reader is told
-           so rather than left to infer it from an absence (ADR-0026: the
-           ladder never blocks, and an unconfirmed claim is not provenance). */
-        actions={
-          <Badge tone="success">
-            {getPublicSurfaceCopy(locale).passport.confirmedProvenance}
-          </Badge>
-        }
-      >
-        {edges.length === 0 ? (
-          /* Nothing is filtered out here — this object simply has no
-             confirmed provenance, so there is no picture to show and nothing
-             to clear (DESIGN.md §5.4). */
-          <EmptyState
-            variant="no-results"
-            illustration={null}
-            title={
-              getPublicSurfaceCopy(locale).passport.noConfirmedPublicLineage
-            }
-          />
-        ) : (
+      {/* Provenance only when there is some: an empty "no confirmed
+          lineage" block under the observations told a reader nothing about
+          this object and read like a missing field (`OVE-495`, criterion 2).
+          Only confirmed edges are ever listed, and the section says what
+          "confirmed" means — two gardeners agreeing, not a genetic test. */}
+      {edges.length > 0 ? (
+        <Section
+          id="passport-provenance"
+          className="border-t border-border pt-6"
+          level={2}
+          title={
+            <span className="inline-flex items-center gap-2">
+              <GitBranch className="size-5" aria-hidden="true" />
+              {getPublicSurfaceCopy(locale).passport.publicLineage}
+            </span>
+          }
+          description={
+            getPublicSurfaceCopy(locale).passport.publicLineageDescription
+          }
+        >
           <ol className="grid gap-4">
             {edges.map((edge) => {
               const subject = nodesById.get(edge.subjectPlantObjectId);
@@ -233,6 +225,7 @@ export async function renderPassport(
                   edge={edge}
                   subject={subject}
                   source={source}
+                  rootPlantObjectId={passport.object.plantObjectId}
                   interactionSlot={
                     <Suspense
                       fallback={
@@ -267,8 +260,8 @@ export async function renderPassport(
               );
             })}
           </ol>
-        )}
-      </Section>
+        </Section>
+      ) : null}
 
       <Suspense
         fallback={
@@ -354,12 +347,14 @@ function PublicLineageEdgeCard({
   edge,
   subject,
   source,
+  rootPlantObjectId,
   interactionSlot,
   locale,
 }: {
   edge: PublicLineageEdge;
   subject: PublicLineageNode;
   source: PublicLineageNode;
+  rootPlantObjectId: string;
   interactionSlot: ReactNode;
   locale: InterfaceLocale;
 }) {
@@ -369,10 +364,13 @@ function PublicLineageEdgeCard({
     <li className="min-w-0">
       <Card as="article" className="grid gap-4 p-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-          <h3 className="text-h3 break-words text-text-heading">
-            {source.displayName} <span aria-hidden="true">→</span>
-            <span className="sr-only">{copy.passport.grownObject}:</span>{" "}
-            {subject.displayName}
+          {/* A sentence, not an arrow: "Томат походить від Томату" says the
+              relationship, and each name says whose it is — related objects
+              are often called the same thing (`OVE-495`, criteria 5, 12). */}
+          <h3 className="text-h4 break-words text-text-heading">
+            {copy.passport.lineageSentence
+              .replace("{subject}", subject.displayName)
+              .replace("{source}", source.displayName)}
           </h3>
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral">
@@ -391,14 +389,20 @@ function PublicLineageEdgeCard({
           <PublicLineageNodeDescription
             label={copy.passport.source}
             node={source}
+            isCurrent={source.plantObjectId === rootPlantObjectId}
             locale={locale}
           />
           <PublicLineageNodeDescription
             label={copy.passport.grownObject}
             node={subject}
+            isCurrent={subject.plantObjectId === rootPlantObjectId}
             locale={locale}
           />
         </dl>
+
+        <p className="text-caption text-text-muted">
+          {copy.passport.lineageConfirmedBy}
+        </p>
 
         {interactionSlot}
       </Card>
@@ -409,17 +413,31 @@ function PublicLineageEdgeCard({
 function PublicLineageNodeDescription({
   label,
   node,
+  isCurrent,
   locale,
 }: {
   label: string;
   node: PublicLineageNode;
+  /**
+   * This page's own object. Related objects are often called the same thing —
+   * every tomato is "Томат" — so the one being read says so (`OVE-495`,
+   * criterion 12). Other gardeners are not named here: the public lineage
+   * reads no identity (`public-lineage-repository.test.ts`).
+   */
+  isCurrent: boolean;
   locale: InterfaceLocale;
 }) {
+  const copy = getPublicSurfaceCopy(locale);
   return (
     <div className="grid min-w-0 gap-1">
       <dt className="text-overline text-text-muted uppercase">{label}</dt>
       <dd className="text-body-sm font-medium break-words text-text">
         {node.displayName}
+        {isCurrent ? (
+          <span className="ml-2 text-caption font-normal text-text-muted">
+            {copy.passport.thisObject}
+          </span>
+        ) : null}
       </dd>
       <dd>
         <PublicLineageNodeMeta node={node} compact locale={locale} />

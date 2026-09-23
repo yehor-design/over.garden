@@ -31,21 +31,40 @@ describe("lineage claim browser handoff", () => {
   it("never server-renders a token or a hidden token input", () => {
     const html = renderToStaticMarkup(<LineageClaimHandoff locale="bg" />);
 
-    expect(html).toContain("Подготвяме личната покана");
+    expect(html).toContain("Отваряме поканата");
+    expect(html).toContain('data-invitation-state="preparing"');
     expect(html).not.toMatch(/name="token"|v1\.payload\.signature/i);
   });
 
-  it("distinguishes permanent invite failures from retryable handoff failures", () => {
-    expect(classifyLineageClaimHandoffResponse(400, null)).toBe("unavailable");
+  it("says nothing beside a stored invitation until a newer link is in the address", () => {
+    // Beside a stored invitation the handoff waits for a fragment the server
+    // cannot see; without one there is nothing to replace and nothing to say.
+    expect(
+      renderToStaticMarkup(<LineageClaimHandoff locale="uk" replacing />),
+    ).toBe("");
+  });
+
+  it("tells an expired link from a broken one, and both from a lost request", () => {
+    expect(
+      classifyLineageClaimHandoffResponse(400, {
+        error: "lineage_invitation_expired",
+      }),
+    ).toBe("expired");
+    expect(
+      classifyLineageClaimHandoffResponse(400, {
+        error: "lineage_invitation_invalid",
+      }),
+    ).toBe("invalid");
+    // A 400 without a code is still a link the server refused, never a retry.
+    expect(classifyLineageClaimHandoffResponse(400, null)).toBe("invalid");
     expect(classifyLineageClaimHandoffResponse(408, null)).toBe("retry");
     expect(classifyLineageClaimHandoffResponse(429, null)).toBe("retry");
     expect(classifyLineageClaimHandoffResponse(503, null)).toBe("retry");
     expect(classifyLineageClaimHandoffResponse(200, null)).toBe("retry");
     expect(
-      classifyLineageClaimHandoffResponse(
-        200,
-        "/garden/lineage/invitations/claim",
-      ),
+      classifyLineageClaimHandoffResponse(200, {
+        next: "/garden/lineage/invitations/claim",
+      }),
     ).toBe("success");
   });
 });

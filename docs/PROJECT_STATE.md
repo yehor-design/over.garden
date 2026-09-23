@@ -70,6 +70,35 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**Passports and lineage (OVE-495):** the lineage pages are tasks between two
+named gardeners. Questions and claims are two tabs of one section; an
+invitation stands alone, reached from its link.
+- Every card names the other gardener by public name and handle, and says the
+  relationship as a sentence with both objects' names.
+- Before an answer can be given, the card says what it does, per the backend:
+  a confirmed claim shows on the public passport of the object that came from
+  the other (public lineage walks ancestry), only when both objects have
+  public entries. An invitation never makes anything public. No answer moves
+  an object or can be changed afterwards.
+- Answers are `ConfirmSubmit`, and each lands with the stored outcome read
+  back in a focused notice, including "not saved" when the record was
+  answered elsewhere or is gone.
+- An invitation link has a sentence for each state: ready, expired, invalid,
+  withdrawn, answered by you or by another account, and your own. A newer
+  link replaces a held one.
+- A question's answer is an entry on the reader's exact object.
+- The passport's crumbs are the gardener's; it shows lineage only when some is
+  confirmed; its own gardener gets a write to exactly that object.
+
+Server changes:
+- An invitation can no longer be answered by the gardener who wrote it.
+- Refused decisions are a typed `LineageDecisionUnavailableError`, not a
+  generic throw.
+- The claim handoff tells an expired link from a broken one.
+- Objects with no catalogue match no longer read as "breed" on these pages.
+
+See `docs/redesign/2026-09-21/OVE-495-PROOF.md`.
+
 **Authentication (OVE-504):** sign-in, sign-up, help and a new password are
 one focused column. Sign-in and sign-up share a mode switch that carries `next`.
 Each reason a reader arrives has its own sentence: an action, an expired

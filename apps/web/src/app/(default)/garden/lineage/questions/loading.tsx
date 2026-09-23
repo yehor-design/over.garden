@@ -1,13 +1,13 @@
 import { WorkspaceSectionSkeleton } from "@/components/garden/workspace-state";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
-import { LineageUpdatesShell } from "./questions-shell";
+import { LineageShell } from "../lineage-shell";
 
-export default async function LineageUpdatesLoading() {
+export default async function LineageQuestionsLoading() {
   const locale = await getRequestInterfaceLocale();
   return (
-    <LineageUpdatesShell locale={locale} state="loading">
+    <LineageShell locale={locale} section="questions" state="loading">
       <WorkspaceSectionSkeleton locale={locale} rows={2} />
-    </LineageUpdatesShell>
+    </LineageShell>
   );
 }

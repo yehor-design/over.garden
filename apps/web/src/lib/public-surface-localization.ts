@@ -147,7 +147,16 @@ interface PublicSurfaceCopy {
     source: string;
     grownObject: string;
     depth: string;
+    /** "«{subject}» походить від «{source}»" — the edge, as a sentence. */
+    lineageSentence: string;
+    /** What "confirmed" means here: the two gardeners, not a laboratory. */
+    lineageConfirmedBy: string;
+    thisObject: string;
     lineageUpdatesFrom: string;
+    /** Only the object's own gardener sees these (`OVE-495`, criterion 3). */
+    ownerBar: string;
+    ownerWrite: string;
+    ownerOpen: string;
     lineageQuestionSafety: string;
     lineageQuestionRateLimited: string;
     interactionUnavailable: string;
@@ -388,13 +397,20 @@ const COPY = {
       confirmedProvenance: "Підтверджене походження",
       publicLineage: "Публічне походження",
       publicLineageDescription:
-        "Тут показані лише підтверджені зв'язки об'єктів, підкріплені активними публічними записами журналу.",
+        "Звідки походить цей об'єкт — лише ті зв'язки, які підтвердили обидва садівники і за якими є публічні записи.",
       noConfirmedPublicLineage:
         "Для цього об'єкта ще немає підтвердженого публічного походження.",
       source: "Джерело",
       grownObject: "Вирощений об'єкт",
-      depth: "Глибина",
+      depth: "Покоління",
+      lineageSentence: "«{subject}» походить від «{source}»",
+      lineageConfirmedBy:
+        "Це підтвердили обидва садівники. Це їхнє слово, а не генетичний аналіз.",
+      thisObject: "(цей об'єкт)",
       lineageUpdatesFrom: "Оновлення походження від",
+      ownerBar: "Це ваш об'єкт.",
+      ownerWrite: "Новий запис про нього",
+      ownerOpen: "Відкрити в моєму саду",
       lineageQuestionSafety:
         "Запитання залишаються в межах цього підтвердженого ланцюга та не містять контактних даних.",
       lineageQuestionRateLimited:
@@ -647,13 +663,20 @@ const COPY = {
       confirmedProvenance: "Потвърден произход",
       publicLineage: "Публичен произход",
       publicLineageDescription:
-        "Този раздел показва само потвърдени връзки между обекти, подкрепени от активни публични записи в дневника.",
+        "Откъде произхожда този обект — само връзките, потвърдени от двамата градинари и подкрепени от публични записи.",
       noConfirmedPublicLineage:
         "За този обект все още няма потвърден публичен произход.",
       source: "Източник",
       grownObject: "Отглеждан обект",
-      depth: "Дълбочина",
+      depth: "Поколение",
+      lineageSentence: "„{subject}“ произхожда от „{source}“",
+      lineageConfirmedBy:
+        "Двамата градинари го потвърдиха. Това е тяхната дума, а не генетичен анализ.",
+      thisObject: "(този обект)",
       lineageUpdatesFrom: "Обновявания на произхода от",
+      ownerBar: "Това е ваш обект.",
+      ownerWrite: "Нов запис за него",
+      ownerOpen: "Отваряне в моята градина",
       lineageQuestionSafety:
         "Въпросите остават в тази потвърдена верига и не съдържат данни за контакт.",
       lineageQuestionRateLimited:
@@ -905,13 +928,20 @@ const COPY = {
       confirmedProvenance: "Подтвержденное происхождение",
       publicLineage: "Публичное происхождение",
       publicLineageDescription:
-        "В этом разделе показаны только подтвержденные связи объектов, подкрепленные активными публичными записями журнала.",
+        "Откуда происходит этот объект — только связи, которые подтвердили оба садовода и за которыми есть публичные записи.",
       noConfirmedPublicLineage:
         "Для этого объекта пока нет подтвержденного публичного происхождения.",
       source: "Источник",
       grownObject: "Выращенный объект",
-      depth: "Глубина",
+      depth: "Поколение",
+      lineageSentence: "«{subject}» происходит от «{source}»",
+      lineageConfirmedBy:
+        "Это подтвердили оба садовода. Это их слово, а не генетический анализ.",
+      thisObject: "(этот объект)",
       lineageUpdatesFrom: "Обновления происхождения от",
+      ownerBar: "Это ваш объект.",
+      ownerWrite: "Новая запись о нём",
+      ownerOpen: "Открыть в моём саду",
       lineageQuestionSafety:
         "Вопросы остаются в пределах этой подтвержденной цепочки и не содержат контактных данных.",
       lineageQuestionRateLimited:

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type { AuthSecretConfiguration } from "@/lib/auth-secret";
+import { mintLineageInviteToken } from "../../tests/helpers/lineage-invite-token";
 import {
+  inspectLineageInviteToken,
   signLineageInviteToken,
   verifyLineageInviteToken,
 } from "./lineage-invite-token";
@@ -87,6 +89,59 @@ describe("lineage invitation tokens", () => {
     ).toBeNull();
   });
 
+  it("tells an expired link from one that was never ours (OVE-495)", () => {
+    const token = signLineageInviteToken({
+      pendingIdentityId,
+      edgeId,
+      createdAt,
+      ttlSeconds: 60,
+      secret,
+    });
+    const expiresAt = Math.floor(createdAt.getTime() / 1000) + 60;
+
+    expect(
+      inspectLineageInviteToken(token, { now: createdAt.getTime(), secret }),
+    ).toEqual({
+      state: "valid",
+      verification: { pendingIdentityId, edgeId, expiresAt },
+    });
+    expect(
+      inspectLineageInviteToken(token, {
+        now: createdAt.getTime() + 61_000,
+        secret,
+      }),
+    ).toEqual({
+      state: "expired",
+      verification: { pendingIdentityId, edgeId, expiresAt },
+    });
+    // Only a signature that verifies can be expired: a forged body's `exp`
+    // is evidence of nothing, however old it claims to be.
+    expect(
+      inspectLineageInviteToken(`${token.slice(0, -2)}xx`, {
+        now: createdAt.getTime() + 61_000,
+        secret,
+      }),
+    ).toEqual({ state: "invalid" });
+    expect(
+      inspectLineageInviteToken(token, {
+        now: createdAt.getTime() + 61_000,
+        secret: "another-secret-entirely-for-this-test",
+      }),
+    ).toEqual({ state: "invalid" });
+    for (const malformed of [
+      null,
+      undefined,
+      "",
+      "v9.a.b",
+      "v1..",
+      "v2.x.a.b",
+    ]) {
+      expect(inspectLineageInviteToken(malformed, { secret })).toEqual({
+        state: "invalid",
+      });
+    }
+  });
+
   it("uses a current key label for Better Auth fallback material and one legacy reader", () => {
     const current = signLineageInviteToken({
       pendingIdentityId,
@@ -150,5 +205,38 @@ describe("lineage invitation tokens", () => {
         authSecrets: localFallbackConfiguration,
       }),
     ).not.toBeNull();
+  });
+
+  it("verifies the browser proof's minted links with the real verifier (OVE-495)", () => {
+    const now = createdAt.getTime();
+    for (const authSecrets of [
+      twoKeyConfiguration,
+      legacyTransitionConfiguration,
+      localFallbackConfiguration,
+    ]) {
+      const fresh = mintLineageInviteToken(
+        { pendingIdentityId, edgeId },
+        { createdAt, configuration: authSecrets },
+      );
+      expect(inspectLineageInviteToken(fresh, { now, authSecrets })).toEqual({
+        state: "valid",
+        verification: {
+          pendingIdentityId,
+          edgeId,
+          expiresAt: Math.floor(now / 1000) + 30 * 24 * 60 * 60,
+        },
+      });
+
+      const old = mintLineageInviteToken(
+        { pendingIdentityId, edgeId },
+        {
+          createdAt: new Date(now - 31 * 24 * 60 * 60 * 1000),
+          configuration: authSecrets,
+        },
+      );
+      expect(inspectLineageInviteToken(old, { now, authSecrets }).state).toBe(
+        "expired",
+      );
+    }
   });
 });

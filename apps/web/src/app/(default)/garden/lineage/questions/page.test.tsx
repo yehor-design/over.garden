@@ -54,6 +54,13 @@ vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
   ),
 }));
 
+const TARGET_ID = "00000000-0000-4000-8000-000000000101";
+
+async function renderQuestions() {
+  const { default: LineageQuestionsPage } = await import("./page");
+  return renderServerHtml(await LineageQuestionsPage());
+}
+
 describe("/garden/lineage/questions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,13 +74,19 @@ describe("/garden/lineage/questions", () => {
         id: "question-1",
         questionText: "Did this tomato tolerate the July heat?",
         targetObject: {
-          id: "object-1",
+          id: TARGET_ID,
           displayName: "Balcony tomato",
           objectKind: "plant",
           catalogKind: "plant_variety",
           varietyText: "Red Cherry",
           varietyState: "selected",
         },
+        asker: {
+          handle: "anna",
+          displayName: "Анна Коваль",
+          profilePath: "/@anna",
+        },
+        relation: { askerObjectName: "Tomato", readerObjectIsSource: true },
         createdAt: new Date("2026-07-03T18:00:00.000Z"),
       },
     ]);
@@ -88,25 +101,25 @@ describe("/garden/lineage/questions", () => {
           varietyText: null,
           varietyState: "provisional",
         },
+        owner: { handle: "petro", displayName: null, profilePath: "/@petro" },
         createdAt: new Date("2026-07-02T18:00:00.000Z"),
       },
     ]);
   });
 
   it.each([
-    ["uk", "Оновлення походження", "Питання для вас"],
-    ["bg", "Обновления за произхода", "Въпроси към вас"],
-    ["ru", "Обновления происхождения", "Вопросы для вас"],
+    ["uk", "Запитання про походження", "За чим ви стежите"],
+    ["bg", "Въпроси за произхода", "Какво следите"],
+    ["ru", "Вопросы о происхождении", "За чем вы следите"],
   ] as const)(
     "renders %s interface copy while preserving UGC",
-    async (locale, title, questionsTitle) => {
+    async (locale, title, followedTitle) => {
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
 
-      const { default: LineageUpdatesPage } = await import("./page");
-      const html = await renderServerHtml(await LineageUpdatesPage());
+      const html = await renderQuestions();
 
       expect(html).toContain(title);
-      expect(html).toContain(questionsTitle);
+      expect(html).toContain(followedTitle);
       expect(html).toContain("Did this tomato tolerate the July heat?");
       expect(html).toContain("Balcony tomato");
       expect(html).toContain("Red Cherry");
@@ -114,28 +127,94 @@ describe("/garden/lineage/questions", () => {
     },
   );
 
+  it("names the page among the lineage tasks (OVE-495)", async () => {
+    const html = await renderQuestions();
+
+    expect(html).toMatch(
+      /<a aria-current="page"[^>]*href="\/garden\/lineage\/questions">Запитання</,
+    );
+    expect(html).toMatch(
+      /<a class="[^"]*" href="\/garden\/lineage\/claims">Заявки</,
+    );
+  });
+
+  it("says who asked, about which object, through which link, and how to answer", async () => {
+    const html = await renderQuestions();
+
+    expect(html).toContain("Про ваш «Balcony tomato»");
+    expect(html).toContain("Питає");
+    expect(html).toContain('href="/@anna"');
+    expect(html).toContain("Анна Коваль");
+    // Related objects are often called the same: the link is said both ways.
+    expect(html).toContain(
+      "Через зв&#x27;язок: «Tomato» походить від вашого «Balcony tomato»",
+    );
+    // The one way to answer there is, on this exact object.
+    expect(html).toContain(`href="/garden/new?object=${TARGET_ID}"`);
+    expect(html).toContain("Відповісти записом про «Balcony tomato»");
+  });
+
+  it("reads a link that runs the other way", async () => {
+    mocks.listLineageQuestionInbox.mockResolvedValue([
+      {
+        id: "question-2",
+        questionText: "Where did yours come from?",
+        targetObject: {
+          id: TARGET_ID,
+          displayName: "Balcony tomato",
+          objectKind: "plant",
+          catalogKind: null,
+          varietyText: null,
+          varietyState: "unknown",
+        },
+        asker: null,
+        relation: {
+          askerObjectName: "Seed mother",
+          readerObjectIsSource: false,
+        },
+        createdAt: new Date("2026-07-03T18:00:00.000Z"),
+      },
+    ]);
+
+    const html = await renderQuestions();
+
+    expect(html).toContain(
+      "Через зв&#x27;язок: ваш «Balcony tomato» походить від «Seed mother»",
+    );
+    expect(html).toContain("Садівник без публічного профілю");
+  });
+
+  it("names whose object is followed, by handle when there is no display name", async () => {
+    const html = await renderQuestions();
+
+    expect(html).toContain("Доглядальник");
+    expect(html).toContain('href="/@petro"');
+    expect(html).toContain("@petro");
+    expect(html).toContain("Стежите з");
+  });
+
   it("inherits the selected locale before authentication without reading owner data", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
     mocks.getCurrentSession.mockResolvedValue(null);
 
-    const { default: LineageUpdatesPage } = await import("./page");
-    const html = await renderServerHtml(await LineageUpdatesPage());
+    const html = await renderQuestions();
 
-    expect(html).toContain("Обновления за произхода");
+    expect(html).toContain("Въпроси за произхода");
     expect(html).toContain('data-locale="bg"');
+    expect(html).toContain('data-next="/garden/lineage/questions"');
     expect(mocks.listLineageQuestionInbox).not.toHaveBeenCalled();
     expect(mocks.listLineageFollowReadback).not.toHaveBeenCalled();
   });
 
-  it("renders localized empty states", async () => {
+  it("renders localized empty states that say who can ask", async () => {
     mocks.listLineageQuestionInbox.mockResolvedValue([]);
     mocks.listLineageFollowReadback.mockResolvedValue([]);
 
-    const { default: LineageUpdatesPage } = await import("./page");
-    const html = await renderServerHtml(await LineageUpdatesPage());
+    const html = await renderQuestions();
 
-    expect(html).toContain("Для вас немає нових питань про походження.");
-    expect(html).toContain("Ви ще не стежите за вузлами походження.");
+    expect(html).toContain("Запитань немає");
+    expect(html).toContain("з яким ви підтвердили походження");
+    expect(html).toContain("Ви ще ні за чим не стежите");
   });
 
   it("renders its own shell and a bounded failure when the relation is missing", async () => {
@@ -143,13 +222,14 @@ describe("/garden/lineage/questions", () => {
       postgresRejection("42P01", 'relation "lineage_questions" does not exist'),
     );
 
-    const { default: Page } = await import("./page");
-    const html = await renderServerHtml(await Page());
+    const html = await renderQuestions();
 
     expect(html).toContain('data-workspace-surface="lineage-questions"');
-    expect(html).toContain("Оновлення походження");
+    expect(html).toContain("Запитання про походження");
     expect(html).toContain('data-section-failure="schema_missing"');
     expect(html).not.toContain("lineage_questions");
     expect(html).not.toContain('data-workspace-state="loading"');
+    // The follows settle on their own and still render.
+    expect(html).toContain("Seed mother");
   });
 });

@@ -259,14 +259,24 @@ function ProvenanceRecords({
                       ),
                     })}
                   </span>
-                  {edge.pendingIdentity.inviteState === "pending" ? (
+                  {edge.pendingIdentity.inviteState !== "pending" ? null : edge
+                      .pendingIdentity.linkExpired ? (
+                    // The invited gardener is told the link expired; so is
+                    // its writer, instead of being handed it to send again.
+                    <span
+                      data-invite-link-expired="true"
+                      className="text-caption text-text-muted"
+                    >
+                      {provenanceCopy.inviteLinkExpired}
+                    </span>
+                  ) : (
                     <Link
                       href={edge.pendingIdentity.invitePath}
                       className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
                     >
                       {provenanceCopy.openPrivateInvite}
                     </Link>
-                  ) : null}
+                  )}
                 </div>
               ) : null}
             </li>
@@ -311,10 +321,15 @@ function lineageEdgeTitle(
     });
   }
 
+  // An answered invitation is no longer waiting: the record says whose
+  // source it names, and its consent line says how it was answered.
   if (edge.pendingIdentity) {
-    return formatOwnerObjectTemplate(copy.edge.invitationPending, {
-      source: edge.pendingIdentity.displayLabel,
-    });
+    return formatOwnerObjectTemplate(
+      edge.pendingIdentity.inviteState === "pending"
+        ? copy.edge.invitationPending
+        : copy.edge.fromObject,
+      { source: edge.pendingIdentity.displayLabel },
+    );
   }
 
   return formatOwnerObjectTemplate(copy.edge.fromReference, {
