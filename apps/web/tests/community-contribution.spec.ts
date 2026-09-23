@@ -24,6 +24,7 @@ import {
   SYNTHETIC_GARDENER_PASSWORD,
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { postPastRateLimit } from "./helpers/auth-rate-limit";
 
 /**
  * A community as a place to read and to add to (`OVE-500`).
@@ -272,16 +273,16 @@ async function signedInRequest(
   gardener: SyntheticGardener,
 ) {
   const request = await playwright.request.newContext();
-  for (const delay of [0, 1_500, 4_000, 9_000]) {
-    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-    const response = await request.post(`${baseURL}/api/auth/sign-in/email`, {
+  const { response, statuses } = await postPastRateLimit(() =>
+    request.post(`${baseURL}/api/auth/sign-in/email`, {
       headers: { origin: baseURL },
       data: { email: gardener.email, password: SYNTHETIC_GARDENER_PASSWORD },
-    });
-    if (response.ok()) return request;
-    if (response.status() !== 429) break;
-  }
-  throw new Error(`${gardener.email} could not sign in`);
+    }),
+  );
+  if (response.ok()) return request;
+  throw new Error(
+    `${gardener.email} could not sign in (${statuses.join(", ")})`,
+  );
 }
 
 async function focusedIntentControl(page: Page) {

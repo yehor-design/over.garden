@@ -16,7 +16,7 @@ import {
 } from "@/lib/interface-market";
 import { INTERFACE_CONTEXT_ENDPOINT } from "@/lib/interface-route-policy";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
-import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { getTrustClientCopy } from "@/lib/trust-client-copy";
 import { googleSans } from "./fonts";
 
 interface GlobalErrorProps {
@@ -55,7 +55,7 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
   const interfaceContext =
     remoteContext ?? parseGlobalErrorContextKey(documentContextKey);
   const copy = getInterfaceCopy(interfaceContext.locale);
-  const trustCopy = getTrustSurfaceCopy(interfaceContext.locale);
+  const choicesCopy = getTrustClientCopy(interfaceContext.locale);
 
   useEffect(() => {
     let active = true;
@@ -141,7 +141,7 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
             </button>
           </div>
           <nav
-            aria-label={trustCopy.support.title}
+            aria-label={choicesCopy.supportTitle}
             className="flex flex-wrap gap-4"
           >
             {/* A root failure must recover through a new document, independently of the failed router. */}
@@ -150,13 +150,13 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
               href="/support"
               className="text-link inline-flex min-h-11 items-center underline"
             >
-              {trustCopy.support.title}
+              {choicesCopy.supportTitle}
             </a>
             <a
               href={localizedPath(interfaceContext.locale, "/privacy")}
               className="text-link inline-flex min-h-11 items-center underline"
             >
-              {trustCopy.privacy.title}
+              {choicesCopy.privacyTitle}
             </a>
           </nav>
         </main>

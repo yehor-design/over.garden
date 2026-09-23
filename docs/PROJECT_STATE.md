@@ -269,6 +269,25 @@ are work queues (DESIGN.md §5.12).
 
 See `docs/redesign/2026-09-21/OVE-506-PROOF.md`.
 
+**The chrome's bundle diet (OVE-468):** a guest's public page no longer loads
+code for controls they have not pressed (DESIGN.md §9).
+- The palette's dialog, the account menu, the narrow bar's sheet, the sign-out
+  question and Better Auth's client arrive on the first press, through
+  `useOnDemandComponent`. A press made before the code lands is kept; a failed
+  download leaves the control as it was.
+- The palette keeps what is typed while its dialog loads, and the page no
+  longer renders inside the palette's dialog root.
+- Client copy comes from small modules instead of the server's tables.
+- Script transferred before `load` fell about 30 % on `/`, an entry and an
+  organism card (340.6 → 238.5 kB on `/`), and executed script about 27 %.
+  Simulated LCP improved 0.44–0.73 s. Applied LCP (≤ 1.8 s) and CLS did not
+  move; applied TTI locally is set by react-dom's chunk on HTTP/1.1.
+- Not changed: Phosphor's four unused weights (about 10 kB compressed, which
+  needs DESIGN.md §2.8 changed by the owner), and Next's own server modules in
+  the client.
+
+See `docs/redesign/2026-09-21/OVE-468-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.
@@ -1000,8 +1019,9 @@ What is left is weight, and the waterfall is specific about it:
 - **Under the agreed method a 92 kB photograph cannot make 2.0 s even alone on
   the link** (asked for at 0.69 s + 562 ms emulated latency + 92 kB at 184 kB/s
   ≈ 1.9 s, with no stylesheet to paint it). The budget needs the LCP photograph
-  near 40 kB and little in flight beside it: 330 kB of script (`OVE-468`) and
-  four preloaded font files, 106 kB, two of them italic.
+  near 40 kB and little in flight beside it: 330 kB of script (`OVE-468`
+  took about 100 kB of it off the path before `load`) and four preloaded font
+  files, 106 kB, two of them italic.
 - **Both lab figures lean, in opposite directions.** The local build is
   HTTP/1.1, whose six connections order requests the way a priority would;
   production is HTTP/2, thirty requests at once, and `devtools` throttling

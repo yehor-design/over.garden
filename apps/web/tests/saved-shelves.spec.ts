@@ -30,6 +30,7 @@ import {
   SYNTHETIC_GARDENER_PASSWORD,
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { postPastRateLimit } from "./helpers/auth-rate-limit";
 
 /**
  * Bookmarks and the wishlist (`OVE-502`).
@@ -765,19 +766,16 @@ async function signIn(
   baseURL: string,
   gardener: SyntheticGardener,
 ) {
-  for (const delay of [0, 1_500, 4_000, 9_000]) {
-    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-    const response = await context.request.post(
-      `${baseURL}/api/auth/sign-in/email`,
-      {
-        headers: { origin: baseURL },
-        data: { email: gardener.email, password: SYNTHETIC_GARDENER_PASSWORD },
-      },
-    );
-    if (response.ok()) return;
-    if (response.status() !== 429) break;
-  }
-  throw new Error(`${gardener.email} could not sign in`);
+  const { response, statuses } = await postPastRateLimit(() =>
+    context.request.post(`${baseURL}/api/auth/sign-in/email`, {
+      headers: { origin: baseURL },
+      data: { email: gardener.email, password: SYNTHETIC_GARDENER_PASSWORD },
+    }),
+  );
+  if (response.ok()) return;
+  throw new Error(
+    `${gardener.email} could not sign in (${statuses.join(", ")})`,
+  );
 }
 
 async function signInOnScreen(page: Page, gardener: SyntheticGardener) {

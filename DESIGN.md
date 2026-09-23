@@ -746,6 +746,11 @@ Four rules that are the whole of it, each one a test:
   index is flat over the groups in order, so Down at the end of one group
   reaches the next.
 
+The dialog's code arrives on the first press (`OVE-468`, §9). Until it has, the
+palette is already open as far as the reader is concerned: what they type is
+kept as the query, `/` pressed again is the shortcut rather than a letter, and
+`Esc` takes the request back.
+
 ### 5.3 Forms
 
 Grounded in the Plain, Twenty, Gorgias and Workable references.
@@ -1883,6 +1888,18 @@ about every page that will ever be added here, not a tuning of three:
   content is still on its way is thrown away and rendered on the client: a
   second, later LCP, and the page's `<main>` in the document twice. A
   transition does not prevent it.
+- **Code a reader needs only after a press arrives with the press** (`OVE-468`).
+  The palette's dialog, the account menu, the narrow bar's sheet, the sign-out
+  question and Better Auth's client load through `useOnDemandComponent`
+  (`src/lib/use-on-demand-component.ts`): the chrome draws a stand-in with the
+  control's name, role and marker, keeps the press as state, and draws the real
+  control open when its code lands. A press is never lost, not even one made
+  before the code arrives; a failed download leaves the stand-in and the next
+  press asks again, never an error thrown into the page — which is what
+  `React.lazy` and `next/dynamic` do. A client component reads its copy from a
+  module that holds only that copy, not from the table the server's pages use.
+  Together these took about 100 kB (30 %) off the script every public page
+  loads before `load`.
 
 **How it is measured.** Lighthouse **CLI**, a production build, three runs,
 median, throttling **applied** (`--throttling-method=devtools`). The simulated

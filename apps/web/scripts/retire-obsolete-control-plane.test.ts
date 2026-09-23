@@ -465,8 +465,13 @@ describe("OVE-314 bounded command and target binding", () => {
     expect(result.durationMs).toBeGreaterThanOrEqual(20);
     expect(result.durationMs).toBeLessThan(RETIREMENT_LOCK_TIMEOUT_MS);
 
+    // The account menu is a module of its own since `OVE-468`: its code
+    // arrives on the first press.
     const shellSource = await readFile(
-      path.join(webRoot, "src/components/site-shell/site-shell.tsx"),
+      path.join(
+        webRoot,
+        "src/components/site-shell/site-shell-account-menu.tsx",
+      ),
       "utf8",
     );
     expect(shellSource).toContain("<SignOutControl");

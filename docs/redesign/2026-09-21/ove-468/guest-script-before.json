@@ -1,0 +1,579 @@
+{
+  "issue": "OVE-468",
+  "proof": "guest-script",
+  "label": "main-6d0e2ff3",
+  "baseUrl": "http://localhost:3179",
+  "measuredAt": "2026-09-23T20:45:26.863Z",
+  "pages": [
+    {
+      "path": "/",
+      "status": 200,
+      "scripts": 25,
+      "transfer": 369093,
+      "decoded": 1259107,
+      "executed": 545059,
+      "beforeLoad": {
+        "scripts": 21,
+        "transfer": 340619,
+        "decoded": 1156502
+      },
+      "chunks": [
+        {
+          "url": "/_next/static/chunks/2j_xs_znrpkx6.js",
+          "transfer": 72525,
+          "decoded": 231717,
+          "executed": 88535,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/21ckudwnpxku7.js",
+          "transfer": 27978,
+          "decoded": 126682,
+          "executed": 77570,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1ch-86lp1dimv.js",
+          "transfer": 28843,
+          "decoded": 108248,
+          "executed": 49370,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0x7-alz84f4j9.js",
+          "transfer": 32099,
+          "decoded": 97794,
+          "executed": 5889,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2y_f38hfkdxz1.js",
+          "transfer": 27693,
+          "decoded": 96442,
+          "executed": 66283,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0__m8ezrle7f5.js",
+          "transfer": 23503,
+          "decoded": 79847,
+          "executed": 66378,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2o-do_ngp-0m9.js",
+          "transfer": 23221,
+          "decoded": 71418,
+          "executed": 25766,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/26zw-sk0kcboy.js",
+          "transfer": 14984,
+          "decoded": 66987,
+          "executed": 5593,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0rxtpx4dxils-.js",
+          "transfer": 12947,
+          "decoded": 39034,
+          "executed": 27403,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2_-_giv49fetc.js",
+          "transfer": 8141,
+          "decoded": 36720,
+          "executed": 5877,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/10vi719i786et.js",
+          "transfer": 10563,
+          "decoded": 36514,
+          "executed": 16957,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/3fgybv6j5cz-2.js",
+          "transfer": 13080,
+          "decoded": 35582,
+          "executed": 11296,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1tiufdtideh2u.js",
+          "transfer": 8697,
+          "decoded": 33853,
+          "executed": 171,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/3jok-ijf8lhl9.js",
+          "transfer": 8659,
+          "decoded": 33706,
+          "executed": 21640,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/1zib7c7u3gjhh.js",
+          "transfer": 11614,
+          "decoded": 31807,
+          "executed": 17387,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1s-b0u8volrz6.js",
+          "transfer": 9026,
+          "decoded": 28931,
+          "executed": 27385,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1j3rivna77dtz.js",
+          "transfer": 8331,
+          "decoded": 28526,
+          "executed": 150,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/12omsp2dvvrvb.js",
+          "transfer": 8827,
+          "decoded": 27797,
+          "executed": 9316,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0dv7d-5zdm0r7.js",
+          "transfer": 5859,
+          "decoded": 18187,
+          "executed": 10432,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/turbopack-42fppawpyljrc.js",
+          "transfer": 4195,
+          "decoded": 10647,
+          "executed": 4924,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/20w11ke5u2chc.js",
+          "transfer": 3204,
+          "decoded": 7243,
+          "executed": 3271,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1sls6jy10dcc9.js",
+          "transfer": 2787,
+          "decoded": 6520,
+          "executed": 111,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/2k86nu-qb9mkh.js",
+          "transfer": 1361,
+          "decoded": 3324,
+          "executed": 2408,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2asnoe9b02cmg.js",
+          "transfer": 674,
+          "decoded": 1299,
+          "executed": 724,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0emh13_62khjj.js",
+          "transfer": 282,
+          "decoded": 282,
+          "executed": 223,
+          "phase": "before-load"
+        }
+      ]
+    },
+    {
+      "path": "/@gardener_204eb9e6f1c84657/post/1",
+      "status": 200,
+      "scripts": 24,
+      "transfer": 359145,
+      "decoded": 1216446,
+      "executed": 533003,
+      "beforeLoad": {
+        "scripts": 21,
+        "transfer": 343091,
+        "decoded": 1166841
+      },
+      "chunks": [
+        {
+          "url": "/_next/static/chunks/2j_xs_znrpkx6.js",
+          "transfer": 72525,
+          "decoded": 231717,
+          "executed": 90666,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/21ckudwnpxku7.js",
+          "transfer": 27978,
+          "decoded": 126682,
+          "executed": 77570,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1ch-86lp1dimv.js",
+          "transfer": 28843,
+          "decoded": 108248,
+          "executed": 49150,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0x7-alz84f4j9.js",
+          "transfer": 32099,
+          "decoded": 97794,
+          "executed": 5889,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2y_f38hfkdxz1.js",
+          "transfer": 27693,
+          "decoded": 96442,
+          "executed": 66299,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0__m8ezrle7f5.js",
+          "transfer": 23503,
+          "decoded": 79847,
+          "executed": 65803,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2o-do_ngp-0m9.js",
+          "transfer": 23221,
+          "decoded": 71418,
+          "executed": 25766,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/26zw-sk0kcboy.js",
+          "transfer": 14984,
+          "decoded": 66987,
+          "executed": 5593,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0rxtpx4dxils-.js",
+          "transfer": 12947,
+          "decoded": 39034,
+          "executed": 27895,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2_-_giv49fetc.js",
+          "transfer": 8141,
+          "decoded": 36720,
+          "executed": 5918,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/10vi719i786et.js",
+          "transfer": 10563,
+          "decoded": 36514,
+          "executed": 16936,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/3fgybv6j5cz-2.js",
+          "transfer": 13080,
+          "decoded": 35582,
+          "executed": 11296,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1zib7c7u3gjhh.js",
+          "transfer": 11614,
+          "decoded": 31807,
+          "executed": 17387,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1s-b0u8volrz6.js",
+          "transfer": 9026,
+          "decoded": 28931,
+          "executed": 27297,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1j3rivna77dtz.js",
+          "transfer": 8331,
+          "decoded": 28526,
+          "executed": 18029,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/12omsp2dvvrvb.js",
+          "transfer": 8827,
+          "decoded": 27797,
+          "executed": 9397,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/3aacc2bdq1c18.js",
+          "transfer": 7408,
+          "decoded": 24898,
+          "executed": 142,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/0dv7d-5zdm0r7.js",
+          "transfer": 5859,
+          "decoded": 18187,
+          "executed": 135,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/turbopack-42fppawpyljrc.js",
+          "transfer": 4195,
+          "decoded": 10647,
+          "executed": 4924,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/20w11ke5u2chc.js",
+          "transfer": 3204,
+          "decoded": 7243,
+          "executed": 3418,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1sls6jy10dcc9.js",
+          "transfer": 2787,
+          "decoded": 6520,
+          "executed": 111,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/2k86nu-qb9mkh.js",
+          "transfer": 1361,
+          "decoded": 3324,
+          "executed": 2408,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2asnoe9b02cmg.js",
+          "transfer": 674,
+          "decoded": 1299,
+          "executed": 751,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0emh13_62khjj.js",
+          "transfer": 282,
+          "decoded": 282,
+          "executed": 223,
+          "phase": "before-load"
+        }
+      ]
+    },
+    {
+      "path": "/variety/pomidor-cheri-0000000101",
+      "status": 200,
+      "scripts": 26,
+      "transfer": 370560,
+      "decoded": 1262596,
+      "executed": 555334,
+      "beforeLoad": {
+        "scripts": 21,
+        "transfer": 342168,
+        "decoded": 1163213
+      },
+      "chunks": [
+        {
+          "url": "/_next/static/chunks/2j_xs_znrpkx6.js",
+          "transfer": 72525,
+          "decoded": 231717,
+          "executed": 90142,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/21ckudwnpxku7.js",
+          "transfer": 27978,
+          "decoded": 126682,
+          "executed": 77570,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1ch-86lp1dimv.js",
+          "transfer": 28843,
+          "decoded": 108248,
+          "executed": 49396,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0x7-alz84f4j9.js",
+          "transfer": 32099,
+          "decoded": 97794,
+          "executed": 5889,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2y_f38hfkdxz1.js",
+          "transfer": 27693,
+          "decoded": 96442,
+          "executed": 66152,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0__m8ezrle7f5.js",
+          "transfer": 23503,
+          "decoded": 79847,
+          "executed": 66425,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2o-do_ngp-0m9.js",
+          "transfer": 23221,
+          "decoded": 71418,
+          "executed": 25766,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/26zw-sk0kcboy.js",
+          "transfer": 14984,
+          "decoded": 66987,
+          "executed": 5593,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1ybs6gtekkoq5.js",
+          "transfer": 15046,
+          "decoded": 59248,
+          "executed": 36452,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/0rxtpx4dxils-.js",
+          "transfer": 12947,
+          "decoded": 39034,
+          "executed": 27459,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2_-_giv49fetc.js",
+          "transfer": 8141,
+          "decoded": 36720,
+          "executed": 5918,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/10vi719i786et.js",
+          "transfer": 10563,
+          "decoded": 36514,
+          "executed": 16930,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/3fgybv6j5cz-2.js",
+          "transfer": 13080,
+          "decoded": 35582,
+          "executed": 11296,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1zib7c7u3gjhh.js",
+          "transfer": 11614,
+          "decoded": 31807,
+          "executed": 17909,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1s-b0u8volrz6.js",
+          "transfer": 9026,
+          "decoded": 28931,
+          "executed": 27297,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/12omsp2dvvrvb.js",
+          "transfer": 8827,
+          "decoded": 27797,
+          "executed": 9657,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/3aacc2bdq1c18.js",
+          "transfer": 7408,
+          "decoded": 24898,
+          "executed": 142,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0dv7d-5zdm0r7.js",
+          "transfer": 5859,
+          "decoded": 18187,
+          "executed": 135,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/2k8ararxghpxd.js",
+          "transfer": 4922,
+          "decoded": 15423,
+          "executed": 120,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/turbopack-42fppawpyljrc.js",
+          "transfer": 4195,
+          "decoded": 10647,
+          "executed": 4924,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/20w11ke5u2chc.js",
+          "transfer": 3204,
+          "decoded": 7243,
+          "executed": 3271,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/2f2ru9bwgjklk.js",
+          "transfer": 1375,
+          "decoded": 3647,
+          "executed": 3441,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/2k86nu-qb9mkh.js",
+          "transfer": 1361,
+          "decoded": 3324,
+          "executed": 2408,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/1415my1d1c9y3.js",
+          "transfer": 1190,
+          "decoded": 2878,
+          "executed": 95,
+          "phase": "after-load"
+        },
+        {
+          "url": "/_next/static/chunks/2asnoe9b02cmg.js",
+          "transfer": 674,
+          "decoded": 1299,
+          "executed": 724,
+          "phase": "before-load"
+        },
+        {
+          "url": "/_next/static/chunks/0emh13_62khjj.js",
+          "transfer": 282,
+          "decoded": 282,
+          "executed": 223,
+          "phase": "before-load"
+        }
+      ]
+    }
+  ]
+}

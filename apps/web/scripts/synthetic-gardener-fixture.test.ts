@@ -14,7 +14,11 @@ function harness(signInStatuses: number[]) {
     const status = url.includes("sign-up")
       ? 500
       : (signin(), signInStatuses.shift() ?? 500);
-    return { status: () => status, ok: () => status >= 200 && status < 300 };
+    return {
+      status: () => status,
+      ok: () => status >= 200 && status < 300,
+      headers: () => (status === 429 ? { "x-retry-after": "2" } : {}),
+    };
   });
   const input = {
     baseURL: "http://127.0.0.1:3188",

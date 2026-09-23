@@ -34,6 +34,7 @@ export const BROWSER_GATE_SPECS = [
   "site-shell.spec.ts",
   "mobile-shell.spec.ts",
   "command-palette.spec.ts",
+  "on-demand-controls.spec.ts",
   "interface-locale.spec.ts",
   "auth-screen.spec.ts",
   "auth-intent.spec.ts",

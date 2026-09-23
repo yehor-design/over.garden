@@ -1,29 +1,28 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
 } from "react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { EmptyState } from "@/components/ui/empty-state";
 import { getInterfaceCopy } from "@/lib/interface-localization";
 import type { PublicLocale } from "@/lib/public-localization";
+import { useOnDemandComponent } from "@/lib/use-on-demand-component";
 import { cn } from "@/lib/utils";
+
+import type {
+  CommandPaletteDialog,
+  PaletteActions,
+  PaletteSearch,
+} from "./command-palette-dialog";
+
+export type { CommandPaletteResult } from "./command-palette-dialog";
 
 /**
  * One palette over five kinds of thing (DESIGN.md §5.2, ADR-0031 D7).
@@ -49,36 +48,13 @@ import { cn } from "@/lib/utils";
  * - **Arrow keys cross group boundaries.** A flat index over the groups in
  *   order, because a reader pressing Down at the end of "Journals" means the
  *   next result, not nothing.
+ *
+ * The last three live in `command-palette-dialog.tsx`, which arrives on the
+ * first press (`OVE-468`): every page drew the palette's triggers and none of
+ * them needed its dialog before a reader asked for it. What has to be here
+ * before a press — the triggers, `⌘K` and `/`, and whether the palette is open
+ * — stays in this module.
  */
-const DEBOUNCE_MS = 180;
-const RECENT_STORAGE_KEY = "overgarden-palette-recent";
-const MAX_RECENT = 5;
-const GROUP_ORDER = [
-  "journals",
-  "organisms",
-  "gardeners",
-  "communities",
-  "actions",
-] as const;
-
-type PaletteGroupKey = (typeof GROUP_ORDER)[number];
-
-export interface CommandPaletteResult {
-  key: PaletteGroupKey;
-  id: string;
-  label: string;
-  detail: string | null;
-  href: string;
-  language: PublicLocale | null;
-}
-
-interface PaletteGroup {
-  key: PaletteGroupKey;
-  results: CommandPaletteResult[];
-}
-
-type PaletteState = "idle" | "ready" | "empty" | "unavailable";
-
 export interface CommandPaletteProps {
   locale: PublicLocale;
   /**
@@ -89,9 +65,7 @@ export interface CommandPaletteProps {
    * learns after it is served, and a provider this high must not render again
    * for that (ADR-0032 D10). Keep the function's identity stable.
    */
-  actions:
-    | readonly CommandPaletteResult[]
-    | (() => readonly CommandPaletteResult[]);
+  actions: PaletteActions;
   /**
    * `field` is the rail's shape — a search field that opens the palette, the
    * way X and Substack draw it. `icon` is the narrow bar's, where a field
@@ -99,7 +73,12 @@ export interface CommandPaletteProps {
    */
   presentation?: "field" | "icon";
   /** Overridable so a test can drive the palette without a network. */
-  search?: (query: string, locale: PublicLocale) => Promise<PaletteGroup[]>;
+  search?: PaletteSearch;
+  /**
+   * Overridable so a test can hold the dialog's download open, and press
+   * before it lands. Keep the function's identity stable.
+   */
+  loadDialog?: () => Promise<typeof CommandPaletteDialog>;
 }
 
 /**
@@ -107,8 +86,14 @@ export interface CommandPaletteProps {
  * rail and an icon in the narrow bar, and mounting the component twice gave
  * the document two dialogs, two comboboxes and two `⌘K` listeners — so `⌘K`
  * opened both. A screen reader saw two.
+ *
+ * Its value never changes after the first render: it sits above the page, and
+ * a context above the page that changes is what ADR-0032 D10 forbids.
  */
-const CommandPaletteContext = createContext<{ open: () => void } | null>(null);
+const CommandPaletteContext = createContext<{
+  open: () => void;
+  preload: () => void;
+} | null>(null);
 
 export function CommandPaletteTrigger({
   presentation = "field",
@@ -131,6 +116,8 @@ export function CommandPaletteTrigger({
       type={fallbackHref ? undefined : "button"}
       data-command-palette-trigger={presentation}
       aria-label={label}
+      onPointerEnter={palette?.preload}
+      onFocus={palette?.preload}
       onClick={(event) => {
         if (
           !palette ||
@@ -186,87 +173,38 @@ export function CommandPalette(props: CommandPaletteProps) {
   );
 }
 
+const loadPaletteDialog = () =>
+  import("./command-palette-dialog").then(
+    (module) => module.CommandPaletteDialog,
+  );
+
 export function CommandPaletteProvider({
   children,
   locale,
   actions,
-  search = fetchPaletteGroups,
+  search,
+  loadDialog = loadPaletteDialog,
 }: CommandPaletteProps & { children?: React.ReactNode }) {
-  const copy = getInterfaceCopy(locale).palette;
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [settledQuery, setSettledQuery] = useState("");
-  const [groups, setGroups] = useState<PaletteGroup[]>([]);
-  const [state, setState] = useState<PaletteState>("idle");
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [recent, setRecent] = useState<string[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  // What the reader types between asking for the palette and its field
+  // existing. On a phone connection that is the first word of the query.
+  const [typedAhead, setTypedAhead] = useState("");
   const restoreFocusRef = useRef<HTMLElement | null>(null);
-  const listId = useId();
-  const baseId = useId();
+  const {
+    Component: PaletteDialog,
+    request: requestDialog,
+    preload,
+  } = useOnDemandComponent(loadDialog);
 
-  const actionGroup = useMemo<PaletteGroup[]>(() => {
-    const needle = settledQuery.trim().toLocaleLowerCase();
-    if (needle.length === 0) return [];
-    const available = typeof actions === "function" ? actions() : actions;
-    const matched = available.filter((action) =>
-      action.label.toLocaleLowerCase().includes(needle),
-    );
-    return matched.length > 0 ? [{ key: "actions", results: matched }] : [];
-  }, [actions, settledQuery]);
-
-  const visibleGroups = useMemo(() => {
-    const merged = [...groups, ...actionGroup];
-    return GROUP_ORDER.flatMap((key) => {
-      const group = merged.find((candidate) => candidate.key === key);
-      return group && group.results.length > 0 ? [group] : [];
-    });
-  }, [groups, actionGroup]);
-
-  const flat = useMemo(
-    () => visibleGroups.flatMap((group) => group.results),
-    [visibleGroups],
-  );
-
-  // One debounce, and the settled query is what both the read and the live
-  // region use — so the count a reader hears is the count they can see. The
-  // "loading" state is derived rather than stored: a state variable that only
-  // ever says "the query is ahead of the result" is a variable that can
-  // disagree with the two it is derived from.
-  useEffect(() => {
-    if (!open) return;
-    const trimmed = query.trim();
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      if (trimmed.length < 2) {
-        setSettledQuery("");
-        setGroups([]);
-        setState("idle");
-        return;
-      }
-      void search(trimmed, locale)
-        .then((next) => {
-          if (cancelled) return;
-          setGroups(next);
-          setSettledQuery(trimmed);
-          setActiveIndex(0);
-          setState(
-            next.some((group) => group.results.length > 0) ? "ready" : "empty",
-          );
-        })
-        .catch(() => {
-          if (cancelled) return;
-          setGroups([]);
-          setSettledQuery(trimmed);
-          setState("unavailable");
-        });
-    }, DEBOUNCE_MS);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [open, query, locale, search]);
+  const changeOpen = useCallback((next: boolean) => {
+    setOpen(next);
+    if (next) return;
+    setTypedAhead("");
+    const target = restoreFocusRef.current;
+    restoreFocusRef.current = null;
+    // After `base-ui` has finished its own focus handling for the close.
+    requestAnimationFrame(() => target?.focus());
+  }, []);
 
   const openPalette = useCallback(() => {
     // Whatever had focus, not whatever opened it. `base-ui` restores focus to
@@ -278,25 +216,20 @@ export function CommandPaletteProvider({
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-    // Recents are read here rather than in an effect: opening is an event, and
-    // an effect that writes state on every `open` is a render nobody asked for.
-    setRecent(readRecent());
     setOpen(true);
-  }, []);
-
-  const changeOpen = useCallback((next: boolean) => {
-    setOpen(next);
-    if (next) return;
-    const target = restoreFocusRef.current;
-    restoreFocusRef.current = null;
-    // After `base-ui` has finished its own focus handling for the close.
-    requestAnimationFrame(() => target?.focus());
-  }, []);
+    void requestDialog().then((ready) => {
+      // A dialog whose code could not be fetched must not leave the page
+      // typing into a palette that never came.
+      if (!ready) changeOpen(false);
+    });
+  }, [changeOpen, requestDialog]);
 
   // `/` is the one entry point that can take a keystroke away from somebody
   // who is writing, so it asks what has focus before it does anything.
   useEffect(() => {
+    const waiting = open && PaletteDialog === null;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (waiting && keepTypedAhead(event)) return;
       const isPaletteShortcut =
         (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
       const isSlash =
@@ -307,253 +240,62 @@ export function CommandPaletteProvider({
         !isEditableTarget(event.target);
       if (!isPaletteShortcut && !isSlash) return;
       event.preventDefault();
-      openPalette();
+      if (!open) openPalette();
+    };
+    // Asked for, and the dialog's code still on its way: the keys the reader
+    // types are the query, kept until the field exists to hold them.
+    const keepTypedAhead = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        changeOpen(false);
+        return true;
+      }
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        setTypedAhead((text) => text.slice(0, -1));
+        return true;
+      }
+      // `/` again is the shortcut pressed twice because the first seemed to do
+      // nothing, not the first letter of a search.
+      if (event.key === "/") {
+        event.preventDefault();
+        return true;
+      }
+      if (
+        event.key.length !== 1 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.isComposing
+      )
+        return false;
+      event.preventDefault();
+      setTypedAhead((text) => text + event.key);
+      return true;
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [openPalette]);
+  }, [PaletteDialog, changeOpen, open, openPalette]);
 
-  const commit = useCallback(
-    (result: CommandPaletteResult | undefined) => {
-      if (!result) return;
-      rememberRecent(settledQuery);
-      changeOpen(false);
-      router.push(result.href);
-    },
-    [changeOpen, router, settledQuery],
+  const paletteContext = useMemo(
+    () => ({ open: openPalette, preload }),
+    [openPalette, preload],
   );
-
-  const onFieldKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (flat.length === 0) return;
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setActiveIndex((index) => (index + 1) % flat.length);
-        return;
-      }
-      if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setActiveIndex((index) => (index - 1 + flat.length) % flat.length);
-        return;
-      }
-      if (event.key === "Enter") {
-        event.preventDefault();
-        commit(flat[activeIndex]);
-      }
-    },
-    [activeIndex, commit, flat],
-  );
-
-  const activeId = flat[activeIndex]
-    ? `${baseId}-${flat[activeIndex].id}`
-    : undefined;
-  const showEmpty = state === "empty" || state === "unavailable";
-
-  const paletteContext = useMemo(() => ({ open: openPalette }), [openPalette]);
 
   return (
     <CommandPaletteContext.Provider value={paletteContext}>
-      <Dialog open={open} onOpenChange={changeOpen}>
-        {children}
-
-        <DialogContent
-          data-command-palette="true"
-          closeLabel={copy.close}
-          className="max-w-xl p-0"
-        >
-          <div className="flex flex-col gap-0">
-            <div className="border-b border-border p-4 pr-12">
-              <DialogTitle className="text-h4">{copy.title}</DialogTitle>
-              <DialogDescription className="sr-only">
-                {copy.description}
-              </DialogDescription>
-              <div className="mt-3 flex items-center gap-2 rounded-md border border-border-control px-3">
-                <Search
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-text-muted"
-                />
-                <input
-                  ref={inputRef}
-                  autoFocus
-                  type="text"
-                  role="combobox"
-                  aria-expanded={flat.length > 0}
-                  aria-controls={listId}
-                  aria-activedescendant={activeId}
-                  aria-autocomplete="list"
-                  aria-label={copy.title}
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={onFieldKeyDown}
-                  placeholder={copy.placeholder}
-                  data-command-palette-input="true"
-                  className="min-h-11 w-full min-w-0 bg-transparent text-body text-text outline-none placeholder:text-text-muted"
-                />
-              </div>
-            </div>
-
-            <div className="max-h-80 min-h-24 overflow-y-auto p-2">
-              {query.trim().length < 2 && recent.length > 0 ? (
-                <RecentSearches
-                  label={copy.recent}
-                  clearLabel={copy.clearRecent}
-                  queries={recent}
-                  onPick={setQuery}
-                  onClear={() => {
-                    clearRecent();
-                    setRecent([]);
-                  }}
-                />
-              ) : null}
-
-              {/* `EmptyState` carries `data-screen-state` itself; a wrapper
-                  repeating it gave the document two of the same marker, which
-                  is one more than any query can mean. */}
-              {showEmpty ? (
-                <div className="p-4">
-                  <EmptyState
-                    variant="no-results"
-                    title={
-                      state === "unavailable"
-                        ? copy.unavailable
-                        : copy.emptyTitle
-                    }
-                    description={
-                      state === "unavailable"
-                        ? undefined
-                        : copy.emptyDescription
-                    }
-                  />
-                </div>
-              ) : null}
-
-              <ul
-                id={listId}
-                role="listbox"
-                aria-label={copy.title}
-                className="flex flex-col gap-2"
-              >
-                {visibleGroups.map((group) => (
-                  <li key={group.key} role="presentation">
-                    <p
-                      id={`${baseId}-group-${group.key}`}
-                      className="px-2 py-1 text-overline text-text-muted uppercase"
-                    >
-                      {copy.groups[group.key]}
-                    </p>
-                    <ul
-                      role="group"
-                      aria-labelledby={`${baseId}-group-${group.key}`}
-                      className="flex flex-col"
-                    >
-                      {group.results.map((result) => {
-                        const index = flat.indexOf(result);
-                        const active = index === activeIndex;
-                        return (
-                          <li key={result.id} role="presentation">
-                            <Link
-                              id={`${baseId}-${result.id}`}
-                              role="option"
-                              aria-selected={active}
-                              href={result.href}
-                              tabIndex={-1}
-                              data-command-palette-result={result.key}
-                              data-active={active || undefined}
-                              onClick={() => rememberRecent(settledQuery)}
-                              className={cn(
-                                "flex min-h-10 items-center justify-between gap-3 rounded-md px-2.5 py-2 text-body-sm text-text",
-                                active &&
-                                  "bg-action-subtle text-action-subtle-text",
-                              )}
-                            >
-                              <span
-                                className="min-w-0 break-words"
-                                {...(result.language
-                                  ? { lang: result.language }
-                                  : {})}
-                              >
-                                {result.label}
-                              </span>
-                              {result.detail ? (
-                                <span className="shrink-0 text-caption text-text-muted">
-                                  {result.detail}
-                                </span>
-                              ) : null}
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* The count a reader hears is the count they can see: written from
-              the settled query, never from a keystroke. */}
-            <p
-              aria-live="polite"
-              data-command-palette-live="true"
-              className="sr-only"
-            >
-              {state === "ready" || state === "empty"
-                ? `${copy.resultCount}: ${flat.length}`
-                : ""}
-            </p>
-
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border px-4 py-2 text-caption text-text-muted">
-              <span>{copy.hintNavigate}</span>
-              <span>{copy.hintOpen}</span>
-              <span>{copy.hintClose}</span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {children}
+      {PaletteDialog ? (
+        <PaletteDialog
+          open={open}
+          onOpenChange={changeOpen}
+          locale={locale}
+          actions={actions}
+          search={search}
+          initialQuery={typedAhead}
+        />
+      ) : null}
     </CommandPaletteContext.Provider>
-  );
-}
-
-function RecentSearches({
-  label,
-  clearLabel,
-  queries,
-  onPick,
-  onClear,
-}: {
-  label: string;
-  clearLabel: string;
-  queries: readonly string[];
-  onPick: (query: string) => void;
-  onClear: () => void;
-}) {
-  return (
-    <div data-command-palette-recent="true" className="flex flex-col gap-1 p-2">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-overline text-text-muted uppercase">{label}</p>
-        <button
-          type="button"
-          onClick={onClear}
-          className="rounded-sm text-caption text-text-muted underline-offset-4 outline-none hover:text-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-        >
-          {clearLabel}
-        </button>
-      </div>
-      <ul className="flex flex-col">
-        {queries.map((query) => (
-          <li key={query}>
-            <button
-              type="button"
-              onClick={() => onPick(query)}
-              className="flex min-h-10 w-full items-center rounded-md px-2.5 py-2 text-left text-body-sm text-text outline-none hover:bg-surface-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
-            >
-              {query}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }
 
@@ -569,54 +311,4 @@ export function isEditableTarget(target: EventTarget | null) {
   const tag = target.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
   return target.closest('[contenteditable="true"]') !== null;
-}
-
-async function fetchPaletteGroups(
-  query: string,
-  locale: PublicLocale,
-): Promise<PaletteGroup[]> {
-  const params = new URLSearchParams({ q: query, locale });
-  const response = await fetch(`/api/public/search/palette?${params}`, {
-    headers: { accept: "application/json" },
-  });
-  if (!response.ok) throw new Error(`palette read answered ${response.status}`);
-  const body = (await response.json()) as { groups?: PaletteGroup[] };
-  return body.groups ?? [];
-}
-
-function readRecent(): string[] {
-  try {
-    const raw = window.localStorage.getItem(RECENT_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((entry): entry is string => typeof entry === "string")
-      : [];
-  } catch {
-    // A private window, blocked site data, or a thumbnail capture: recents are
-    // a convenience and their absence is not a failure.
-    return [];
-  }
-}
-
-function rememberRecent(query: string) {
-  const trimmed = query.trim();
-  if (trimmed.length < 2) return;
-  try {
-    const next = [
-      trimmed,
-      ...readRecent().filter((entry) => entry !== trimmed),
-    ].slice(0, MAX_RECENT);
-    window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Same reason as above.
-  }
-}
-
-function clearRecent() {
-  try {
-    window.localStorage.removeItem(RECENT_STORAGE_KEY);
-  } catch {
-    // Same reason as above.
-  }
 }

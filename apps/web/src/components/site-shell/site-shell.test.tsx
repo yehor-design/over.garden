@@ -601,11 +601,21 @@ describe("the shell's server HTML", () => {
   });
 
   it("closes the mobile sheet before opening the shared sign-out flow", async () => {
-    const source = await readShellSource();
+    // The sheet is a module of its own since `OVE-468`: its code arrives on
+    // the first press, and it arrives open.
+    const source = await readFile(
+      resolve(
+        process.cwd(),
+        "src/components/site-shell/site-shell-mobile-sheet.tsx",
+      ),
+      "utf8",
+    );
 
     // The menu owns whether it is open — state in the chrome would render the
     // chrome, and the page inside it, for a sheet (ADR-0032 D10).
-    expect(source).toContain("const [open, onOpenChange] = useState(false);");
+    expect(source).toContain(
+      "const [open, onOpenChange] = useState(defaultOpen);",
+    );
     expect(source).toMatch(
       /onBeforeRequest=\{\(\)\s*=>\s*onOpenChange\(false\)\s*\}/,
     );

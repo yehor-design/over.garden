@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 
-import { authClient } from "@/lib/auth-client";
 import { normalizeOwnerUserId } from "@/lib/auth/owner-scope-contract";
 import {
   announceSessionSignal,
@@ -53,8 +52,10 @@ export function SessionSignalBoundary({
 
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      void authClient
-        .getSession()
+      // The client arrives with the first return to the tab, not with the
+      // page: a guest who never leaves it never needs it (`OVE-468`).
+      void import("@/lib/auth-client")
+        .then(({ authClient }) => authClient.getSession())
         .then((result) => {
           const liveOwner = normalizeOwnerUserId(result.data?.user?.id ?? null);
           if (liveOwner !== ownerUserId) goHome();

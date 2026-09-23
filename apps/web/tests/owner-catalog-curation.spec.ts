@@ -17,6 +17,7 @@ import {
   scanAccessibility,
   tabToControl,
 } from "./helpers/redesign-accessibility";
+import { postPastRateLimit } from "./helpers/auth-rate-limit";
 
 /**
  * The owner curation queue end to end (OVE-391, ADR-0026 D10), against a
@@ -1139,20 +1140,13 @@ async function signInMember(
   baseURL: string,
   memberId: string,
 ) {
-  const statuses: number[] = [];
-  for (const delay of [0, 1_500, 4_000, 9_000]) {
-    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
-    const response = await member.request.post(
-      `${baseURL}/api/auth/sign-in/email`,
-      {
-        headers: { origin: baseURL },
-        data: { email: memberEmail(memberId), password: MEMBER_PASSWORD },
-      },
-    );
-    if (response.ok()) return;
-    statuses.push(response.status());
-    if (response.status() !== 429) break;
-  }
+  const { response, statuses } = await postPastRateLimit(() =>
+    member.request.post(`${baseURL}/api/auth/sign-in/email`, {
+      headers: { origin: baseURL },
+      data: { email: memberEmail(memberId), password: MEMBER_PASSWORD },
+    }),
+  );
+  if (response.ok()) return;
   throw new Error(`member sign-in answered ${statuses.join(", ")}`);
 }
 

@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { InterfaceMarket } from "@/lib/interface-market";
 import { getInterfaceLanguageControlPlacement } from "@/lib/interface-route-policy";
-import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { getTrustClientCopy } from "@/lib/trust-client-copy";
 
 export function AuthenticatedUtilityRegion({
   locale,
@@ -22,7 +22,7 @@ export function AuthenticatedUtilityRegion({
   pathname: string;
   isAuthenticated: boolean;
 }) {
-  const copy = getTrustSurfaceCopy(locale).signOut;
+  const copy = getTrustClientCopy(locale).signOut;
 
   return (
     <nav
