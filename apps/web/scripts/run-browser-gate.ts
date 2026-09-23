@@ -80,6 +80,16 @@ async function main() {
     PUBLIC_SITE_URL: origin,
     OVERGARDEN_ADMIN_OWNER_USER_ID: OWNER_BROWSER_FIXTURE.userId,
     CRON_SECRET: randomBytes(32).toString("base64url"),
+    // An auth key made for this run and handed to both sides, like the cron
+    // secret. `next start` is production-like, and without a versioned key it
+    // signs with a random one of its own that nothing else can verify — so a
+    // proof that needs a token the server accepts (`OVE-504`: an expired held
+    // action) could not make one. A runner that brings its own keeps it.
+    BETTER_AUTH_SECRETS:
+      process.env.BETTER_AUTH_SECRETS ??
+      `0:${randomBytes(32).toString("base64url")}`,
+    BETTER_AUTH_CURRENT_SECRET_VERSION:
+      process.env.BETTER_AUTH_CURRENT_SECRET_VERSION ?? "0",
     // The placeholders Playwright's own dev-server config uses. They make the
     // sign-in screen draw its Google entry point — which two specs assert —
     // and reach no Google; a runner with a real client keeps its own.

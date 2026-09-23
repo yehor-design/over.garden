@@ -38,7 +38,7 @@ test.describe("OVE-296 retired provider surface", () => {
 
       const response = await page.goto("/auth/sign-in");
       expect(response?.status()).toBe(200);
-      const surface = page.locator('[data-auth-surface="sign-in"]');
+      const surface = page.locator('[data-auth-frame="sign-in"]');
       await expect(surface).toBeVisible();
       await expect(surface).toHaveAttribute("lang", locale);
       await expect(surface.locator('input[type="email"]')).toBeVisible();

@@ -3,43 +3,26 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { ResetPasswordForm } from "./reset-password-form";
 
-const mocks = vi.hoisted(() => ({
-  error: null as string | null,
-  token: "opaque-reset-token",
-}));
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
-  useSearchParams: () => ({
-    get: (key: string) => {
-      if (key === "token") return mocks.token;
-      if (key === "error") return mocks.error;
-      return null;
-    },
-  }),
-}));
-
-vi.mock("../auth-actions", () => ({
-  resetPasswordAction: async () => ({ status: "idle", message: null }),
-}));
+const idle = async () => ({ status: "idle" as const, message: null });
 
 describe("ResetPasswordForm", () => {
-  beforeEach(() => {
-    mocks.token = "opaque-reset-token";
-    mocks.error = null;
-  });
-
   it("renders the ready state in the selected locale", () => {
-    const html = renderToStaticMarkup(<ResetPasswordForm locale="bg" />);
+    const html = renderToStaticMarkup(
+      <ResetPasswordForm locale="bg" token="opaque-reset-token" reset={idle} />,
+    );
 
-    expect(html).toContain("Изберете нова парола");
+    expect(html).toContain("Нова парола");
     expect(html).toContain("Потвърждаване на паролата");
     expect(html).toContain("Обновяване на паролата");
     expect(html).not.toMatch(/Choose a new password|Confirm password/i);
+    // Both fields are new passwords to a password manager.
+    expect(
+      html.toLowerCase().match(/autocomplete="new-password"/gu),
+    ).toHaveLength(2);
   });
 
   it("carries the token in the form, and nowhere a reader could hand it on", () => {
@@ -49,7 +32,9 @@ describe("ResetPasswordForm", () => {
     // already on the address that carries it, and it posts back to the same
     // origin. What must stay true is that it reaches nothing else — no link, no
     // visible text, no other attribute somebody could copy or share.
-    const html = renderToStaticMarkup(<ResetPasswordForm locale="bg" />);
+    const html = renderToStaticMarkup(
+      <ResetPasswordForm locale="bg" token="opaque-reset-token" reset={idle} />,
+    );
     const occurrences = [...html.matchAll(/opaque-reset-token/gu)];
     expect(occurrences).toHaveLength(1);
     expect(html).toContain(
@@ -68,17 +53,25 @@ describe("ResetPasswordForm", () => {
       join(dirname(fileURLToPath(import.meta.url)), "reset-password-form.tsx"),
       "utf8",
     );
-    expect(source).toContain("action={formAction}");
-    expect(source).toContain("] = useActionState(resetPasswordAction,");
+    expect(source).toMatch(/<form\s+action=\{formAction\}/u);
+    expect(source).toContain("] = useActionState(reset,");
     expect(source).not.toContain("authClient.resetPassword");
   });
 
-  it("renders an expired or invalid token recovery in Russian", () => {
-    mocks.error = "expired";
-    const html = renderToStaticMarkup(<ResetPasswordForm locale="ru" />);
-
-    expect(html).toContain("Эта ссылка для входа неактивна");
-    expect(html).toContain("Помощь со входом");
-    expect(html).not.toContain("expired");
+  it("keeps both passwords above the boundary a lost request re-mounts", () => {
+    // `OVE-504`: two passwords that differ, or a request that never came back,
+    // leave what was typed where it was typed.
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "reset-password-form.tsx"),
+      "utf8",
+    );
+    const outer = source.slice(
+      source.indexOf("export function ResetPasswordForm"),
+      source.indexOf("function ResetForm"),
+    );
+    expect(outer).toContain("useState");
+    expect(outer).toContain("<TransportBoundary");
+    expect(source).toMatch(/value=\{password\}/u);
+    expect(source).toMatch(/value=\{confirmation\}/u);
   });
 });

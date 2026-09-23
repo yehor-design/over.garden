@@ -5,16 +5,27 @@ import { redirect } from "next/navigation";
 import { APIError } from "better-auth/api";
 
 import { auth } from "@/lib/auth";
-import { passwordResetSuccessPath } from "@/lib/auth/auth-recovery";
+import {
+  passwordResetRedirectUrl,
+  passwordResetSuccessPath,
+} from "@/lib/auth/auth-recovery";
+import { getAuthScreenCopy } from "@/lib/auth-screen-copy";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
+import {
+  buildEmailVerificationCallbackHref,
+  buildSignInHref,
+} from "@/lib/navigation/sign-in-href";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
+  formatTrustTemplate,
   getLocalizedAuthClientErrorMessage,
   getLocalizedEmailSignUpResult,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
+import { getAuthBaseUrl } from "@/lib/runtime-url";
+import { handlePasswordResetRequest } from "@/server/auth/password-reset-request";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   describeWorkspaceFailure,
@@ -44,10 +55,23 @@ import {
  */
 
 export interface AuthFormState {
-  status: "idle" | "error" | "accepted" | "signed-in" | "redirect";
+  status:
+    | "idle"
+    | "error"
+    | "accepted"
+    | "unverified"
+    | "expired"
+    | "signed-in"
+    | "redirect";
   message: string | null;
   /** Where the browser must go next: the return path, or a provider handshake. */
   redirectTo?: string;
+  /**
+   * Who just signed in, so the cross-tab signal can leave alone a tab already
+   * drawn for this same account (ADR-0022 D6 reloads only for *another* one).
+   * It is the reader's own id, which every document drawn for them carries.
+   */
+  ownerUserId?: string | null;
 }
 
 export async function signInAction(
@@ -58,10 +82,13 @@ export async function signInAction(
   const copy = getTrustSurfaceCopy(locale).authPanel;
 
   try {
-    await auth.api.signInEmail({
+    const result = await auth.api.signInEmail({
       body: {
         email: field(formData, "email").trim(),
         password: field(formData, "password"),
+        // Where the verification link returns an unverified reader: the
+        // sign-in screen, carrying the same destination (`OVE-504`).
+        callbackURL: buildEmailVerificationCallbackHref(safeNext(formData)),
       },
       headers: await headers(),
     });
@@ -69,8 +96,18 @@ export async function signInAction(
       status: "signed-in",
       message: null,
       redirectTo: safeNext(formData),
+      ownerUserId: result?.user?.id ?? null,
     };
   } catch (error) {
+    // Better Auth checks the password before it checks verification, so this
+    // answer reaches only somebody who typed the right password: saying the
+    // address needs verifying tells an enumerator nothing they did not know.
+    if (isEmailNotVerified(error)) {
+      return {
+        status: "unverified",
+        message: getAuthScreenCopy(locale).verifyEmail,
+      };
+    }
     return {
       status: "error",
       message: authMessage(locale, error, copy.signInError),
@@ -91,6 +128,9 @@ export async function signUpAction(
         email: field(formData, "email").trim(),
         password: field(formData, "password"),
         name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+        // The verification link signs the new gardener in and returns them to
+        // what they were doing before signing up, not to the home page.
+        callbackURL: buildEmailVerificationCallbackHref(safeNext(formData)),
       },
       headers: await headers(),
     });
@@ -141,6 +181,7 @@ export async function resetPasswordAction(
 ): Promise<AuthFormState> {
   const locale = await getRequestInterfaceLocale();
   const copy = getTrustSurfaceCopy(locale).resetPassword;
+  const expired = getAuthScreenCopy(locale).reset.expiredDescription;
   const token = field(formData, "token").trim();
   const password = field(formData, "password");
 
@@ -148,7 +189,7 @@ export async function resetPasswordAction(
     return { status: "error", message: copy.mismatch };
   }
   if (token.length === 0) {
-    return { status: "error", message: copy.invalidDescription };
+    return { status: "expired", message: expired };
   }
 
   try {
@@ -157,14 +198,95 @@ export async function resetPasswordAction(
       headers: await headers(),
     });
   } catch (error) {
+    if (isPasswordOutOfBounds(error)) {
+      return {
+        status: "error",
+        message: getAuthScreenCopy(locale).reset.passwordRule,
+      };
+    }
     if (!(error instanceof APIError)) record(error, "reset_password");
-    return { status: "error", message: copy.invalidDescription };
+    return { status: "expired", message: expired };
   }
 
   // Outside the `try`: `redirect` throws by design, and catching it here would
-  // turn a completed reset into "the link did not work".
+  // turn a completed reset into "the link did not work". Every session ended
+  // with the old password, so the sign-in screen is the next step, and it says
+  // the password changed rather than leaving the reader to guess (`OVE-504`).
   redirect(passwordResetSuccessPath());
 }
+
+/**
+ * Asking for a password-reset link, from the help screen (`OVE-504`).
+ *
+ * It was `authClient.requestPasswordReset` behind a `type="button"`, so the
+ * one form a locked-out reader needs did nothing until the bundle had run, and
+ * it was the last client-only form on the five authentication screens
+ * (ADR-0024 D3). Now it is a Server Action — and it answers through the same
+ * path as `POST /api/auth/request-password-reset`, not through `auth.api`:
+ * Better Auth's rate limit lives in its HTTP router, and a direct call would
+ * have quietly lost it. The reader's address headers go with the request, so
+ * the limit is still per reader and not per server.
+ *
+ * Every address gets the same answer, whether or not it has an account.
+ */
+export async function requestPasswordResetAction(
+  _previous: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const locale = await getRequestInterfaceLocale();
+  const copy = getTrustSurfaceCopy(locale).authHelp.reset;
+  const screen = getAuthScreenCopy(locale);
+  const email = field(formData, "email").trim();
+  if (email.length === 0) {
+    return { status: "error", message: copy.emailRequired };
+  }
+
+  const base = new URL(getAuthBaseUrl());
+  const incoming = await headers();
+  const forwarded = new Headers({
+    "content-type": "application/json",
+    origin: base.origin,
+  });
+  for (const name of FORWARDED_CLIENT_HEADERS) {
+    const value = incoming.get(name);
+    if (value) forwarded.set(name, value);
+  }
+
+  let response: Response;
+  try {
+    response = await handlePasswordResetRequest(
+      new Request(new URL("/api/auth/request-password-reset", base), {
+        method: "POST",
+        headers: forwarded,
+        body: JSON.stringify({
+          email,
+          redirectTo: passwordResetRedirectUrl(base.origin),
+        }),
+      }),
+    );
+  } catch (error) {
+    record(error, "request_password_reset");
+    return { status: "error", message: copy.error };
+  }
+
+  if (response.status === 429) {
+    return { status: "error", message: screen.help.rateLimited };
+  }
+  if (response.status === 400) {
+    return { status: "error", message: copy.emailRequired };
+  }
+  if (!response.ok) return { status: "error", message: copy.error };
+  return { status: "accepted", message: copy.success };
+}
+
+/** What the rate limit keys on: the reader's address, as the edge saw it. */
+const FORWARDED_CLIENT_HEADERS = [
+  "x-forwarded-for",
+  "x-real-ip",
+  "x-vercel-forwarded-for",
+  "cf-connecting-ip",
+  "user-agent",
+] as const;
 
 /**
  * Starts an OAuth handshake and hands the provider URL back for the browser to
@@ -178,8 +300,12 @@ export async function startSocialSignInAction(
   const locale = await getRequestInterfaceLocale();
   const copy = getTrustSurfaceCopy(locale).authPanel;
 
+  const refused = formatTrustTemplate(copy.socialSignInError, {
+    provider: "Google",
+  });
+
   if (!isGoogleSignInEnabled() || field(formData, "provider") !== "google") {
-    return { status: "error", message: copy.socialSignInError };
+    return { status: "error", message: refused };
   }
 
   try {
@@ -189,7 +315,10 @@ export async function startSocialSignInAction(
         provider: "google",
         callbackURL,
         newUserCallbackURL: callbackURL,
-        errorCallbackURL: callbackURL,
+        // A refusal at the provider comes back to this screen, which says
+        // what happened, rather than to the destination, which knows
+        // nothing about it (`OVE-504`, criterion 5).
+        errorCallbackURL: buildSignInHref({ returnTo: callbackURL }),
         disableRedirect: true,
       },
       headers: await headers(),
@@ -197,10 +326,10 @@ export async function startSocialSignInAction(
     const url = (result as { url?: unknown } | null)?.url;
     return typeof url === "string" && url.length > 0
       ? { status: "redirect", message: null, redirectTo: url }
-      : { status: "error", message: copy.socialSignInError };
+      : { status: "error", message: refused };
   } catch (error) {
     record(error, "sign_in_social");
-    return { status: "error", message: copy.socialSignInError };
+    return { status: "error", message: refused };
   }
 }
 
@@ -224,6 +353,21 @@ function authMessage(
   }
   record(error, "sign_in");
   return fallback;
+}
+
+function isPasswordOutOfBounds(error: unknown): boolean {
+  if (!(error instanceof APIError)) return false;
+  const code = (error.body as { code?: unknown } | undefined)?.code;
+  return code === "PASSWORD_TOO_SHORT" || code === "PASSWORD_TOO_LONG";
+}
+
+function isEmailNotVerified(error: unknown): boolean {
+  if (!(error instanceof APIError)) return false;
+  const body = error.body as { code?: unknown } | undefined;
+  return (
+    body?.code === "EMAIL_NOT_VERIFIED" ||
+    /email not verified/iu.test(error.message)
+  );
 }
 
 function field(formData: FormData, name: string): string {

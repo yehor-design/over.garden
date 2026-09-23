@@ -25,8 +25,8 @@ describe("auth intent focus selector", () => {
       scrollIntoView: vi.fn(),
     };
     const root = {
-      querySelector: vi.fn(() => target),
-    } as unknown as Pick<Document, "querySelector">;
+      querySelectorAll: vi.fn(() => [target]),
+    } as unknown as Pick<Document, "querySelectorAll">;
 
     expect(
       focusAuthIntentControl('[data-auth-intent-control="publish"]', root),
@@ -40,11 +40,63 @@ describe("auth intent focus selector", () => {
 
   it("returns false while a delayed control is not mounted", () => {
     const root = {
-      querySelector: vi.fn(() => null),
-    } as unknown as Pick<Document, "querySelector">;
+      querySelectorAll: vi.fn(() => []),
+    } as unknown as Pick<Document, "querySelectorAll">;
 
     expect(
       focusAuthIntentControl('[data-auth-intent-control="comment"]', root),
     ).toBe(false);
+  });
+
+  it("skips a hidden streamed copy that cannot take focus (OVE-504)", () => {
+    const owner = { activeElement: null as unknown };
+    const hidden = {
+      ownerDocument: owner,
+      focus: vi.fn(),
+      scrollIntoView: vi.fn(),
+    };
+    const shown = {
+      ownerDocument: owner,
+      focus: vi.fn(() => {
+        owner.activeElement = shown;
+      }),
+      scrollIntoView: vi.fn(),
+    };
+    const root = {
+      querySelectorAll: vi.fn(() => [hidden, shown]),
+    } as unknown as Pick<Document, "querySelectorAll">;
+
+    expect(
+      focusAuthIntentControl('[data-auth-intent-control="follow"]', root),
+    ).toBe(true);
+    expect(hidden.scrollIntoView).not.toHaveBeenCalled();
+    expect(shown.scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("never focuses a guest's stand-in, whatever the document order (OVE-504)", () => {
+    const owner = { activeElement: null as unknown };
+    const guest = {
+      ownerDocument: owner,
+      hasAttribute: (name: string) => name === "data-auth-intent-guest",
+      focus: vi.fn(),
+      scrollIntoView: vi.fn(),
+    };
+    const member = {
+      ownerDocument: owner,
+      hasAttribute: () => false,
+      focus: vi.fn(() => {
+        owner.activeElement = member;
+      }),
+      scrollIntoView: vi.fn(),
+    };
+    const root = {
+      querySelectorAll: vi.fn(() => [guest, member]),
+    } as unknown as Pick<Document, "querySelectorAll">;
+
+    expect(
+      focusAuthIntentControl('[data-auth-intent-control="follow"]', root),
+    ).toBe(true);
+    expect(guest.focus).not.toHaveBeenCalled();
+    expect(member.focus).toHaveBeenCalled();
   });
 });

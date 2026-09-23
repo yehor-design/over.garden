@@ -47,7 +47,7 @@ describe("GET /auth/intent/resume", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/journal/balcony-tomato-check?tab=history&authIntent=bookmark&authControl=bookmark-main-control#engagement-bookmark-bookmark-main-control",
+      "/journal/balcony-tomato-check?tab=history&authIntent=bookmark&authControl=bookmark-main-control#engagement-bookmark-bookmark-main-control",
     );
     expect(mocks.verifyAuthIntentToken).toHaveBeenCalledWith(
       "opaque-intent-token",
@@ -65,7 +65,7 @@ describe("GET /auth/intent/resume", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/auth/intent?intent=opaque-intent-token&state=auth-required",
+      "/auth/intent?intent=opaque-intent-token&state=auth-required",
     );
   });
 
@@ -81,7 +81,7 @@ describe("GET /auth/intent/resume", () => {
 
     expect(response.status).toBe(303);
     expect(location).toBe(
-      "https://over.garden/auth/intent?intent=opaque-intent-token&state=auth-required&error=account_not_linked",
+      "/auth/intent?intent=opaque-intent-token&state=auth-required&error=account_not_linked",
     );
     expect(location).not.toMatch(
       /error_description|private|provider%20payload/i,
@@ -124,8 +124,8 @@ describe("GET /auth/intent/resume", () => {
       expect(response.status).toBe(303);
       expect(response.headers.get("location")).toBe(
         keepToken
-          ? `https://over.garden/auth/intent?intent=opaque-intent-token&state=${expectedState}`
-          : `https://over.garden/auth/intent?state=${expectedState}`,
+          ? `/auth/intent?intent=opaque-intent-token&state=${expectedState}`
+          : `/auth/intent?state=${expectedState}`,
       );
     },
   );

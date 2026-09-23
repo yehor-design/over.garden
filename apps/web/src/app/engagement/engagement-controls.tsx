@@ -7,8 +7,6 @@ import { ArrowBendUpLeftIcon as Reply } from "@/components/icons/ArrowBendUpLeft
 import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
 import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
 import {
-  Component,
-  Fragment,
   useActionState,
   useEffect,
   useLayoutEffect,
@@ -16,9 +14,11 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { useFormStatus } from "react-dom";
 
+import { TransportBoundary } from "@/components/transport-boundary";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { formatPublicCount } from "@/lib/public-surface-localization";
@@ -212,12 +212,15 @@ export function EngagementBookmarkControl({
   targetKind,
   targetRef,
   initialActive,
+  autoFocus = false,
   labels,
   submit,
 }: {
   targetKind: string;
   targetRef: string;
   initialActive: boolean;
+  /** Focused when the reader has just returned from signing in to save. */
+  autoFocus?: boolean;
   labels: ToggleLabels;
   submit: (
     previous: EngagementToggleState,
@@ -229,6 +232,8 @@ export function EngagementBookmarkControl({
       targetKind={targetKind}
       targetRef={targetRef}
       initialActive={initialActive}
+      autoFocus={autoFocus}
+      controlId={autoFocus ? "engagement-bookmark" : undefined}
       labels={labels}
       icon={(active) => (
         <Bookmark selected={active} className="size-4" aria-hidden="true" />
@@ -368,9 +373,12 @@ function ToggleButton({
 }) {
   const { pending } = useFormStatus();
   const shown = pending ? !active : active;
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  useFocusOnMount(buttonRef, autoFocus);
 
   return (
     <button
+      ref={buttonRef}
       id={controlId}
       type="submit"
       autoFocus={autoFocus}
@@ -473,6 +481,7 @@ function CommentForm({
   });
   const [initialState] = useState(state);
   const fieldRef = useRef<HTMLTextAreaElement | null>(null);
+  useFocusOnMount(fieldRef, autoFocus);
 
   // The server said the comment landed: the words are its now.
   useEffect(() => {
@@ -627,42 +636,17 @@ export function EngagementCommentActionButton({
 }
 
 /**
- * A request that never reached the server — or whose answer never came back —
- * makes React throw where the form stands, and the nearest boundary above an
- * entry page is the locale's own `error.tsx`: a dropped connection on Like
- * replaced the whole page with an error screen (`OVE-493`, criterion 4).
- *
- * This boundary answers it in place. It re-draws its control from scratch,
- * which puts back the state the server last confirmed rather than the
- * optimistic guess, and tells the control a request failed so it can say so.
- * The forms stay bare Server Action endpoints; this only changes what a
- * hydrated page does when the network does not.
+ * `autoFocus` on a server-rendered control is the browser's to honour, and a
+ * browser does not honour it when the address has a fragment — which every
+ * resumed action's address has (`#engagement-bookmark`, `#lineage-follow`,
+ * `#comments`) — while React does not focus a node it only hydrates. So a
+ * reader who signed in to save, follow or comment landed on the page with
+ * nothing focused, and had to find the control again (`OVE-504`).
  */
-class TransportBoundary extends Component<
-  { render: (failures: number) => ReactNode },
-  { failures: number; erred: boolean }
-> {
-  override state = { failures: 0, erred: false };
-
-  static getDerivedStateFromError() {
-    return { erred: true };
-  }
-
-  override componentDidUpdate() {
-    if (this.state.erred) {
-      this.setState((current) => ({
-        failures: current.failures + 1,
-        erred: false,
-      }));
-    }
-  }
-
-  override render() {
-    // The key moves on the failing render itself, so the control is
-    // re-mounted at once and never disappears for a frame.
-    const failures = this.state.failures + (this.state.erred ? 1 : 0);
-    return <Fragment key={failures}>{this.props.render(failures)}</Fragment>;
-  }
+function useFocusOnMount(ref: RefObject<HTMLElement | null>, enabled: boolean) {
+  useEffect(() => {
+    if (enabled) ref.current?.focus();
+  }, [enabled, ref]);
 }
 
 /**

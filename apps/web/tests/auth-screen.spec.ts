@@ -123,7 +123,7 @@ test.describe("a successful sign-in, watched", () => {
 
     // Arrive the way a reader does: from a page, carrying where they were.
     await page.goto("/auth/sign-in?next=%2Fjournals", { waitUntil: "load" });
-    await expect(page.locator('[data-auth-surface="sign-in"]')).toBeVisible();
+    await expect(page.locator('[data-auth-frame="sign-in"]')).toBeVisible();
     await page.locator('input[name="email"]').fill(gardener.email);
     await page.locator('input[name="password"]').fill(TEST_PASSWORD);
     await page.getByRole("button", { name: /Увійти/u }).click();
@@ -277,7 +277,9 @@ test.describe("the screens themselves", () => {
     );
     await page.getByRole("button", { name: /Оновити|Обнов|Обновить/u }).click();
 
-    const alert = page.locator('[data-auth-message="error"]');
+    // A refused link is its own state since `OVE-504`, with the way to a new
+    // one inside it.
+    const alert = page.locator('[data-auth-message="expired"]');
     await expect(alert).toBeVisible({ timeout: 20_000 });
     expect(await alert.getAttribute("role")).toBe("alert");
     // It says the link did not work, and not why.

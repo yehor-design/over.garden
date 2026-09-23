@@ -181,6 +181,7 @@ export function PublicEngagementPanel({
                 "viewerBookmarked" in summary &&
                 Boolean(summary.viewerBookmarked)
               }
+              autoFocus={resumeAction === "bookmark"}
               labels={{
                 inactive: copy.engagement.bookmark,
                 active: copy.engagement.bookmarkActive,
