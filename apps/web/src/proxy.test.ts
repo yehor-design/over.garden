@@ -253,6 +253,25 @@ describe("app route cache guardrail", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
   });
 
+  it("sends the garden page's old space journal to the space's own page (OVE-490)", async () => {
+    const spaceId = "10000000-0000-4000-8000-000000000001";
+    const response = await responseFor(
+      `/garden?space=${spaceId}&saveProgress=space-entry`,
+      { accept: "text/html", "sec-fetch-dest": "document" },
+    );
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      `https://over.garden/garden/spaces/${spaceId}?saveProgress=space-entry`,
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    // Anything else under `/garden` is the page itself, not a redirect.
+    expect(
+      (await responseFor("/garden?space=not-a-uuid", { accept: "text/html" }))
+        .status,
+    ).toBe(200);
+  });
+
   it("redirects www document navigation to the canonical apex before auth UI can render", async () => {
     const response = await responseForHost(
       "https://www.over.garden/garden?returnTo=%2Fgarden%2Fprofile",

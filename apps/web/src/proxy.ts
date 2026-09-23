@@ -102,6 +102,7 @@ import {
   publicProfileBasePath,
   publicTopicPath,
 } from "@/lib/garden/public-paths";
+import { legacySpaceJournalLocation } from "@/lib/garden/space-page";
 import {
   publicJournalEntryNameKey,
   publicJournalEntryNumberKey,
@@ -809,6 +810,20 @@ export async function proxy(request: NextRequest) {
   // `src/app` any more and `/species` has no index of its own, so both are now
   // exactly the shapes those blocks 404 — the redirect has to be decided
   // first or a published address answers 404 instead of moving.
+  // A space's journal on the garden page became the space's own page
+  // (`OVE-490`); the old address answers 308 instead of rendering a garden
+  // page that no longer shows one space.
+  const legacySpaceJournal = legacySpaceJournalLocation(request.nextUrl);
+  if (legacySpaceJournal) {
+    return withAppRouteContract(
+      NextResponse.redirect(new URL(legacySpaceJournal, request.url), {
+        status: 308,
+      }),
+      request,
+      localization,
+    );
+  }
+
   const legacyCatalogDoor = matchLegacyCatalogBrowsePath(
     request.nextUrl.pathname,
   );

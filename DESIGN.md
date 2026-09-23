@@ -1053,6 +1053,13 @@ tomato unwritten for a fortnight was flagged as a problem.
 - **Every view is an address.** Query, mode, order and page are the URL, so a
   view survives reload and Back; each row's Write carries `returnTo` back to
   that row's own anchor, and Close lands on it.
+- **A space is a place with a page** (`OVE-490`). `/garden/spaces/[id]`
+  answers what lives here and what was written here. Its history is an
+  aggregate of the entries that already belong to it — each once, under its one
+  permalink, labelled with what it is about — never a copy. Settings sit on
+  their own child route, and deletion is offered only when nothing hangs from
+  the space: a button that would cascade into a gardener's plants and entries
+  is not a button this product shows.
 
 ---
 

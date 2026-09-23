@@ -53,6 +53,8 @@ export interface SpaceSetupCopy {
     createdBody: string;
     replayed: string;
     toGarden: string;
+    /** The new space's own page (`OVE-490`). */
+    openSpace: string;
     continue: string;
     failed: string;
     uncertain: string;
@@ -119,6 +121,7 @@ const uk: SpaceSetupCopy = {
       "Він порожній. Записи в ньому з'являться, коли ви їх опублікуєте.",
     replayed: "Цей простір уже було створено цим запитом — другий не з'явився.",
     toGarden: "До мого саду",
+    openSpace: "Відкрити простір",
     continue: "Повернутися",
     failed:
       "Не вдалося створити простір. Ваші відповіді збережено на цій сторінці.",
@@ -190,6 +193,7 @@ const bg: SpaceSetupCopy = {
     replayed:
       "Това пространство вече е създадено от същата заявка — второ не се появи.",
     toGarden: "Към моята градина",
+    openSpace: "Отвори пространството",
     continue: "Връщане",
     failed:
       "Пространството не беше създадено. Отговорите ви са запазени на тази страница.",
@@ -262,6 +266,7 @@ const ru: SpaceSetupCopy = {
     replayed:
       "Это пространство уже было создано этим запросом — второе не появилось.",
     toGarden: "К моему саду",
+    openSpace: "Открыть пространство",
     continue: "Вернуться",
     failed:
       "Не удалось создать пространство. Ваши ответы сохранены на этой странице.",

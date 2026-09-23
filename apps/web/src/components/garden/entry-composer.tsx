@@ -337,7 +337,7 @@ export function EntryComposer({
         returnTo:
           destination.kind === "object"
             ? `/garden/objects/${encodeURIComponent(destination.id)}`
-            : `/garden?space=${encodeURIComponent(destination.id)}#space-journal`,
+            : `/garden/spaces/${encodeURIComponent(destination.id)}#space-history`,
       });
       setSubmitState("published");
       setMessage(atomicCopy.published);

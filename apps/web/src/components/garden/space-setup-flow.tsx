@@ -253,7 +253,14 @@ export function SpaceSetupFlow({
           {outcome.replayed ? copy.result.replayed : copy.result.createdBody}
         </p>
         {returnTo ? null : (
-          <div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={`/garden/spaces/${encodeURIComponent(outcome.space.id)}`}
+              data-space-setup-open="true"
+              className={buttonVariants()}
+            >
+              {copy.result.openSpace}
+            </Link>
             <Link
               href="/garden#garden-spaces"
               className={buttonVariants({ variant: "secondary" })}
@@ -537,7 +544,7 @@ function OutcomeNotice({
           actions={
             <>
               <Link
-                href="/garden#garden-spaces"
+                href={`/garden/spaces/${encodeURIComponent(outcome.existing.id)}`}
                 className={buttonVariants({ variant: "secondary", size: "sm" })}
               >
                 {copy.duplicate.openExisting}

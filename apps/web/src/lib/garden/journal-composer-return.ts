@@ -6,6 +6,7 @@ const SAFE_UUID =
 export function journalCreateReturnFallback(input: {
   target: JournalEntryTarget;
   plantObjectId?: string | null;
+  spaceId?: string | null;
 }): string {
   if (
     input.target === "plant_object_entry" &&
@@ -13,6 +14,14 @@ export function journalCreateReturnFallback(input: {
     SAFE_UUID.test(input.plantObjectId)
   ) {
     return `/garden/objects/${input.plantObjectId}`;
+  }
+  // A space's own page since OVE-490.
+  if (
+    input.target === "space_entry" &&
+    input.spaceId &&
+    SAFE_UUID.test(input.spaceId)
+  ) {
+    return `/garden/spaces/${input.spaceId}`;
   }
   return "/garden";
 }

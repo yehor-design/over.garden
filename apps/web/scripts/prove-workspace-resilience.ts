@@ -46,6 +46,16 @@ export const WORKSPACE_SURFACE_PROBES: readonly WorkspaceSurfaceProbe[] = [
     heading: "Живий об",
   },
   {
+    surface: "space",
+    path: "/garden/spaces/00000000-0000-4000-8000-000000000001",
+    heading: "Простір",
+  },
+  {
+    surface: "space-settings",
+    path: "/garden/spaces/00000000-0000-4000-8000-000000000001/settings",
+    heading: "Налаштування простору",
+  },
+  {
     surface: "entry-edit",
     path: "/garden/entries/00000000-0000-4000-8000-000000000001/edit",
     heading: "Редагування запису",

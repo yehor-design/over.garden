@@ -146,7 +146,7 @@ async function JournalEntryEditSection({
   const afterDeleteHref =
     destinationTarget.kind === "object"
       ? `/garden/objects/${encodeURIComponent(destinationTarget.id)}`
-      : `/garden?space=${encodeURIComponent(destinationTarget.id)}#space-journal`;
+      : `/garden/spaces/${encodeURIComponent(destinationTarget.id)}#space-history`;
   const blockIdByMediaId = new Map(
     baseline.document.blocks.flatMap((block) =>
       block.type === "image" ? [[block.mediaAssetId, block.id] as const] : [],

@@ -238,7 +238,8 @@ test.describe("the one entry composer", () => {
       await mentions.getByRole("checkbox", { name: "Томат" }).check();
       const publish = composer.locator('[data-entry-composer-publish="true"]');
       await publish.dblclick();
-      await page.waitForURL(/space=.*#space-journal|\/garden\?/u, {
+      // A space's own page since OVE-490.
+      await page.waitForURL(/\/garden\/spaces\/[0-9a-f-]{36}/u, {
         timeout: 30_000,
       });
       const entries = await entriesOf(pool, userId);
