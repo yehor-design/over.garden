@@ -1500,6 +1500,46 @@ product into its gardening FAQ. The hub and every topic said which topics had
   - Entries that cannot be read leave the text, with a retry of the same
     page, never a detour to the hub.
 
+### 5.20 Notes, market pages and the source archive say what they are
+
+The notes' heading was the team's plan ("Корисні публічні сторінки перед
+тонкими…"). The market pages said "Що публічний discovery може безпечно
+використовувати зараз" and showed English cards on a Ukrainian page. The EPPO
+archive called its records "безпечні" and "не схвалена продуктова
+ідентичність", counted "Знайдено записів: 0", and claimed a second
+`#main-content` (`OVE-499`, OG-UX-034). The rules:
+
+- **Say what the reader finds, not what the team plans.** A heading promises
+  the reader something. Search engines, traffic, thin pages and the next
+  slice of work are never in the copy.
+- **A note is signed and dated.** The eyebrow names the format ("Нотатка"),
+  the byline carries "Редакція OverGarden" and the date, and the sections are
+  the contents. "Читайте також" is the one list after the text. A news
+  article, when it exists, passes no author at all (ADR-0027 D2); the byline
+  drops the row, never shows an empty one.
+- **A market page explains its purpose and links only what exists.**
+  - The country is the eyebrow.
+  - Then who it is for, what a gardener can do there today, and what is
+    true of OverGarden. The location wording is the privacy page's own.
+  - Then "З чого почати" into the journals, the catalogue, knowledge and
+    the guide, each in the page's language.
+  - No prices, no orders, no delivery, no place finer than a region.
+- **A reference is not a front door.**
+  - The archive says it is a source ("Довідкове джерело") and points a
+    gardener to the catalogue.
+  - Every record keeps its source's credit, its licence and the date it was
+    received, in the page's language.
+  - An empty archive, a search with no results, a search the archive cannot
+    run and an unavailable archive are four different sentences, and none of
+    them is a nought.
+- **One skip-link target.** A page never sets `id="main-content"`: the shell
+  owns it.
+- **Links into a query view stay plain.** A search, a later page or a retry
+  of the archive is a plain link or a `GET` form (`public-query-twin.ts`).
+
+The contract the database-backed notes and news reuse is
+`docs/redesign/2026-09-21/OVE-499-ARTICLE-CONTRACT.md`.
+
 ---
 
 ## 6. Language and locale

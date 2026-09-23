@@ -81,13 +81,16 @@ describe("localized EPPO source explorer page", () => {
       "ru",
     );
     expect(html).toContain('data-eppo-archive="explorer"');
-    expect(html).toContain('id="main-content"');
-    expect(html).toContain("Запись источника — не одобрено");
+    // The shell holds the skip link's `#main-content`; the page does not claim
+    // it again (`OVE-499`).
+    expect(html).not.toContain('id="main-content"');
+    expect(html).toContain("Запись источника");
     expect(html).toContain("EPPO Codes");
     expect(html).toContain("Научное название");
-    expect(html).toContain("Таксономический ранг");
+    expect(html).toContain("Ранг");
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain("Одобрено Stable Registry");
+    expect(html).not.toMatch(/безопасн|продуктов|одобрен/u);
   });
 
   it("reads the archive's own filters only through its twin", async () => {

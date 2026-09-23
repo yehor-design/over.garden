@@ -24,8 +24,26 @@ describe("/markets/[market]", () => {
     );
 
     expect(html).toContain("OverGarden для садівників в Україні");
+    // What the page is for, in the reader's words (`OVE-499`): who it is
+    // for, what can be done here, what is true, and where to start.
     expect(html).toContain("Для кого це");
-    expect(html).toContain("Обіцянка");
+    expect(html).toContain("Що тут можна робити");
+    expect(html).toContain("Що варто знати");
+    expect(html).toContain("З чого почати");
+    expect(html).toContain("Державного реєстру сортів рослин України");
+    expect(html).toContain("Точне місце не збирається й не показується");
+    expect(html).not.toMatch(/discovery|hreflang|UGC|Ринкова|Обіцянка/u);
+    // Every start is a page that exists, in the page's language — never an
+    // English card on a Ukrainian page.
+    expect(html).toContain('href="/journals"');
+    expect(html).toContain('href="/catalog"');
+    expect(html).toContain('href="/knowledge"');
+    expect(html).toContain("Журнали садівників");
+    expect(html).not.toMatch(
+      /Create a public entry|Read the first-record guide/u,
+    );
+    // Nothing for sale, nobody located.
+    expect(html).not.toMatch(/ціна|кошик|оплат|доставк|координат/iu);
     expect(html).toContain("Створити публічний запис");
     expect(html).not.toContain("/ru/markets/ukraine");
     expect(html).not.toContain("/bg/markets/ukraine");
@@ -47,6 +65,13 @@ describe("/markets/[market]", () => {
 
     expect(html).toContain("OverGarden за градинари в България");
     expect(html).toContain("градини, дворове, оранжерии, тераси");
+    expect(html).toContain("Какво можете да правите тук");
+    expect(html).toContain("Общия каталог на ЕС");
+    // Links into listings carry the page's language.
+    expect(html).toContain('href="/bg/journals"');
+    expect(html).toContain('href="/bg/catalog"');
+    expect(html).toContain("Дневници на градинари");
+    expect(html).not.toMatch(/hreflang|UGC|откриване/u);
     expect(html).not.toContain("/uk/markets/bulgaria");
     expect(html).not.toContain("/ru/markets/bulgaria");
     expect(html).not.toContain("data-interface-language-control");

@@ -4,22 +4,39 @@ import type {
   EppoArchiveKind,
 } from "@/server/catalog-source/public-eppo-explorer-repository";
 
+/**
+ * The EPPO archive's words (`OVE-499`).
+ *
+ * The archive is a reference: EPPO's own records as OverGarden received them,
+ * each with its source's credit and licence. It is not a way into the garden,
+ * so it says what it is, points a gardener to the catalogue, and never calls a
+ * record "safe", "approved" or "a product identity" — that was the team's
+ * vocabulary, not the reader's.
+ */
 export interface EppoArchiveCopy {
+  eyebrow: string;
   title: string;
   intro: string;
+  /** Where a gardener looking for a plant or an animal should go instead. */
+  catalogueHint: string;
+  catalogueLink: string;
   resultsTitle: string;
+  /** How many records the page shows — never a nought. */
+  resultsCount: (count: number) => string;
+  showAll: string;
   detailTitle: string;
   /** OVE-394: the archive record now has a canonical card to walk to. */
   canonicalCard: string;
   searchLabel: string;
   searchPlaceholder: string;
   searchButton: string;
-  reset: string;
   kindLabel: string;
   kinds: Record<EppoArchiveKind, string>;
   invalidQuery: string;
+  /** The archive holds nothing at all. */
   empty: string;
-  resultsCount: string;
+  /** A search found nothing. */
+  noResults: (query: string) => string;
   unavailable: string;
   retry: string;
   browseArchive: string;
@@ -28,6 +45,7 @@ export interface EppoArchiveCopy {
   sourceLicense: string;
   sourceAttribution: string;
   observed: string;
+  code: string;
   aliases: string;
   scientificName: string;
   taxonomicRank: string;
@@ -39,142 +57,156 @@ export interface EppoArchiveCopy {
 
 const COPY: Record<PublicLocale, EppoArchiveCopy> = {
   uk: {
-    title: "Архів джерел EPPO",
+    eyebrow: "Довідкове джерело",
+    title: "Архів EPPO",
     intro:
-      "Спостережені публічні дані EPPO Codes. Запис у цьому архіві не є схваленим ідентифікатором продуктового каталогу OverGarden.",
-    resultsTitle: "Записи джерела",
-    detailTitle: "Запис джерела EPPO",
-    canonicalCard: "Картка організму в OverGarden",
-    searchLabel: "Пошук за назвою або кодом",
-    searchPlaceholder: "Введіть щонайменше 2 символи",
+      "Коди й назви рослин і тварин з EPPO Global Database — такими, якими OverGarden їх отримав. Це записи джерела для довідки, а не картки каталогу OverGarden.",
+    catalogueHint:
+      "Що це за рослина чи тварина і що про неї записали садівники — розповідає каталог.",
+    catalogueLink: "Відкрити каталог",
+    resultsTitle: "Записи",
+    resultsCount: (count) => `Показано: ${count.toLocaleString("uk-UA")}`,
+    showAll: "Показати всі записи",
+    detailTitle: "Запис EPPO",
+    canonicalCard: "Картка в каталозі OverGarden",
+    searchLabel: "Назва або код EPPO",
+    searchPlaceholder: "Наприклад, Solanum або LYPES",
     searchButton: "Шукати",
-    reset: "Скинути пошук",
-    kindLabel: "Тип",
+    kindLabel: "Рослини чи тварини",
     kinds: {
       all: "Усі",
       plant: "Рослини",
       animal: "Тварини",
     },
     invalidQuery:
-      "Використайте від 2 до 120 звичайних символів без службових знаків.",
-    empty: "За цим запитом безпечних публічних записів немає.",
-    resultsCount: "Знайдено записів: {count}",
-    unavailable:
-      "Пошук тимчасово недоступний. Дані не були замінені припущенням.",
+      "Введіть від 2 до 120 символів; знаки %, _ і \\ не підходять.",
+    empty: "В архіві поки немає жодного запису.",
+    noResults: (query) => `За «${query}» записів немає.`,
+    unavailable: "Архів тимчасово недоступний. Спробуйте ще раз за хвилину.",
     retry: "Спробувати ще раз",
-    browseArchive: "Переглянути архів EPPO",
+    browseArchive: "До архіву EPPO",
     next: "Наступні записи",
     sourceCredit: "Джерело",
     sourceLicense: "Ліцензія",
-    sourceAttribution: "Атрибуція",
-    observed: "Спостережено",
-    aliases: "Інші безпечні назви",
+    sourceAttribution: "Зазначення джерела",
+    observed: "Отримано",
+    code: "Код EPPO",
+    aliases: "Інші назви",
     scientificName: "Наукова назва",
-    taxonomicRank: "Таксономічний ранг",
-    parentTaxon: "Батьківський таксон",
+    taxonomicRank: "Ранг",
+    parentTaxon: "Вищий таксон",
     badges: {
-      source_record_not_approved: "Запис джерела — не схвалено",
-      superseded_source_evidence: "Застаріле джерельне свідчення",
+      source_record_not_approved: "Запис джерела",
+      superseded_source_evidence: "Замінений у джерелі",
     },
     evidenceDescription: {
       source_record_not_approved:
-        "Це публічне свідчення джерела; воно ще не є продуктовою ідентичністю OverGarden.",
+        "Запис з EPPO у тому вигляді, в якому його подає джерело. Він служить довідкою і не є карткою каталогу OverGarden.",
       superseded_source_evidence:
-        "Джерело позначає це свідчення як неактивне або замінене; воно не є продуктовою ідентичністю OverGarden.",
+        "Джерело позначило цей запис як неактивний або замінений іншим.",
     },
-    notFound: "Безпечний публічний запис не знайдено.",
+    notFound: "Такого запису в архіві немає.",
   },
   bg: {
-    title: "Архив на източниците EPPO",
+    eyebrow: "Справочен източник",
+    title: "Архив EPPO",
     intro:
-      "Наблюдавани публични данни от EPPO Codes. Записът тук не е одобрена продуктова идентичност в каталога на OverGarden.",
-    resultsTitle: "Записи от източника",
-    detailTitle: "Запис от източника EPPO",
-    canonicalCard: "Картa на организма в OverGarden",
-    searchLabel: "Търсене по име или код",
-    searchPlaceholder: "Въведете поне 2 знака",
+      "Кодове и имена на растения и животни от EPPO Global Database — такива, каквито OverGarden ги е получил. Това са записи от източника за справка, а не карти от каталога на OverGarden.",
+    catalogueHint:
+      "Какво е растението или животното и какво са записали градинарите за него — вижте в каталога.",
+    catalogueLink: "Към каталога",
+    resultsTitle: "Записи",
+    resultsCount: (count) => `Показани: ${count.toLocaleString("bg-BG")}`,
+    showAll: "Покажи всички записи",
+    detailTitle: "Запис от EPPO",
+    canonicalCard: "Карта в каталога на OverGarden",
+    searchLabel: "Име или код на EPPO",
+    searchPlaceholder: "Например Solanum или LYPES",
     searchButton: "Търсене",
-    reset: "Изчистване на търсенето",
-    kindLabel: "Тип",
+    kindLabel: "Растения или животни",
     kinds: {
       all: "Всички",
       plant: "Растения",
       animal: "Животни",
     },
     invalidQuery:
-      "Използвайте от 2 до 120 обикновени знака без служебни символи.",
-    empty: "Няма безопасни публични записи за това търсене.",
-    resultsCount: "Намерени записи: {count}",
-    unavailable:
-      "Търсенето временно не е достъпно. Данните не са заменени с предположение.",
+      "Въведете от 2 до 120 знака; знаците %, _ и \\ не са позволени.",
+    empty: "В архива все още няма нито един запис.",
+    noResults: (query) => `За „${query}“ няма записи.`,
+    unavailable: "Архивът временно не е достъпен. Опитайте отново след минута.",
     retry: "Опитайте отново",
-    browseArchive: "Преглед на архива EPPO",
+    browseArchive: "Към архива EPPO",
     next: "Следващи записи",
     sourceCredit: "Източник",
     sourceLicense: "Лиценз",
-    sourceAttribution: "Атрибуция",
-    observed: "Наблюдавано",
-    aliases: "Други безопасни имена",
+    sourceAttribution: "Посочване на източника",
+    observed: "Получено",
+    code: "Код на EPPO",
+    aliases: "Други имена",
     scientificName: "Научно име",
-    taxonomicRank: "Таксономичен ранг",
-    parentTaxon: "Родителски таксон",
+    taxonomicRank: "Ранг",
+    parentTaxon: "По-висок таксон",
     badges: {
-      source_record_not_approved: "Запис от източник — не е одобрен",
-      superseded_source_evidence: "Заменено свидетелство от източник",
+      source_record_not_approved: "Запис от източника",
+      superseded_source_evidence: "Заменен в източника",
     },
     evidenceDescription: {
       source_record_not_approved:
-        "Това е публично свидетелство от източник; все още не е продуктова идентичност на OverGarden.",
+        "Запис от EPPO, какъвто го дава източникът. Служи за справка и не е карта от каталога на OverGarden.",
       superseded_source_evidence:
-        "Източникът маркира свидетелството като неактивно или заменено; то не е продуктова идентичност на OverGarden.",
+        "Източникът е отбелязал този запис като неактивен или заменен с друг.",
     },
-    notFound: "Безопасен публичен запис не е намерен.",
+    notFound: "Такъв запис в архива няма.",
   },
   ru: {
-    title: "Архив источников EPPO",
+    eyebrow: "Справочный источник",
+    title: "Архив EPPO",
     intro:
-      "Наблюдаемые публичные данные EPPO Codes. Запись в этом архиве не является одобренной продуктовой идентичностью каталога OverGarden.",
-    resultsTitle: "Записи источника",
-    detailTitle: "Запись источника EPPO",
-    canonicalCard: "Карточка организма в OverGarden",
-    searchLabel: "Поиск по названию или коду",
-    searchPlaceholder: "Введите минимум 2 символа",
+      "Коды и названия растений и животных из EPPO Global Database — такими, какими OverGarden их получил. Это записи источника для справки, а не карточки каталога OverGarden.",
+    catalogueHint:
+      "Что это за растение или животное и что о нём записали садоводы — рассказывает каталог.",
+    catalogueLink: "Открыть каталог",
+    resultsTitle: "Записи",
+    resultsCount: (count) => `Показано: ${count.toLocaleString("ru-RU")}`,
+    showAll: "Показать все записи",
+    detailTitle: "Запись EPPO",
+    canonicalCard: "Карточка в каталоге OverGarden",
+    searchLabel: "Название или код EPPO",
+    searchPlaceholder: "Например, Solanum или LYPES",
     searchButton: "Найти",
-    reset: "Сбросить поиск",
-    kindLabel: "Тип",
+    kindLabel: "Растения или животные",
     kinds: {
       all: "Все",
       plant: "Растения",
       animal: "Животные",
     },
-    invalidQuery:
-      "Используйте от 2 до 120 обычных символов без служебных знаков.",
-    empty: "По этому запросу нет безопасных публичных записей.",
-    resultsCount: "Найдено записей: {count}",
-    unavailable:
-      "Поиск временно недоступен. Данные не заменены предположением.",
+    invalidQuery: "Введите от 2 до 120 символов; знаки %, _ и \\ не подходят.",
+    empty: "В архиве пока нет ни одной записи.",
+    noResults: (query) => `По «${query}» записей нет.`,
+    unavailable: "Архив временно недоступен. Попробуйте ещё раз через минуту.",
     retry: "Повторить",
-    browseArchive: "Открыть архив EPPO",
+    browseArchive: "К архиву EPPO",
     next: "Следующие записи",
     sourceCredit: "Источник",
     sourceLicense: "Лицензия",
-    sourceAttribution: "Атрибуция",
-    observed: "Наблюдено",
-    aliases: "Другие безопасные названия",
+    sourceAttribution: "Указание источника",
+    observed: "Получено",
+    code: "Код EPPO",
+    aliases: "Другие названия",
     scientificName: "Научное название",
-    taxonomicRank: "Таксономический ранг",
-    parentTaxon: "Родительский таксон",
+    taxonomicRank: "Ранг",
+    parentTaxon: "Вышестоящий таксон",
     badges: {
-      source_record_not_approved: "Запись источника — не одобрено",
-      superseded_source_evidence: "Устаревшее свидетельство источника",
+      source_record_not_approved: "Запись источника",
+      superseded_source_evidence: "Заменена в источнике",
     },
     evidenceDescription: {
       source_record_not_approved:
-        "Это публичное свидетельство источника; оно пока не является продуктовой идентичностью OverGarden.",
+        "Запись из EPPO в том виде, в каком её даёт источник. Она служит справкой и не является карточкой каталога OverGarden.",
       superseded_source_evidence:
-        "Источник помечает это свидетельство как неактивное или заменённое; оно не является продуктовой идентичностью OverGarden.",
+        "Источник пометил эту запись как неактивную или заменённую другой.",
     },
-    notFound: "Безопасная публичная запись не найдена.",
+    notFound: "Такой записи в архиве нет.",
   },
 };
 

@@ -145,6 +145,31 @@ about and what it rests on (DESIGN.md §5.19).
 
 See `docs/redesign/2026-09-21/OVE-498-PROOF.md`.
 
+**Notes, market pages and the source archive (OVE-499):** the remaining
+reading pages say what they are (DESIGN.md §5.20).
+- The notes (`/blog`) say what a gardener finds there, in place of the team's
+  search plan. The note is signed "Редакція OverGarden" and dated, its
+  sections are the contents, and "Читайте також" is its one related list. Its
+  URL is unchanged, so moving notes into the database later still finds it.
+- The market pages explain their purpose: who they are for, what a gardener
+  can do, and what is true, with the location wording taken from the privacy
+  page. They link the journals, the catalogue, knowledge and the guide in the
+  page's language; the English cards and "public discovery" copy are gone.
+  Nothing is for sale and nobody is located. The locale grouping is
+  unchanged.
+- The EPPO archive is a reference: "Довідкове джерело", a pointer to the
+  catalogue, records with credit, licence and date received in the page's
+  language, and four worded states instead of "Знайдено записів: 0".
+  - It no longer sets a second `#main-content`.
+  - Its later pages and retries are plain links into its query view.
+  - Production still keeps it behind `STABLE_REGISTRY_PUBLIC_DISCOVERY`, so
+    it answers 404 there.
+- `docs/redesign/2026-09-21/OVE-499-ARTICLE-CONTRACT.md` records what the
+  news and blog entity tasks must hand the article components, including no
+  author for news, and what the static pages must not imply.
+
+See `docs/redesign/2026-09-21/OVE-499-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.
