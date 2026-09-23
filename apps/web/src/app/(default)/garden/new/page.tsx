@@ -7,6 +7,7 @@ import {
 } from "@/components/garden/entry-composer";
 import { WorkspaceSectionError } from "@/components/garden/workspace-state";
 import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
@@ -69,18 +70,29 @@ function communityReturnPath(
   return localizedPath(locale, own);
 }
 
-/** The composer's own address with the context it was opened with. */
+/**
+ * The composer's own address with the context it was opened with.
+ *
+ * The slashes of `returnTo` stay literal (`OVE-501`). The return-path guard
+ * (`internal-return-path.ts`) refuses an encoded `/` anywhere in an address,
+ * and `URLSearchParams` encodes every one — so signing in from a reminder's
+ * Write, or from a community's, came back to an empty composer with the plant
+ * and the way back both gone. A literal `/` is valid in a query; `#` and `&`
+ * stay encoded.
+ */
 function composerSignInReturn(params: {
   object?: string;
   space?: string;
   community?: string;
   returnTo?: string;
 }) {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value) query.set(key, value);
-  }
-  const search = query.toString();
+  const search = Object.entries(params)
+    .filter((entry): entry is [string, string] => Boolean(entry[1]))
+    .map(
+      ([key, value]) =>
+        `${key}=${encodeURIComponent(value).replace(/%2F/giu, "/")}`,
+    )
+    .join("&");
   return search
     ? `${GARDEN_ENTRY_COMPOSER_PATH}?${search}`
     : GARDEN_ENTRY_COMPOSER_PATH;
@@ -95,7 +107,9 @@ function composerSignInReturn(params: {
  *
  * Every read is settled (ADR-0023): a destination that cannot be read opens
  * the picker instead, and a failed disclosure read asks for the disclosure
- * rather than skipping it.
+ * rather than skipping it. A destination that is not there — a reminder
+ * opened after its plant was deleted — opens the picker too, and says so
+ * (`OVE-501`, criterion 2).
  */
 export default async function GardenEntryComposerPage({
   searchParams,
@@ -218,6 +232,16 @@ export default async function GardenEntryComposerPage({
       : "/garden/objects/new";
     return (
       <EntryComposerShell locale={locale}>
+        {/* The last plant was deleted and a reminder for it still opened
+            this: say so above the way to add one. */}
+        {target && destination?.status === "ready" && !destination.value ? (
+          <Callout
+            tone="warning"
+            data-entry-composer-destination-notice={target.kind}
+          >
+            <p>{copy.destinationNotice[target.kind]}</p>
+          </Callout>
+        ) : null}
         <EmptyState
           illustration={resolveIllustration("first-entry")}
           title={copy.empty.title}
@@ -268,6 +292,15 @@ export default async function GardenEntryComposerPage({
         }
         closeHref={closeHref}
         community={communityContext}
+        destinationNotice={
+          !target || !destination
+            ? null
+            : destination.status === "error"
+              ? "unavailable"
+              : destination.value
+                ? null
+                : target.kind
+        }
       />
     </EntryComposerShell>
   );

@@ -345,14 +345,14 @@ describe("interface route policy", () => {
         }),
       }),
     ).toBe("/ru/catalog?kingdom=plantae&rank=species");
+    // A receipt's outcome is said beside its row since `OVE-501`: it is not a
+    // view, so it is not carried into another language.
     expect(
       sanitizeInterfaceRouteSearch(
         "/notifications",
         "?filter=comments&filter=system&unread=1&view=individual&engagement=notification-updated",
       ),
-    ).toBe(
-      "?filter=comments&unread=1&view=individual&engagement=notification-updated",
-    );
+    ).toBe("?filter=comments&unread=1&view=individual");
     expect(
       sanitizeInterfaceRouteSearch(
         "/journal/garden-log",
@@ -405,6 +405,50 @@ describe("interface route policy", () => {
         "?catalog=00000000-0000-4000-8000-000000000123&topic=private-note",
       ),
     ).toBe("");
+  });
+
+  it("carries the Activity view into another language, and never an outcome (OVE-501)", () => {
+    expect(
+      sanitizeInterfaceRouteSearch(
+        "/bg/notifications",
+        `?filter=reminders&receipt=failed&event=${"a".repeat(32)}&cursor=opaque`,
+      ),
+    ).toBe("?filter=reminders");
+    // `system` is the reminders' old name, and an old link keeps its view.
+    expect(
+      sanitizeInterfaceRouteSearch("/notifications", "?filter=system"),
+    ).toBe("?filter=system");
+    expect(
+      sanitizeInterfaceRouteSearch("/notifications", "?filter=replies"),
+    ).toBe("");
+    expect(
+      buildLocalizedInterfaceTarget({
+        locale: "ru",
+        pathname: "/notifications",
+        search: "?filter=reminders&unread=1&receipt=read",
+        fragment: `#notification-${"a".repeat(32)}`,
+      }),
+    ).toBe(
+      `/ru/notifications?filter=reminders&unread=1#notification-${"a".repeat(32)}`,
+    );
+
+    // The settings are their own page under Activity, in every language, and
+    // a saved outcome stays where it was said.
+    expect(getInterfaceRoutePolicy("/bg/notifications/settings")).toMatchObject(
+      { id: "public-notification-settings", mode: "localized-link" },
+    );
+    expect(
+      sanitizeInterfaceRouteSearch("/notifications/settings", "?saved=1"),
+    ).toBe("");
+    expect(
+      buildLocalizedInterfaceTarget({
+        locale: "bg",
+        pathname: "/ru/notifications/settings",
+        search: "?saved=failed",
+        fragment: "#notification-settings-outcome",
+      }),
+    ).toBe("/bg/notifications/settings");
+    expect(isReaderLocalizedPublicPath("/notifications/settings")).toBe(true);
   });
 
   it("carries a profile's open tab and its page, and only a tab that exists", () => {

@@ -32,6 +32,8 @@ export const NOTIFICATION_PAGE_SIZE = 12;
 const MAX_PAGE_SIZE = 30;
 const MAX_NOTIFICATION_CANDIDATES = 60;
 const STALE_JOURNAL_DAYS = 14;
+/** A receipt write is one small upsert; anything slower is an incident. */
+const RECEIPT_STATEMENT_TIMEOUT = "3s";
 
 export type FollowedFeedSource = "all" | "people" | "objects" | "topics";
 export type FollowedFeedObjectKind = "all" | PlantObjectKind;
@@ -120,13 +122,50 @@ export type NotificationEventKind =
   | "question"
   | "system";
 
+/**
+ * What a row is (`OVE-501`): something another gardener did, or the optional
+ * reminder to write about one of the reader's own plants and animals.
+ *
+ * No backend produces a notice from OverGarden itself, so there is no third
+ * category to name. The reminder is stored as the `system` kind, and the kind
+ * stays: it is hashed into every event's receipt key, and renaming it would
+ * bring back every reminder a reader has already read or dismissed.
+ */
+export type NotificationCategory = "social" | "reminder";
+
+/**
+ * The reader's own plant or animal a row is about, with where it lives — the
+ * identity the garden list shows (`garden-collection-repository.ts`), so one
+ * tomato reads the same on both pages.
+ */
+export interface NotificationObjectSubject {
+  id: string;
+  name: string;
+  objectKind: PlantObjectKind;
+  spaceName: string;
+  /** The catalogue's canonical name, when an active public identity is set. */
+  species: string | null;
+  variety: string | null;
+  /** The day it was added, `YYYY-MM-DD`: how two twins are told apart. */
+  addedOn: string;
+  /** The minute it was added, `YYYY-MM-DDTHH:MMZ`, for twins added one day. */
+  addedAt: string;
+  /** The newest active entry's date, `YYYY-MM-DD`, or null when none. */
+  lastEntryDate: string | null;
+}
+
+/**
+ * The filters. `reminders` holds the journaling reminders; it was called
+ * `system` while the chip said «Системні», and an old `?filter=system` link
+ * still lands on it.
+ */
 export type NotificationFilter =
   | "all"
   | "comments"
   | "follows"
   | "mentions"
   | "claims"
-  | "system";
+  | "reminders";
 
 export type NotificationSummaryKey =
   | "comment_on_journal"
@@ -158,15 +197,21 @@ export interface NotificationCandidateRow {
   summaryKey: NotificationSummaryKey;
   groupRef: string;
   actionKind?: NotificationActionKind;
+  /** The reader's own object the row is about, resolved to its identity. */
+  objectRef?: string | null;
 }
 
 export interface NotificationEvent {
   key: string;
   kind: NotificationEventKind;
+  category: NotificationCategory;
   summaryKey: NotificationSummaryKey;
   createdAt: Date | string;
   actorMention: `@${string}` | null;
+  /** The entry's title or the object's name the row is about. */
   targetLabel: string | null;
+  /** The reader's own plant or animal, when the row is about one. */
+  object: NotificationObjectSubject | null;
   href: string;
   actionKind: NotificationActionKind;
   groupKey: string;
@@ -175,7 +220,11 @@ export interface NotificationEvent {
 
 export interface GroupedNotificationEvent extends NotificationEvent {
   count: number;
+  /** How many of `eventKeys` are unread; the page's count is their sum. */
+  unreadCount: number;
   eventKeys: string[];
+  /** Everyone who did it, newest first, so a group never hides who acted. */
+  actors: Array<`@${string}`>;
 }
 
 export interface NotificationPage {
@@ -212,6 +261,13 @@ interface NotificationCommentRow {
   entryNumber: number | null;
   /** The author's registry handle; the entry's address hangs from it. */
   addressHandle: string;
+  /** The entry's public title: which entry the comment is on. */
+  entryTitle: string | null;
+  /**
+   * The entry's object, only when the entry is the reader's own. A reply can
+   * sit under somebody else's entry, whose space is not the reader's to see.
+   */
+  ownObjectId: string | null;
 }
 
 interface NotificationFollowRow {
@@ -460,15 +516,23 @@ export function serializeFollowedFeedPage(
   };
 }
 
-export async function listNotificationCenterPage(
+/**
+ * Every event the reader can see, with the receipts that say what they have
+ * read and the identity of the objects the rows name.
+ *
+ * Three round trips at most: the preferences and the eight event sources
+ * together, then the receipts and the object identities together. The
+ * preferences used to be read first and alone.
+ */
+async function collectNotificationCandidates(
   scope: RequestScope,
   locale: PublicLocale,
-  options: NotificationPageOptions = {},
-  executor: QueryExecutor = db,
-): Promise<NotificationPage> {
-  const preferences = await getNotificationPreferences(scope, executor);
+  executor: QueryExecutor,
+  options: { subjects: boolean },
+) {
   const candidateLimit = MAX_NOTIFICATION_CANDIDATES;
   const [
+    preferences,
     commentRows,
     profileFollowRows,
     objectFollowRows,
@@ -478,6 +542,7 @@ export async function listNotificationCenterPage(
     lineageFollowRows,
     staleRows,
   ] = await Promise.all([
+    getNotificationPreferences(scope, executor),
     buildNotificationCommentEventsQuery(
       executor,
       scope,
@@ -521,7 +586,7 @@ export async function listNotificationCenterPage(
     ).execute(),
   ]);
 
-  const candidates = [
+  const candidates: NotificationCandidateRow[] = [
     ...(commentRows as NotificationCommentRow[]).map((row) =>
       mapCommentNotification(row),
     ),
@@ -552,6 +617,7 @@ export async function listNotificationCenterPage(
       summaryKey: "object_followed" as const,
       groupRef: `object:${row.targetRef}`,
       actionKind: "open_object" as const,
+      objectRef: row.targetRef,
     })),
     ...(mentionRows as NotificationFollowRow[]).map((row) => ({
       sourceId: row.sourceId,
@@ -564,6 +630,7 @@ export async function listNotificationCenterPage(
       summaryKey: "provenance_mention" as const,
       groupRef: `claim:${row.targetRef}`,
       actionKind: "review_claims" as const,
+      objectRef: row.targetRef,
     })),
     ...(claimRows as NotificationFollowRow[]).map((row) => ({
       sourceId: row.sourceId,
@@ -576,6 +643,7 @@ export async function listNotificationCenterPage(
       summaryKey: "claim_decided" as const,
       groupRef: `claim:${row.targetRef}`,
       actionKind: "review_claims" as const,
+      objectRef: row.targetRef,
     })),
     ...(questionRows as NotificationFollowRow[]).map((row) => ({
       sourceId: row.sourceId,
@@ -588,6 +656,7 @@ export async function listNotificationCenterPage(
       summaryKey: "lineage_question" as const,
       groupRef: `question:${row.targetRef}`,
       actionKind: "open_questions" as const,
+      objectRef: row.targetRef,
     })),
     ...(lineageFollowRows as NotificationFollowRow[]).map((row) => ({
       sourceId: row.sourceId,
@@ -604,6 +673,7 @@ export async function listNotificationCenterPage(
       summaryKey: "lineage_followed" as const,
       groupRef: `lineage:${row.targetRef}`,
       actionKind: "open_object" as const,
+      objectRef: row.targetRef,
     })),
     ...(staleRows as NotificationFollowRow[]).map((row) => ({
       sourceId: row.sourceId,
@@ -611,33 +681,95 @@ export async function listNotificationCenterPage(
       createdAt: row.createdAt,
       actorHandle: null,
       targetRef: row.targetRef,
-      targetLabel: null,
+      targetLabel: row.targetLabel ?? null,
       href: `/garden/objects/${encodeURIComponent(row.targetRef)}`,
       summaryKey: "stale_journal_prompt" as const,
       groupRef: `stale:${row.targetRef}`,
       actionKind: "continue_journal" as const,
+      objectRef: row.targetRef,
     })),
   ].filter((candidate) => notificationEnabled(candidate.kind, preferences));
 
   const eventKeys = candidates.map((candidate) =>
     notificationEventKey(candidate.kind, candidate.sourceId),
   );
-  const receiptRows =
+  const objectIds = options.subjects
+    ? Array.from(
+        new Set(
+          candidates
+            .map((candidate) => candidate.objectRef)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      )
+    : [];
+  const [receiptRows, subjectRows] = await Promise.all([
     eventKeys.length > 0
-      ? await buildListNotificationReceiptsQuery(
+      ? buildListNotificationReceiptsQuery(executor, scope, eventKeys).execute()
+      : Promise.resolve([]),
+    objectIds.length > 0
+      ? buildNotificationObjectSubjectsQuery(
           executor,
           scope,
-          eventKeys,
+          objectIds,
         ).execute()
-      : [];
+      : Promise.resolve([]),
+  ]);
   const receipts = new Map(
     (receiptRows as NotificationReceiptRow[]).map((row) => [
       row.eventKey,
       row.state,
     ]),
   );
+  const subjects = new Map<string, NotificationObjectSubject>(
+    subjectRows.map((row) => [
+      row.id,
+      {
+        id: row.id,
+        name: row.name,
+        objectKind: row.objectKind === "animal" ? "animal" : "plant",
+        spaceName: row.spaceName,
+        species: row.species ?? null,
+        variety: row.variety?.trim() || null,
+        addedOn: row.addedOn,
+        addedAt: row.addedAt,
+        lastEntryDate: row.lastEntryDate ?? null,
+      },
+    ]),
+  );
 
-  return serializeNotificationPage(candidates, receipts, options);
+  return { candidates, receipts, subjects };
+}
+
+export async function listNotificationCenterPage(
+  scope: RequestScope,
+  locale: PublicLocale,
+  options: NotificationPageOptions = {},
+  executor: QueryExecutor = db,
+): Promise<NotificationPage> {
+  const { candidates, receipts, subjects } =
+    await collectNotificationCandidates(scope, locale, executor, {
+      subjects: true,
+    });
+  return serializeNotificationPage(candidates, receipts, options, subjects);
+}
+
+/**
+ * The reader's unread count, from the same events and the same receipts as
+ * the Activity page (`OVE-501`). The garden's rail counted another model —
+ * lineage events, with no receipts at all — so its number never went down
+ * when a reader read something, and never matched the page it linked to.
+ */
+export async function countUnreadNotifications(
+  scope: RequestScope,
+  executor: QueryExecutor = db,
+): Promise<number> {
+  const { candidates, receipts } = await collectNotificationCandidates(
+    scope,
+    "uk",
+    executor,
+    { subjects: false },
+  );
+  return serializeNotificationPage(candidates, receipts).unreadCount;
 }
 
 export function buildNotificationCommentEventsQuery(
@@ -687,6 +819,10 @@ export function buildNotificationCommentEventsQuery(
       "entries.public_slug as entryPublicSlug",
       "entries.author_entry_number as entryNumber",
       "owner_handles.normalized_handle as addressHandle",
+      "entries.title as entryTitle",
+      sql<string | null>`case when ${sql.ref("entries.owner_user_id")} = ${scope.userId}::uuid then ${sql.ref("entries.plant_object_id")} end`.as(
+        "ownObjectId",
+      ),
     ])
     .where("comments.comment_state", "=", "active")
     .where("comments.author_user_id", "!=", scope.userId)
@@ -1047,12 +1183,27 @@ export function buildStaleJournalPromptEventsQuery(
     now.getTime() - STALE_JOURNAL_DAYS * 24 * 60 * 60 * 1000,
   );
 
+  const lastEntryDate = sql<string | null>`(
+    select max(last_entries.entry_date)
+    from "journal_entries" as last_entries
+    where last_entries.owner_user_id = ${scope.userId}
+      and last_entries.plant_object_id = ${sql.ref("objects.id")}
+      and last_entries.lifecycle_state = 'active'
+  )`;
+
   return executor
     .selectFrom("plant_objects as objects")
     .select([
       "objects.id as sourceId",
-      "objects.updated_at as createdAt",
+      // When the reminder began to hold (`OVE-501`): two weeks after the newest
+      // entry, or when an object with none was added. It was the object's
+      // `updated_at`, so renaming a plant dated its reminder today.
+      sql<Date>`coalesce(
+        (${lastEntryDate} + ${STALE_JOURNAL_DAYS}::int)::timestamptz,
+        ${sql.ref("objects.created_at")}
+      )`.as("createdAt"),
       "objects.id as targetRef",
+      "objects.display_name as targetLabel",
     ])
     .where("objects.owner_user_id", "=", scope.userId)
     .where(
@@ -1065,9 +1216,60 @@ export function buildStaleJournalPromptEventsQuery(
           and recent_entries.entry_date >= ${threshold.toISOString().slice(0, 10)}
       )`,
     )
-    .orderBy("objects.updated_at", "asc")
+    // The most recently due first, as the list reads them.
+    .orderBy(sql.ref("createdAt"), "desc")
     .orderBy("objects.id", "asc")
     .limit(normalizePageSize(limit, MAX_NOTIFICATION_CANDIDATES));
+}
+
+/**
+ * The identity of the reader's own objects the rows name (`OVE-501`): name,
+ * kind, space, organism, variety, the day it was added and the date of its
+ * newest active entry. The organism and the last entry are read exactly as the
+ * garden list reads them, and only the reader's own objects are ever resolved
+ * — a row about somebody else's entry names that entry and nothing of theirs.
+ */
+export function buildNotificationObjectSubjectsQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  objectIds: readonly string[],
+) {
+  return executor
+    .selectFrom("plant_objects as objects")
+    .innerJoin("spaces", (join) =>
+      join
+        .onRef("spaces.id", "=", "objects.space_id")
+        .onRef("spaces.owner_user_id", "=", "objects.owner_user_id"),
+    )
+    .leftJoin("catalog_items as catalog", (join) =>
+      join
+        .onRef("catalog.id", "=", "objects.catalog_item_id")
+        .on("catalog.identity_state", "=", "active")
+        .on("catalog.created_by_user_id", "is", null),
+    )
+    .select([
+      "objects.id as id",
+      "objects.display_name as name",
+      "objects.object_kind as objectKind",
+      "spaces.display_name as spaceName",
+      "catalog.canonical_name as species",
+      "objects.variety_text as variety",
+      sql<string>`to_char(${sql.ref("objects.created_at")} at time zone 'UTC', 'YYYY-MM-DD')`.as(
+        "addedOn",
+      ),
+      sql<string>`to_char(${sql.ref("objects.created_at")} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI"Z"')`.as(
+        "addedAt",
+      ),
+      sql<string | null>`(
+        select to_char(max(last_entries.entry_date), 'YYYY-MM-DD')
+        from "journal_entries" as last_entries
+        where last_entries.owner_user_id = ${scope.userId}
+          and last_entries.plant_object_id = ${sql.ref("objects.id")}
+          and last_entries.lifecycle_state = 'active'
+      )`.as("lastEntryDate"),
+    ])
+    .where("objects.owner_user_id", "=", scope.userId)
+    .where("objects.id", "in", [...objectIds]);
 }
 
 export function buildListNotificationReceiptsQuery(
@@ -1082,30 +1284,31 @@ export function buildListNotificationReceiptsQuery(
     .where("event_key", "in", eventKeys.map(normalizeNotificationEventKey));
 }
 
-export function buildUpsertNotificationReceiptQuery(
+export function buildUpsertNotificationReceiptsQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   input: {
-    eventKey: string;
+    eventKeys: readonly string[];
     state: NotificationReceiptState;
     now?: Date;
   },
 ) {
-  const eventKey = normalizeNotificationEventKey(input.eventKey);
   const state = normalizeNotificationReceiptState(input.state);
   const now = input.now ?? new Date();
   const readAt = state === "read" ? now : null;
 
   return executor
     .insertInto("notification_receipts")
-    .values({
-      owner_user_id: scope.userId,
-      event_key: eventKey,
-      receipt_state: state,
-      read_at: readAt,
-      created_at: now,
-      updated_at: now,
-    })
+    .values(
+      input.eventKeys.map((eventKey) => ({
+        owner_user_id: scope.userId,
+        event_key: normalizeNotificationEventKey(eventKey),
+        receipt_state: state,
+        read_at: readAt,
+        created_at: now,
+        updated_at: now,
+      })),
+    )
     .onConflict((oc) =>
       oc.columns(["owner_user_id", "event_key"]).doUpdateSet({
         receipt_state: state,
@@ -1113,7 +1316,7 @@ export function buildUpsertNotificationReceiptQuery(
         updated_at: now,
       }),
     )
-    .returningAll();
+    .returning(["event_key as eventKey", "receipt_state as state"]);
 }
 
 export function buildUpsertNotificationPreferencesQuery(
@@ -1156,39 +1359,42 @@ export function buildUpsertNotificationPreferencesQuery(
     ]);
 }
 
-export async function setNotificationReceipt(
+/**
+ * One row's receipts, all or none (`OVE-501`, criterion 4). A grouped row is
+ * one control over several events, so marking it is one statement: it was one
+ * upsert per event outside a transaction, and a failure half-way left the row
+ * half read while the page said nothing. The statement timeout bounds the
+ * wait, so a stuck write is a failure the page can name rather than a request
+ * that never answers.
+ */
+export async function updateNotificationReceipts(
   scope: RequestScope,
-  input: { eventKey: string; state: NotificationReceiptState },
-  executor: QueryExecutor = db,
-) {
-  return buildUpsertNotificationReceiptQuery(
-    executor,
-    scope,
-    input,
-  ).executeTakeFirstOrThrow();
-}
-
-export async function markNotificationEventsRead(
-  scope: RequestScope,
-  eventKeys: readonly string[],
+  input: {
+    eventKeys: readonly string[];
+    state: NotificationReceiptState;
+    now?: Date;
+  },
   database: Kysely<Database> = db,
-) {
-  const uniqueKeys = Array.from(
-    new Set(eventKeys.map(normalizeNotificationEventKey)),
+): Promise<number> {
+  const eventKeys = Array.from(
+    new Set(input.eventKeys.map(normalizeNotificationEventKey)),
   ).slice(0, MAX_NOTIFICATION_CANDIDATES);
-  const now = new Date();
+  if (eventKeys.length === 0) return 0;
+  const state = normalizeNotificationReceiptState(input.state);
+  const now = input.now ?? new Date();
 
   await database.transaction().execute(async (trx) => {
-    for (const eventKey of uniqueKeys) {
-      await buildUpsertNotificationReceiptQuery(trx, scope, {
-        eventKey,
-        state: "read",
-        now,
-      }).execute();
-    }
+    await sql
+      .raw(`set local statement_timeout = '${RECEIPT_STATEMENT_TIMEOUT}'`)
+      .execute(trx);
+    await buildUpsertNotificationReceiptsQuery(trx, scope, {
+      eventKeys,
+      state,
+      now,
+    }).execute();
   });
 
-  return uniqueKeys.length;
+  return eventKeys.length;
 }
 
 export async function updateNotificationPreferences(
@@ -1230,15 +1436,16 @@ export function serializeNotificationPage(
   rows: NotificationCandidateRow[],
   receipts: ReadonlyMap<string, string>,
   options: NotificationPageOptions = {},
+  subjects: ReadonlyMap<string, NotificationObjectSubject> = new Map(),
 ): NotificationPage {
   const pageSize = normalizePageSize(
     options.pageSize ?? NOTIFICATION_PAGE_SIZE,
     NOTIFICATION_PAGE_SIZE,
   );
-  const filter = normalizeNotificationFilter(options.filter ?? "all");
+  const filter = normalizeNotificationFilter(options.filter);
   const cursor = decodeNotificationCursor(options.cursor);
   const mapped = rows
-    .map((row) => serializeNotificationEvent(row, receipts))
+    .map((row) => serializeNotificationEvent(row, receipts, subjects))
     .filter((event): event is NotificationEvent => Boolean(event))
     .sort(compareNotificationEvents);
   const unreadCount = mapped.filter((event) => !event.read).length;
@@ -1270,22 +1477,45 @@ export function serializeNotificationPage(
   };
 }
 
+/**
+ * Rows that say the same thing about the same target and lead to the same
+ * place become one row (`OVE-501`, criterion 4): the comments on one entry,
+ * the follows of one object, and nothing wider. Every reminder is about one
+ * object, so no two reminders ever share a row. A group keeps everyone who
+ * acted and how many of its events are unread — the page's count is the sum
+ * of those, never a count of rows.
+ *
+ * `grouped: false` is the individual view: one row per event, same shape.
+ */
 export function groupNotificationEvents(
   events: NotificationEvent[],
+  grouped = true,
 ): GroupedNotificationEvent[] {
   const groups = new Map<string, GroupedNotificationEvent>();
 
   for (const event of events) {
-    const groupingKey = `${event.summaryKey}:${event.groupKey}:${event.href}`;
+    const groupingKey = grouped
+      ? `${event.summaryKey}:${event.groupKey}:${event.href}`
+      : event.key;
     const existing = groups.get(groupingKey);
     if (!existing) {
-      groups.set(groupingKey, { ...event, count: 1, eventKeys: [event.key] });
+      groups.set(groupingKey, {
+        ...event,
+        count: 1,
+        unreadCount: event.read ? 0 : 1,
+        eventKeys: [event.key],
+        actors: event.actorMention ? [event.actorMention] : [],
+      });
       continue;
     }
 
     existing.count += 1;
     existing.eventKeys.push(event.key);
+    if (!event.read) existing.unreadCount += 1;
     existing.read = existing.read && event.read;
+    if (event.actorMention && !existing.actors.includes(event.actorMention)) {
+      existing.actors.push(event.actorMention);
+    }
     if (timestamp(event.createdAt) > timestamp(existing.createdAt)) {
       existing.createdAt = event.createdAt;
       existing.actorMention = event.actorMention;
@@ -1308,6 +1538,7 @@ export function notificationEventKey(
 function serializeNotificationEvent(
   row: NotificationCandidateRow,
   receipts: ReadonlyMap<string, string>,
+  subjects: ReadonlyMap<string, NotificationObjectSubject>,
 ): NotificationEvent | null {
   const key = notificationEventKey(row.kind, row.sourceId);
   const state = receipts.get(key);
@@ -1316,17 +1547,27 @@ function serializeNotificationEvent(
   return {
     key,
     kind: row.kind,
+    category: notificationCategory(row.kind),
     summaryKey: row.summaryKey,
     createdAt: row.createdAt,
     actorMention: row.actorHandle
       ? `@${normalizeHandle(row.actorHandle)}`
       : null,
     targetLabel: row.targetLabel?.trim() || null,
+    object: row.objectRef ? (subjects.get(row.objectRef) ?? null) : null,
     href: normalizeNotificationHref(row.href),
     actionKind: row.actionKind ?? defaultNotificationAction(row.kind),
     groupKey: stableOpaqueKey("notification-group", row.groupRef),
     read: state === "read",
   };
+}
+
+/** Everything another gardener did is social; the one stored kind that is
+ * not is the journaling reminder. */
+export function notificationCategory(
+  kind: NotificationEventKind,
+): NotificationCategory {
+  return kind === "system" ? "reminder" : "social";
 }
 
 function mapCommentNotification(
@@ -1339,7 +1580,10 @@ function mapCommentNotification(
     createdAt: row.createdAt,
     actorHandle: row.actorHandle,
     targetRef: row.targetRef,
-    targetLabel: null,
+    // Which entry: a comment row used to name none, so three comments on
+    // three entries read as the same sentence three times (`OVE-501`).
+    targetLabel: row.entryTitle,
+    objectRef: row.ownObjectId,
     // Under the author, at its number (ADR-0029 D9): the ref is an id, and
     // the row carries the handle and the number the address is built from.
     href: publicJournalEntryAddress({
@@ -1497,7 +1741,7 @@ function notificationFilterForKind(
     case "question":
       return "claims";
     case "system":
-      return "system";
+      return "reminders";
   }
 }
 
@@ -1557,17 +1801,20 @@ function normalizeFollowedFeedObjectKind(
   return "all";
 }
 
-function normalizeNotificationFilter(value: string): NotificationFilter {
+/** A filter from an address; `system` is the reminders' old name. */
+export function normalizeNotificationFilter(
+  value: string | null | undefined,
+): NotificationFilter {
   if (
     value === "comments" ||
     value === "follows" ||
     value === "mentions" ||
     value === "claims" ||
-    value === "system"
+    value === "reminders"
   ) {
     return value;
   }
-  return "all";
+  return value === "system" ? "reminders" : "all";
 }
 
 function normalizeNotificationEventKey(value: string) {

@@ -19,47 +19,11 @@ const UK_COPY = {
       retry: "Спробувати ще раз",
       retryAction: "Оновити простір",
     },
-    attention: {
-      eyebrow: "Спершу",
-      title: "Що потребує уваги",
-      description:
-        "Об'єкти, яким давно не додавали спостережень, і ті, що ще чекають на перший запис.",
-      emptyTitle: "Усе актуальне",
-      emptyDescription:
-        "Жоден живий об'єкт не чекає на оновлення. Додайте наступну помітну зміну, коли вона станеться.",
-      countLabel: "Потребують уваги: {count}",
-      allCurrent: "Усе актуальне",
-    },
-    nextAction: {
-      eyebrow: "Наступна корисна дія",
-      checkWriteAccess: "Перевірити доступ до запису",
-      addObject: "Додати об'єкт",
-      emptyTitle: "Почніть з одного живого об'єкта",
-      emptyDescription:
-        "Опублікуйте перше спостереження, щоб почати історію свого саду.",
-      startFirstObject: "Почати перший об'єкт",
-      finishFirstNoteTitle: "Завершіть першу нотатку про {objectName}",
-      finishFirstNoteDescription:
-        "Об'єкт уже існує, але для корисної історії йому потрібне перше датоване спостереження.",
-      addFirstNote: "Додати першу нотатку",
-      updateTitle: "Оновіть {objectName}",
-      continueTitle: "Продовжте історію {objectName}",
-      dueDescription:
-        "Від останнього прямого оновлення минуло достатньо часу, тож свіже спостереження відновить безперервність історії.",
-      currentDescription:
-        "Простір актуальний. Додайте наступну помітну зміну, коли вона станеться.",
-      addUpdate: "Додати оновлення",
-      unavailableTitle: "Відновіть список живих об'єктів",
-      unavailableDescription:
-        "Останні події доступні, але список об'єктів має оновитися, перш ніж простір зможе надійно вибрати наступний об'єкт.",
-      retryInventory: "Оновити список",
-    },
     summary: {
       ariaLabel: "Огляд саду",
       objects: "Об'єкти",
       spaces: "Простори",
       recent: "Останні",
-      dueInView: "Потребують уваги",
     },
     spaces: {
       errorTitle: "Простори тимчасово недоступні",
@@ -171,13 +135,6 @@ const UK_COPY = {
       previous: "Назад",
       next: "Далі",
     },
-    objectState: {
-      unknownCatalogIdentity: "Ідентичність у каталозі невідома",
-      needsFirstNote: "Потрібна перша нотатка",
-      daysSinceUpdate: "{count} дн. від оновлення",
-      updatedToday: "Оновлено сьогодні",
-      daysAgo: "{count} дн. тому",
-    },
   },
   serviceState: {
     privacy: "Приватність",
@@ -186,7 +143,7 @@ const UK_COPY = {
       recent: "Останні події",
       noRecent: "Датованих оновлень ще немає.",
       inbox: "Вхідні",
-      notifications: "Сповіщення",
+      notifications: "Події",
       lineageClaims: "Запити про походження",
       privacy: "Приватність",
       privacyControls: "Налаштування приватності",
@@ -435,47 +392,11 @@ const BG_COPY = {
       retry: "Опитайте отново",
       retryAction: "Презареждане на пространството",
     },
-    attention: {
-      eyebrow: "Първо",
-      title: "Какво чака внимание",
-      description:
-        "Обектите, на които отдавна не е добавяно наблюдение, и тези, които още чакат първия си запис.",
-      emptyTitle: "Всичко е актуално",
-      emptyDescription:
-        "Нито един жив обект не чака обновяване. Добавете следващата забележима промяна, когато се случи.",
-      countLabel: "Чакат внимание: {count}",
-      allCurrent: "Всичко е актуално",
-    },
-    nextAction: {
-      eyebrow: "Следващо полезно действие",
-      checkWriteAccess: "Проверка на достъпа за писане",
-      addObject: "Добавяне на обект",
-      emptyTitle: "Започнете с един жив обект",
-      emptyDescription:
-        "Публикувайте първото наблюдение, за да започнете историята на градината си.",
-      startFirstObject: "Започване на първия обект",
-      finishFirstNoteTitle: "Завършете първата бележка за {objectName}",
-      finishFirstNoteDescription:
-        "Обектът съществува, но е нужно първо датирано наблюдение, за да стане историята му полезна.",
-      addFirstNote: "Добавяне на първа бележка",
-      updateTitle: "Обновете {objectName}",
-      continueTitle: "Продължете историята на {objectName}",
-      dueDescription:
-        "От последното пряко обновяване е минало достатъчно време и ново наблюдение ще възстанови непрекъснатостта.",
-      currentDescription:
-        "Пространството е актуално. Добавете следващата видима промяна, когато се случи.",
-      addUpdate: "Добавяне на обновяване",
-      unavailableTitle: "Възстановете списъка с живи обекти",
-      unavailableDescription:
-        "Последната активност е достъпна, но списъкът трябва да се презареди, преди пространството надеждно да избере следващ обект.",
-      retryInventory: "Презареждане на списъка",
-    },
     summary: {
       ariaLabel: "Обобщение на градината",
       objects: "Обекти",
       spaces: "Пространства",
       recent: "Последни",
-      dueInView: "За внимание",
     },
     spaces: {
       errorTitle: "Пространствата временно не са достъпни",
@@ -587,13 +508,6 @@ const BG_COPY = {
       ariaLabel: "Страници на раздел „{section}“",
       previous: "Назад",
       next: "Напред",
-    },
-    objectState: {
-      unknownCatalogIdentity: "Неизвестна идентичност в каталога",
-      needsFirstNote: "Нужна е първа бележка",
-      daysSinceUpdate: "{count} дни от обновяването",
-      updatedToday: "Обновено днес",
-      daysAgo: "преди {count} дни",
     },
   },
   serviceState: {
@@ -850,47 +764,11 @@ const RU_COPY = {
       retry: "Попробовать снова",
       retryAction: "Обновить пространство",
     },
-    attention: {
-      eyebrow: "Сначала",
-      title: "Что требует внимания",
-      description:
-        "Объекты, которым давно не добавляли наблюдений, и те, что ещё ждут первой записи.",
-      emptyTitle: "Всё актуально",
-      emptyDescription:
-        "Ни один живой объект не ждёт обновления. Добавьте следующее заметное изменение, когда оно случится.",
-      countLabel: "Требуют внимания: {count}",
-      allCurrent: "Всё актуально",
-    },
-    nextAction: {
-      eyebrow: "Следующее полезное действие",
-      checkWriteAccess: "Проверить доступ к записи",
-      addObject: "Добавить объект",
-      emptyTitle: "Начните с одного живого объекта",
-      emptyDescription:
-        "Опубликуйте первое наблюдение, чтобы начать историю своего сада.",
-      startFirstObject: "Начать первый объект",
-      finishFirstNoteTitle: "Завершите первую заметку про {objectName}",
-      finishFirstNoteDescription:
-        "Объект уже существует, но для полезной истории ему нужно первое датированное наблюдение.",
-      addFirstNote: "Добавить первую заметку",
-      updateTitle: "Обновите {objectName}",
-      continueTitle: "Продолжите историю {objectName}",
-      dueDescription:
-        "С последнего прямого обновления прошло достаточно времени, поэтому свежее наблюдение восстановит непрерывность истории.",
-      currentDescription:
-        "Пространство актуально. Добавьте следующее заметное изменение, когда оно произойдёт.",
-      addUpdate: "Добавить обновление",
-      unavailableTitle: "Восстановите список живых объектов",
-      unavailableDescription:
-        "Последние события доступны, но список должен обновиться, прежде чем пространство сможет надёжно выбрать следующий объект.",
-      retryInventory: "Обновить список",
-    },
     summary: {
       ariaLabel: "Обзор сада",
       objects: "Объекты",
       spaces: "Пространства",
       recent: "Последние",
-      dueInView: "Требуют внимания",
     },
     spaces: {
       errorTitle: "Пространства временно недоступны",
@@ -1003,13 +881,6 @@ const RU_COPY = {
       previous: "Назад",
       next: "Далее",
     },
-    objectState: {
-      unknownCatalogIdentity: "Идентичность в каталоге неизвестна",
-      needsFirstNote: "Нужна первая заметка",
-      daysSinceUpdate: "{count} дн. с обновления",
-      updatedToday: "Обновлено сегодня",
-      daysAgo: "{count} дн. назад",
-    },
   },
   serviceState: {
     privacy: "Конфиденциальность",
@@ -1018,7 +889,7 @@ const RU_COPY = {
       recent: "Последние события",
       noRecent: "Датированных обновлений пока нет.",
       inbox: "Входящие",
-      notifications: "Уведомления",
+      notifications: "События",
       lineageClaims: "Запросы о происхождении",
       privacy: "Конфиденциальность",
       privacyControls: "Настройки конфиденциальности",

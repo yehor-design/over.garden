@@ -151,6 +151,46 @@ describe("the one entry composer (OVE-486)", () => {
     expect(html).toContain("Куди записати?");
   });
 
+  // A reminder opened after its plant was deleted, or a link whose place could
+  // not be read (`OVE-501`): the picker opens as before, and now says why.
+  it.each(["object", "space", "unavailable"] as const)(
+    "says why the destination a link named is not chosen (%s), above the picker",
+    (notice) => {
+      const copy = getEntryComposerCopy("uk");
+      const html = renderToStaticMarkup(
+        <EntryComposer
+          locale="uk"
+          initialDestination={null}
+          today="2026-07-16"
+          requiresFirstPublicationDisclosure={false}
+          destinationNotice={notice}
+        />,
+      );
+      const at = html.indexOf(
+        `data-entry-composer-destination-notice="${notice}"`,
+      );
+
+      expect(at).toBeGreaterThan(-1);
+      expect(html).toContain(copy.destinationNotice[notice]);
+      expect(at).toBeLessThan(html.indexOf("data-owned-destination-picker"));
+    },
+  );
+
+  it("says nothing about the link once a destination is chosen", () => {
+    const html = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={beehive}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+        destinationNotice="object"
+      />,
+    );
+
+    expect(html).not.toContain("data-entry-composer-destination-notice");
+    expect(html).toContain(beehive.displayName);
+  });
+
   it("asks a space entry which of the space's objects it mentions", () => {
     const html = renderToStaticMarkup(
       <EntryComposer

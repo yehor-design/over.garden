@@ -41,23 +41,72 @@ export interface SocialSurfaceCopy {
     emptyAction: string;
     unreadBadge: string;
     readBadge: string;
+    /** A grouped row's unread part: "Непрочитані: {count}". */
+    unreadOfGroup: string;
     all: string;
     unread: string;
     comments: string;
-    replies: string;
     follows: string;
     mentions: string;
     claims: string;
-    system: string;
+    /** The journaling reminders' chip; it said «Системні» (`OVE-501`). */
+    reminders: string;
     grouped: string;
     settings: string;
-    saveSettings: string;
     markRead: string;
     markUnread: string;
     dismiss: string;
     more: string;
     filtersLabel: string;
+    listLabel: string;
+    /** Who did it: "Від {actors}". */
+    from: string;
+    /** When the actor's public profile is gone. */
+    fromSomeone: string;
+    /** "{actors} та ще {count}". */
+    andOthers: string;
+    /** What a reminder is, where a social row names who acted. */
+    reminderOrigin: string;
+    lastEntry: string;
+    never: string;
+    /** How two same-named objects are told apart: "додано {date}". */
+    addedOn: string;
+    /** And two added the same day: "додано {date} о {time}". */
+    addedAt: string;
+    write: string;
+    writeLabel: string;
+    /** A row control's full name: "{action}: {name}". */
+    rowAction: string;
+    kinds: { plant: string; animal: string };
+    outcome: {
+      read: string;
+      unread: string;
+      dismissed: string;
+      failed: string;
+    };
+    loadErrorTitle: string;
     summaries: Record<string, string>;
+    settingsPage: {
+      title: string;
+      description: string;
+      back: string;
+      social: string;
+      reminders: string;
+      options: {
+        comments: string;
+        replies: string;
+        follows: string;
+        mentions: string;
+        claims: string;
+        system: string;
+      };
+      reminderHint: string;
+      save: string;
+      saved: string;
+      failed: string;
+      signIn: string;
+      loadErrorTitle: string;
+    };
   };
   bookmarks: {
     title: string;
@@ -117,7 +166,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
     my: "Моє",
     tabs: {
       feed: "Стрічка",
-      notifications: "Сповіщення",
+      notifications: "Події",
       bookmarks: "Закладки",
       wishlist: "Хочу спробувати",
     },
@@ -148,41 +197,86 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       kindFiltersLabel: "Тип живого об'єкта",
     },
     notifications: {
-      emptyTitle: "Сповіщень поки немає",
+      emptyTitle: "Подій поки немає",
       emptyAction: "Знайти журнали",
       unreadBadge: "Непрочитане",
       readBadge: "Прочитане",
-      title: "Сповіщення",
+      unreadOfGroup: "Непрочитані: {count}",
+      title: "Події",
       description:
-        "Відповіді, підписки, згадки та дії з походженням в одному місці.",
-      signIn: "Увійдіть, щоб відкрити сповіщення.",
-      empty: "Нових сповіщень за цим фільтром немає.",
+        "Що зробили інші садівники — коментарі, підписки, походження — і необов'язкові нагадування про записи.",
+      signIn: "Увійдіть, щоб відкрити свої події.",
+      empty:
+        "Тут з'являться коментарі, підписки й запитання від інших садівників, а також нагадування про записи, якщо їх увімкнено.",
       all: "Усі",
       unread: "Непрочитані",
       comments: "Коментарі",
-      replies: "Відповіді",
       follows: "Підписки",
       mentions: "Згадки",
       claims: "Походження",
-      system: "Системні",
+      reminders: "Нагадування",
       grouped: "Групувати схожі",
       settings: "Налаштування",
-      saveSettings: "Зберегти",
       markRead: "Позначити прочитаним",
       markUnread: "Позначити непрочитаним",
       dismiss: "Прибрати",
       more: "Показати наступні",
-      filtersLabel: "Тип сповіщень",
+      filtersLabel: "Тип подій",
+      listLabel: "Події",
+      from: "Від {actors}",
+      fromSomeone: "Від іншого садівника",
+      andOthers: "{actors} та ще {count}",
+      reminderOrigin: "Нагадування",
+      lastEntry: "Останній запис: {when}",
+      never: "Ще без записів",
+      addedOn: "додано {date}",
+      addedAt: "додано {date} о {time}",
+      write: "Записати",
+      writeLabel: "Записати: {name}",
+      rowAction: "{action}: {name}",
+      kinds: { plant: "Рослина", animal: "Тварина" },
+      outcome: {
+        read: "Позначено прочитаним.",
+        unread: "Позначено непрочитаним.",
+        dismissed: "Прибрано зі списку.",
+        failed: "Не вдалося зберегти, нічого не змінилося. Спробуйте ще раз.",
+      },
+      loadErrorTitle: "Не вдалося показати події",
       summaries: {
         comment_on_journal: "Новий коментар до вашого запису",
         reply_to_comment: "Нова відповідь на ваш коментар",
         profile_followed: "Новий підписник профілю",
-        object_followed: "Хтось стежить за вашим об'єктом",
-        lineage_followed: "Хтось стежить за походженням об'єкта",
-        provenance_mention: "Ваш об'єкт згадано у запиті про походження",
-        claim_decided: "Статус запиту про походження змінено",
+        object_followed: "Нова підписка на вашу рослину чи тварину",
+        lineage_followed:
+          "Нова підписка на походження вашої рослини чи тварини",
+        provenance_mention: "Вашу рослину чи тварину вказано як джерело",
+        claim_decided: "Рішення щодо вашого запиту про походження",
         lineage_question: "Нове запитання про походження",
-        stale_journal_prompt: "Час додати новий запис до журналу",
+        stale_journal_prompt: "Нагадування про запис",
+      },
+      settingsPage: {
+        title: "Налаштування подій",
+        description:
+          "Що з'являється на сторінці «Події». Вимкнене не показується, доки ви не ввімкнете його знову.",
+        back: "До подій",
+        social: "Від інших садівників",
+        reminders: "Нагадування",
+        options: {
+          comments: "Коментарі до ваших записів",
+          replies: "Відповіді на ваші коментарі",
+          follows: "Підписки на вас і ваші рослини й тварини",
+          mentions: "Коли вашу рослину чи тварину вказують як джерело",
+          claims: "Рішення й запитання про походження",
+          system: "Нагадування про записи",
+        },
+        reminderHint:
+          "Про ваші рослини й тварини без записів за останні два тижні. Вони необов'язкові: вимкніть, якщо не потрібні.",
+        save: "Зберегти",
+        saved: "Налаштування збережено.",
+        failed:
+          "Не вдалося зберегти налаштування, збережене не змінилося. Спробуйте ще раз.",
+        signIn: "Увійдіть, щоб змінити налаштування подій.",
+        loadErrorTitle: "Не вдалося показати налаштування",
       },
     },
     bookmarks: {
@@ -233,7 +327,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       previous: "Назад",
       next: "Далі",
       itemCount: (count) => `${count} елементів`,
-      unreadCount: (count) => `${count} непрочитаних`,
+      unreadCount: (count) => `Непрочитані: ${count}`,
       loadError: (surface) => `Не вдалося завантажити: ${surface}`,
       retry: "Спробувати ще раз",
     },
@@ -277,37 +371,83 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       emptyAction: "Разгледай дневниците",
       unreadBadge: "Непрочетено",
       readBadge: "Прочетено",
+      unreadOfGroup: "Непрочетени: {count}",
       title: "Известия",
       description:
-        "Отговори, следвания, споменавания и произход на едно място.",
-      signIn: "Влезте, за да отворите известията.",
-      empty: "Няма известия за този филтър.",
+        "Какво направиха другите градинари — коментари, следвания, произход — и незадължителни напомняния за записи.",
+      signIn: "Влезте, за да отворите известията си.",
+      empty:
+        "Тук ще се появят коментари, следвания и въпроси от други градинари, както и напомняния за записи, ако са включени.",
       all: "Всички",
       unread: "Непрочетени",
       comments: "Коментари",
-      replies: "Отговори",
       follows: "Следвания",
       mentions: "Споменавания",
       claims: "Произход",
-      system: "Системни",
+      reminders: "Напомняния",
       grouped: "Групирай сходните",
       settings: "Настройки",
-      saveSettings: "Запази",
       markRead: "Маркирай като прочетено",
       markUnread: "Маркирай като непрочетено",
       dismiss: "Премахни",
       more: "Покажи следващите",
       filtersLabel: "Тип известия",
+      listLabel: "Известия",
+      from: "От {actors}",
+      fromSomeone: "От друг градинар",
+      andOthers: "{actors} и още {count}",
+      reminderOrigin: "Напомняне",
+      lastEntry: "Последен запис: {when}",
+      never: "Все още без записи",
+      addedOn: "добавено {date}",
+      addedAt: "добавено {date} в {time}",
+      write: "Запиши",
+      writeLabel: "Запиши: {name}",
+      rowAction: "{action}: {name}",
+      kinds: { plant: "Растение", animal: "Животно" },
+      outcome: {
+        read: "Маркирано като прочетено.",
+        unread: "Маркирано като непрочетено.",
+        dismissed: "Премахнато от списъка.",
+        failed: "Не успяхме да запазим, нищо не е променено. Опитайте отново.",
+      },
+      loadErrorTitle: "Известията не могат да се покажат",
       summaries: {
         comment_on_journal: "Нов коментар към ваш запис",
         reply_to_comment: "Нов отговор на ваш коментар",
         profile_followed: "Нов последовател на профила",
-        object_followed: "Някой следва ваш обект",
-        lineage_followed: "Някой следва произхода на обект",
-        provenance_mention: "Ваш обект е споменат в заявка за произход",
-        claim_decided: "Статусът на заявка за произход е променен",
+        object_followed: "Ново следване на ваше растение или животно",
+        lineage_followed:
+          "Ново следване на произхода на ваше растение или животно",
+        provenance_mention:
+          "Ваше растение или животно е посочено като източник",
+        claim_decided: "Решение по ваша заявка за произход",
         lineage_question: "Нов въпрос за произход",
-        stale_journal_prompt: "Време е за нов запис в дневника",
+        stale_journal_prompt: "Напомняне за запис",
+      },
+      settingsPage: {
+        title: "Настройки на известията",
+        description:
+          "Какво се появява на страницата „Известия“. Изключеното не се показва, докато не го включите отново.",
+        back: "Към известията",
+        social: "От други градинари",
+        reminders: "Напомняния",
+        options: {
+          comments: "Коментари към вашите записи",
+          replies: "Отговори на вашите коментари",
+          follows: "Следвания на вас и на вашите растения и животни",
+          mentions: "Когато ваше растение или животно е посочено като източник",
+          claims: "Решения и въпроси за произход",
+          system: "Напомняния за записи",
+        },
+        reminderHint:
+          "За вашите растения и животни без записи през последните две седмици. Не са задължителни: изключете ги, ако не ви трябват.",
+        save: "Запази",
+        saved: "Настройките са запазени.",
+        failed:
+          "Настройките не бяха запазени, запазеното не е променено. Опитайте отново.",
+        signIn: "Влезте, за да промените настройките на известията.",
+        loadErrorTitle: "Настройките не могат да се покажат",
       },
     },
     bookmarks: {
@@ -359,7 +499,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       previous: "Назад",
       next: "Напред",
       itemCount: (count) => `${count} елемента`,
-      unreadCount: (count) => `${count} непрочетени`,
+      unreadCount: (count) => `Непрочетени: ${count}`,
       loadError: (surface) => `Неуспешно зареждане: ${surface}`,
       retry: "Опитай отново",
     },
@@ -368,7 +508,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
     my: "Моё",
     tabs: {
       feed: "Лента",
-      notifications: "Уведомления",
+      notifications: "События",
       bookmarks: "Закладки",
       wishlist: "Хочу попробовать",
     },
@@ -399,41 +539,87 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       kindFiltersLabel: "Тип живого объекта",
     },
     notifications: {
-      emptyTitle: "Уведомлений пока нет",
+      emptyTitle: "Событий пока нет",
       emptyAction: "Найти журналы",
       unreadBadge: "Непрочитанное",
       readBadge: "Прочитанное",
-      title: "Уведомления",
+      unreadOfGroup: "Непрочитанные: {count}",
+      title: "События",
       description:
-        "Ответы, подписки, упоминания и действия с происхождением в одном месте.",
-      signIn: "Войдите, чтобы открыть уведомления.",
-      empty: "Уведомлений по этому фильтру нет.",
+        "Что сделали другие садоводы — комментарии, подписки, происхождение — и необязательные напоминания о записях.",
+      signIn: "Войдите, чтобы открыть свои события.",
+      empty:
+        "Здесь появятся комментарии, подписки и вопросы от других садоводов, а также напоминания о записях, если они включены.",
       all: "Все",
       unread: "Непрочитанные",
       comments: "Комментарии",
-      replies: "Ответы",
       follows: "Подписки",
       mentions: "Упоминания",
       claims: "Происхождение",
-      system: "Системные",
+      reminders: "Напоминания",
       grouped: "Группировать похожие",
       settings: "Настройки",
-      saveSettings: "Сохранить",
       markRead: "Отметить прочитанным",
       markUnread: "Отметить непрочитанным",
       dismiss: "Убрать",
       more: "Показать следующие",
-      filtersLabel: "Тип уведомлений",
+      filtersLabel: "Тип событий",
+      listLabel: "События",
+      from: "От {actors}",
+      fromSomeone: "От другого садовода",
+      andOthers: "{actors} и ещё {count}",
+      reminderOrigin: "Напоминание",
+      lastEntry: "Последняя запись: {when}",
+      never: "Ещё без записей",
+      addedOn: "добавлено {date}",
+      addedAt: "добавлено {date} в {time}",
+      write: "Записать",
+      writeLabel: "Записать: {name}",
+      rowAction: "{action}: {name}",
+      kinds: { plant: "Растение", animal: "Животное" },
+      outcome: {
+        read: "Отмечено прочитанным.",
+        unread: "Отмечено непрочитанным.",
+        dismissed: "Убрано из списка.",
+        failed:
+          "Не удалось сохранить, ничего не изменилось. Попробуйте ещё раз.",
+      },
+      loadErrorTitle: "Не удалось показать события",
       summaries: {
         comment_on_journal: "Новый комментарий к вашей записи",
         reply_to_comment: "Новый ответ на ваш комментарий",
         profile_followed: "Новый подписчик профиля",
-        object_followed: "Кто-то следит за вашим объектом",
-        lineage_followed: "Кто-то следит за происхождением объекта",
-        provenance_mention: "Ваш объект упомянут в запросе о происхождении",
-        claim_decided: "Статус запроса о происхождении изменён",
+        object_followed: "Новая подписка на ваше растение или животное",
+        lineage_followed:
+          "Новая подписка на происхождение вашего растения или животного",
+        provenance_mention: "Ваше растение или животное указано как источник",
+        claim_decided: "Решение по вашему запросу о происхождении",
         lineage_question: "Новый вопрос о происхождении",
-        stale_journal_prompt: "Время добавить новую запись в журнал",
+        stale_journal_prompt: "Напоминание о записи",
+      },
+      settingsPage: {
+        title: "Настройки событий",
+        description:
+          "Что появляется на странице «События». Выключенное не показывается, пока вы не включите его снова.",
+        back: "К событиям",
+        social: "От других садоводов",
+        reminders: "Напоминания",
+        options: {
+          comments: "Комментарии к вашим записям",
+          replies: "Ответы на ваши комментарии",
+          follows: "Подписки на вас и ваши растения и животных",
+          mentions: "Когда ваше растение или животное указывают как источник",
+          claims: "Решения и вопросы о происхождении",
+          system: "Напоминания о записях",
+        },
+        reminderHint:
+          "О ваших растениях и животных без записей за последние две недели. Они необязательны: выключите, если не нужны.",
+        save: "Сохранить",
+        saved: "Настройки сохранены.",
+        failed:
+          "Не удалось сохранить настройки, сохранённое не изменилось. Попробуйте ещё раз.",
+        signIn: "Войдите, чтобы изменить настройки событий.",
+        loadErrorTitle: "Не удалось показать настройки",
       },
     },
     bookmarks: {
@@ -484,7 +670,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       previous: "Назад",
       next: "Далее",
       itemCount: (count) => `${count} элементов`,
-      unreadCount: (count) => `${count} непрочитанных`,
+      unreadCount: (count) => `Непрочитанные: ${count}`,
       loadError: (surface) => `Не удалось загрузить: ${surface}`,
       retry: "Попробовать снова",
     },
@@ -493,4 +679,15 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
 
 export function getSocialSurfaceCopy(locale: PublicLocale) {
   return COPY[locale];
+}
+
+/** Fills `{name}` placeholders in a copy template. */
+export function fillSocialTemplate(
+  template: string,
+  values: Record<string, string | number>,
+): string {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
 }

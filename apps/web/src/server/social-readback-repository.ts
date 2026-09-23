@@ -151,26 +151,6 @@ export async function listFollowedFeedStories(
   return serializeFollowedFeedStories(rows);
 }
 
-export async function listNotificationCenter(
-  scope: RequestScope,
-): Promise<NotificationCenterEvent[]> {
-  const [claimRequests, claimDecisions, questions, follows] = await Promise.all(
-    [
-      buildNotificationClaimRequestEventsQuery(db, scope).execute(),
-      buildNotificationClaimDecisionEventsQuery(db, scope).execute(),
-      buildNotificationQuestionEventsQuery(db, scope).execute(),
-      buildNotificationFollowEventsQuery(db, scope).execute(),
-    ],
-  );
-
-  return serializeNotificationCenterRows({
-    claimRequests,
-    claimDecisions,
-    questions,
-    follows,
-  });
-}
-
 export function buildFollowedFeedStoriesQuery(
   executor: QueryExecutor,
   scope: RequestScope,

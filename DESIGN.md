@@ -1599,6 +1599,50 @@ values, and a ban with no question before it (`OVE-500`). The rules:
   - "Немає доступу", or a failure that changed nothing and is safe to retry.
   One failed action is one card's notice, never a list that disappears.
 
+### 5.22 Activity says what happened, to what, and what to do next
+
+Every reminder read «Час додати новий запис до журналу», with no plant and no
+space. Four of them were four identical rows, their Write went to a page
+instead of the composer, and the chip that held them said «Системні». A
+comment named no entry. The garden's rail counted another model with no
+receipts, so its number never went down. The preferences sat inside the list
+(`OG-UX-022`, `OVE-501`). The rules:
+
+- **Each row says what happened, what it is about, and who or what it came
+  from.** A comment names the entry, and the reader's own plant and space. A
+  follow, a claim or a question names the reader's plant or animal and its
+  space. A reminder names the plant or animal, its kind, its space and its
+  organism, the way the garden list does. Somebody else's space is never
+  shown.
+- **Two kinds, said in words.** "Від @handle" for what another gardener did,
+  "Нагадування" for the optional reminder to write. Nothing produces a notice
+  from OverGarden itself, so no row pretends to be one. The reminders' chip
+  says «Нагадування».
+- **Rows that would read the same are told apart** by what differs between
+  them: the variety, then the day each was added, then the minute. Two
+  «Томат» on one balcony are two rows a reader can choose between. The row's
+  link is described by its lines, so a keyboard reader hears them too, and
+  each control's name carries the row it acts on.
+- **A reminder states a fact: when the plant was last written about**
+  ("Останній запис: 3 тижні тому", "Ще без записів"). It never says
+  "needs attention", "time to", or anything about the plant's health.
+- **Write opens the composer for exactly that plant, in one press**
+  (`/garden/new?object=…`), and Close comes back to the row. A plant deleted
+  since the list was drawn opens the composer with the reason and the picker.
+  Signing in keeps both the plant and the way back.
+- **The count is the receipts.** The header says "Непрочитані: N", where N is
+  the unread events, not rows. A group shows how many of its events are
+  unread. The garden's rail shows the same number, and "—" when it could not
+  be read. A row is grouped only when its events say the same thing about the
+  same target and lead to the same place, and it names everyone who acted.
+- **A receipt that could not be written is said beside its row**, and nothing
+  changes until it is. The row's own buttons are the retry.
+- **The preferences are their own page**, `/notifications/settings`, under
+  Activity: what other gardeners did, and the reminders with the rule that
+  makes one. Saving comes back there with what happened.
+- **A failed read is a failure with a retry of the same view**, never an empty
+  list. An unreadable session is not "signed out".
+
 ---
 
 ## 6. Language and locale

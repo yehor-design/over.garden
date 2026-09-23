@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
-  markNotificationEventsRead: vi.fn(),
-  setNotificationReceipt: vi.fn(),
+  updateNotificationReceipts: vi.fn(),
   updateNotificationPreferences: vi.fn(),
   revalidatePath: vi.fn(),
   resolveMutationScope: vi.fn(),
@@ -12,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next/cache", () => ({
-  revalidatePath: mocks.revalidatePath ,
+  revalidatePath: mocks.revalidatePath,
   revalidateTag: vi.fn(),
   updateTag: vi.fn(),
 }));
@@ -34,8 +33,7 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 vi.mock("@/server/social-return-repository", () => ({
-  markNotificationEventsRead: mocks.markNotificationEventsRead,
-  setNotificationReceipt: mocks.setNotificationReceipt,
+  updateNotificationReceipts: mocks.updateNotificationReceipts,
   updateNotificationPreferences: mocks.updateNotificationPreferences,
 }));
 const scope = {
@@ -67,6 +65,10 @@ describe("notification mutation routes", () => {
     mocks.mutationScopeResponse.mockImplementation((admission) =>
       Response.json({ code: admission.code }, { status: admission.statusCode }),
     );
+    mocks.updateNotificationReceipts.mockResolvedValue(2);
+    mocks.updateNotificationPreferences.mockImplementation(
+      async (_scope, preferences) => preferences,
+    );
   });
 
   it("updates every explicit preference and keeps locale return bounded", async () => {
@@ -88,13 +90,90 @@ describe("notification mutation routes", () => {
       claims: false,
       system: true,
     });
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/bg/notifications");
+    // The settings page, and the list that reads the same preferences.
+    expect(mocks.revalidatePath.mock.calls).toEqual([
+      ["/bg/notifications/settings"],
+      ["/bg/notifications"],
+    ]);
+    expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/bg/notifications?engagement=preferences-saved",
+      "/bg/notifications/settings?saved=1#notification-settings-outcome",
     );
   });
 
-  it("marks every opaque key in a grouped notification as read", async () => {
+  it.each([
+    ["ru", "/ru/notifications/settings"],
+    ["uk", "/notifications/settings"],
+    // A language the site does not speak is the default one, never a path.
+    ["../../account", "/notifications/settings"],
+  ])(
+    "returns preferences saved in %s to that language's settings page",
+    async (locale, settingsPath) => {
+      const { POST } = await import("./preferences/route");
+      const response = await POST(
+        formRequest("/api/notifications/preferences", { locale }),
+      );
+
+      expect(mocks.updateNotificationPreferences).toHaveBeenCalledWith(scope, {
+        comments: false,
+        replies: false,
+        follows: false,
+        mentions: false,
+        claims: false,
+        system: false,
+      });
+      expect(mocks.revalidatePath.mock.calls).toEqual([
+        [settingsPath],
+        [settingsPath.replace(/\/settings$/u, "")],
+      ]);
+      expect(response.headers.get("location")).toBe(
+        `${settingsPath}?saved=1#notification-settings-outcome`,
+      );
+    },
+  );
+
+  it("says a failed save on the settings page, and refreshes nothing", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.updateNotificationPreferences.mockRejectedValue(
+      Object.assign(new Error("connection terminated"), { code: "08006" }),
+    );
+    const { POST } = await import("./preferences/route");
+    const response = await POST(
+      formRequest("/api/notifications/preferences", {
+        locale: "ru",
+        comments: "on",
+      }),
+    );
+
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "/ru/notifications/settings?saved=failed#notification-settings-outcome",
+    );
+    expect(log).toHaveBeenCalledWith(
+      "[notifications] preference write failed",
+      { error: "connection terminated" },
+    );
+    log.mockRestore();
+  });
+
+  it("sends a signed-out save back to the settings page without writing", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    const { POST } = await import("./preferences/route");
+    const response = await POST(
+      formRequest("/api/notifications/preferences", {
+        locale: "bg",
+        comments: "on",
+      }),
+    );
+
+    expect(mocks.updateNotificationPreferences).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/bg/notifications/settings");
+  });
+
+  it("marks every opaque key in a grouped notification as read in one write", async () => {
     const { POST } = await import("./receipts/route");
     const keys = ["a".repeat(32), "b".repeat(32)];
     const response = await POST(
@@ -106,10 +185,13 @@ describe("notification mutation routes", () => {
       ]),
     );
 
-    expect(mocks.markNotificationEventsRead).toHaveBeenCalledWith(scope, keys);
-    expect(mocks.setNotificationReceipt).not.toHaveBeenCalled();
-    expect(response.headers.get("location")).toContain(
-      "/ru/notifications?filter=comments&view=grouped&engagement=notification-updated",
+    expect(mocks.updateNotificationReceipts).toHaveBeenCalledTimes(1);
+    expect(mocks.updateNotificationReceipts).toHaveBeenCalledWith(scope, {
+      eventKeys: keys,
+      state: "read",
+    });
+    expect(response.headers.get("location")).toBe(
+      `/ru/notifications?filter=comments&view=grouped&receipt=read&event=${keys[0]}#notification-${keys[0]}`,
     );
   });
 
@@ -119,7 +201,7 @@ describe("notification mutation routes", () => {
     "/%5cattacker.example/notifications",
     "/%252f%255cattacker.example/notifications",
   ])(
-    "dismisses grouped keys individually and rejects unsafe return path %s",
+    "dismisses a grouped row in one write and rejects unsafe return path %s",
     async (returnTo) => {
       const { POST } = await import("./receipts/route");
       const keys = ["c".repeat(32), "d".repeat(32)];
@@ -133,12 +215,11 @@ describe("notification mutation routes", () => {
         ]),
       );
 
-      expect(mocks.setNotificationReceipt.mock.calls).toEqual([
-        [scope, { eventKey: keys[0], state: "dismissed" }],
-        [scope, { eventKey: keys[1], state: "dismissed" }],
+      expect(mocks.updateNotificationReceipts.mock.calls).toEqual([
+        [scope, { eventKeys: keys, state: "dismissed" }],
       ]);
       expect(response.headers.get("location")).toBe(
-        "https://over.garden/notifications?engagement=notification-updated",
+        `/notifications?receipt=dismissed&event=${keys[0]}#notification-outcome`,
       );
     },
   );
@@ -150,14 +231,13 @@ describe("notification mutation routes", () => {
       formRequest("/api/notifications/receipts", {
         eventKey: "a".repeat(32),
         receiptState: "read",
-        returnTo: "/notifications",
+        returnTo: "/bg/notifications?filter=reminders",
       }),
     );
 
-    expect(mocks.markNotificationEventsRead).not.toHaveBeenCalled();
-    expect(mocks.setNotificationReceipt).not.toHaveBeenCalled();
+    expect(mocks.updateNotificationReceipts).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/notifications",
+      "/bg/notifications?filter=reminders",
     );
   });
 });
