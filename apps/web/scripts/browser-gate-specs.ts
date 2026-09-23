@@ -59,6 +59,7 @@ export const BROWSER_GATE_SPECS = [
   "space-page.spec.ts",
   "object-pages.spec.ts",
   "public-feed-cards.spec.ts",
+  "entry-reading.spec.ts",
   "catalog.spec.ts",
   "organism-card.spec.ts",
   "editorial-surfaces.spec.ts",

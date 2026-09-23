@@ -260,9 +260,7 @@ describe("an entry whose photographs are in its document (OVE-471)", () => {
     // React hoists the preload for an eager, high-priority image, so the
     // photograph is asked for from `<head>` rather than when the parser
     // reaches it.
-    expect(html).toMatch(
-      /<link rel="preload" as="image"[^>]*landscape\.webp/u,
-    );
+    expect(html).toMatch(/<link rel="preload" as="image"[^>]*landscape\.webp/u);
   });
 
   it("keeps a separate cover, which no block of the document shows", () => {
@@ -278,9 +276,7 @@ describe("an entry whose photographs are in its document (OVE-471)", () => {
             ...composerPage.entry,
             contentDocument: {
               schemaVersion: 1,
-              blocks: [
-                { id: "b3", type: "image", mediaAssetId: "media-2" },
-              ],
+              blocks: [{ id: "b3", type: "image", mediaAssetId: "media-2" }],
             },
           },
         }}
@@ -330,13 +326,16 @@ describe("public journal entry V2", () => {
     expect(html.match(/<h1/g)).toHaveLength(1);
     expect(html).toMatch(/<h1[^>]*>Перший урожай після спеки<\/h1>/u);
 
-    // Criterion 3: the cover reserves a 16:9 box and keeps its srcset; the
-    // rest of the photographs are 4:3 cards with their real captions.
+    // Criterion 3: the landscape cover reserves a 16:9 box and keeps its
+    // srcset. The rest stand at their own shape (`OVE-493`): the portrait in
+    // this fixture is 800 × 1200, and a 4:3 crop kept a strip of it.
     expect(html).toContain('data-journal-cover="true"');
     expect(html).toContain('data-media-aspect="cover"');
-    expect(html).toContain('data-media-aspect="card"');
     expect(html).toContain("aspect-cover");
-    expect(html).toContain("aspect-card");
+    expect(html).toMatch(
+      /data-media-aspect="auto"[\s\S]*?width="800" height="1200"/u,
+    );
+    expect(html).not.toContain("aspect-card");
     expect(html).not.toContain("/_next/image");
     expect(html).toContain('data-journal-media-count="2"');
     // The caption is the `alt` (OVE-432): one sentence describes the photo,
@@ -473,5 +472,98 @@ describe("public journal entry V2", () => {
     expect(html).toContain("Местоположението е скрито");
     expect(html).not.toContain("Управление на записа");
     expect(html).not.toContain("<img");
+  });
+});
+
+describe("the entry reads as the card did (OVE-493)", () => {
+  function renderEntry(
+    page: PublicJournalEntryPage,
+    locale: "uk" | "bg" | "ru" = "uk",
+  ) {
+    return renderToStaticMarkup(
+      <PublicJournalEntryView
+        locale={locale}
+        copy={getPublicJournalEntryCopy(locale)}
+        page={page}
+        directoryReturnTo="/journals"
+      />,
+    );
+  }
+
+  it("leads with who and when, then where it belongs, then the title", () => {
+    const html = renderEntry(objectPage);
+    const at = (needle: string) => html.indexOf(needle);
+    expect(at('data-entry-byline="true"')).toBeGreaterThan(-1);
+    expect(at('data-entry-byline="true"')).toBeLessThan(
+      at('data-entry-context="true"'),
+    );
+    expect(at('data-entry-context="true"')).toBeLessThan(at("<h1"));
+    // The byline names the author for a screen reader and hides the
+    // avatar's initials, which would read the author twice.
+    expect(html).toMatch(
+      /<span aria-hidden="true" class="contents"><span data-slot="avatar"/u,
+    );
+    expect(html).toContain('<span class="sr-only">Автор </span>');
+    // The kind in words beside the object.
+    expect(html).toMatch(/data-entry-context="true"[\s\S]*?Рослина/u);
+  });
+
+  it("dates the entry by its observation and names a later publication", () => {
+    const sameDay = renderEntry(objectPage);
+    expect(sameDay).not.toContain('data-entry-published="true"');
+
+    const backdated = renderEntry({
+      ...objectPage,
+      entry: { ...objectPage.entry, publishedAt: "2026-09-12T18:40:00.000Z" },
+    });
+    expect(backdated).toContain('<time dateTime="2026-07-10"');
+    expect(backdated).toMatch(
+      /data-entry-published="true"[^>]*>Опубліковано 12 вер\. 2026 р\.<\/time>/u,
+    );
+  });
+
+  // OG-UX-030: the page speaks the reader's language; the gardener's words
+  // carry theirs.
+  it("marks the gardener's words with their language and nothing else", () => {
+    const html = renderEntry(
+      {
+        ...objectPage,
+        entry: { ...objectPage.entry, sourceLanguage: "bg" },
+      },
+      "uk",
+    );
+    expect(html).toContain('<main lang="uk"');
+    expect(html).toMatch(/<h1[^>]*lang="bg"[^>]*>Перший урожай/u);
+    expect(html).toMatch(/data-journal-prose="true"[^>]*lang="bg"/u);
+    const byline = html.slice(
+      html.indexOf('data-entry-byline="true"'),
+      html.indexOf('data-entry-context="true"'),
+    );
+    expect(byline).not.toContain('lang="bg"');
+    // Same language, no redundant attribute.
+    expect(renderEntry(objectPage)).not.toContain('lang="bg"');
+  });
+
+  // OG-UX-018: the previous entry is not listed a second time below it.
+  it("gathers the rest of the journal in one section, each entry once", () => {
+    const html = renderEntry({
+      ...objectPage,
+      relatedEntries: [
+        ...objectPage.relatedEntries,
+        {
+          id: "entry-x",
+          title: "Пересадка",
+          bodyPreview: "У більший горщик.",
+          entryDate: "2026-06-20",
+          publicSlug: "peresadka",
+          publicPath: "/@olena/post/3",
+        },
+      ],
+    });
+    expect(html.match(/data-related-history="true"/gu)).toHaveLength(1);
+    expect(html.match(/href="\/journal\/pered-tsvitinniam"/gu)).toHaveLength(1);
+    expect(html).toContain('data-journal-chronology="true"');
+    expect(html).toContain('data-related-entries="true"');
+    expect(html).toContain('href="/@olena/post/3"');
   });
 });

@@ -336,6 +336,16 @@ state, which is a separate decision. Until then the render path treats a null
 as the default locale and the publish path never writes one. Production holds
 no such row (`docs/PRODUCTION_SCHEMA_STATE.md`, 2026-09-11).
 
+**Amendment, 2026-09-23 (`OVE-493`).** "The entry element" is the entry's own
+words, not the page around them. The column now marks the title, the story,
+the captions and the titles of the journal's other entries; the page's
+`<main>` carries the reader's language, because the byline, the dates and
+every label on it are the reader's. The purpose is unchanged — a screen
+reader reads the gardener's words with their own phonetics — and the same
+rule now reaches the page's chrome, which was being declared in the entry's
+language (OG-UX-030). Cards in every listing mark only the title and excerpt
+the same way (`OVE-492`).
+
 ### D12. One declaration generates the validator, the constraint and the lint
 
 `src/lib/address/address-manifest.ts` is the sole declaration: one entry per

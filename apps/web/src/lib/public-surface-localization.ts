@@ -92,6 +92,21 @@ interface PublicSurfaceCopy {
     moreActions: string;
     /** `OVE-454`: every comment is a place a reader can link to. */
     commentPermalink: string;
+    /** `OVE-493`: the action row's way to the comments. */
+    commentsJump: string;
+    /** "Відповідь для {author}": whom a reply answers. */
+    replyTo: string;
+    /** On a comment's button while it is on its way. */
+    sending: string;
+    /** In place of a comment its author deleted. */
+    commentRemovedByAuthor: string;
+    /** In place of a comment a moderator is looking at. */
+    commentUnderReview: string;
+    share: string;
+    shareCopied: string;
+    shareFailed: string;
+    /** Names the field that shows the address when copying failed. */
+    shareAddress: string;
     reportReasons: {
       spam: string;
       harassment: string;
@@ -327,6 +342,15 @@ const COPY = {
       signInComplete: "Вхід завершено. Підтвердьте дію нижче, щоб продовжити.",
       moreActions: "Інші дії",
       commentPermalink: "Посилання на коментар",
+      commentsJump: "Коментувати",
+      replyTo: "Відповідь для {author}",
+      sending: "Надсилаємо…",
+      commentRemovedByAuthor: "Автор видалив цей коментар.",
+      commentUnderReview: "Коментар на перевірці модератора.",
+      share: "Поділитися",
+      shareCopied: "Посилання скопійовано.",
+      shareFailed: "Не вдалося скопіювати. Ось посилання:",
+      shareAddress: "Посилання на запис",
       reportReasons: {
         spam: "Спам",
         harassment: "Переслідування",
@@ -577,6 +601,15 @@ const COPY = {
         "Влизането е завършено. Потвърдете действието по-долу, за да продължите.",
       moreActions: "Още действия",
       commentPermalink: "Връзка към коментара",
+      commentsJump: "Коментирай",
+      replyTo: "Отговор на {author}",
+      sending: "Изпращаме…",
+      commentRemovedByAuthor: "Авторът изтри този коментар.",
+      commentUnderReview: "Коментарът се преглежда от модератор.",
+      share: "Сподели",
+      shareCopied: "Връзката е копирана.",
+      shareFailed: "Копирането не успя. Ето връзката:",
+      shareAddress: "Връзка към записа",
       reportReasons: {
         spam: "Спам",
         harassment: "Тормоз",
@@ -826,6 +859,15 @@ const COPY = {
         "Вход завершён. Подтвердите действие ниже, чтобы продолжить.",
       moreActions: "Другие действия",
       commentPermalink: "Ссылка на комментарий",
+      commentsJump: "Комментировать",
+      replyTo: "Ответ для {author}",
+      sending: "Отправляем…",
+      commentRemovedByAuthor: "Автор удалил этот комментарий.",
+      commentUnderReview: "Комментарий на проверке у модератора.",
+      share: "Поделиться",
+      shareCopied: "Ссылка скопирована.",
+      shareFailed: "Не удалось скопировать. Вот ссылка:",
+      shareAddress: "Ссылка на запись",
       reportReasons: {
         spam: "Спам",
         harassment: "Преследование",

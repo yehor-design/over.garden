@@ -122,7 +122,9 @@ describe("/", () => {
     expect(html).toContain('lang="uk"');
     expect(html).toContain(">Стрічка</h1>");
     expect(html).toContain("Ранкове спостереження");
-    expect(html).toContain('href="/@demo_olena/morning-check"');
+    // The entry's own address, carrying the feed view as its way back
+    // (`OVE-493`); the entry's canonical address stays the bare path.
+    expect(html).toContain('href="/@demo_olena/morning-check?from=%2F"');
     // Criterion 8: the article is named by the entry it holds.
     expect(html).toContain('aria-labelledby="entry-card-entry-1-title"');
     expect(html).not.toContain("Ведіть живу історію");

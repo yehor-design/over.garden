@@ -96,8 +96,11 @@ test.describe("OVE-464 entry addresses", () => {
       );
       // Nothing in it to encode: what a reader copies is what they send.
       expect(encodeURI(address)).toBe(address);
-      // The entry is Bulgarian whatever the reader's interface is (D11).
-      expect(html).toContain('<main lang="bg"');
+      // The entry's words are Bulgarian whatever the reader's interface is;
+      // the page around them is the reader's (D11, amended by OVE-493).
+      expect(html).toMatch(/<h1[^>]*lang="bg"/u);
+      expect(html).toMatch(/data-journal-prose="true"[^>]*lang="bg"/u);
+      expect(html).not.toContain('<main lang="bg"');
 
       // 2. One 308 from every address it ever had.
       const olderSpellings = [

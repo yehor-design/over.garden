@@ -57,6 +57,41 @@ export function readDirectoryReturnTarget(
   }
 }
 
+/** The feed's three spellings, and what its own request normalizer reads. */
+const FEED_PATHS: ReadonlySet<string> = new Set(
+  PUBLIC_LOCALES.map((locale) => localizedPath(locale, "/")),
+);
+const FEED_QUERY_KEYS = ["kind", "topic"] as const;
+
+/**
+ * The feed view a reader came from (`OVE-493`), or `null` when `from` names
+ * anything else. Same rules as the directory's: same origin, no fragment, one
+ * of the feed's own addresses, and only the parameters the feed reads.
+ */
+export function readFeedReturnTarget(
+  from: string | null,
+  origin: string,
+): string | null {
+  if (!from || from.length > 1_500 || !from.startsWith("/")) return null;
+
+  try {
+    const url = new URL(from, origin);
+    if (url.origin !== origin || url.hash) return null;
+    if (!FEED_PATHS.has(url.pathname)) return null;
+
+    const query = new URLSearchParams();
+    for (const key of FEED_QUERY_KEYS) {
+      const value = url.searchParams.get(key);
+      if (!value || value.length > MAX_VALUE_LENGTH) continue;
+      query.set(key, value);
+    }
+    const search = query.toString();
+    return search ? `${url.pathname}?${search}` : url.pathname;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * "Back to the journals", to the listing the reader came from.
  *
@@ -70,31 +105,44 @@ export function readDirectoryReturnTarget(
 export function DirectoryReturnLink({
   href,
   label,
+  feedLabel,
 }: {
   /** The directory itself: what the served document links to. */
   href: string;
   label: string;
+  /**
+   * "Стрічка": said instead when the reader came from the feed, whose cards
+   * carry `?from=` the way the directory's do (`OVE-493`).
+   */
+  feedLabel?: string;
 }) {
-  const [target, setTarget] = useState(href);
+  const [target, setTarget] = useState({ href, label });
 
   useEffect(() => {
-    const returnTarget = readDirectoryReturnTarget(
-      new URLSearchParams(window.location.search).get("from"),
-      window.location.origin,
-    );
-    if (!returnTarget) return;
+    const from = new URLSearchParams(window.location.search).get("from");
+    const directory = readDirectoryReturnTarget(from, window.location.origin);
+    const feed = feedLabel
+      ? readFeedReturnTarget(from, window.location.origin)
+      : null;
+    const next = directory
+      ? { href: directory, label }
+      : feed && feedLabel
+        ? { href: feed, label: feedLabel }
+        : null;
+    if (!next) return;
     // A transition: the page around this link may still be hydrating
     // (ADR-0032 D2).
-    startTransition(() => setTarget(returnTarget));
-  }, []);
+    startTransition(() => setTarget(next));
+  }, [feedLabel, label]);
 
   return (
     <Link
-      href={target}
+      href={target.href}
+      data-return-link="true"
       className={buttonVariants({ variant: "ghost", size: "sm" })}
     >
       <ArrowLeft aria-hidden="true" />
-      {label}
+      {target.label}
     </Link>
   );
 }

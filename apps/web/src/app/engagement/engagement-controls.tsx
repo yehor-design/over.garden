@@ -6,7 +6,17 @@ import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
 import { ArrowBendUpLeftIcon as Reply } from "@/components/icons/ArrowBendUpLeft";
 import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
 import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
-import { useActionState, type ReactNode } from "react";
+import {
+  Component,
+  Fragment,
+  useActionState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -46,15 +56,7 @@ import { Textarea } from "@/components/ui/textarea";
  * update injected into a client closure.
  */
 
-export function EngagementLikeControl({
-  targetKind,
-  targetRef,
-  initialLiked,
-  initialCount,
-  locale,
-  labels,
-  toggle,
-}: {
+type LikeControlProps = {
   targetKind: string;
   targetRef: string;
   initialLiked: boolean;
@@ -70,19 +72,66 @@ export function EngagementLikeControl({
     previous: EngagementLikeState,
     formData: FormData,
   ) => Promise<EngagementLikeState>;
+};
+
+export function EngagementLikeControl(props: LikeControlProps) {
+  // What the server last said, kept above the boundary, so a control that
+  // lost its request comes back showing the truth rather than the optimistic
+  // guess (`OVE-493`, criterion 4).
+  const [known, setKnown] = useState({
+    liked: props.initialLiked,
+    activeLikeCount: props.initialCount,
+  });
+  return (
+    <TransportBoundary
+      render={(failures) => (
+        <LikeForm
+          {...props}
+          initialLiked={known.liked}
+          initialCount={known.activeLikeCount}
+          transportFailed={failures > 0}
+          onSettled={setKnown}
+        />
+      )}
+    />
+  );
+}
+
+function LikeForm({
+  targetKind,
+  targetRef,
+  initialLiked,
+  initialCount,
+  locale,
+  labels,
+  toggle,
+  transportFailed,
+  onSettled,
+}: LikeControlProps & {
+  transportFailed: boolean;
+  onSettled: (known: { liked: boolean; activeLikeCount: number }) => void;
 }) {
   const [state, formAction] = useActionState(toggle, {
     liked: initialLiked,
     activeLikeCount: initialCount,
     failure: null,
   });
+  const [initialState] = useState(state);
+  useEffect(() => {
+    if (state !== initialState && !state.failure) {
+      onSettled({ liked: state.liked, activeLikeCount: state.activeLikeCount });
+    }
+  }, [initialState, onSettled, state]);
 
   return (
     <form action={formAction} className="flex flex-col gap-1">
       <TargetFields targetKind={targetKind} targetRef={targetRef} />
       <LikeButton state={state} locale={locale} labels={labels} />
       <ActionFailure
-        failure={state.failure}
+        failure={
+          state.failure ??
+          (transportFailed && state === initialState ? "unavailable" : null)
+        }
         labels={{
           unavailable: labels.unavailable,
           rateLimited: labels.rateLimited,
@@ -125,6 +174,8 @@ function LikeButton({
       <button
         type="submit"
         aria-pressed={liked}
+        aria-busy={pending || undefined}
+        onClick={refuseWhilePending(pending)}
         aria-label={`${liked ? labels.liked : labels.like}, ${counted}`}
         className={buttonVariants({
           variant: liked ? "primary" : "secondary",
@@ -226,16 +277,7 @@ export function EngagementFollowToggleControl({
   );
 }
 
-function ToggleControl({
-  targetKind,
-  targetRef,
-  initialActive,
-  autoFocus = false,
-  controlId,
-  labels,
-  icon,
-  submit,
-}: {
+type ToggleControlProps = {
   targetKind: string;
   targetRef: string;
   initialActive: boolean;
@@ -247,11 +289,48 @@ function ToggleControl({
     previous: EngagementToggleState,
     formData: FormData,
   ) => Promise<EngagementToggleState>;
+};
+
+function ToggleControl(props: ToggleControlProps) {
+  // As the like control: the server's last word survives a lost request.
+  const [known, setKnown] = useState(props.initialActive);
+  return (
+    <TransportBoundary
+      render={(failures) => (
+        <ToggleForm
+          {...props}
+          initialActive={known}
+          transportFailed={failures > 0}
+          onSettled={setKnown}
+        />
+      )}
+    />
+  );
+}
+
+function ToggleForm({
+  targetKind,
+  targetRef,
+  initialActive,
+  autoFocus = false,
+  controlId,
+  labels,
+  icon,
+  submit,
+  transportFailed,
+  onSettled,
+}: ToggleControlProps & {
+  transportFailed: boolean;
+  onSettled: (active: boolean) => void;
 }) {
   const [state, formAction] = useActionState(submit, {
     active: initialActive,
     failure: null,
   });
+  const [initialState] = useState(state);
+  useEffect(() => {
+    if (state !== initialState && !state.failure) onSettled(state.active);
+  }, [initialState, onSettled, state]);
 
   return (
     <form action={formAction} className="flex flex-col gap-1">
@@ -263,7 +342,13 @@ function ToggleControl({
         labels={labels}
         icon={icon}
       />
-      <ActionFailure failure={state.failure} labels={labels} />
+      <ActionFailure
+        failure={
+          state.failure ??
+          (transportFailed && state === initialState ? "unavailable" : null)
+        }
+        labels={labels}
+      />
     </form>
   );
 }
@@ -290,6 +375,8 @@ function ToggleButton({
       type="submit"
       autoFocus={autoFocus}
       aria-pressed={shown}
+      aria-busy={pending || undefined}
+      onClick={refuseWhilePending(pending)}
       className={buttonVariants({
         variant: "secondary",
         className: "self-start",
@@ -303,21 +390,20 @@ function ToggleButton({
 
 /**
  * The comment composer. Posts through a Server Action, so it works without
- * JavaScript; with JavaScript it clears itself once the action reports the
- * comment landed, and keeps the text on screen when the action refuses.
+ * JavaScript. With JavaScript it clears itself only when the server answered
+ * that the comment landed; a refusal keeps every word on screen, beside the
+ * reason (`OVE-493`, criterion 4).
+ *
+ * The words are the component's state rather than the field's own value
+ * because React resets a form once its action answers — success or refusal
+ * alike — and an uncontrolled field lost a refused comment to that reset. A
+ * draft belongs to the answer it was typed after: a new "sent" empties it, a
+ * new refusal leaves it.
+ *
+ * The button refuses a second press while the first is on its way, and says
+ * so; the server's `clientMutationId` makes a second post a no-op besides.
  */
-export function EngagementCommentForm({
-  targetKind,
-  targetRef,
-  parentCommentId,
-  clientMutationId,
-  autoFocus = false,
-  fieldId,
-  controlRef,
-  compact = false,
-  labels,
-  submit,
-}: {
+type CommentFormProps = {
   targetKind: string;
   targetRef: string;
   parentCommentId?: string | null;
@@ -326,9 +412,13 @@ export function EngagementCommentForm({
   fieldId?: string;
   controlRef?: string;
   compact?: boolean;
+  /** "Відповідь для Олени" — whom a reply answers, said before it is written. */
+  replyTarget?: string;
   labels: {
     field: string;
     action: string;
+    /** Said on the button while the comment is on its way. */
+    sending?: string;
     unavailable: string;
     rateLimited: string;
     signInRequired: string;
@@ -337,53 +427,148 @@ export function EngagementCommentForm({
     previous: EngagementCommentState,
     formData: FormData,
   ) => Promise<EngagementCommentState>;
+};
+
+export function EngagementCommentForm(props: CommentFormProps) {
+  // The words live above the boundary: a request that never reached the
+  // server re-draws the form, and the words are still in it.
+  const [text, setText] = useState("");
+  return (
+    <TransportBoundary
+      render={(failures) => (
+        <CommentForm
+          {...props}
+          text={text}
+          onTextChange={setText}
+          transportFailed={failures > 0}
+        />
+      )}
+    />
+  );
+}
+
+function CommentForm({
+  targetKind,
+  targetRef,
+  parentCommentId,
+  clientMutationId,
+  autoFocus = false,
+  fieldId,
+  controlRef,
+  compact = false,
+  replyTarget,
+  labels,
+  submit,
+  text,
+  onTextChange,
+  transportFailed,
+}: CommentFormProps & {
+  text: string;
+  onTextChange: (text: string) => void;
+  transportFailed: boolean;
 }) {
   const [state, formAction] = useActionState(submit, {
     submitted: false,
     failure: null,
   });
+  const [initialState] = useState(state);
+  const fieldRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // The server said the comment landed: the words are its now.
+  useEffect(() => {
+    if (state !== initialState && state.submitted && !state.failure) {
+      onTextChange("");
+    }
+  }, [initialState, onTextChange, state]);
+
+  // React resets the form in the same commit as the answer. When an answer
+  // arrives — and only then, so typing after a success is never undone — put
+  // the words back after a refusal, or leave the field empty after a success.
+  const answered = useRef(state);
+  useLayoutEffect(() => {
+    if (answered.current === state) return;
+    answered.current = state;
+    const field = fieldRef.current;
+    const shown = state.submitted && !state.failure ? "" : text;
+    if (field && field.value !== shown) field.value = shown;
+  }, [state, text]);
 
   return (
     <form
       action={formAction}
+      data-comment-form={parentCommentId ? "reply" : "comment"}
       className={compact ? "grid gap-2" : "grid gap-3"}
-      key={state.submitted ? "sent" : "draft"}
     >
       <TargetFields targetKind={targetKind} targetRef={targetRef} />
       <HiddenField name="clientMutationId" value={clientMutationId} />
       {parentCommentId ? (
         <HiddenField name="parentCommentId" value={parentCommentId} />
       ) : null}
-      <Field label={labels.field} id={fieldId}>
+      <Field label={labels.field} description={replyTarget} id={fieldId}>
         <Textarea
+          ref={fieldRef}
           data-auth-intent-control="comment"
           data-auth-intent-control-ref={controlRef}
           autoFocus={autoFocus}
           name="body"
-          defaultValue=""
+          value={text}
+          onChange={(event) => onTextChange(event.target.value)}
           maxLength={600}
           rows={compact ? 2 : 3}
           className={compact ? "min-h-16" : "min-h-24"}
         />
       </Field>
-      <button
-        type="submit"
-        className={buttonVariants({
-          variant: compact ? "secondary" : "primary",
-          size: compact ? "sm" : "md",
-          className: "self-start",
-        })}
-      >
-        {compact ? (
-          <Reply className="size-4" aria-hidden="true" />
-        ) : (
-          <MessageCircle className="size-4" aria-hidden="true" />
-        )}
-        {labels.action}
-      </button>
-      <ActionFailure failure={state.failure} labels={labels} />
+      <CommentSubmitButton compact={compact} labels={labels} />
+      <ActionFailure
+        failure={
+          state.failure ??
+          (transportFailed && state === initialState ? "unavailable" : null)
+        }
+        labels={labels}
+      />
     </form>
   );
+}
+
+function CommentSubmitButton({
+  compact,
+  labels,
+}: {
+  compact: boolean;
+  labels: { action: string; sending?: string };
+}) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      aria-busy={pending || undefined}
+      onClick={refuseWhilePending(pending)}
+      data-comment-submit={pending ? "pending" : "ready"}
+      className={buttonVariants({
+        variant: compact ? "secondary" : "primary",
+        size: compact ? "sm" : "md",
+        className: "self-start",
+      })}
+    >
+      {compact ? (
+        <Reply className="size-4" aria-hidden="true" />
+      ) : (
+        <MessageCircle className="size-4" aria-hidden="true" />
+      )}
+      {pending && labels.sending ? labels.sending : labels.action}
+    </button>
+  );
+}
+
+/**
+ * A press on a control whose last press is still on its way is not a second
+ * request (`OVE-493`, criterion 4). The control stays focusable and says it is
+ * busy; it is not `disabled`, which would take the keyboard's focus with it.
+ */
+function refuseWhilePending(pending: boolean) {
+  return (event: MouseEvent<HTMLButtonElement>) => {
+    if (pending) event.preventDefault();
+  };
 }
 
 /**
@@ -439,6 +624,45 @@ export function EngagementCommentActionButton({
       <ActionFailure failure={state.failure} labels={labels} />
     </form>
   );
+}
+
+/**
+ * A request that never reached the server — or whose answer never came back —
+ * makes React throw where the form stands, and the nearest boundary above an
+ * entry page is the locale's own `error.tsx`: a dropped connection on Like
+ * replaced the whole page with an error screen (`OVE-493`, criterion 4).
+ *
+ * This boundary answers it in place. It re-draws its control from scratch,
+ * which puts back the state the server last confirmed rather than the
+ * optimistic guess, and tells the control a request failed so it can say so.
+ * The forms stay bare Server Action endpoints; this only changes what a
+ * hydrated page does when the network does not.
+ */
+class TransportBoundary extends Component<
+  { render: (failures: number) => ReactNode },
+  { failures: number; erred: boolean }
+> {
+  override state = { failures: 0, erred: false };
+
+  static getDerivedStateFromError() {
+    return { erred: true };
+  }
+
+  override componentDidUpdate() {
+    if (this.state.erred) {
+      this.setState((current) => ({
+        failures: current.failures + 1,
+        erred: false,
+      }));
+    }
+  }
+
+  override render() {
+    // The key moves on the failing render itself, so the control is
+    // re-mounted at once and never disappears for a frame.
+    const failures = this.state.failures + (this.state.erred ? 1 : 0);
+    return <Fragment key={failures}>{this.props.render(failures)}</Fragment>;
+  }
 }
 
 /**

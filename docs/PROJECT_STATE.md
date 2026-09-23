@@ -70,6 +70,18 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**The entry page and its conversation (OVE-493):** a permanent entry reads
+in its card's order — author and date (and the publication, when later), the
+object, the title and story — with `lang` on the gardener's words only, one
+"Ще з цього журналу" section (before, after, the rest, each once), and one
+action row: like, comment, save and share. Share uses the device's sheet or
+copies the canonical permalink, and says so. Comments name whom a reply
+answers, say they are sending, keep every word on a refusal or a lost
+request, and read "Автор видалив цей коментар." / "Коментар на перевірці…"
+in the reader's language. A lost request on any engagement control is
+answered in place, never by the locale's error page. See
+`docs/redesign/2026-09-21/OVE-493-PROOF.md`.
+
 **The feed's cards and bar (OVE-492):** every list of journal entries uses
 one author-first `EntryCard` — who and when, the object, the words, then the
 photographs at their own bounded shape (none for a text note) — dated by the
