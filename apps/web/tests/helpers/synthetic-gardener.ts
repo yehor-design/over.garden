@@ -88,8 +88,9 @@ export async function signInSyntheticGardener(input: {
           signedIn = true;
           break;
         }
+        if (response.status() !== 429) break;
         const delay = authRetryDelayMs(response, attempt);
-        if (response.status() !== 429 || delay === null) break;
+        if (delay === null) break;
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
       if (!signedIn) {
