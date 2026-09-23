@@ -1,119 +1,199 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import {
+  WorkspaceSectionError,
+  workspaceSchemaMissingHint,
+} from "@/components/garden/workspace-state";
+import {
+  ModerationAreas,
+  ModerationFrame,
+} from "@/components/moderation/moderation-frame";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
-import type { OperatorCopy } from "@/lib/operator-copy";
-import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { resolveAdminCapabilityAccessBounded } from "@/server/admin-access";
-import { listCommunityModerationQueue } from "@/server/community-repository";
+import { EmptyState } from "@/components/ui/empty-state";
+import { getCommunityContentCopy } from "@/lib/community-copy";
+import { publicCommunityPath } from "@/lib/garden/public-paths";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  fillModerationTemplate,
+  getModerationCopy,
+} from "@/lib/moderation-copy";
+import { localizedPath } from "@/lib/public-localization";
+import {
+  listModeratedCommunities,
+  type ModeratedCommunity,
+} from "@/server/community-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { scopedToUser } from "@/server/request-scope";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
 
-const FIRST_COMMUNITY_SLUG = "observation-and-care";
+export const COMMUNITIES_MODERATION_PATH = "/account/communities";
 
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getModerationCopy(await getRequestInterfaceLocale());
+  return {
+    title: copy.communities.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
+
+/**
+ * The communities this reader may moderate (`OVE-500`, criterion 5): every
+ * one for the owner, the assigned ones for a community's moderator. It used
+ * to be one hard-coded card for `observation-and-care`, reached only by the
+ * operator — so a second community had no way in, and a moderator the server
+ * would let act was shown "unavailable".
+ */
 export default async function CommunityModerationDirectory() {
-  const [locale, session] = await Promise.all([
+  const [locale, viewer] = await Promise.all([
     getRequestInterfaceLocale(),
-    getCurrentSession(),
+    resolveWorkspaceViewer(),
   ]);
-  const copy = getOperatorCopy(locale);
-  if (!session?.user?.id) {
+  const copy = getModerationCopy(locale);
+  const frame = {
+    locale,
+    surface: "communities-moderation" as const,
+    title: copy.communities.title,
+    description: copy.communities.description,
+    tabs: <ModerationAreas locale={locale} current="communities" />,
+  };
+
+  if (viewer.status === "unavailable") {
     return (
-      <main
-        lang={locale}
-        className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8"
-      >
-        <AdminCommunityHeader copy={copy} />
-        <SignInPrompt locale={locale} next={"/account/communities"} />
-      </main>
+      <ModerationFrame {...frame} accessState="unavailable">
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          title={copy.communities.title}
+          retryHref={COMMUNITIES_MODERATION_PATH}
+          technicalHint={workspaceSchemaMissingHint(locale, viewer.failure)}
+        />
+      </ModerationFrame>
+    );
+  }
+  if (viewer.status === "sign-in-required") {
+    return (
+      <ModerationFrame {...frame} accessState="sign-in-required" tabs={null}>
+        <SignInPrompt locale={locale} next={COMMUNITIES_MODERATION_PATH} />
+      </ModerationFrame>
     );
   }
 
-  const scope = scopedToUser(session.user.id, getSessionId(session));
-  const access = await resolveAdminCapabilityAccessBounded(
-    scope,
-    "operator:mutate",
+  const settled = await settleSection(
+    () => listModeratedCommunities(viewer.scope),
+    {
+      deadlineMs: workspaceSectionDeadlineMs(4),
+      surface: "communities-moderation",
+      section: "communities",
+    },
   );
-  const moderation =
-    access.status === "allowed"
-      ? await listCommunityModerationQueue(scope, FIRST_COMMUNITY_SLUG).catch(
-          () => null,
-        )
-      : null;
 
-  return (
-    <main
-      lang={locale}
-      className="mx-auto grid w-full max-w-5xl gap-6 px-5 py-8"
-    >
-      <AdminCommunityHeader copy={copy} />
-      {moderation ? (
-        <Card
-          as="article"
-          interactive
-          className="relative grid max-w-xl gap-3 p-4"
-        >
-          <ShieldCheck className="size-5 text-action" aria-hidden="true" />
-          <h2 className="text-h3 text-text-heading">
-            <Link
-              href={`/account/communities/${FIRST_COMMUNITY_SLUG}`}
-              data-private-moderation-queue="true"
-              className="rounded-sm outline-none before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-            >
-              {copy.community.observationAndCare}
-            </Link>
-          </h2>
-          <p className="text-body-sm leading-6 text-text-muted">
-            {copy.community.cardDescription}
-          </p>
-          {/* A count of zero is the absence of a fact, not a fact
-              (DESIGN.md §5.10): an empty queue says so in words instead. */}
-          {moderation.items.length > 0 ? (
-            <Badge tone="warning">
-              {formatOperatorTemplate(copy.community.openReportsCount, {
-                count: moderation.items.length,
-              })}
-            </Badge>
-          ) : (
-            <Badge tone="success">{copy.community.noReports}</Badge>
-          )}
-        </Card>
-      ) : (
-        <Callout
-          tone="warning"
-          role="alert"
-          data-operator-access-state="unavailable"
-        >
-          <p>{copy.community.unavailable}</p>
+  if (settled.status === "error") {
+    return (
+      <ModerationFrame {...frame} accessState="unavailable">
+        <WorkspaceSectionError
+          locale={locale}
+          failure={settled}
+          title={copy.communities.title}
+          retryHref={COMMUNITIES_MODERATION_PATH}
+          technicalHint={workspaceSchemaMissingHint(locale, settled)}
+        />
+      </ModerationFrame>
+    );
+  }
+  // Nothing this reader may moderate: no access, said as such — not an
+  // empty list that reads as "all quiet".
+  if (settled.value === null) {
+    return (
+      <ModerationFrame {...frame} accessState="denied" tabs={null}>
+        <Callout tone="warning" role="alert">
+          <p>{copy.accessDenied}</p>
         </Callout>
+      </ModerationFrame>
+    );
+  }
+
+  const communities = settled.value;
+  return (
+    <ModerationFrame {...frame} accessState="allowed">
+      {communities.length === 0 ? (
+        <EmptyState title={copy.communities.empty} />
+      ) : (
+        <ul
+          className="grid list-none gap-3"
+          data-private-moderation-queue="true"
+        >
+          {communities.map((community) => (
+            <ModeratedCommunityCard
+              key={community.id}
+              locale={locale}
+              community={community}
+            />
+          ))}
+        </ul>
       )}
-    </main>
+    </ModerationFrame>
   );
 }
 
-function AdminCommunityHeader({ copy }: { copy: OperatorCopy }) {
+function ModeratedCommunityCard({
+  locale,
+  community,
+}: {
+  locale: InterfaceLocale;
+  community: ModeratedCommunity;
+}) {
+  const copy = getModerationCopy(locale);
+  const name = getCommunityContentCopy(locale, community.contentKey).name;
+  const titleId = `moderated-community-${community.id}`;
+  const state =
+    community.lifecycleState === "archived"
+      ? copy.communities.states.archived
+      : copy.communities.states[community.participationState];
+
   return (
-    <PageHeader
-      breadcrumb={
+    <Card
+      as="li"
+      aria-labelledby={titleId}
+      data-moderated-community={community.slug}
+      className="grid min-w-0 gap-2 p-4"
+    >
+      <h2 id={titleId} className="text-h3 break-words text-text-heading">
         <Link
-          href="/garden"
-          className={buttonVariants({
-            variant: "secondary",
-            size: "sm",
-            className: "w-fit",
-          })}
+          href={`${COMMUNITIES_MODERATION_PATH}/${encodeURIComponent(community.slug)}`}
+          className="rounded-sm outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
         >
-          {copy.community.backToGarden}
+          {name}
         </Link>
-      }
-      title={copy.community.title}
-      description={copy.community.description}
-    />
+      </h2>
+      <p className="text-body-sm text-text-secondary">{state}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        {/* A count of zero is the absence of a fact (DESIGN.md §5.10): an
+            empty queue says so in words. */}
+        {community.openReportCount > 0 ? (
+          <Badge tone="warning" data-moderated-community-open-reports="true">
+            {fillModerationTemplate(copy.communities.openReports, {
+              count: community.openReportCount,
+            })}
+          </Badge>
+        ) : (
+          <Badge tone="success">{copy.communities.noOpenReports}</Badge>
+        )}
+        {/* The public page has no workspace twin: its address is the
+            reader's language's (`/bg/…` for Bulgarian). */}
+        <Link
+          href={localizedPath(locale, publicCommunityPath(community.slug))}
+          className="text-link hover:text-link-hover text-body-sm underline underline-offset-4"
+        >
+          {copy.communities.publicPage}
+        </Link>
+      </div>
+    </Card>
   );
 }

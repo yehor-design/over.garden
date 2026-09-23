@@ -12,9 +12,11 @@ import {
 } from "@/lib/public-localization";
 import {
   blockCommunityContributionAuthor,
+  communityMutationRefusal,
   contributePublicJournalToCommunity,
   reportCommunityContribution,
   setCommunityMembership,
+  type CommunityMutationRefusal,
 } from "@/server/community-repository";
 import {
   ownerUserIdFromFormData,
@@ -26,6 +28,34 @@ import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import { publicCommunityPath } from "@/lib/garden/public-paths";
 
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+/** The two places on the page an action may return the reader to. */
+const CONTRIBUTE_ANCHOR = "community-contribute";
+
+/**
+ * What the reader is told when the server refused (`OVE-500`, criterion 6):
+ * the rule that refused, in words, and the step it points to — not one
+ * "unavailable" for being a guest, a closed community and a duplicate alike.
+ * Anything else — the database, a timeout — is still "unavailable", with a
+ * retry.
+ */
+const REFUSAL_STATUS: Record<CommunityMutationRefusal, string> = {
+  community_unavailable: "community_unavailable",
+  participation_closed: "closed",
+  membership_required: "not_member",
+  membership_banned: "banned",
+  entry_not_eligible: "not_eligible",
+  entry_already_added: "already_added",
+  entry_removed: "removed",
+  moderation_denied: "unavailable",
+  target_unavailable: "unavailable",
+};
+
+function refusalStatus(error: unknown) {
+  const refusal = communityMutationRefusal(error);
+  return refusal ? REFUSAL_STATUS[refusal] : "unavailable";
+}
 
 /**
  * Every action here is shaped `(previousState, formData)` — the shape
@@ -61,10 +91,16 @@ export async function setCommunityMembershipAction(
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     announceCommunity(slug);
     status = state === "left" ? "left" : "joined";
-  } catch {
-    status = "unavailable";
+  } catch (error) {
+    status = refusalStatus(error);
   }
-  finish(formData, slug, status, "community-membership");
+  // Joined from the contribution step: back to the step, with the entry the
+  // reader was adding still offered first.
+  const anchor =
+    String(formData.get("returnAnchor") ?? "") === CONTRIBUTE_ANCHOR
+      ? CONTRIBUTE_ANCHOR
+      : "community-membership";
+  finish(formData, slug, status, anchor, contributeEntryId(formData));
 }
 
 export async function contributeJournalToCommunityAction(
@@ -79,19 +115,24 @@ export async function contributeJournalToCommunityAction(
   }
   const scope = admission.scope;
   const slug = communitySlug(formData);
+  const journalEntryId = String(formData.get("journalEntryId") ?? "");
   let status: string;
   try {
-    await contributePublicJournalToCommunity(scope, {
-      slug,
-      journalEntryId: String(formData.get("journalEntryId") ?? ""),
-    });
+    await contributePublicJournalToCommunity(scope, { slug, journalEntryId });
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     announceCommunity(slug);
     status = "contributed";
-  } catch {
-    status = "unavailable";
+  } catch (error) {
+    status = refusalStatus(error);
   }
-  finish(formData, slug, status, "community-contribute");
+  // A refusal keeps the entry chosen, so a retry is one press.
+  finish(
+    formData,
+    slug,
+    status,
+    CONTRIBUTE_ANCHOR,
+    status === "contributed" ? null : normalizeEntryId(journalEntryId),
+  );
 }
 
 export async function reportCommunityContributionAction(
@@ -116,8 +157,8 @@ export async function reportCommunityContributionAction(
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     announceCommunity(slug);
     status = "reported";
-  } catch {
-    status = "unavailable";
+  } catch (error) {
+    status = refusalStatus(error);
   }
   finish(formData, slug, status, "community-journals");
 }
@@ -143,8 +184,8 @@ export async function blockCommunityContributionAuthorAction(
     revalidatePublicCacheTags(publicCommunityChangeTags(slug), "update");
     announceCommunity(slug);
     status = "blocked";
-  } catch {
-    status = "unavailable";
+  } catch (error) {
+    status = refusalStatus(error);
   }
   finish(formData, slug, status, "community-journals");
 }
@@ -154,6 +195,7 @@ function finish(
   slug: string,
   status: string,
   anchor: string,
+  contributeEntry: string | null = null,
 ): never {
   for (const locale of PUBLIC_LOCALES) {
     revalidatePath(localizedPath(locale, publicCommunityPath(slug)));
@@ -163,8 +205,24 @@ function finish(
     requestedLocale(formData),
     publicCommunityPath(slug),
   );
-  const query = new URLSearchParams({ communityAction: status });
+  // The contribution step reports its own outcome in place; the page's head
+  // reports the rest. Neither key is a `/q` twin key, so the community stays
+  // its static document and the step reads the outcome at request time.
+  const query = new URLSearchParams({
+    [anchor === CONTRIBUTE_ANCHOR ? "contributeAction" : "communityAction"]:
+      status,
+  });
+  if (contributeEntry) query.set("contribute", contributeEntry);
   redirect(`${path}?${query.toString()}#${anchor}`);
+}
+
+function contributeEntryId(formData: FormData) {
+  return normalizeEntryId(String(formData.get("contribute") ?? ""));
+}
+
+function normalizeEntryId(value: string) {
+  const id = value.trim().toLowerCase();
+  return UUID_PATTERN.test(id) ? id : null;
 }
 
 function communityReportReason(formData: FormData) {

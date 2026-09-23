@@ -102,6 +102,12 @@ describe("auth intent contract", () => {
         returnTo: "/garden/objects/18700003-0000-4000-8000-000000000003",
         target: { kind: "journal", ref: "private-entry-ready-to-publish" },
       },
+      {
+        action: "contribute",
+        returnTo: "/bg/communities/observation-and-care",
+        target: { kind: "collection", ref: "observation-and-care" },
+        control: "add-entry",
+      },
     ] as const;
 
     expect(AUTH_INTENT_ACTIONS).toEqual(cases.map((item) => item.action));
@@ -310,6 +316,60 @@ describe("auth intent contract", () => {
         target,
       }),
     ).toThrow(AuthIntentContractError);
+  });
+
+  /**
+   * A guest who presses "Add an entry" on a community signs in and comes back
+   * to that community's own contribution step (`OVE-500`), with the control
+   * they pressed in focus — not to a garden setup.
+   */
+  it("resumes a community contribution at the community's contribution step", () => {
+    expect(
+      buildAuthIntentResumeHref({
+        action: "contribute",
+        returnTo: "/bg/communities/observation-and-care",
+        control: "add-entry",
+      }),
+    ).toBe(
+      "/bg/communities/observation-and-care?authIntent=contribute&authControl=add-entry#community-contribute-add-entry",
+    );
+    expect(
+      buildAuthIntentResumeHref(
+        normalizeAuthIntentDraft({
+          action: "contribute",
+          returnTo: "/communities/observation-and-care",
+          target: { kind: "collection", ref: "observation-and-care" },
+        }),
+      ),
+    ).toBe(
+      "/communities/observation-and-care?authIntent=contribute#community-contribute",
+    );
+    expect(normalizeAuthIntentResumeAction("contribute")).toBe("contribute");
+  });
+
+  it("holds a contribution to the one community it was pressed on", () => {
+    // Without a target the resumed step would not know which community asked.
+    expect(() =>
+      normalizeAuthIntentDraft({
+        action: "contribute",
+        returnTo: "/bg/communities/observation-and-care",
+      }),
+    ).toThrow(AuthIntentContractError);
+    // A contribution is made to a community, and to nothing else.
+    for (const target of [
+      { kind: "journal", ref: "balcony-tomato-check" },
+      { kind: "object", ref: "18700003-0000-4000-8000-000000000001" },
+      { kind: "profile", ref: "demo_olena" },
+      { kind: "contribution", ref: "00000000-0000-4000-8000-000000000201" },
+    ]) {
+      expect(() =>
+        normalizeAuthIntentDraft({
+          action: "contribute",
+          returnTo: "/bg/communities/observation-and-care",
+          target,
+        }),
+      ).toThrow(AuthIntentContractError);
+    }
   });
 
   it("rejects incompatible target kinds and missing required targets", () => {

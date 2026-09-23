@@ -73,6 +73,8 @@ export const BROWSER_GATE_SPECS = [
   "reading-pages.spec.ts",
   "editorial-surfaces.spec.ts",
   "communities.spec.ts",
+  "community-contribution.spec.ts",
+  "community-moderation.spec.ts",
 ] as const;
 
 /**

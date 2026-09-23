@@ -50,9 +50,9 @@ vi.mock("@/components/public/public-community", () => ({
   ),
   CommunityMembershipAction: () => null,
   CommunitySafetyActions: () => null,
-  CommunityFirstRunAction: () => null,
-  CommunityContributionForm: () => null,
+  CommunityContributionStep: () => null,
   CommunityModeratorLink: () => null,
+  communityOutcomeTone: () => "success",
 }));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
@@ -150,7 +150,6 @@ describe("localized community detail route", () => {
     // Every viewer-dependent part arrives as a request-time region.
     expect(Object.keys(element.props.regions).sort()).toEqual([
       "contribute",
-      "firstRunAction",
       "intentFocus",
       "membership",
       "moderator",
@@ -238,5 +237,38 @@ describe("localized community detail route", () => {
     // `/communities` makes, so a reader who came from the list pays nothing.
     expect(mocks.readPublicCommunityDirectory).toHaveBeenCalledTimes(1);
     expect(element.props.otherCommunities).toHaveLength(2);
+  });
+
+  it("keeps the community when only the rail's directory fails (OVE-500)", async () => {
+    const { default: CommunityDetailRoute } = await import("./page");
+    mocks.readPublicCommunityDirectory.mockRejectedValue(
+      new Error("directory unavailable"),
+    );
+    const element = asElement(
+      await CommunityDetailRoute({
+        params: Promise.resolve({ locale: "uk", slug: "observation-and-care" }),
+      }),
+    );
+
+    // A partial failure stays partial: the rail loses its other
+    // communities, and the page keeps everything else.
+    expect(element.props).toMatchObject({ viewer: "guest", state: "ready" });
+    expect(element.props.otherCommunities).toEqual([]);
+  });
+
+  it("hands the twin the contribution step's outcome and its fresh entry", async () => {
+    const { renderCommunityForRequest } = await import("./page");
+    const element = asElement(
+      await renderCommunityForRequest("uk", "observation-and-care", {
+        q: "волога",
+        contributeAction: "not_member",
+        contribute: "00000000-0000-4000-8000-000000000401",
+      }),
+    );
+
+    expect(element.props).toMatchObject({
+      contributeStatus: "not_member",
+      contributeEntryId: "00000000-0000-4000-8000-000000000401",
+    });
   });
 });

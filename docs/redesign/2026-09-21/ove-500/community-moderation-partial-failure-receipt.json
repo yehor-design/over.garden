@@ -1,0 +1,39 @@
+{
+  "issue": "OVE-500",
+  "proof": "community-moderation-partial-failure",
+  "baseUrl": "http://localhost:3179",
+  "pages": [
+    {
+      "path": "/account/communities",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/account/communities",
+      "frameTitle": "Модерація спільнот",
+      "tabsDuringFailure": 2,
+      "skeletonLeft": false,
+      "reportAfterRetry": true
+    },
+    {
+      "path": "/account/communities/ove500p-6d56c976",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/account/communities/ove500p-6d56c976",
+      "frameTitle": "Модерація спільноти",
+      "tabsDuringFailure": 2,
+      "skeletonLeft": false,
+      "reportAfterRetry": true
+    },
+    {
+      "path": "/account/moderation/comments",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/account/moderation/comments",
+      "frameTitle": "Модерація коментарів",
+      "tabsDuringFailure": 2,
+      "skeletonLeft": false,
+      "reportAfterRetry": true
+    }
+  ],
+  "elapsedMs": 17676,
+  "passed": true
+}

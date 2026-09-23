@@ -46,7 +46,11 @@ export type WorkspaceSurface =
   | "space"
   | "space-settings"
   | "object-settings"
-  | "object-provenance";
+  | "object-provenance"
+  | "communities-moderation"
+  | "community-moderation"
+  | "community-moderation-settings"
+  | "comment-moderation";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",

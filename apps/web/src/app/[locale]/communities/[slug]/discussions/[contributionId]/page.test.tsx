@@ -12,7 +12,10 @@ const mocks = vi.hoisted(() => ({
   engagementPanel: vi.fn(() => <div data-engagement-panel="true" />),
 }));
 
-vi.mock("next/navigation", () => ({ notFound: mocks.notFound }));
+vi.mock("next/navigation", () => ({
+  notFound: mocks.notFound,
+  unstable_rethrow: () => undefined,
+}));
 vi.mock("@/db", () => ({ db: {} }));
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
@@ -24,6 +27,11 @@ vi.mock("@/server/engagement-repository", () => ({
 }));
 vi.mock("@/app/engagement/public-engagement-panel", () => ({
   PublicEngagementPanel: mocks.engagementPanel,
+}));
+vi.mock("@/server/public-cache", () => ({
+  readPublicCommunityDirectory: async () => [
+    { slug: "observation-and-care", contentKey: "observation-and-care" },
+  ],
 }));
 vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
   SiteShellContextRailRegistration: () => null,
@@ -41,6 +49,7 @@ function targetRow(overrides: Record<string, unknown> = {}) {
     communitySlug: "observation-and-care",
     communityContentKey: "observation-and-care",
     entryTitle: "Томат після тижня спеки",
+    entryBody: "Листя   тримає   тургор\nпісля поливу зранку.",
     entryPublicSlug: "tomato-after-heat",
     entryNumber: 4,
     entryDate: "2026-07-12",
@@ -108,6 +117,8 @@ describe("contribution discussion route", () => {
     expect(html).toContain('href="/@demo_olena/post/4"');
     expect(html).toContain("Томат Чорний принц");
     expect(html).toContain("Олена");
+    // The post under discussion, readable: its opening, whitespace folded.
+    expect(html).toContain("Листя тримає тургор після поливу зранку.");
     expect(html).toContain('data-engagement-panel="true"');
   });
 
@@ -134,26 +145,53 @@ describe("contribution discussion route", () => {
     expect(html).not.toContain('data-engagement-panel="true"');
   });
 
-  it("answers 404 when the contribution belongs to another community", async () => {
-    mocks.targetQuery.mockReturnValue({
-      executeTakeFirst: async () => targetRow({ communitySlug: "elsewhere" }),
-    });
+  it("says a discussion from another community, or a removed one, is gone — and leads back", async () => {
+    for (const row of [targetRow({ communitySlug: "elsewhere" }), undefined]) {
+      mocks.targetQuery.mockReturnValue({ executeTakeFirst: async () => row });
 
-    await expect(
-      ContributionDiscussionRoute({
-        params: Promise.resolve({
-          locale: "uk",
-          slug: "observation-and-care",
-          contributionId: CONTRIBUTION_ID,
+      const html = renderToStaticMarkup(
+        await ContributionDiscussionRoute({
+          params: Promise.resolve({
+            locale: "uk",
+            slug: "observation-and-care",
+            contributionId: CONTRIBUTION_ID,
+          }),
         }),
-      }),
-    ).rejects.toThrow("NEXT_NOT_FOUND");
+      );
+
+      // `OVE-500`, criterion 6: a removed discussion is a page that says so,
+      // with the community it belonged to one press away — not a bare 404
+      // that reads as a broken link.
+      expect(html).toContain(
+        'data-public-community-discussion-state="unavailable"',
+      );
+      expect(html).toContain("Це обговорення недоступне");
+      expect(html).toContain('href="/communities/observation-and-care"');
+      expect(mocks.commentThread).not.toHaveBeenCalled();
+    }
   });
 
-  it("stays out of the index: a conversation is not the indexable thing", async () => {
+  it("stays out of the index, and names the entry under discussion", async () => {
     const { generateMetadata } = await import("./page");
-    expect(await generateMetadata()).toMatchObject({
-      robots: { index: false, follow: false },
+    mocks.targetQuery.mockReturnValue({
+      executeTakeFirst: async () => targetRow(),
     });
+    const metadata = await generateMetadata({
+      params: Promise.resolve({
+        locale: "bg",
+        slug: "observation-and-care",
+        contributionId: CONTRIBUTION_ID,
+      }),
+    });
+    expect(metadata).toMatchObject({
+      title: "Обсъждане: Томат після тижня спеки | OverGarden",
+      robots: { index: false, follow: false },
+      alternates: {
+        canonical: `/bg/communities/observation-and-care/discussions/${CONTRIBUTION_ID}`,
+      },
+    });
+    // The metadata reads as a guest: what a shared link says never depends
+    // on who shared it.
+    expect(mocks.targetQuery).toHaveBeenCalledWith({}, CONTRIBUTION_ID, null);
   });
 });

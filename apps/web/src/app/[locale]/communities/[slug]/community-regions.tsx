@@ -3,11 +3,11 @@ import { unstable_rethrow } from "next/navigation";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import {
-  CommunityContributionForm,
-  CommunityFirstRunAction,
+  CommunityContributionStep,
   CommunityMembershipAction,
   CommunityModeratorLink,
   CommunitySafetyActions,
+  communityOutcomeTone,
 } from "@/components/public/public-community";
 import { Callout } from "@/components/ui/callout";
 import {
@@ -74,12 +74,15 @@ function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }
 
-function canContribute(member: PublicCommunityPageModel) {
-  return (
-    member.viewer.membershipState === "active" &&
-    member.lifecycleState === "active" &&
-    member.participationState === "open"
-  );
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/** A just-published entry the composer sent back (`?contribute=`). */
+function contributeEntryId(
+  query: Record<string, string | string[] | undefined>,
+) {
+  const value = firstValue(query.contribute).trim().toLowerCase();
+  return UUID_PATTERN.test(value) ? value : null;
 }
 
 export async function CommunityIntentFocus({
@@ -136,37 +139,44 @@ export async function CommunityViewerStatus({
     ? getCommunityCopy(locale).actionMessages[status]
     : null;
   return message ? (
-    <Callout tone="info" role="status">
+    <Callout
+      tone={communityOutcomeTone(status)}
+      role="status"
+      data-community-action={status}
+    >
       {message}
     </Callout>
   ) : null;
 }
 
+/**
+ * The contribution step, for this reader (`OVE-500`, criterion 2). Its
+ * fallback is the guest's step — sign in to add an entry — which is also what
+ * a failed session or member read settles to.
+ */
 export async function CommunityViewerContribution({
   locale,
-  slug,
+  community,
+  communityPath,
+  searchParams,
 }: {
   locale: PublicLocale;
-  slug: string;
+  community: PublicCommunityPageModel;
+  communityPath: string;
+  searchParams: Query;
 }) {
-  const { member } = await readCommunityViewer(slug, locale);
-  return member && canContribute(member) ? (
-    <CommunityContributionForm locale={locale} community={member} />
-  ) : null;
-}
-
-export async function CommunityViewerFirstRunAction({
-  locale,
-  slug,
-}: {
-  locale: PublicLocale;
-  slug: string;
-}) {
-  const { member } = await readCommunityViewer(slug, locale);
+  const [{ member }, query] = await Promise.all([
+    readCommunityViewer(community.slug, locale),
+    readQuery(searchParams),
+  ]);
   return (
-    <CommunityFirstRunAction
+    <CommunityContributionStep
       locale={locale}
-      canContribute={Boolean(member && canContribute(member))}
+      community={member ?? community}
+      viewer={member ? "member" : "guest"}
+      communityPath={communityPath}
+      freshEntryId={contributeEntryId(query)}
+      outcome={firstValue(query.contributeAction) || null}
     />
   );
 }
@@ -231,6 +241,6 @@ export async function CommunityViewerModerator({
 }) {
   const { member } = await readCommunityViewer(slug, locale);
   return member?.viewer.isModerator ? (
-    <CommunityModeratorLink locale={locale} />
+    <CommunityModeratorLink locale={locale} slug={slug} />
   ) : null;
 }

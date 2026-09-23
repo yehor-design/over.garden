@@ -39,7 +39,10 @@ const PROGRESSIVE_SURFACES = [
   "app/[locale]/bookmarks/page.tsx",
   "app/[locale]/wishlist/page.tsx",
   "app/(default)/erasure/page.tsx",
-  "app/(default)/account/communities/[slug]/page.tsx",
+  // Since `OVE-500` a community's report decisions live in its moderation
+  // parts, and its one setting on a page of its own.
+  "app/(default)/account/communities/[slug]/moderation-parts.tsx",
+  "app/(default)/account/communities/[slug]/settings/page.tsx",
   "app/(default)/garden/privacy/erasure-requests/page.tsx",
   // `OVE-457`: the workspace. The garden home's wishlist intent, both lineage
   // inboxes, the living object's passport and its two controls, and the

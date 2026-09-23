@@ -170,6 +170,29 @@ reading pages say what they are (DESIGN.md §5.20).
 
 See `docs/redesign/2026-09-21/OVE-499-PROOF.md`.
 
+**Communities and moderation (OVE-500):** a community is a place to read
+and to add to, and moderating it is a task (DESIGN.md §5.21).
+- A community says what it is for, the topic it files under and how to take
+  part: join, and "Додати запис" into its one contribution step. A guest
+  signs in (the `contribute` intent) and comes back to that step; a reader
+  who is not a member joins there; a member picks a published entry or writes
+  one in the composer with the community named (`/garden/new?community=`),
+  and comes back with the new entry offered first. Adding it is their own
+  press; nothing is cross-posted, and no object or space is created.
+- Refusals say which rule refused (not a member, banned, closed, not an entry
+  a community takes, already there). A reader's own entry offers no report
+  or block. The rail is the community's own; a failed directory read leaves
+  the page. A removed discussion says so and leads back; a discussion is
+  titled after its entry.
+- The owner's moderation lists every community the reader may moderate
+  (the owner, or an assigned moderator — the repository's one rule), and each
+  community has its reports (open or resolved) and its one setting. Reports
+  show what was reported, by whom and about what; removal and a ban confirm
+  first; a second press does nothing; outcomes are read back from the record.
+  Comment reports show the comment and its page.
+
+See `docs/redesign/2026-09-21/OVE-500-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

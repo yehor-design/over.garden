@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { EntryComposer } from "@/components/garden/entry-composer";
+import {
+  EntryComposer,
+  type EntryComposerCommunity,
+} from "@/components/garden/entry-composer";
 import { WorkspaceSectionError } from "@/components/garden/workspace-state";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
+import { getCommunityContentCopy } from "@/lib/community-copy";
+import { publicCommunityPath } from "@/lib/garden/public-paths";
+import {
+  localizedPath,
+  stripLocalePrefix,
+  type PublicLocale,
+} from "@/lib/public-localization";
+import { readCommunityWritingContext } from "@/server/community-repository";
 import { getEntryComposerCopy } from "@/lib/entry-composer-copy";
 import { resolveIllustration } from "@/lib/illustrations";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -37,6 +48,44 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+const COMMUNITY_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
+
+/**
+ * The community's own address to come back to: the `returnTo` it sent when
+ * that is this community's page in some language, and its address in the
+ * reader's language otherwise. Never somewhere else — a composer opened "for
+ * a community" returns to that community.
+ */
+function communityReturnPath(
+  slug: string,
+  returnTo: string | undefined,
+  locale: PublicLocale,
+) {
+  const own = publicCommunityPath(slug);
+  if (returnTo) {
+    const path = returnTo.split(/[?#]/u)[0] ?? "";
+    if (stripLocalePrefix(path).path === own) return path;
+  }
+  return localizedPath(locale, own);
+}
+
+/** The composer's own address with the context it was opened with. */
+function composerSignInReturn(params: {
+  object?: string;
+  space?: string;
+  community?: string;
+  returnTo?: string;
+}) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+  const search = query.toString();
+  return search
+    ? `${GARDEN_ENTRY_COMPOSER_PATH}?${search}`
+    : GARDEN_ENTRY_COMPOSER_PATH;
+}
+
 /**
  * The one entry composer, as a page (`OVE-486`). The global Write opens it
  * with nothing chosen, so the owned-destination picker comes first; an
@@ -62,9 +111,19 @@ export default async function GardenEntryComposerPage({
   const objectId = firstParam(params.object);
   const spaceId = firstParam(params.space);
   const rawReturnTo = firstParam(params.returnTo);
-  const closeHref = rawReturnTo
-    ? normalizeJournalComposerReturnTo(rawReturnTo, "/garden")
-    : "/garden";
+  const communitySlug = firstParam(params.community)?.trim().toLowerCase();
+  const community =
+    communitySlug && COMMUNITY_SLUG_PATTERN.test(communitySlug)
+      ? {
+          slug: communitySlug,
+          returnPath: communityReturnPath(communitySlug, rawReturnTo, locale),
+        }
+      : null;
+  const closeHref = community
+    ? community.returnPath
+    : rawReturnTo
+      ? normalizeJournalComposerReturnTo(rawReturnTo, "/garden")
+      : "/garden";
 
   if (viewer.status === "unavailable") {
     return (
@@ -78,9 +137,19 @@ export default async function GardenEntryComposerPage({
     );
   }
   if (viewer.status === "sign-in-required") {
+    // Signing in comes back to this composer as it was opened — the object,
+    // the space, or the community it writes for (`OVE-500`, criterion 2).
     return (
       <EntryComposerShell locale={locale}>
-        <SignInPrompt locale={locale} next={GARDEN_ENTRY_COMPOSER_PATH} />
+        <SignInPrompt
+          locale={locale}
+          next={composerSignInReturn({
+            object: objectId,
+            space: spaceId,
+            community: community?.slug,
+            returnTo: community ? community.returnPath : rawReturnTo,
+          })}
+        />
       </EntryComposerShell>
     );
   }
@@ -91,7 +160,7 @@ export default async function GardenEntryComposerPage({
     : spaceId
       ? { kind: "space" as const, id: spaceId }
       : null;
-  const [destination, anything, disclosed] = await Promise.all([
+  const [destination, anything, disclosed, writingFor] = await Promise.all([
     target
       ? settleSection(() => readOwnedDestination(viewer.scope, target), {
           deadlineMs,
@@ -109,12 +178,44 @@ export default async function GardenEntryComposerPage({
       surface: "entry-composer",
       section: "disclosure",
     }),
+    community
+      ? settleSection(
+          () => readCommunityWritingContext(viewer.scope, community.slug),
+          { deadlineMs, surface: "entry-composer", section: "community" },
+        )
+      : null,
   ]);
+  // A community that cannot be read, or is not there, is simply not named:
+  // the composer is still the composer, and Close still goes back to it.
+  const communityContext: EntryComposerCommunity | null =
+    community && writingFor?.status === "ready" && writingFor.value
+      ? {
+          name: getCommunityContentCopy(locale, writingFor.value.contentKey)
+            .name,
+          returnPath: community.returnPath,
+          accepting:
+            writingFor.value.accepting &&
+            writingFor.value.membershipState !== "banned",
+          member: writingFor.value.membershipState === "active",
+          banned: writingFor.value.membershipState === "banned",
+        }
+      : null;
   const copy = getEntryComposerCopy(locale);
 
   // Nothing to write to yet: the two ways to have something, not an empty
   // picker. A failed read is not "nothing" — the picker handles that itself.
   if (anything.status === "ready" && !anything.value) {
+    // Writing for a community with nothing to write about yet: add the plant
+    // or animal first, and come straight back to this composer with it chosen
+    // and the community still named (object setup appends `object=`).
+    const addObjectHref = community
+      ? `/garden/objects/new?${new URLSearchParams({
+          returnTo: composerSignInReturn({
+            community: community.slug,
+            returnTo: community.returnPath,
+          }),
+        }).toString()}`
+      : "/garden/objects/new";
     return (
       <EntryComposerShell locale={locale}>
         <EmptyState
@@ -124,19 +225,29 @@ export default async function GardenEntryComposerPage({
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Link
-                href="/garden/objects/new"
+                href={addObjectHref}
                 className={buttonVariants({})}
                 data-entry-composer-empty-action="object"
               >
                 {copy.empty.addObject}
               </Link>
-              <Link
-                href="/garden#first-entry-composer"
-                className={buttonVariants({ variant: "secondary" })}
-                data-entry-composer-empty-action="first-entry"
-              >
-                {copy.empty.firstEntry}
-              </Link>
+              {community ? (
+                <Link
+                  href={community.returnPath}
+                  className={buttonVariants({ variant: "secondary" })}
+                  data-entry-composer-empty-action="community"
+                >
+                  {copy.community.back}
+                </Link>
+              ) : (
+                <Link
+                  href="/garden#first-entry-composer"
+                  className={buttonVariants({ variant: "secondary" })}
+                  data-entry-composer-empty-action="first-entry"
+                >
+                  {copy.empty.firstEntry}
+                </Link>
+              )}
             </div>
           }
         />
@@ -156,6 +267,7 @@ export default async function GardenEntryComposerPage({
           disclosed.status === "ready" ? !disclosed.value : true
         }
         closeHref={closeHref}
+        community={communityContext}
       />
     </EntryComposerShell>
   );
