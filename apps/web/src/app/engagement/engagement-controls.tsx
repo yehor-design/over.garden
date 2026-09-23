@@ -21,7 +21,7 @@ import { useFormStatus } from "react-dom";
 import { TransportBoundary } from "@/components/transport-boundary";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { formatPublicCount } from "@/lib/public-surface-localization";
+import { formatPublicCount } from "@/lib/public-count";
 import type {
   EngagementActionFailure,
   EngagementCommentState,

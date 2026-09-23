@@ -1,0 +1,126 @@
+{
+  "issue": "OVE-468",
+  "proof": "Each control pressed after load and hydration, with every script requested after that held until the press had been made.",
+  "heldMs": 750,
+  "receipts": [
+    {
+      "control": "⌘K",
+      "path": "/",
+      "viewport": "1440x900",
+      "heldScripts": [
+        "/_next/static/chunks/40h89-g83zic2.js",
+        "/_next/static/chunks/06ft6frhkis3j.js"
+      ],
+      "heldBeforePress": [
+        "/_next/static/chunks/1od_q4munkb12.js",
+        "/_next/static/chunks/04odqly5j-_cr.js",
+        "/_next/static/chunks/1sls6jy10dcc9.js",
+        "/_next/static/chunks/3jok-ijf8lhl9.js",
+        "/_next/static/chunks/1tiufdtideh2u.js"
+      ],
+      "openWhileHeld": false,
+      "openedAfterRelease": true,
+      "detail": {
+        "typedWhileHeld": "tom",
+        "valueAfter": "tomato"
+      }
+    },
+    {
+      "control": "/",
+      "path": "/journals",
+      "viewport": "1440x900",
+      "heldScripts": [
+        "/_next/static/chunks/40h89-g83zic2.js",
+        "/_next/static/chunks/06ft6frhkis3j.js"
+      ],
+      "heldBeforePress": [
+        "/_next/static/chunks/1od_q4munkb12.js",
+        "/_next/static/chunks/04odqly5j-_cr.js",
+        "/_next/static/chunks/1sls6jy10dcc9.js"
+      ],
+      "openWhileHeld": false,
+      "openedAfterRelease": true
+    },
+    {
+      "control": "rail search field",
+      "path": "/",
+      "viewport": "1440x900",
+      "heldScripts": [
+        "/_next/static/chunks/40h89-g83zic2.js",
+        "/_next/static/chunks/06ft6frhkis3j.js"
+      ],
+      "heldBeforePress": [
+        "/_next/static/chunks/1od_q4munkb12.js",
+        "/_next/static/chunks/04odqly5j-_cr.js",
+        "/_next/static/chunks/1sls6jy10dcc9.js"
+      ],
+      "openWhileHeld": false,
+      "openedAfterRelease": true
+    },
+    {
+      "control": "narrow bar menu",
+      "path": "/",
+      "viewport": "375x812",
+      "heldScripts": [
+        "/_next/static/chunks/1d2bds4f-r_nq.js",
+        "/_next/static/chunks/06ft6frhkis3j.js"
+      ],
+      "heldBeforePress": [
+        "/_next/static/chunks/1sls6jy10dcc9.js",
+        "/_next/static/chunks/3jok-ijf8lhl9.js",
+        "/_next/static/chunks/1tiufdtideh2u.js"
+      ],
+      "openWhileHeld": false,
+      "openedAfterRelease": true
+    },
+    {
+      "control": "account menu",
+      "path": "/",
+      "viewport": "1440x900",
+      "heldScripts": [
+        "/_next/static/chunks/19sxpib5ps2wo.js",
+        "/_next/static/chunks/22s95vzek8lei.js",
+        "/_next/static/chunks/2ltincb9q6csm.js",
+        "/_next/static/chunks/1415my1d1c9y3.js"
+      ],
+      "heldBeforePress": [],
+      "openWhileHeld": false,
+      "openedAfterRelease": true
+    },
+    {
+      "control": "sign-out",
+      "path": "/",
+      "viewport": "1440x900",
+      "heldScripts": [
+        "/_next/static/chunks/27g2pj8s0ozjc.js",
+        "/_next/static/chunks/12rmefavu9p_6.js",
+        "/_next/static/chunks/1pt2tqtd_nmti.js"
+      ],
+      "heldBeforePress": [
+        "/_next/static/chunks/3e2_0dpw1i3nt.js",
+        "/_next/static/chunks/0w7ktjd5qj-3c.js",
+        "/_next/static/chunks/1hefulujozh5q.js",
+        "/_next/static/chunks/27vaj3ps3dvad.js",
+        "/_next/static/chunks/3x6qi499w6_06.js",
+        "/_next/static/chunks/3pcs_abgx1iu5.js"
+      ],
+      "openWhileHeld": false,
+      "openedAfterRelease": true,
+      "detail": {
+        "sessionAfterConfirm": null
+      }
+    },
+    {
+      "control": "no JavaScript",
+      "path": "/",
+      "viewport": "375x812, 1440x900",
+      "heldScripts": [],
+      "openWhileHeld": false,
+      "openedAfterRelease": false,
+      "detail": {
+        "searchHref": "/journals",
+        "searchStatus": 200
+      }
+    }
+  ]
+}

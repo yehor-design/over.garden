@@ -10,14 +10,13 @@ import {
   isAnalyticsRoute,
 } from "@/lib/analytics-routes";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { localizedPath } from "@/lib/public-localization";
 import { Link } from "@/components/ui/link";
 import {
   ANALYTICS_CONSENT_NOTICE_HEIGHT_PROPERTY,
   useNoticeHeightOnRoot,
 } from "@/lib/consent-notice-room";
-import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { getTrustClientCopy } from "@/lib/trust-client-copy";
 
 export { ANALYTICS_CONSENT_NOTICE_HEIGHT_PROPERTY };
 
@@ -141,7 +140,7 @@ export function AnalyticsConsentNotice({
   /** Whether this deployment runs Microsoft Clarity after consent. */
   clarityEnabled?: boolean;
 }) {
-  const copy = getPublicSurfaceCopy(locale).analyticsConsent;
+  const copy = getTrustClientCopy(locale).analyticsConsent;
   const messageId = "analytics-consent-message";
   const noticeRef = useRef<HTMLElement>(null);
   useNoticeHeightOnRoot(noticeRef, ANALYTICS_CONSENT_NOTICE_HEIGHT_PROPERTY);
@@ -295,7 +294,7 @@ export function AnalyticsPrivacyControls({
 }: {
   locale?: InterfaceLocale;
 }) {
-  const copy = getTrustSurfaceCopy(locale).privacy.analytics;
+  const copy = getTrustClientCopy(locale).analytics;
   const config = resolveMicrosoftClarityPublicConfig();
   const storedConsent = useSyncExternalStore(
     subscribeToGoogleAnalyticsConsent,

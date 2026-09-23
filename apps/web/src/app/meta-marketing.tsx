@@ -21,7 +21,7 @@ import {
   writeStoredMetaMarketingConsent,
 } from "@/lib/meta-marketing/client";
 import type { MetaMarketingConsent } from "@/lib/meta-marketing/events";
-import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+import { getTrustClientCopy } from "@/lib/trust-client-copy";
 
 const PUBLIC_LOCALE_PREFIX_PATTERN = /^\/(?:uk|bg|ru)(?=\/|$)/;
 const META_MARKETING_ALLOWED_EXACT_PATHS = new Set([
@@ -89,7 +89,7 @@ export function MetaMarketingPrivacyControls({
 }: {
   locale?: InterfaceLocale;
 }) {
-  const copy = getTrustSurfaceCopy(locale).privacy.marketing;
+  const copy = getTrustClientCopy(locale).marketing;
   const config = resolveMetaMarketingPublicConfig();
   const storedConsent = useSyncExternalStore(
     subscribeToMetaMarketingConsent,
@@ -226,7 +226,7 @@ function MetaMarketingConsentBanner({
   onAccept: () => void;
   onDecline: () => void;
 }) {
-  const copy = getTrustSurfaceCopy(locale).privacy.marketing;
+  const copy = getTrustClientCopy(locale).marketing;
   const messageId = "meta-marketing-consent-message";
   const noticeRef = useRef<HTMLElement>(null);
   useNoticeHeightOnRoot(

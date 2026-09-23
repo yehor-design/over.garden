@@ -42,6 +42,18 @@ vi.mock("@/components/ui/alert-dialog", () => ({
 
 import { SignOutProvider, useSignOut } from "./sign-out-provider";
 
+/**
+ * The question's code arrives on the press (`OVE-468`), so a press is followed
+ * by its module landing before the dialog can be looked for.
+ */
+async function press(onClick: () => void) {
+  await act(async () => {
+    onClick();
+    await import("./sign-out-confirmation");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
 function Trigger() {
   const { phase, requestSignOut } = useSignOut();
   return (
@@ -76,7 +88,7 @@ describe("sign-out provider (ADR-0022, D6)", () => {
       0,
     );
 
-    await act(async () => trigger().props.onClick());
+    await press(() => trigger().props.onClick());
     expect(renderer!.root.findAllByProps({ role: "alertdialog" })).toHaveLength(
       1,
     );
@@ -108,7 +120,7 @@ describe("sign-out provider (ADR-0022, D6)", () => {
         </SignOutProvider>,
       );
     });
-    await act(async () =>
+    await press(() =>
       renderer!.root.findByProps({ "data-phase": "idle" }).props.onClick(),
     );
     await act(async () => {
