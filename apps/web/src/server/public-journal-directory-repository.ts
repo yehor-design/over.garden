@@ -78,6 +78,8 @@ const UNSAFE_PUBLIC_RESULT_REPLACEMENT_PATTERN = new RegExp(
 export interface PublicJournalDirectoryCard {
   title: string;
   excerpt: string;
+  /** The excerpt stopped short of the entry, so a card offers "Read more". */
+  excerptTruncated?: boolean;
   /** The language of this card's own words, for `lang` where it differs. */
   sourceLanguage: PublicLocale;
   entryDate: Date | string;
@@ -400,6 +402,7 @@ export function serializePublicJournalDirectoryPage(
     return {
       title: sanitizePublicResultTitle(row.title, locale),
       excerpt: buildPublicJournalDirectoryExcerpt(row.body),
+      excerptTruncated: isPublicJournalDirectoryExcerptTruncated(row.body),
       sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
@@ -576,6 +579,14 @@ function sanitizePublicObjectName(
       animal: "Животное",
     },
   }[locale][kind];
+}
+
+function isPublicJournalDirectoryExcerptTruncated(body: string) {
+  const safe = body
+    .replace(UNSAFE_PUBLIC_RESULT_REPLACEMENT_PATTERN, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return safe.length > MAX_PUBLIC_JOURNAL_DIRECTORY_EXCERPT_LENGTH;
 }
 
 function buildPublicJournalDirectoryExcerpt(body: string) {

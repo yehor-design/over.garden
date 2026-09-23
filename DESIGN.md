@@ -1069,6 +1069,34 @@ tomato unwritten for a fortnight was flagged as a problem.
   a plant descended from an animal. The gardener's specimen and the organism it
   belongs to are two links with two names, never one "open".
 
+### 5.14 An entry card reads who, where, what
+
+`EntryCard` is one card for every list of journal entries — the feed, the
+followed feed, the journals directory, a community, a profile (`OVE-492`):
+
+- **Who and when first.** The author's avatar and name, then the date, lead
+  the card; an entry with no public author starts at the date — a card never
+  invents a person, and an editorial item is not given one.
+- **The date is the observation.** A card is dated by the entry's own date,
+  the day the gardener chose. When it was published on another day, the card
+  says so — "Опубліковано 12 вер." — because the feed orders by publication
+  and a backdated entry must not look misplaced. One meaning in every list
+  (`lib/entry-card-dates.ts`).
+- **Where it belongs, then the words.** The object, its kind and a coarse
+  region; then the title and an excerpt, and "Read more" only when the excerpt
+  stopped short, named with the title.
+- **Photographs at their own shape, or not at all.** One photograph keeps its
+  proportions between 4:5 and 16:9 and never stands taller than 32 rem; two or
+  three sit side by side as squares; a text note draws no box. The box is
+  reserved before the bytes arrive, so a late photograph moves nothing.
+- **`lang` is the gardener's words only**, never the dates or the byline.
+- **No link in a link.** Title, author, object, topics and actions are links
+  side by side.
+
+A listing's discovery bar offers plants or animals once: where the kind is a
+mode or a facet, the `plants` and `animals` system topics are not offered
+again as topics. The feed's modes are Latest and Following (`/feed`).
+
 ---
 
 ## 6. Language and locale

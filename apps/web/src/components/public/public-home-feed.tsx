@@ -1,4 +1,3 @@
-import { SignedInOnly } from "@/components/site-shell/signed-in-only";
 import Link from "next/link";
 import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
 import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
@@ -11,18 +10,20 @@ import {
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
 import { buttonVariants } from "@/components/ui/button";
-import { Chip, ToggleChip } from "@/components/ui/chip";
+import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntryCard } from "@/components/ui/entry-card";
 import { ErrorState } from "@/components/ui/error-state";
-import { HiddenField } from "@/components/ui/hidden-field";
+import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { entryCardDates, getEntryCardCopy } from "@/lib/entry-card-dates";
+import { entryCardMedia } from "@/lib/entry-card-media";
+import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";
-import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
-import { publicCardMediaAltText } from "@/lib/public-media-alt";
+import { isKindTopicSlug } from "@/lib/system-topic-labels";
 import {
   contentLanguageAttribute,
   localizedPath,
@@ -45,6 +46,11 @@ export interface PublicHomeFeedCopy {
   followedFilter: string;
   plantFilter: string;
   animalFilter: string;
+  /** The kind facet's name in the filters panel. */
+  kindFacetLabel: string;
+  allKinds: string;
+  allTopics: string;
+  removeFilter: string;
   topicFilterLabel: string;
   discuss: string;
   publishedBy: string;
@@ -136,7 +142,7 @@ export function PublicHomeFeed({
 
       <PageHeader title={copy.heading} description={copy.headingDescription} />
 
-      <FeedFilterRow
+      <FeedFilterBar
         locale={locale}
         copy={copy}
         request={request}
@@ -221,15 +227,21 @@ export function PublicHomeFeed({
 }
 
 /**
- * The chips, in two groups: the object's kind, then the trusted topics.
+ * The feed's discovery bar (`OVE-492`, DESIGN.md §5.1).
  *
- * A topic with no entries is not offered. A count of zero is not information
- * and a filter that can only ever return nothing is not a filter — it is a
- * dead end with a number beside it, which is what this row printed five of.
- * The one exception is the topic currently in the URL, which stays visible so
- * the reader can press it off again.
+ * The feed's one primary split is *whose* entries: the latest of everyone's,
+ * or the ones a reader follows, which is `/feed` (the IA's Latest / Following
+ * modes). Plants or animals and the trusted topics are secondary facets behind
+ * one "Filters" button — they used to be two rows of chips above the first
+ * card, and plants and animals were offered twice more in the rail
+ * (OG-UX-015). Following is offered to everyone: `/feed` shows a guest the
+ * public feed and says what signing in adds, and the page never has to ask
+ * who is reading to draw the link (ADR-0032 D2).
+ *
+ * A topic nobody has written about is not offered; the one in the URL stays,
+ * so the reader can remove it again.
  */
-function FeedFilterRow({
+function FeedFilterBar({
   locale,
   copy,
   request,
@@ -240,91 +252,117 @@ function FeedFilterRow({
   request: PublicFeedRequest;
   topics: TrustedPublicFeedTopic[];
 }) {
-  const action = localizedPath(locale, "/");
+  const chrome = getFilterBarChromeCopy(locale);
+  const home = localizedPath(locale, "/");
   const offeredTopics = topics.filter(
-    (topic) => topic.entryCount > 0 || topic.slug === request.topic,
+    (topic) =>
+      topic.slug === request.topic ||
+      (topic.entryCount > 0 && !isKindTopicSlug(topic.slug)),
   );
+  const facets: FilterBarFacet[] = [
+    {
+      key: "kind",
+      label: copy.kindFacetLabel,
+      anyLabel: copy.allKinds,
+      value: request.kind === "all" ? [] : [request.kind],
+      options: [
+        { value: "plant", label: copy.plantFilter },
+        { value: "animal", label: copy.animalFilter },
+      ],
+    },
+    ...(offeredTopics.length > 0
+      ? [
+          {
+            key: "topic",
+            label: copy.topicFilterLabel,
+            anyLabel: copy.allTopics,
+            value: request.topic ? [request.topic] : [],
+            options: offeredTopics.map((topic) => ({
+              value: topic.slug,
+              label: topic.label,
+              ...(topic.entryCount > 0
+                ? {
+                    count: topic.entryCount,
+                    countLabel: String(topic.entryCount),
+                  }
+                : {}),
+            })),
+          },
+        ]
+      : []),
+  ];
+  const topicLabel = topics.find(
+    (topic) => topic.slug === request.topic,
+  )?.label;
+  const chips = [
+    ...(request.kind === "all"
+      ? []
+      : [
+          {
+            key: "kind",
+            label: copy.kindLabels[request.kind],
+            removeHref: buildPublicFeedHref(locale, {
+              ...request,
+              cursor: null,
+              kind: "all",
+            }),
+          },
+        ]),
+    ...(request.topic
+      ? [
+          {
+            key: "topic",
+            label: topicLabel ?? request.topic,
+            removeHref: buildPublicFeedHref(locale, {
+              ...request,
+              cursor: null,
+              topic: null,
+            }),
+          },
+        ]
+      : []),
+  ].map((chip) => ({
+    ...chip,
+    removeLabel: `${copy.removeFilter}: ${chip.label}`,
+  }));
 
   return (
-    <div
-      role="group"
-      aria-label={copy.filterLabel}
-      className="grid gap-3 border-b border-border pb-4"
-    >
-      <form
-        method="get"
-        action={action}
-        data-feed-kind-filters="true"
-        className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
-      >
-        {request.topic ? (
-          <HiddenField name="topic" value={request.topic} />
-        ) : null}
-        <ToggleChip
-          label={copy.recentFilter}
-          pressed={request.kind === "all"}
-        />
-        {(["plant", "animal"] as const).map((kind) => {
-          const pressed = request.kind === kind;
-          return (
-            <ToggleChip
-              key={kind}
-              {...(pressed ? {} : { name: "kind", value: kind })}
-              icon={KIND_ICONS[kind]}
-              label={kind === "plant" ? copy.plantFilter : copy.animalFilter}
-              pressed={pressed}
-            />
-          );
-        })}
-        {/* The one thing on this page that differs for a gardener. It is a
-            region of its own so the page never asks who is reading, and stays
-            a static document (ADR-0032 D2). */}
-        <SignedInOnly>
-          <Link
-            href={localizedPath(locale, "/feed")}
-            className={buttonVariants({
-              variant: "ghost",
-              size: "sm",
-              className: "shrink-0",
-            })}
-          >
-            {copy.followedFilter}
-          </Link>
-        </SignedInOnly>
-      </form>
-
-      {offeredTopics.length > 0 ? (
-        <form
-          method="get"
-          action={action}
-          data-feed-topic-filters="true"
-          className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
-        >
-          {request.kind !== "all" ? (
-            <HiddenField name="kind" value={request.kind} />
-          ) : null}
-          <span className="shrink-0 text-overline text-text-muted uppercase">
-            {copy.topicFilterLabel}
-          </span>
-          {offeredTopics.map((topic) => {
-            const pressed = request.topic === topic.slug;
-            return (
-              <ToggleChip
-                key={topic.slug}
-                {...(pressed ? {} : { name: "topic", value: topic.slug })}
-                label={topic.label}
-                count={topic.entryCount > 0 ? topic.entryCount : undefined}
-                pressed={pressed}
-              />
-            );
-          })}
-        </form>
-      ) : null}
-    </div>
+    <FilterBar
+      // The filtered feed is a query twin of the static home (ADR-0032), so
+      // a change is a document navigation that lets Proxy pick the tree.
+      documentNavigation
+      action={home}
+      facets={facets}
+      modes={[
+        { label: copy.recentFilter, href: home, current: true },
+        {
+          label: copy.followedFilter,
+          href: localizedPath(locale, "/feed"),
+          current: false,
+        },
+      ]}
+      chips={chips}
+      clearAllHref={chips.length > 1 ? home : undefined}
+      clearFiltersHref={home}
+      labels={{
+        filters: copy.filterLabel,
+        openFilters: chrome.filtersWithCount(chips.length),
+        sheetDescription: chrome.panelDescription,
+        apply: chrome.showResults,
+        close: chrome.close,
+        clear: chrome.clearFilters,
+        clearAll: copy.emptyPrimary,
+        activeFilters: copy.activeFiltersLabel,
+        sort: copy.filterLabel,
+        modes: chrome.modes,
+        pending: chrome.pending,
+      }}
+    />
   );
 }
 
-function PublicFeedEntryCard({
+/** One public entry as the feed draws it; `/feed` draws a guest's the same way. */
+export function PublicFeedEntryCard({
   locale,
   copy,
   entry,
@@ -335,8 +373,7 @@ function PublicFeedEntryCard({
   entry: PublicFeedEntry;
   priority: boolean;
 }) {
-  const [cover] = entry.media;
-  const sourceSet = cover ? buildPublicMediaSourceSet(cover) : null;
+  const dates = entryCardDates(locale, entry.entryDate, entry.publishedAt);
 
   return (
     <EntryCard
@@ -358,23 +395,14 @@ function PublicFeedEntryCard({
           </>
         ) : null,
       }}
-      dateTime={toIsoDateTime(entry.publishedAt)}
-      dateLabel={formatFeedDate(entry.publishedAt, locale)}
+      dateTime={dates.dateTime}
+      dateLabel={dates.dateLabel}
+      published={dates.published}
       excerpt={entry.excerpt}
-      cover={
-        cover && sourceSet
-          ? {
-              src: sourceSet.src,
-              srcSet: sourceSet.srcSet,
-              alt: publicCardMediaAltText(cover),
-              placeholderDataUri: cover.placeholderDataUri,
-              focalX: cover.focalX,
-              focalY: cover.focalY,
-              intrinsicWidth: cover.intrinsicWidth,
-              intrinsicHeight: cover.intrinsicHeight,
-            }
-          : null
+      readMoreLabel={
+        entry.excerptTruncated ? getEntryCardCopy(locale).readMore : undefined
       }
+      media={entryCardMedia(entry.media)}
       author={
         entry.author
           ? {
@@ -424,12 +452,12 @@ function PublicFeedLoading({ label }: { label: string }) {
           key={item}
           className="grid gap-3 rounded-lg border border-border p-4 sm:p-5"
         >
+          {/* The card's own order: who and when, where, what was written. */}
+          <Skeleton className="h-8 w-48" />
           <Skeleton className="h-3 w-36" />
           <Skeleton className="h-6 w-4/5" />
-          {/* The skeleton reserves the same 16:9 box the cover will fill, so
-              the arrival of the real card shifts nothing (DESIGN.md §5.4). */}
-          <Skeleton className="aspect-card w-full" />
-          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
         </div>
       ))}
     </div>
@@ -512,7 +540,9 @@ export function buildPublicHomeFeedContextModules(
   // The rail is where a topic becomes a real anchor: a crawler follows it, a
   // reader can open it in a new tab, and a topic nobody has written about is
   // not offered at all — which is what the row of zeros used to be.
-  const offered = topics.filter((topic) => topic.entryCount > 0);
+  const offered = topics.filter(
+    (topic) => topic.entryCount > 0 && !isKindTopicSlug(topic.slug),
+  );
 
   return [
     {
@@ -562,24 +592,4 @@ export function buildPublicFeedHref(
   const path = localizedPath(locale, "/");
   const query = params.toString();
   return query ? `${path}?${query}` : path;
-}
-
-function formatFeedDate(value: Date | string, locale: PublicLocale) {
-  const localeTag = {
-    uk: "uk-UA",
-    bg: "bg-BG",
-    ru: "ru-RU",
-  }[locale];
-
-  return new Intl.DateTimeFormat(localeTag, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function toIsoDateTime(value: Date | string) {
-  return value instanceof Date
-    ? value.toISOString()
-    : new Date(value).toISOString();
 }

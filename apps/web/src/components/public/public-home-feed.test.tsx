@@ -67,6 +67,10 @@ const copy: PublicHomeFeedCopy = {
   followedFilter: "Підписки",
   plantFilter: "Рослини",
   animalFilter: "Тварини",
+  kindFacetLabel: "Рослини чи тварини",
+  allKinds: "Усі",
+  allTopics: "Усі теми",
+  removeFilter: "Прибрати фільтр",
   topicFilterLabel: "Перевірені теми",
   discuss: "Обговорення",
   publishedBy: "Автор",
@@ -208,23 +212,65 @@ describe("the public home feed", () => {
     expect(html).toContain('id="entry-card-entry-1-title"');
   });
 
-  it("reserves every cover's box and keeps the media pipeline's srcset", () => {
+  // OVE-492 (OG-UX-041): photographs at their own proportions, several side
+  // by side, and no box at all for a text note.
+  it("keeps the media pipeline's srcset and draws no box for a text note", () => {
     const html = render();
 
-    // Criterion 3, and ADR-0022 D2: plain `<img srcset>` off
-    // media.over.garden, the 480/1280 variants, no optimizer hop.
-    expect(html).toContain('data-entry-card-media="cover"');
-    // 4:3 is DESIGN.md §2.10's *card* ratio; 16:9 is a cover's, and a cover is
-    // the entry page's hero rather than a card's picture.
-    expect(html).toContain("aspect-card");
+    // ADR-0022 D2: plain `<img srcset>` off media.over.garden, the 480/1280
+    // variants, no optimizer hop.
     expect(html).toContain("one-480.webp 480w");
     expect(html).toContain("one-1280.webp 1280w");
     expect(html).not.toContain("/_next/image");
-    // One cover per card, not a grid of three: the second photograph of an
-    // entry belongs on the entry, not in a feed.
-    expect(html.match(/data-entry-card-media="cover"/g)).toHaveLength(1);
-    // The card with no photograph reserves the same box.
-    expect(html).toContain('data-entry-card-media="fallback"');
+    // The first entry has two photographs, and the card shows both.
+    expect(html).toContain(
+      'data-entry-card-media="grid" data-entry-card-media-count="2"',
+    );
+    // The second is a text note: its card draws no photograph's box.
+    expect(html.match(/data-entry-card-media=/g)).toHaveLength(1);
+    expect(html).not.toContain("aspect-card");
+  });
+
+  it("reads author and date before the object, the words and the photographs", () => {
+    const html = render();
+    const card = html.slice(
+      html.indexOf('data-entry-card="entry-1"'),
+      html.indexOf('data-entry-card="entry-2"'),
+    );
+    const at = (needle: string) => card.indexOf(needle);
+    expect(at("Олена")).toBeGreaterThan(-1);
+    expect(at("Олена")).toBeLessThan(at("10 лип. 2026"));
+    expect(at("10 лип. 2026")).toBeLessThan(at("Томат Черрі"));
+    expect(at("Томат Черрі")).toBeLessThan(at("Підсумок тижня для томата"));
+    expect(at("Підсумок тижня для томата")).toBeLessThan(
+      at("data-entry-card-media"),
+    );
+    expect(at("data-entry-card-media")).toBeLessThan(at("Обговорення"));
+  });
+
+  it("dates a backdated entry by its observation and names its publication", () => {
+    const [first] = page.entries;
+    const html = render({
+      feed: {
+        ...page,
+        entries: [
+          {
+            ...first!,
+            entryDate: "2026-05-03",
+            publishedAt: "2026-09-12T18:40:00.000Z",
+            excerptTruncated: true,
+          },
+        ],
+      },
+    });
+
+    expect(html).toContain('<time dateTime="2026-05-03"');
+    expect(html).toContain(">3 трав. 2026 р.</time>");
+    expect(html).toContain(">Опубліковано 12 вер. 2026 р.</time>");
+    expect(html).toContain('data-entry-card-read-more="true"');
+    // An entry published the day it was observed says so once.
+    expect(render()).not.toContain("Опубліковано");
+    expect(render()).not.toContain('data-entry-card-read-more="true"');
   });
 
   it("asks first for the first photograph, not for the first card", () => {
@@ -243,9 +289,12 @@ describe("the public home feed", () => {
     const reordered = images(
       render({ feed: { ...page, entries: [wordsOnly!, withPhotograph!] } }),
     );
-    expect(reordered).toHaveLength(1);
+    // Two photographs in that card: the first is asked for at once, the
+    // second waits.
+    expect(reordered).toHaveLength(2);
     expect(reordered[0]).toMatch(/loading="eager"/u);
     expect(reordered[0]).toMatch(/fetchPriority="high"/iu);
+    expect(reordered[1]).toMatch(/loading="lazy"/u);
 
     // Below the second card a photograph is below the first screen, and asking
     // for it early would take the link from what the reader is looking at.
@@ -265,28 +314,62 @@ describe("the public home feed", () => {
     expect(buried).not.toMatch(/fetchPriority=/iu);
   });
 
-  it("filters with chips that state whether they are on, and put the state in the URL", () => {
+  // OVE-492 (OG-UX-015): one discovery bar. Latest and Following are the
+  // modes; plants or animals and the topics are facets behind one button,
+  // never rows of chips above the first card.
+  it("filters through the shared bar: modes as links, facets behind Filters", () => {
     const html = render({
       request: { cursor: null, kind: "plant", topic: "winter-care" },
     });
 
-    // Criterion 4. `aria-pressed` is valid on a button and an ARIA error on a
-    // link, which is why these are submit buttons in a GET form rather than
-    // the anchors this row used to be.
-    expect(html).toContain('data-feed-kind-filters="true"');
-    expect(html).toContain('method="get"');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).toContain('aria-pressed="false"');
-    expect(html).not.toMatch(/<a[^>]*aria-pressed/u);
-    // The pressed chip carries no name, so pressing it again clears the filter.
+    expect(html).toContain('data-filter-bar-modes="true"');
     expect(html).toMatch(
-      /<button[^>]*type="submit"[^>]*aria-pressed="true"[^>]*>(?![^<]*name=)/u,
+      /<a[^>]*aria-current="page"[^>]*href="\/"[^>]*>Останні<\/a>|<a[^>]*href="\/"[^>]*aria-current="page"[^>]*>Останні<\/a>/u,
     );
-    // The other filter travels as a hidden field, so choosing a kind keeps the
-    // topic and the URL still describes the whole view.
-    expect(html).toContain('type="hidden" name="topic" value="winter-care"');
-    expect(html).toContain('type="hidden" name="kind" value="plant"');
-    expect(html).toContain("overflow-x-auto");
+    expect(html).toMatch(/<a[^>]*href="\/feed"[^>]*>Підписки<\/a>/u);
+    expect(html).toContain('data-filter-bar-open="true"');
+    expect(html).toContain("Фільтри (2)");
+    expect(html).toContain('data-filter-bar-facet="kind"');
+    expect(html).toContain('data-filter-bar-facet="topic"');
+    // The active filters are chips that remove themselves by a real link.
+    expect(html).toContain('href="/?topic=winter-care"');
+    expect(html).toContain('href="/?kind=plant"');
+    // No row of chips repeating plants and animals above the cards.
+    expect(html).not.toContain('data-feed-kind-filters="true"');
+    expect(html).not.toContain('data-feed-topic-filters="true"');
+    expect(html).not.toContain("aria-pressed");
+  });
+
+  // OG-UX-015: "Рослини" is the kind facet; the system topic of the same
+  // name is not offered again, in the panel or the rail — unless it is the
+  // one in the URL, so the reader can remove it.
+  it("does not offer plants or animals a second time as topics", () => {
+    const withKindTopics: TrustedPublicFeedTopic[] = [
+      ...topics,
+      { slug: "plants", label: "Рослини", entryCount: 63 },
+      { slug: "animals", label: "Тварини", entryCount: 12 },
+    ];
+    const html = render({ topics: withKindTopics });
+    const topicFacet = html.slice(
+      html.indexOf('data-filter-bar-facet="topic"'),
+      html.indexOf("</select>", html.indexOf('data-filter-bar-facet="topic"')),
+    );
+    expect(topicFacet).toContain("Зимовий догляд");
+    expect(topicFacet).not.toContain('value="plants"');
+    expect(topicFacet).not.toContain('value="animals"');
+    expect(
+      buildPublicHomeFeedContextModules(
+        "uk",
+        copy,
+        withKindTopics,
+      )[0]?.items.map((item) => item.label),
+    ).toEqual(["Зимовий догляд"]);
+
+    const inUrl = render({
+      topics: withKindTopics,
+      request: { cursor: null, kind: "all", topic: "plants" },
+    });
+    expect(inUrl).toContain('value="plants"');
   });
 
   it("offers no topic nobody has written about", () => {
@@ -299,12 +382,12 @@ describe("the public home feed", () => {
     expect(html).not.toContain('href="/?topic=quiet-topic"');
   });
 
-  it("leaves the followed feed to a region of its own, so the page never asks who is reading", () => {
-    // `SignedInOnly` answers from the session the document started; under a
-    // server render with no provider that is a guest, and the link is absent.
-    // What a gardener sees is asserted where it is decided:
-    // `src/components/site-shell/signed-in-only.test.tsx`.
-    expect(render()).not.toContain('href="/feed"');
+  it("offers Following to every reader, so the page never asks who is reading", () => {
+    // `/feed` shows a guest the public feed and says what signing in adds, so
+    // the link is the same for everyone and the page stays a static document.
+    const html = render();
+    expect(html).toMatch(/<a[^>]*href="\/feed"[^>]*>Підписки<\/a>/u);
+    expect(html).not.toContain("data-signed-in-only");
   });
 
   it("paginates with real links and says when the feed is exhausted", () => {
@@ -350,8 +433,9 @@ describe("the public home feed", () => {
 
     expect(html).toContain('aria-label="Завантаження публічних журналів"');
     expect(html).toContain('aria-busy="true"');
-    // The skeleton reserves the same 4:3 box, so the real card shifts nothing.
-    expect(html).toContain("aspect-card");
+    // Shaped like a card's own order — byline, context, words — with no
+    // photograph box a text note would not have.
+    expect(html).not.toContain("aspect-card");
   });
 
   it("renders a failure the page settled, with the class and the digest", () => {

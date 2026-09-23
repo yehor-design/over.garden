@@ -188,7 +188,9 @@ describe("/{locale}/feed", () => {
     );
   });
 
-  it("filters with chips that state whether they are on, and work without JavaScript", async () => {
+  // OVE-492: the same discovery bar as the home feed — Latest and Following
+  // as modes, this feed's facets behind one button, a GET form underneath.
+  it("filters through the shared bar and works without JavaScript", async () => {
     const { default: LocalizedFollowedFeedRoute } = await import("./page");
     const html = renderToStaticMarkup(
       await LocalizedFollowedFeedRoute({
@@ -197,17 +199,35 @@ describe("/{locale}/feed", () => {
       }),
     );
 
-    // Six full-width selects in two bordered strips became two chip rows. The
-    // press is a GET form submit, so it works before hydration and the result
-    // is in the URL (DESIGN.md §5.1).
-    expect(html).toContain('data-followed-feed-source-filters="true"');
-    expect(html).toContain('data-followed-feed-kind-filters="true"');
+    expect(html).toContain('data-filter-bar-modes="true"');
+    expect(html).toMatch(/<a[^>]*href="\/"[^>]*>Останні<\/a>/u);
+    expect(html).toMatch(
+      /aria-current="page"[^>]*>Підписки<\/a>|<a[^>]*href="\/feed"[^>]*aria-current="page"/u,
+    );
     expect(html).toContain('method="get"');
-    expect(html).toContain('aria-pressed="true"');
-    expect(html).not.toMatch(/<a[^>]*aria-pressed/u);
-    // The other filter rides along as a hidden field.
+    expect(html).toContain('data-filter-bar-facet="source"');
+    expect(html).toContain('data-filter-bar-facet="kind"');
+    // The committed filters ride along as hidden fields, and each chip
+    // removes itself by a real link.
     expect(html).toContain('type="hidden" name="kind" value="plant"');
     expect(html).toContain('type="hidden" name="source" value="people"');
+    expect(html).toContain('href="/feed?kind=plant"');
+    expect(html).toContain('href="/feed?source=people"');
+    expect(html).not.toContain("aria-pressed");
+  });
+
+  it("gives a guest the two modes and no facets of a feed they do not have", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    const { default: LocalizedFollowedFeedRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedFollowedFeedRoute({
+        params: Promise.resolve({ locale: "uk" }),
+      }),
+    );
+
+    expect(html).toContain('data-screen-state="signed-out"');
+    expect(html).toContain('data-filter-bar-modes="true"');
+    expect(html).not.toContain("data-filter-bar-facet=");
   });
 
   it("shows the designed first-run state when nothing is followed", async () => {

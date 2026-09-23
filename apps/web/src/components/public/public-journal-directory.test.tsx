@@ -244,10 +244,13 @@ describe("public journal directory", () => {
     expect(html).toContain(
       'href="/journal/recovery-check?from=%2Fjournals%3Fq%3D',
     );
-    // One cover per card, and the card with no photograph reserves the box.
-    expect(html).toContain('data-entry-card-media="cover"');
-    expect(html).toContain('data-entry-card-media="fallback"');
-    expect(html.match(/<img /g)).toHaveLength(1);
+    // The photographed card shows its three photographs side by side, and
+    // the text-only card draws no photograph's box at all (OVE-492).
+    expect(html).toContain(
+      'data-entry-card-media="grid" data-entry-card-media-count="3"',
+    );
+    expect(html.match(/data-entry-card-media=/g)).toHaveLength(1);
+    expect(html.match(/<img /g)).toHaveLength(3);
     expect(html).not.toMatch(
       /ownerUserId|entryId|spaceId|derivativeKey|quarantine|latitude|longitude|href="[^"]*(?:sign-in|register)|>Створити акаунт</i,
     );
@@ -344,7 +347,7 @@ describe("public journal directory", () => {
 
     // Criterion 8: the filters that are on, a way to clear them, no picture.
     expect(noResults).toContain('data-screen-state="empty-no-results"');
-    expect(noResults).toContain("Няма намерени дневници");
+    expect(noResults).toContain("Няма намерени записи");
     expect(noResults).toContain("Нулиране на всичко");
     expect(noResults).not.toContain("/illustrations/");
 

@@ -34,7 +34,7 @@ describe("public journal directory copy", () => {
 
     expect(bg.heading).toBe("Дневници");
     expect(bg.catalogLabel).toBe("Идентичност");
-    expect(bg.emptyTitle).toBe("Няма намерени дневници");
+    expect(bg.emptyTitle).toBe("Няма намерени записи");
     expect(ru.heading).toBe("Журналы");
     expect(ru.regionLabel).toBe("Безопасный регион");
     expect(ru.errorTitle).toBe("Журналы временно недоступны");
