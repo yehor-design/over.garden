@@ -1353,6 +1353,59 @@ stands — and only then who approved the text and which version it is
   erasure pages draw no garden chrome at all (the safe exit), so a failed
   session recheck cannot trap a person in an account.
 
+### 5.17 The catalogue opens on a door, not on its register
+
+`/catalog` used to open on page one of an A–Z register of 114,669 scientific
+names — "1001" and a run of numbered cultivars first, six-figure counts above
+them. A gardener with a tomato in their hand had nothing to hold on to
+(`OVE-496`, OG-UX-011/012/015). The catalogue's own address is now a **door**;
+any filter, letter, sort or search is the **register** behind it, which keeps
+every facet it had. The register has no unfiltered page one: removing its last
+filter is the door, whose "whole register" section is every kingdom and
+letter.
+
+- **The door leads with a search whose scope is said out loud** — plants,
+  animals or everything, by common or scientific name. It is a real `GET` form
+  to the register, with plants chosen until the reader says otherwise, and the
+  results show the same choice as their mode, so a search widens where it
+  answered.
+- **A query is in the form every name is stored in.** It goes through
+  `normalizeCatalogName`, the mirror of `catalog_normalize_name`, so a
+  typographic apostrophe, ё or ґ finds what was stored the other way; `%` and
+  `_` never widen it into a wildcard.
+- **An exact name outranks the alphabet.** With a query: an exact name first,
+  then a species before its forms, then what gardeners here wrote about, then
+  the chosen sort. "м'ята колосиста" is the species, not its cultivars.
+- **A form names its species.** "1001" says nothing alone; "Сорт виду «м'ята
+  колосиста»" says which one the reader found. With no common name, the row is
+  the scientific name, never a blank.
+- **What gardeners here wrote about, and only that**, with how many there are.
+  The door claims no popularity and no evidence it does not have (ADR-0026
+  D9).
+- **Species, form and your own object, a sentence each** — a legend a reader
+  can skip, not a tutorial they must pass.
+- **"Add to my garden" is object setup, which offers what the reader already
+  keeps first**, so writing about the tomato they have never starts a second
+  one. Plants and animals only; nobody keeps a fungus or a virus.
+- **An empty search among plants says where it would find something**
+  ("search everywhere", with the count) rather than offering a reset.
+- **Every link from the door into the register is a document navigation**
+  (`DocumentLink`). The register is the door's `/q` twin, and Next 16.2
+  predicts a route it has not received from the same path without its query —
+  the door itself, which needs no request — so a client link changed only the
+  URL on a slow connection. This is §5.1's twin exception, for plain links.
+- **Every read is settled on its own.** A failed one hides its section and
+  says so; the search, which reads nothing, is always there.
+- **The door has no context rail.** Its kingdoms and register hubs are
+  sections of the page, and a rail repeating them offered one choice three
+  ways at once — a scope, a rail and a section (OG-UX-015).
+- **A catalogue read runs with JIT off** (`set local jit = off`). The planner
+  prices a name search far above what it costs, so Postgres compiled it, which
+  cost more than the read: in production a search for «томат» took 1,188 ms
+  with JIT and 189 ms without (read-only `EXPLAIN ANALYZE`, 114,669
+  catalogue rows). Reads without a name stay under the threshold and are
+  unchanged.
+
 ---
 
 ## 6. Language and locale

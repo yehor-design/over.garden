@@ -152,6 +152,22 @@ export async function readCatalogBrowsePage(
   return listCatalogBrowsePage(request, locale);
 }
 
+/**
+ * The organisms gardeners here have written about, for the catalogue's door
+ * (`OVE-496`): the catalogue's own `grown=1` view, cut short. `catalog` is
+ * revalidated whenever an entry about an object changes
+ * (`publicEntryChangeTags`), so a newly written-about organism does not wait
+ * out the day.
+ */
+export async function readCatalogFirstHandOrganisms(locale: PublicLocale) {
+  "use cache";
+  cacheLife("days");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog);
+  const { listCatalogBrowseFirstHandOrganisms } =
+    await import("@/server/public-catalog-browse-repository");
+  return listCatalogBrowseFirstHandOrganisms(locale, 12);
+}
+
 /** The counts beside every facet option, for the same request. */
 export async function readCatalogBrowseFacets(
   request: PublicCatalogBrowseRequest,

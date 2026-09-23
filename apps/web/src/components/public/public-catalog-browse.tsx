@@ -1,5 +1,6 @@
 import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
+import { PlusIcon as Plus } from "@/components/icons/Plus";
 
 import {
   SiteShellContextRailModules,
@@ -7,12 +8,12 @@ import {
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Field } from "@/components/ui/field";
 import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
-import { Link } from "@/components/ui/link";
+import { DocumentLink, Link } from "@/components/ui/link";
 import { ListRow } from "@/components/ui/list-row";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
@@ -35,6 +36,7 @@ import {
 import type { PublicCatalogBrowseCopy } from "@/lib/public-catalog-browse-copy";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
+import { gardenObjectSetupPreselectionPath } from "@/lib/garden/public-paths";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { cn } from "@/lib/utils";
@@ -106,6 +108,13 @@ export function PublicCatalogBrowse({
     kingdomTotals,
     registerHubs,
   );
+  const elsewhere =
+    state === "empty" && request.kingdoms.length > 0
+      ? Object.values(facets.kingdoms).reduce(
+          (sum, total) => sum + (total ?? 0),
+          0,
+        )
+      : 0;
 
   return (
     <main
@@ -128,7 +137,17 @@ export function PublicCatalogBrowse({
       <SiteShellContextRailRegistration modules={contextModules} />
 
       <PageHeader
-        eyebrow={copy.eyebrow}
+        // The door is the catalogue's own address: every view of the register
+        // and every search is one step from it (`OVE-496`).
+        breadcrumb={
+          <Link
+            href={listingPath}
+            data-catalog-door-link="true"
+            className="w-fit text-body-sm"
+          >
+            {copy.eyebrow}
+          </Link>
+        }
         title={copy.title}
         description={copy.description}
       />
@@ -254,7 +273,21 @@ export function PublicCatalogBrowse({
           title={copy.emptyTitle}
           description={copy.emptyBody}
           action={
-            chips.length > 0 ? (
+            elsewhere > 0 ? (
+              // A search for «бджола» among plants finds nothing and says
+              // where it would (`OVE-496`): the kingdom counts ignore the
+              // kingdom filter, so they are that number.
+              <Link
+                href={buildPublicCatalogBrowseHref(locale, {
+                  ...request,
+                  kingdoms: [],
+                  page: 1,
+                })}
+                data-catalog-search-everywhere="true"
+              >
+                {copy.searchEverywhere(elsewhere)}
+              </Link>
+            ) : chips.length > 0 ? (
               <Link href={listingPath}>{copy.resetFilters}</Link>
             ) : null
           }
@@ -355,6 +388,14 @@ export function PublicCatalogBrowse({
  * registers hold it, and whether a gardener here has written about it — the
  * five facts `OVE-451` asks for, in one component used by every view.
  *
+ * Two more since `OVE-496`. **A form names its species**: a cultivar called
+ * "1001", or "Де Барао", tells a reader nothing on its own, and "Сорт виду
+ * «томат»" is what says which one they have found. **A plant or an animal can
+ * be added to the reader's garden** from here — object setup, which first
+ * offers the objects of that organism the gardener already keeps, so writing
+ * about the tomato they have never starts a second one. Nothing else is
+ * offered for a fungus or a virus, which nobody keeps.
+ *
  * **A row, not a card.** A page is sixty of these, and sixty bordered boxes
  * for sixty one-line names is a page a reader has to scroll past rather than
  * scan; DESIGN.md §4.1 has it plainly — a list of things is a list. The card
@@ -365,7 +406,7 @@ export function PublicCatalogBrowse({
  * reads a different word (WCAG 3.1.2). A cultivar denomination is a name
  * somebody chose, in whatever language they chose it, so it does not.
  */
-function CatalogResultRow({
+export function CatalogResultRow({
   card,
   locale,
   copy,
@@ -375,6 +416,17 @@ function CatalogResultRow({
   copy: PublicCatalogBrowseCopy;
 }) {
   const scientific = card.rank === "species" || card.rank === "subspecies";
+  const rankLabel =
+    card.rank && isKnownRank(card.rank) ? copy.rank[card.rank] : null;
+  const vernacular =
+    card.vernacularName && card.vernacularName !== card.name
+      ? card.vernacularName
+      : null;
+  const species =
+    card.speciesName && card.rank !== "species" && rankLabel
+      ? copy.speciesOf(rankLabel, card.speciesName)
+      : null;
+  const keepable = card.kingdom === "Plantae" || card.kingdom === "Animalia";
 
   return (
     <ListRow
@@ -390,9 +442,31 @@ function CatalogResultRow({
         )
       }
       description={
-        card.vernacularName && card.vernacularName !== card.name
-          ? card.vernacularName
-          : null
+        vernacular || species ? (
+          <>
+            {vernacular}
+            {vernacular && species ? " · " : null}
+            {species ? (
+              <span data-catalog-card-species="true">{species}</span>
+            ) : null}
+          </>
+        ) : null
+      }
+      actions={
+        keepable ? (
+          <a
+            href={gardenObjectSetupPreselectionPath(card.publicSlug)}
+            data-catalog-add-to-garden="true"
+            // Into a private workspace route: sixty per page are nothing a
+            // crawler should spend itself on.
+            rel="nofollow"
+            aria-label={copy.addToGardenLabel(card.name)}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+          >
+            <Plus aria-hidden="true" />
+            {copy.addToGarden}
+          </a>
+        ) : null
       }
       meta={
         <span className="flex flex-wrap items-center gap-2">
@@ -430,39 +504,52 @@ function isKnownRank(
  * a list of anchors rather than a row of buttons because a crawler walks it
  * and because 27 buttons in a toolbar is 27 tab stops.
  */
-function CatalogAlphabetIndex({
+export function CatalogAlphabetIndex({
   locale,
   copy,
   request,
   facets,
+  omitAll = false,
+  documentNavigation = false,
 }: {
   locale: PublicLocale;
   copy: PublicCatalogBrowseCopy;
   request: PublicCatalogBrowseRequest;
   facets: CatalogBrowseFacetCounts;
+  /** On the door, "all letters" would be the door itself. */
+  omitAll?: boolean;
+  /**
+   * On the door, every letter leads into the query twin, which a client
+   * navigation from the static document never reaches
+   * (`public-query-twin.ts`).
+   */
+  documentNavigation?: boolean;
 }) {
+  const IndexLink = documentNavigation ? DocumentLink : Link;
   return (
     <nav aria-label={copy.lettersHeading} className="min-w-0">
       <ul className="flex list-none flex-wrap gap-1">
-        <li>
-          <Link
-            href={buildPublicCatalogBrowseHref(locale, {
-              ...request,
-              initial: null,
-              page: 1,
-            })}
-            variant="quiet"
-            aria-current={request.initial === null ? "true" : undefined}
-            className={cn(
-              "inline-flex min-h-11 items-center rounded-md px-3 text-body-sm",
-              request.initial === null
-                ? "bg-surface-sunken font-semibold text-text"
-                : "text-text-muted",
-            )}
-          >
-            {copy.allLetters}
-          </Link>
-        </li>
+        {omitAll ? null : (
+          <li>
+            <IndexLink
+              href={buildPublicCatalogBrowseHref(locale, {
+                ...request,
+                initial: null,
+                page: 1,
+              })}
+              variant="quiet"
+              aria-current={request.initial === null ? "true" : undefined}
+              className={cn(
+                "inline-flex min-h-11 items-center rounded-md px-3 text-body-sm",
+                request.initial === null
+                  ? "bg-surface-sunken font-semibold text-text"
+                  : "text-text-muted",
+              )}
+            >
+              {copy.allLetters}
+            </IndexLink>
+          </li>
+        )}
         {CATALOG_BROWSE_INITIALS.map((initial) => {
           const total = facets.initials[initial] ?? 0;
           const active = request.initial === initial;
@@ -480,7 +567,7 @@ function CatalogAlphabetIndex({
           }
           return (
             <li key={initial}>
-              <Link
+              <IndexLink
                 href={buildPublicCatalogBrowseHref(locale, {
                   ...request,
                   initial,
@@ -496,7 +583,7 @@ function CatalogAlphabetIndex({
                 )}
               >
                 {initial}
-              </Link>
+              </IndexLink>
             </li>
           );
         })}
@@ -655,7 +742,10 @@ export function buildPublicCatalogContextModules(
       ).map((kingdom) => ({
         href: buildPublicCatalogBrowseHref(locale, { kingdoms: [kingdom] }),
         label: copy.kingdom[kingdom],
-        meta: String(kingdomTotals[kingdom] ?? 0),
+        meta: (kingdomTotals[kingdom] ?? 0).toLocaleString(locale),
+        // A kingdom is a whole view of the register, and from the door a
+        // link into the query twin (`public-query-twin.ts`).
+        document: true,
       })),
       emptyLabel: copy.emptyTitle,
     },
@@ -665,7 +755,7 @@ export function buildPublicCatalogContextModules(
       items: (registerHubs ?? []).slice(0, 6).map((hub) => ({
         href: localizedPath(locale, publicCatalogRegisterHubPath(hub.slug)),
         label: hub.name,
-        meta: String(hub.total),
+        meta: hub.total.toLocaleString(locale),
       })),
       emptyLabel: copy.anyRegister,
     },

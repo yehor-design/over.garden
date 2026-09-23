@@ -17,6 +17,10 @@ import type { PublicLocale } from "@/lib/public-localization";
  *
  * A plain anchor, rendered on the server: it is a crawl path into 114 669
  * pages, and a link that needs hydration is not a crawl path (ADR-0024).
+ *
+ * It says what the catalogue's door does (`OVE-496`) — find an organism by
+ * the name the reader has — because that is where it leads, and a reader
+ * asking what something is has a name, not a kingdom.
  */
 export function CatalogFrontDoor({ locale }: { locale: PublicLocale }) {
   const copy = getPublicCatalogBrowseCopy(locale);
@@ -33,9 +37,11 @@ export function CatalogFrontDoor({ locale }: { locale: PublicLocale }) {
       />
       <span className="flex flex-col gap-1">
         <span className="text-body-sm font-semibold text-text-heading">
-          {copy.title}
+          {copy.doorTitle}
         </span>
-        <span className="text-body-sm text-text-muted">{copy.description}</span>
+        <span className="text-body-sm text-text-muted">
+          {copy.doorDescription}
+        </span>
       </span>
     </Link>
   );

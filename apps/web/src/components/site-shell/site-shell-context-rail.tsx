@@ -19,6 +19,11 @@ export interface SiteShellContextRailItem {
   href: string;
   label: string;
   meta?: string;
+  /**
+   * Leave by a document navigation rather than the client router: a link
+   * from a static document into its own query twin (`public-query-twin.ts`).
+   */
+  document?: boolean;
 }
 
 export interface SiteShellContextRailModule {
@@ -120,17 +125,7 @@ export function SiteShellContextRailModules({
             <ul className="flex flex-col border-t border-border">
               {module.items.map((item) => (
                 <li key={`${module.key}:${item.href}:${item.label}`}>
-                  <Link
-                    href={item.href}
-                    className="hover:text-link flex min-h-11 items-center justify-between gap-3 rounded-sm border-b border-border py-2 text-body-sm font-medium text-text transition-colors duration-instant ease-out outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring"
-                  >
-                    <span className="min-w-0 break-words">{item.label}</span>
-                    {item.meta ? (
-                      <span className="shrink-0 text-caption text-text-muted tabular-nums">
-                        {item.meta}
-                      </span>
-                    ) : null}
-                  </Link>
+                  <ContextRailLink item={item} />
                 </li>
               ))}
             </ul>
@@ -140,5 +135,29 @@ export function SiteShellContextRailModules({
         </section>
       ))}
     </div>
+  );
+}
+
+function ContextRailLink({ item }: { item: SiteShellContextRailItem }) {
+  const className =
+    "hover:text-link flex min-h-11 items-center justify-between gap-3 rounded-sm border-b border-border py-2 text-body-sm font-medium text-text transition-colors duration-instant ease-out outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-ring";
+  const content = (
+    <>
+      <span className="min-w-0 break-words">{item.label}</span>
+      {item.meta ? (
+        <span className="shrink-0 text-caption text-text-muted tabular-nums">
+          {item.meta}
+        </span>
+      ) : null}
+    </>
+  );
+  return item.document ? (
+    <a href={item.href} className={className}>
+      {content}
+    </a>
+  ) : (
+    <Link href={item.href} className={className}>
+      {content}
+    </Link>
   );
 }

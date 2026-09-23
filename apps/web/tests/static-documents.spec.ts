@@ -706,7 +706,7 @@ test.describe("a public page is a static document", () => {
     ).toBe(404);
   });
 
-  test("catalog directories serve every result and control outside hidden segments", async ({
+  test("the catalogue's door serves its search and its way into the register outside hidden segments", async ({
     request,
   }) => {
     for (const address of [
@@ -724,10 +724,14 @@ test.describe("a public page is a static document", () => {
         'data-public-catalog-state="loading"',
       );
       const ranges = hiddenSegments(html);
+      // The door (`OVE-496`): its search form and the kingdoms into the
+      // register. The rows of what gardeners wrote about depend on the data;
+      // the register's own rows are the query twin's, below.
       for (const marker of [
         'data-public-catalog-state="',
-        'data-filter-bar-form="true"',
-        'data-catalog-card="',
+        'data-catalog-view="door"',
+        'data-catalog-search-form="true"',
+        'data-catalog-kingdom="',
       ]) {
         const occurrences = [...html.matchAll(new RegExp(marker, "g"))];
         expect(occurrences.length, `${address}: ${marker}`).toBeGreaterThan(0);
@@ -756,6 +760,9 @@ test.describe("a public page is a static document", () => {
       expect(filtered.html, address).toMatch(
         /href="[^"]*kingdom=plantae[^"]*"[^>]*aria-current="page"|aria-current="page"[^>]*href="[^"]*kingdom=plantae/,
       );
+      // The register behind the door: its filter form and its rows.
+      expect(filtered.html, address).toContain('data-filter-bar-form="true"');
+      expect(filtered.html, address).toContain('data-catalog-card="');
     }
     for (const address of ["/q/catalog", "/bg/q/catalog", "/ru/q/catalog"]) {
       expect((await getDocument(request, address)).status, address).toBe(404);

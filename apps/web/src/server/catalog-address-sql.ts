@@ -23,3 +23,38 @@ export function catalogSpeciesSlugSql(itemRef: string): RawBuilder<string | null
     limit 1
   )`;
 }
+
+/**
+ * The species a form belongs to, named the way its reader would name it
+ * (`OVE-496`): its name in `locale` when the catalogue holds one, its accepted
+ * name otherwise. Null for a species and for a form with no species yet. A
+ * cultivar called "1001" or "Де Барао" says nothing on its own; "a variety of
+ * the species «томат»" is what tells a reader which one they have found.
+ */
+export function catalogSpeciesNameSql(
+  itemRef: string,
+  locale: string,
+): RawBuilder<string | null> {
+  return sql<string | null>`(
+    select coalesce(
+      (
+        select parent_name.display_name
+        from catalog_item_names as parent_name
+        where parent_name.catalog_item_id = parent.id
+          and parent_name.locale = ${locale}
+        order by parent_name.is_primary desc, parent_name.weight desc,
+          parent_name.display_name
+        limit 1
+      ),
+      parent.canonical_name
+    )
+    from catalog_item_relations as form_relation
+    join catalog_items as parent on parent.id = form_relation.to_catalog_item_id
+    where form_relation.from_catalog_item_id = ${sql.ref(`${itemRef}.id`)}
+      and form_relation.relation_type = 'form_of'
+      and parent.node_kind = 'taxon'
+      and parent.identity_state = 'active'
+    order by form_relation.created_at, form_relation.id
+    limit 1
+  )`;
+}
