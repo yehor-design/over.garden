@@ -27,6 +27,23 @@ export function catalogKindSql(alias: string) {
   end`;
 }
 
+/**
+ * As `catalogKindSql`, for a catalogue row that may not be there — a
+ * left-joined item. `catalogKindSql` answers `breed` for an object with no
+ * catalogue match at all, because `NULL` falls through to its `else`: a
+ * gardener's unmatched tomato read "Порода" on the lineage pages
+ * (`OVE-495`). No row, no kind.
+ */
+export function optionalCatalogKindSql(alias: string) {
+  const node = sql.raw(`${alias}.node_kind`);
+  return sql<CatalogKind | null>`case
+    when ${node} is null then null
+    when ${node} = 'taxon' then 'species'
+    when ${node} = 'cultivar' then 'plant_variety'
+    else 'breed'
+  end`;
+}
+
 /** The same mapping in TypeScript, for a row already read. */
 export function catalogKindOfNodeKind(nodeKind: string): CatalogKind {
   if (nodeKind === "taxon") return "species";

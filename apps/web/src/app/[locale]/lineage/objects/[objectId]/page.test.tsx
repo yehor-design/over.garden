@@ -251,7 +251,12 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("Публичен дневник на обекта");
     expect(html).toContain("Хронология");
     expect(html).toContain("Прочетете последния запис");
-    expect(html).toContain("Потвърден произход");
+    // The link as a sentence with both names, this page's object marked,
+    // and what "confirmed" means: the two gardeners' word (`OVE-495`).
+    expect(html).toContain("„Balcony tomato“ произхожда от „Seed mother“");
+    expect(html).toContain("(този обект)");
+    expect(html).toContain("Двамата градинари го потвърдиха");
+    expect(html).toContain("не генетичен анализ");
     // A guest may like without an account; bookmark, comment and follow still
     // route through the auth intent (hybrid ownership, 2026-09-04).
     expect(html).toContain("Харесвам");

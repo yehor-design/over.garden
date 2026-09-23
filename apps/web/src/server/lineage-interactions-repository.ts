@@ -24,7 +24,12 @@ import {
   utcDayWindow,
 } from "@/server/interaction-admission";
 import type { RequestScope } from "@/server/request-scope";
-import { catalogKindSql } from "@/server/catalog-kind-sql";
+import {
+  lineageGardenerIdentitySql,
+  mapLineageGardenerIdentity,
+  type LineageGardenerIdentity,
+} from "@/server/lineage-identity";
+import { optionalCatalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -73,12 +78,27 @@ export interface LineageQuestionInboxItem {
   id: string;
   questionText: string;
   targetObject: LineageInteractionObjectReadback;
+  /** Who asked, as their public profile shows them (`OVE-495`). */
+  asker: LineageGardenerIdentity | null;
+  /**
+   * The confirmed link the question came through, seen from the reader: the
+   * asker's object on it, and which way it runs. Related objects are often
+   * called the same thing, so "about your «Томат»" needs its other end
+   * (`OVE-495`, criterion 12). Null once the link itself is gone.
+   */
+  relation: {
+    askerObjectName: string;
+    /** True when the reader's object is the source the asker's came from. */
+    readerObjectIsSource: boolean;
+  } | null;
   createdAt: Date | string;
 }
 
 export interface LineageFollowReadbackItem {
   id: string;
   targetObject: LineageInteractionObjectReadback;
+  /** Whose object it is, as their public profile shows them (`OVE-495`). */
+  owner: LineageGardenerIdentity | null;
   createdAt: Date | string;
 }
 
@@ -312,8 +332,30 @@ export async function listLineageQuestionInbox(
       varietyText: row.targetVarietyText,
       varietyState: row.targetVarietyState,
     }),
+    asker: mapLineageGardenerIdentity(row.asker),
+    relation: mapQuestionRelation(row.relation),
     createdAt: row.created_at,
   }));
+}
+
+function mapQuestionRelation(
+  value: unknown,
+): LineageQuestionInboxItem["relation"] {
+  if (!value || typeof value !== "object") return null;
+  const record = value as {
+    askerObjectName?: unknown;
+    readerObjectIsSource?: unknown;
+  };
+  if (
+    typeof record.askerObjectName !== "string" ||
+    typeof record.readerObjectIsSource !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    askerObjectName: record.askerObjectName,
+    readerObjectIsSource: record.readerObjectIsSource,
+  };
 }
 
 export async function listLineageFollowReadback(
@@ -330,6 +372,7 @@ export async function listLineageFollowReadback(
       varietyText: row.targetVarietyText,
       varietyState: row.targetVarietyState,
     }),
+    owner: mapLineageGardenerIdentity(row.owner),
     createdAt: row.created_at,
   }));
 }
@@ -519,9 +562,33 @@ export function buildLineageQuestionInboxQuery(
       "target_objects.id as targetObjectId",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
+      optionalCatalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
+      lineageGardenerIdentitySql(
+        "lineage_questions.asker_user_id",
+        scope.userId,
+      ).as("asker"),
+      // The asker's end of the link, only while the link stands and the
+      // object is still theirs.
+      sql<{ askerObjectName: string; readerObjectIsSource: boolean } | null>`(
+        select json_build_object(
+                 'askerObjectName', asker_objects.display_name,
+                 'readerObjectIsSource',
+                 edges.source_plant_object_id = lineage_questions.target_plant_object_id
+               )
+          from lineage_provenance_edges as edges
+          join plant_objects as asker_objects
+            on asker_objects.id = case
+                 when edges.source_plant_object_id = lineage_questions.target_plant_object_id
+                   then edges.subject_plant_object_id
+                 else edges.source_plant_object_id
+               end
+           and asker_objects.owner_user_id = lineage_questions.asker_user_id
+         where edges.id = lineage_questions.lineage_edge_id
+           and edges.erasure_state = 'active'
+         limit 1
+      )`.as("relation"),
     ])
     .where("lineage_questions.recipient_user_id", "=", scope.userId)
     .where("lineage_questions.question_state", "=", "delivered")
@@ -576,9 +643,14 @@ export function buildLineageFollowReadbackQuery(
       "target_objects.id as targetObjectId",
       "target_objects.display_name as targetObjectDisplayName",
       "target_objects.object_kind as targetObjectKind",
-      catalogKindSql("target_catalog_items").as("targetCatalogKind"),
+      optionalCatalogKindSql("target_catalog_items").as("targetCatalogKind"),
       "target_objects.variety_text as targetVarietyText",
       "target_objects.variety_state as targetVarietyState",
+      // `lineage_node_follows.id` is grouped, so its own columns may be read.
+      lineageGardenerIdentitySql(
+        "lineage_node_follows.target_owner_user_id",
+        scope.userId,
+      ).as("owner"),
     ])
     .where("lineage_node_follows.follower_user_id", "=", scope.userId)
     .where("lineage_node_follows.follow_state", "=", "active")
@@ -588,7 +660,7 @@ export function buildLineageFollowReadbackQuery(
       "target_objects.id",
       "target_objects.display_name",
       "target_objects.object_kind",
-      catalogKindSql("target_catalog_items"),
+      optionalCatalogKindSql("target_catalog_items"),
       "target_objects.variety_text",
       "target_objects.variety_state",
     ])

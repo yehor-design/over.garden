@@ -1,10 +1,14 @@
+import NextLink from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { cache } from "react";
+import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { readViewerLikeState } from "@/app/engagement/engagement-viewer";
 import { BellRingingIcon as BellPlus } from "@/components/icons/BellRinging";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Callout } from "@/components/ui/callout";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Field } from "@/components/ui/field";
@@ -27,6 +31,8 @@ import type {
   PublicLineageNode,
 } from "@/server/public-lineage-repository";
 import { readGuestEngagementSummary } from "@/server/public-cache";
+import { readOwnedDestination } from "@/server/owned-destination-repository";
+import { gardenObjectSectionPath } from "@/lib/garden/object-pages";
 import { scopedToUser } from "@/server/request-scope";
 import { askLineageQuestionAction, followLineageNodeAction } from "./actions";
 
@@ -281,5 +287,57 @@ export async function ViewerLineageInteraction({
       resumeControl={normalizeAuthIntentResumeControl(query.authControl)}
       status={firstParam(query.engagement) ?? null}
     />
+  );
+}
+
+/**
+ * The passport's own gardener, reading it signed in, gets the two ways to
+ * their object: a new entry about exactly this one, and its page in their
+ * garden (`OVE-495`, criterion 3). The passport is one static document for
+ * every reader; this streams in for the owner alone, so a guest's bytes and
+ * a guest's controls are unchanged (criterion 4).
+ */
+export async function PassportOwnerBar({
+  plantObjectId,
+  locale,
+}: {
+  plantObjectId: string;
+  locale: PublicLocale;
+}) {
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  if (!userId) return null;
+  const owned = await readOwnedDestination(
+    scopedToUser(userId, getSessionId(session)),
+    { kind: "object", id: plantObjectId },
+  ).catch((error: unknown) => {
+    unstable_rethrow(error);
+    // An owner who cannot be confirmed is shown the reader's page.
+    return null;
+  });
+  if (!owned) return null;
+
+  const copy = getPublicSurfaceCopy(locale).passport;
+  return (
+    <aside
+      aria-label={copy.ownerBar}
+      data-passport-owner-bar="true"
+      className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface-sunken p-3"
+    >
+      <p className="text-body-sm text-text">{copy.ownerBar}</p>
+      <NextLink
+        href={`/garden/new?${new URLSearchParams({ object: plantObjectId })}`}
+        className={buttonVariants({ size: "sm" })}
+      >
+        <NotePencil aria-hidden="true" />
+        {copy.ownerWrite}
+      </NextLink>
+      <NextLink
+        href={gardenObjectSectionPath(plantObjectId)}
+        className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
+      >
+        {copy.ownerOpen}
+      </NextLink>
+    </aside>
   );
 }

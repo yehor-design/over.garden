@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   listLineageClaimInbox: vi.fn(),
+  getLineageClaimRecord: vi.fn(),
 }));
 
 // The signed-out path asks whether the reader arrived with a session cookie
@@ -33,6 +34,7 @@ vi.mock("@/server/interface-localization", () => ({
 
 vi.mock("@/server/lineage-repository", () => ({
   listLineageClaimInbox: mocks.listLineageClaimInbox,
+  getLineageClaimRecord: mocks.getLineageClaimRecord,
 }));
 
 vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
@@ -57,6 +59,51 @@ vi.mock("./actions", () => ({
   declineLineageClaimAction: vi.fn(),
 }));
 
+const EDGE_ID = "00000000-0000-4000-8000-000000000201";
+
+function claim(overrides: Record<string, unknown> = {}) {
+  return {
+    id: EDGE_ID,
+    consentState: "proposed",
+    visibilityPolicy: "owner_only_until_confirmed",
+    erasureState: "active",
+    createdAt: new Date("2026-07-03T18:00:00.000Z"),
+    proposer: {
+      handle: "anna",
+      displayName: "Анна Коваль",
+      profilePath: "/@anna",
+    },
+    subjectObject: {
+      id: "00000000-0000-4000-8000-000000000101",
+      displayName: "Balcony tomato",
+      objectKind: "plant",
+      catalogKind: "plant_variety",
+      varietyText: "Red Cherry",
+      varietyState: "selected",
+    },
+    sourceObject: {
+      id: "00000000-0000-4000-8000-000000000102",
+      displayName: "Seed mother",
+      objectKind: "plant",
+      catalogKind: "plant_variety",
+      varietyText: "Red Cherry",
+      varietyState: "selected",
+    },
+    ...overrides,
+  };
+}
+
+async function renderClaims(
+  searchParams: Record<string, string> = {},
+): Promise<string> {
+  const { default: LineageClaimInboxPage } = await import("./page");
+  return renderServerHtml(
+    await LineageClaimInboxPage({
+      searchParams: Promise.resolve(searchParams),
+    }),
+  );
+}
+
 describe("/garden/lineage/claims", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -65,90 +112,179 @@ describe("/garden/lineage/claims", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.listLineageClaimInbox.mockResolvedValue([
-      {
-        id: "00000000-0000-4000-8000-000000000201",
-        consentState: "proposed",
-        visibilityPolicy: "owner_only_until_confirmed",
-        erasureState: "active",
-        createdAt: new Date("2026-07-03T18:00:00.000Z"),
-        subjectObject: {
-          id: "00000000-0000-4000-8000-000000000101",
-          displayName: "Balcony tomato",
-          objectKind: "plant",
-          catalogKind: "plant_variety",
-          varietyText: "Red Cherry",
-          varietyState: "selected",
-        },
-        sourceObject: {
-          id: "00000000-0000-4000-8000-000000000102",
-          displayName: "Seed mother",
-          objectKind: "plant",
-          catalogKind: "plant_variety",
-          varietyText: "Red Cherry",
-          varietyState: "selected",
-        },
-      },
-    ]);
+    mocks.listLineageClaimInbox.mockResolvedValue([claim()]);
+    mocks.getLineageClaimRecord.mockResolvedValue(null);
   });
 
   it("requires auth before reading lineage claims", async () => {
     mocks.getCurrentSession.mockResolvedValue(null);
 
-    const { default: LineageClaimInboxPage } = await import("./page");
-    const html = await renderServerHtml(await LineageClaimInboxPage());
+    const html = await renderClaims();
 
-    expect(html).toContain("Запити щодо походження");
+    expect(html).toContain("Заявки на походження");
     expect(html).toContain('data-locale="uk"');
+    expect(html).toContain('data-next="/garden/lineage/claims"');
     expect(mocks.listLineageClaimInbox).not.toHaveBeenCalled();
   });
 
-  it("renders bounded proposed claim cards without private payload fields", async () => {
-    const { default: LineageClaimInboxPage } = await import("./page");
-    const html = await renderServerHtml(await LineageClaimInboxPage());
+  it("names the page among the lineage tasks (OVE-495)", async () => {
+    const html = await renderClaims();
+
+    expect(html).toContain('data-lineage-sections="true"');
+    expect(html).toMatch(
+      /<a aria-current="page"[^>]*href="\/garden\/lineage\/claims">Заявки</,
+    );
+    expect(html).toMatch(
+      /<a class="[^"]*" href="\/garden\/lineage\/questions">Запитання</,
+    );
+  });
+
+  it("says who claims what, and what each answer changes, before the controls", async () => {
+    const html = await renderClaims();
 
     expect(mocks.listLineageClaimInbox).toHaveBeenCalledOnce();
-    expect(html).toContain("Запити щодо походження");
+    // Both names in a sentence, and whose each object is.
     expect(html).toContain(
-      "Заявлене походження Balcony tomato від Seed mother",
+      "«Balcony tomato» походить від вашого «Seed mother»",
     );
-    expect(html).toContain("Balcony tomato · Red Cherry");
-    expect(html).toContain("Seed mother · Red Cherry");
-    expect(html).toContain("Запропоноване походження");
-    expect(html).toContain("Підтвердити походження");
-    expect(html).toContain("Відхилити");
-    expect(html).not.toMatch(
+    expect(html).toContain("Заявник");
+    expect(html).toContain('href="/@anna"');
+    expect(html).toContain("Анна Коваль");
+    expect(html).toContain("@anna");
+    expect(html).toContain("Заявлений об&#x27;єкт");
+    expect(html).toContain(
+      'href="/garden/objects/00000000-0000-4000-8000-000000000102"',
+    );
+    expect(html).toContain("Red Cherry · Сорт рослини");
+    expect(html).toContain("Чекає на вашу відповідь");
+    // The consequences come before the buttons in the document.
+    const consequences = html.indexOf("Що зміниться");
+    const confirm = html.indexOf("Підтвердити походження");
+    expect(consequences).toBeGreaterThan(-1);
+    expect(consequences).toBeLessThan(confirm);
+    expect(html).toContain("не генетичний аналіз");
+    expect(html).toContain("Змінити відповідь потім не можна");
+    // Each answer asks first, and is still a real submit before hydration.
+    expect(html).toContain(
+      `data-confirm-submit="lineage-claim-confirm-${EDGE_ID}"`,
+    );
+    expect(html).toContain(
+      `data-confirm-submit="lineage-claim-decline-${EDGE_ID}"`,
+    );
+    expect(html).toContain("Відхилити заявку");
+    // Icons carry an SVG namespace URL; nothing else on the card may.
+    expect(html.replace(/<svg[\s\S]*?<\/svg>/gu, "")).not.toMatch(
       /journal body|quarantine|derivative|media key|ip_address|ipaddress|user_agent|useragent|user-agent|email|phone|coarse_region|location_visibility|coordinates|@private|https?:\/\//i,
     );
   });
 
-  it("shows a bounded completion state after an invitation decision", async () => {
-    const { default: LineageClaimInboxPage } = await import("./page");
-    const html = await renderServerHtml(
-      await LineageClaimInboxPage({
-        searchParams: Promise.resolve({ invitation: "confirmed" }),
-      }),
+  it("says so when the gardener has no public profile to show", async () => {
+    mocks.listLineageClaimInbox.mockResolvedValue([claim({ proposer: null })]);
+
+    const html = await renderClaims();
+
+    expect(html).toContain("Садівник без публічного профілю");
+    expect(html).not.toContain("data-lineage-gardener");
+  });
+
+  it("reads the answer back and says what is stored now", async () => {
+    mocks.listLineageClaimInbox.mockResolvedValue([]);
+    mocks.getLineageClaimRecord.mockResolvedValue(
+      claim({ consentState: "confirmed" }),
     );
 
-    expect(html).toContain("Запрошення підтверджено");
-    expect(html).toContain("зі збереженою політикою видимості");
-    expect(html).not.toMatch(/token|private-payload|opaque\.sealed/i);
+    const html = await renderClaims({ claim: EDGE_ID, result: "done" });
+
+    expect(mocks.getLineageClaimRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "00000000-0000-4000-8000-000000000001",
+      }),
+      EDGE_ID,
+    );
+    expect(html).toContain('data-lineage-outcome="confirmed"');
+    expect(html).toContain("Походження підтверджено");
+    expect(html).toContain(
+      "«Balcony tomato» походить від вашого «Seed mother»",
+    );
+    expect(html).toContain('role="status"');
+  });
+
+  it("says a declined claim is shown nowhere", async () => {
+    mocks.getLineageClaimRecord.mockResolvedValue(
+      claim({ consentState: "declined" }),
+    );
+
+    const html = await renderClaims({ claim: EDGE_ID, result: "done" });
+
+    expect(html).toContain('data-lineage-outcome="declined"');
+    expect(html).toContain("Заявку відхилено");
+    expect(html).toContain("ніде не показується");
   });
 
   it.each([
-    ["bg", "Заявки за произход", "Потвърждаване на произхода"],
-    ["ru", "Запросы о происхождении", "Подтвердить происхождение"],
+    ["confirmed", "Ви вже підтвердили цю заявку раніше"],
+    ["declined", "Ви вже відхилили цю заявку раніше"],
+  ] as const)(
+    "says an answer was not saved because the claim was already %s",
+    async (consentState, sentence) => {
+      mocks.getLineageClaimRecord.mockResolvedValue(claim({ consentState }));
+
+      const html = await renderClaims({ claim: EDGE_ID, result: "stale" });
+
+      expect(html).toContain('data-lineage-outcome="stale"');
+      expect(html).toContain("Відповідь не збережено");
+      expect(html).toContain(sentence);
+      expect(html).toContain('role="alert"');
+    },
+  );
+
+  it("says an answer was not saved because the claim is gone", async () => {
+    mocks.getLineageClaimRecord.mockResolvedValue(null);
+
+    const html = await renderClaims({ claim: EDGE_ID, result: "stale" });
+
+    expect(html).toContain("Цієї заявки більше немає");
+  });
+
+  it("ignores an outcome address it cannot read", async () => {
+    const html = await renderClaims({ claim: EDGE_ID, result: "published" });
+
+    expect(mocks.getLineageClaimRecord).not.toHaveBeenCalled();
+    expect(html).not.toContain("data-lineage-outcome");
+  });
+
+  it("says what to expect when nothing is waiting", async () => {
+    mocks.listLineageClaimInbox.mockResolvedValue([]);
+
+    const html = await renderClaims();
+
+    expect(html).toContain("Заявок немає");
+    expect(html).not.toContain("data-confirm-submit");
+  });
+
+  it.each([
+    [
+      "bg",
+      "Заявки за произход",
+      "Потвърждаване на произхода",
+      "„Balcony tomato“",
+    ],
+    [
+      "ru",
+      "Заявки о происхождении",
+      "Подтвердить происхождение",
+      "«Balcony tomato»",
+    ],
   ] as const)(
     "renders %s action copy without changing object values",
-    async (locale, title, confirm) => {
+    async (locale, title, confirm, quoted) => {
       mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
 
-      const { default: LineageClaimInboxPage } = await import("./page");
-      const html = await renderServerHtml(await LineageClaimInboxPage());
+      const html = await renderClaims();
 
       expect(html).toContain(title);
       expect(html).toContain(confirm);
-      expect(html).toContain("Balcony tomato");
+      expect(html).toContain(quoted);
       expect(html).toContain("Seed mother");
     },
   );
@@ -158,11 +294,10 @@ describe("/garden/lineage/claims", () => {
       postgresRejection("42P01", 'relation "lineage_edges" does not exist'),
     );
 
-    const { default: Page } = await import("./page");
-    const html = await renderServerHtml(await Page());
+    const html = await renderClaims();
 
     expect(html).toContain('data-workspace-surface="lineage-claims"');
-    expect(html).toContain("Запити щодо походження");
+    expect(html).toContain("Заявки на походження");
     expect(html).toContain('data-section-failure="schema_missing"');
     expect(html).not.toContain("lineage_edges");
     expect(html).not.toContain('data-workspace-state="loading"');

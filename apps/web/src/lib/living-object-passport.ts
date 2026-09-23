@@ -137,6 +137,8 @@ export interface LivingObjectPassportCopy {
   publicPassport: string;
   ownerPassport: string;
   livingObjects: string;
+  /** The gardener's objects, as their profile's tab calls them. */
+  gardenerObjects: string;
   myGarden: string;
   caretaker: string;
   you: string;
@@ -200,6 +202,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     publicPassport: "Публічний паспорт",
     ownerPassport: "Мій паспорт об'єкта",
     livingObjects: "Живі об'єкти",
+    gardenerObjects: "Об’єкти",
     myGarden: "Мій сад",
     caretaker: "Доглядальник",
     you: "Ви",
@@ -254,6 +257,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     publicPassport: "Публичен паспорт",
     ownerPassport: "Моят паспорт на обекта",
     livingObjects: "Живи обекти",
+    gardenerObjects: "Обекти",
     myGarden: "Моята градина",
     caretaker: "Грижещ се",
     you: "Вие",
@@ -308,6 +312,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     publicPassport: "Публичный паспорт",
     ownerPassport: "Мой паспорт объекта",
     livingObjects: "Живые объекты",
+    gardenerObjects: "Объекты",
     myGarden: "Мой сад",
     caretaker: "Владелец ухода",
     you: "Вы",

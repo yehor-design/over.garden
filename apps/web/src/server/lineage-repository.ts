@@ -19,12 +19,18 @@ import type {
 } from "@/db/schema";
 import { lineageInvitationClaimPath } from "@/lib/garden/public-paths";
 import {
+  inspectLineageInviteToken,
   signLineageInviteToken,
   verifyLineageInviteToken,
   type LineageInviteVerification,
 } from "@/server/lineage-invite-token";
+import {
+  lineageGardenerIdentitySql,
+  mapLineageGardenerIdentity,
+  type LineageGardenerIdentity,
+} from "@/server/lineage-identity";
 import type { RequestScope } from "@/server/request-scope";
-import { catalogKindSql } from "@/server/catalog-kind-sql";
+import { optionalCatalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type CreateProvenanceSourceKind = Extract<
@@ -101,6 +107,12 @@ export interface LineagePendingSourceIdentityReadback {
   displayLabel: string;
   inviteState: LineagePendingSourceInviteState;
   invitePath: string;
+  /**
+   * The link is signed from the invitation's creation and lasts thirty days;
+   * past that the invited gardener is told it expired, so the writer is told
+   * too rather than handed a link that no longer opens (`OVE-495`).
+   */
+  linkExpired: boolean;
   createdAt: Date | string;
 }
 
@@ -111,6 +123,11 @@ export interface LineageClaimInboxItem {
   erasureState: LineageErasureState;
   subjectObject: LineagePlantObjectOption;
   sourceObject: LineagePlantObjectOption;
+  /**
+   * Who says their object came from yours — their public name and handle, or
+   * null when there is no public profile to show you (`OVE-495`).
+   */
+  proposer: LineageGardenerIdentity | null;
   createdAt: Date | string;
 }
 
@@ -135,6 +152,29 @@ export interface LineageInvitationClaimPreview {
   subjectObject: LineagePlantObjectOption;
   createdAt: Date | string;
 }
+
+/**
+ * Every answer an invitation link can get, each its own sentence
+ * (`OVE-495`, criterion 9). `ready` is the only one with a decision to make.
+ */
+export type LineageInvitationClaimState =
+  | {
+      state: "ready";
+      preview: LineageInvitationClaimPreview;
+      inviter: LineageGardenerIdentity | null;
+    }
+  | { state: "expired" }
+  | { state: "invalid" }
+  /** The record it points at was removed, or its object deleted. */
+  | { state: "withdrawn" }
+  /** Answered already — by this reader, or by somebody else. */
+  | {
+      state: "answered";
+      byViewer: boolean;
+      decision: "confirmed" | "declined" | null;
+    }
+  /** The reader wrote this invitation: it is for the other gardener. */
+  | { state: "own"; preview: LineageInvitationClaimPreview };
 
 export interface ResolveLineageInvitationClaimInput {
   token: string;
@@ -166,6 +206,10 @@ interface NormalizedResolveLineageClaimInput {
   decision: LineageClaimDecision;
 }
 
+/** An id from a URL is checked before it reaches a `uuid` column. */
+const EDGE_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
 const LINEAGE_SOURCE_REFERENCE_KINDS = [
   "person",
   "seed_packet",
@@ -178,7 +222,34 @@ export async function listLineageClaimInbox(
   scope: RequestScope,
 ): Promise<LineageClaimInboxItem[]> {
   const rows = await buildLineageClaimInboxQuery(db, scope).execute();
-  return rows.map((row) => ({
+  return rows.map(mapLineageClaimRow);
+}
+
+/**
+ * One claim addressed to this gardener, in whatever state it is now — how the
+ * inbox says what an answer did (`OVE-495`): the outcome it shows is the
+ * stored one, read back, not the button that was pressed. Null when the claim
+ * is not this gardener's to answer or no longer exists.
+ */
+export async function getLineageClaimRecord(
+  scope: RequestScope,
+  edgeId: string,
+): Promise<LineageClaimInboxItem | null> {
+  if (!EDGE_ID_PATTERN.test(edgeId)) return null;
+  const row = await buildLineageClaimRecordQuery(
+    db,
+    scope,
+    edgeId,
+  ).executeTakeFirst();
+  return row ? mapLineageClaimRow(row) : null;
+}
+
+function mapLineageClaimRow(
+  row: Awaited<
+    ReturnType<ReturnType<typeof buildLineageClaimInboxQuery>["execute"]>
+  >[number],
+): LineageClaimInboxItem {
+  return {
     id: row.id,
     consentState: row.consent_state as LineageConsentState,
     visibilityPolicy: row.visibility_policy as LineageVisibilityPolicy,
@@ -199,8 +270,9 @@ export async function listLineageClaimInbox(
       varietyText: row.sourceVarietyText,
       varietyState: row.sourceVarietyState,
     }),
+    proposer: mapLineageGardenerIdentity(row.proposer),
     createdAt: row.created_at,
-  }));
+  };
 }
 
 export async function getObjectProvenancePanel(
@@ -244,20 +316,14 @@ export async function getObjectProvenancePanel(
           }
         : null,
       pendingIdentity: edge.pendingIdentityId
-        ? {
+        ? pendingIdentityReadback({
             id: edge.pendingIdentityId,
             displayLabel: edge.pendingIdentityDisplayLabel ?? "Pending source",
             inviteState:
               edge.pendingIdentityInviteState as LineagePendingSourceInviteState,
-            invitePath: lineageInvitationClaimPath(
-              signLineageInviteToken({
-                pendingIdentityId: edge.pendingIdentityId,
-                edgeId: edge.id,
-                createdAt: edge.pendingIdentityCreatedAt ?? edge.created_at,
-              }),
-            ),
+            edgeId: edge.id,
             createdAt: edge.pendingIdentityCreatedAt ?? edge.created_at,
-          }
+          })
         : null,
       sourceReferenceKind:
         edge.source_reference_kind as LineageSourceReferenceKind | null,
@@ -274,6 +340,29 @@ export async function getObjectProvenancePanel(
 }
 
 /** A relation the domain does not allow, refused with a reason the form can say. */
+/**
+ * A decision that can no longer be made: the claim or invitation was
+ * answered already, withdrawn, expired, or is not the reader's to answer
+ * (`OVE-495`, criterion 9). Nothing was written. The pages read the record
+ * again to say which of those it is, so this carries no reason of its own.
+ */
+export class LineageDecisionUnavailableError extends Error {
+  constructor(readonly subject: "claim" | "invitation") {
+    super(
+      subject === "claim"
+        ? "Lineage claim is not available for this gardener."
+        : "Lineage invitation is not available.",
+    );
+    this.name = "LineageDecisionUnavailableError";
+  }
+}
+
+export function isLineageDecisionUnavailableError(
+  error: unknown,
+): error is LineageDecisionUnavailableError {
+  return error instanceof LineageDecisionUnavailableError;
+}
+
 export class ProvenanceRelationError extends Error {
   constructor(readonly reason: "cross_kind") {
     super(`Provenance relation refused: ${reason}.`);
@@ -479,7 +568,7 @@ export async function resolveLineageClaim(
     }).executeTakeFirst();
 
     if (!edge) {
-      throw new Error("Lineage claim is not available for this gardener.");
+      throw new LineageDecisionUnavailableError("claim");
     }
 
     await buildInsertLineageClaimAuditEventQuery(trx, {
@@ -499,19 +588,50 @@ export async function resolveLineageClaim(
   });
 }
 
-export async function getLineageInvitationClaimPreview(
+/**
+ * What an invitation link says to the reader holding it (`OVE-495`).
+ *
+ * The page used to ask only "can this be decided now", and every other case
+ * was one sentence: "unavailable, expired or already handled". This reads the
+ * record without the filters that make a decision possible and says which
+ * case it is, so a reader who already answered, or who wrote the invitation
+ * themselves, is told so instead of being told the link is broken. The
+ * decision itself still goes through `resolveLineageInvitationClaim`.
+ */
+export async function getLineageInvitationClaimState(
   token: string,
-): Promise<LineageInvitationClaimPreview | null> {
-  const verified = verifyLineageInviteToken(token);
-  if (!verified) return null;
+  viewerUserId: string,
+): Promise<LineageInvitationClaimState> {
+  const inspection = inspectLineageInviteToken(token);
+  if (inspection.state === "invalid") return { state: "invalid" };
+  if (inspection.state === "expired") return { state: "expired" };
 
-  const row = await buildLineageInvitationClaimPreviewQuery(
+  const row = await buildLineageInvitationRecordQuery(
     db,
-    verified,
+    inspection.verification,
+    viewerUserId,
   ).executeTakeFirst();
-  if (!row) return null;
+  if (!row || row.erasure_state !== "active") return { state: "withdrawn" };
+  if (row.pendingIdentityInviteState === "anonymized") {
+    return { state: "withdrawn" };
+  }
+  if (
+    row.consent_state !== "proposed" ||
+    row.pendingIdentityInviteState !== "pending"
+  ) {
+    return {
+      state: "answered",
+      byViewer: row.pendingIdentityClaimedByUserId === viewerUserId,
+      decision:
+        row.pendingIdentityInviteState === "claimed"
+          ? "confirmed"
+          : row.pendingIdentityInviteState === "declined"
+            ? "declined"
+            : null,
+    };
+  }
 
-  return {
+  const preview: LineageInvitationClaimPreview = {
     edgeId: row.id,
     consentState: row.consent_state as LineageConsentState,
     pendingIdentity: {
@@ -530,6 +650,12 @@ export async function getLineageInvitationClaimPreview(
     }),
     createdAt: row.created_at,
   };
+  if (row.owner_user_id === viewerUserId) return { state: "own", preview };
+  return {
+    state: "ready",
+    preview,
+    inviter: mapLineageGardenerIdentity(row.inviter),
+  };
 }
 
 export async function resolveLineageInvitationClaim(
@@ -539,7 +665,7 @@ export async function resolveLineageInvitationClaim(
   const decision = normalizeLineageClaimDecision(input.decision);
   const verified = verifyLineageInviteToken(input.token);
   if (!verified) {
-    throw new Error("Lineage invitation is invalid or expired.");
+    throw new LineageDecisionUnavailableError("invitation");
   }
   const inviteState = decision === "confirmed" ? "claimed" : "declined";
   const now = new Date();
@@ -550,12 +676,13 @@ export async function resolveLineageInvitationClaim(
       verified,
       {
         decision,
+        claimerUserId: scope.userId,
         now,
       },
     ).executeTakeFirst();
 
     if (!edge) {
-      throw new Error("Lineage invitation is not available.");
+      throw new LineageDecisionUnavailableError("invitation");
     }
 
     await buildResolveLineagePendingSourceIdentityClaimQuery(trx, verified, {
@@ -597,7 +724,7 @@ export function buildLineagePlantObjectByIdQuery(
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
-      catalogKindSql("catalog_items").as("catalogKind"),
+      optionalCatalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
     ])
@@ -629,7 +756,7 @@ export function buildLineageSourceObjectOptionsQuery(
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
-      catalogKindSql("catalog_items").as("catalogKind"),
+      optionalCatalogKindSql("catalog_items").as("catalogKind"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
     ])
@@ -716,7 +843,7 @@ export function buildObjectProvenanceEdgesQuery(
       "source_objects.id as sourceObjectId",
       "source_objects.display_name as sourceObjectDisplayName",
       "source_objects.object_kind as sourceObjectKind",
-      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
+      optionalCatalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
       "pending_identities.id as pendingIdentityId",
@@ -765,6 +892,29 @@ export function buildLineageClaimInboxQuery(
   executor: QueryExecutor,
   scope: RequestScope,
 ) {
+  return lineageClaimBaseQuery(executor, scope)
+    .where("lineage_provenance_edges.consent_state", "=", "proposed")
+    .where("lineage_provenance_edges.erasure_state", "=", "active")
+    .orderBy("lineage_provenance_edges.created_at", "desc")
+    .orderBy("lineage_provenance_edges.id", "asc");
+}
+
+/** The same claim as the inbox reads it, answered or not. */
+export function buildLineageClaimRecordQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  edgeId: string,
+) {
+  return lineageClaimBaseQuery(executor, scope)
+    .where("lineage_provenance_edges.erasure_state", "=", "active")
+    .where("lineage_provenance_edges.id", "=", edgeId);
+}
+
+/**
+ * A claim on one of this gardener's objects by another gardener: the edge,
+ * both objects, and who made it. Nothing about the state it is in.
+ */
+function lineageClaimBaseQuery(executor: QueryExecutor, scope: RequestScope) {
   return executor
     .selectFrom("lineage_provenance_edges")
     .innerJoin("plant_objects as source_objects", (join) =>
@@ -816,23 +966,23 @@ export function buildLineageClaimInboxQuery(
       "subject_objects.id as subjectObjectId",
       "subject_objects.display_name as subjectObjectDisplayName",
       "subject_objects.object_kind as subjectObjectKind",
-      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
+      optionalCatalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_objects.variety_text as subjectVarietyText",
       "subject_objects.variety_state as subjectVarietyState",
       "source_objects.id as sourceObjectId",
       "source_objects.display_name as sourceObjectDisplayName",
       "source_objects.object_kind as sourceObjectKind",
-      catalogKindSql("source_catalog_items").as("sourceCatalogKind"),
+      optionalCatalogKindSql("source_catalog_items").as("sourceCatalogKind"),
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
+      lineageGardenerIdentitySql(
+        "lineage_provenance_edges.owner_user_id",
+        scope.userId,
+      ).as("proposer"),
     ])
     .where("lineage_provenance_edges.source_owner_user_id", "=", scope.userId)
     .where("lineage_provenance_edges.owner_user_id", "!=", scope.userId)
-    .where("lineage_provenance_edges.source_kind", "=", "own_object")
-    .where("lineage_provenance_edges.consent_state", "=", "proposed")
-    .where("lineage_provenance_edges.erasure_state", "=", "active")
-    .orderBy("lineage_provenance_edges.created_at", "desc")
-    .orderBy("lineage_provenance_edges.id", "asc");
+    .where("lineage_provenance_edges.source_kind", "=", "own_object");
 }
 
 export function buildFindProvenanceEdgeByClientMutationQuery(
@@ -894,9 +1044,15 @@ export function buildResolveLineageClaimQuery(
     .returningAll();
 }
 
-export function buildLineageInvitationClaimPreviewQuery(
+/**
+ * The invitation's record as it is now, whatever state it is in: the edge
+ * the token names, its pending identity and subject, and who wrote it — with
+ * none of the filters that make a decision possible.
+ */
+export function buildLineageInvitationRecordQuery(
   executor: QueryExecutor,
   token: LineageInviteVerification,
+  viewerUserId: string,
 ) {
   return executor
     .selectFrom("lineage_provenance_edges")
@@ -933,17 +1089,24 @@ export function buildLineageInvitationClaimPreviewQuery(
     )
     .select([
       "lineage_provenance_edges.id",
+      "lineage_provenance_edges.owner_user_id",
       "lineage_provenance_edges.consent_state",
+      "lineage_provenance_edges.erasure_state",
       "lineage_provenance_edges.created_at",
       "pending_identities.id as pendingIdentityId",
       "pending_identities.display_label as pendingIdentityDisplayLabel",
       "pending_identities.invite_state as pendingIdentityInviteState",
+      "pending_identities.claimed_by_user_id as pendingIdentityClaimedByUserId",
       "subject_objects.id as subjectObjectId",
       "subject_objects.display_name as subjectObjectDisplayName",
       "subject_objects.object_kind as subjectObjectKind",
-      catalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
+      optionalCatalogKindSql("subject_catalog_items").as("subjectCatalogKind"),
       "subject_objects.variety_text as subjectVarietyText",
       "subject_objects.variety_state as subjectVarietyState",
+      lineageGardenerIdentitySql(
+        "lineage_provenance_edges.owner_user_id",
+        viewerUserId,
+      ).as("inviter"),
     ])
     .where("lineage_provenance_edges.id", "=", token.edgeId)
     .where(
@@ -952,10 +1115,7 @@ export function buildLineageInvitationClaimPreviewQuery(
       token.pendingIdentityId,
     )
     .where("lineage_provenance_edges.source_kind", "=", "pending_identity")
-    .where("lineage_provenance_edges.consent_state", "=", "proposed")
-    .where("lineage_provenance_edges.erasure_state", "=", "active")
-    .where("pending_identities.id", "=", token.pendingIdentityId)
-    .where("pending_identities.invite_state", "=", "pending");
+    .where("pending_identities.id", "=", token.pendingIdentityId);
 }
 
 export function buildResolveLineageInvitationClaimEdgeQuery(
@@ -963,6 +1123,12 @@ export function buildResolveLineageInvitationClaimEdgeQuery(
   token: LineageInviteVerification,
   input: {
     decision: LineageClaimDecision;
+    /**
+     * The invitation is the other gardener's to answer. Its writer holds the
+     * same link — it is how they send it — and answering it themselves would
+     * confirm their own claim (`OVE-495`, criterion 9).
+     */
+    claimerUserId: string;
     now: Date;
   },
 ) {
@@ -977,6 +1143,7 @@ export function buildResolveLineageInvitationClaimEdgeQuery(
     .where("source_kind", "=", "pending_identity")
     .where("consent_state", "=", "proposed")
     .where("erasure_state", "=", "active")
+    .where("owner_user_id", "!=", input.claimerUserId)
     .returningAll();
 }
 
@@ -1240,19 +1407,35 @@ function mapPendingIdentityReadback(
   pendingIdentity: LineagePendingSourceIdentity,
   edgeId: string,
 ): LineagePendingSourceIdentityReadback {
-  return {
+  return pendingIdentityReadback({
     id: pendingIdentity.id,
     displayLabel: pendingIdentity.display_label,
     inviteState:
       pendingIdentity.invite_state as LineagePendingSourceInviteState,
-    invitePath: lineageInvitationClaimPath(
-      signLineageInviteToken({
-        pendingIdentityId: pendingIdentity.id,
-        edgeId,
-        createdAt: pendingIdentity.created_at,
-      }),
-    ),
+    edgeId,
     createdAt: pendingIdentity.created_at,
+  });
+}
+
+function pendingIdentityReadback(input: {
+  id: string;
+  displayLabel: string;
+  inviteState: LineagePendingSourceInviteState;
+  edgeId: string;
+  createdAt: Date | string;
+}): LineagePendingSourceIdentityReadback {
+  const token = signLineageInviteToken({
+    pendingIdentityId: input.id,
+    edgeId: input.edgeId,
+    createdAt: input.createdAt,
+  });
+  return {
+    id: input.id,
+    displayLabel: input.displayLabel,
+    inviteState: input.inviteState,
+    invitePath: lineageInvitationClaimPath(token),
+    linkExpired: inspectLineageInviteToken(token).state === "expired",
+    createdAt: input.createdAt,
   };
 }
 

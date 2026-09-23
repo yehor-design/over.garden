@@ -19,13 +19,18 @@ import {
   buildInsertProvenanceEdgeQuery,
   buildInsertLineagePendingSourceIdentityQuery,
   buildInsertLineageClaimAuditEventQuery,
-  buildLineageInvitationClaimPreviewQuery,
+  buildLineageInvitationRecordQuery,
   buildLineageClaimInboxQuery,
+  buildLineageClaimRecordQuery,
   buildLineageSourceObjectOptionsQuery,
   buildObjectProvenanceEdgesQuery,
   buildResolveLineageInvitationClaimEdgeQuery,
   buildResolveLineagePendingSourceIdentityClaimQuery,
   buildResolveLineageClaimQuery,
+  getLineageClaimRecord,
+  getLineageInvitationClaimState,
+  isLineageDecisionUnavailableError,
+  LineageDecisionUnavailableError,
   normalizeLineagePendingSourceLabel,
   normalizeLineageSourceReferenceLabel,
   resolveLineageInvitationClaim,
@@ -254,34 +259,39 @@ describe("lineage provenance repository query contracts", () => {
     ]);
   });
 
-  it("reads invitation claim previews only for token-scoped pending identity edges", () => {
-    const compiled = buildLineageInvitationClaimPreviewQuery(testDb, {
-      pendingIdentityId,
-      edgeId,
-      expiresAt: 1790000000,
-    }).compile();
+  it("reads an invitation's record only through the token's edge and identity (OVE-495)", () => {
+    const compiled = buildLineageInvitationRecordQuery(
+      testDb,
+      { pendingIdentityId, edgeId, expiresAt: 1790000000 },
+      scope.userId,
+    ).compile();
 
     expect(compiled.sql).toContain('from "lineage_provenance_edges"');
-    expect(compiled.sql).toContain('"lineage_provenance_edges"."id" = $1');
+    // Its writer, as their public profile shows them, unless a block stands
+    // between them and the reader.
+    expect(compiled.sql).toContain("from user_public_profiles as profiles");
+    expect(compiled.sql).toContain("from profile_blocks as blocks");
+    expect(compiled.sql).toContain('"lineage_provenance_edges"."id" = $3');
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."source_pending_identity_id" = $2',
+      '"lineage_provenance_edges"."source_pending_identity_id" = $4',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."source_kind" = $3',
+      '"lineage_provenance_edges"."source_kind" = $5',
     );
     expect(compiled.sql).toContain('"pending_identities"."id" = $6');
-    expect(compiled.sql).toContain('"pending_identities"."invite_state" = $7');
+    // Any state: the page says which one it is.
+    expect(compiled.sql).not.toContain('"consent_state" =');
+    expect(compiled.sql).not.toContain('"invite_state" =');
     expect(compiled.sql).not.toMatch(
-      /token|raw_url|referrer|ip|user_agent|email|phone|coarse_region|location_visibility|journal_entries|media_assets|body|quarantine|derivative/i,
+      /token|raw_url|referrer|ip_address|user_agent|email|phone|coarse_region|location_visibility|journal_entries|media_assets|quarantine|derivative/i,
     );
     expect(compiled.parameters).toEqual([
+      scope.userId,
+      scope.userId,
       edgeId,
       pendingIdentityId,
       "pending_identity",
-      "proposed",
-      "active",
       pendingIdentityId,
-      "pending",
     ]);
   });
 
@@ -296,6 +306,7 @@ describe("lineage provenance repository query contracts", () => {
       },
       {
         decision: "confirmed",
+        claimerUserId: scope.userId,
         now,
       },
     ).compile();
@@ -308,6 +319,9 @@ describe("lineage provenance repository query contracts", () => {
     expect(compiled.sql).toContain('"source_kind" = $5');
     expect(compiled.sql).toContain('"consent_state" = $6');
     expect(compiled.sql).toContain('"erasure_state" = $7');
+    // The invitation's own writer cannot answer it (`OVE-495`): answering
+    // their own link would confirm their own claim.
+    expect(compiled.sql).toContain('"owner_user_id" != $8');
     expect(compiled.sql).not.toMatch(
       /visibility_policy\s*=|token|raw_url|referrer|ip|user_agent|email|phone|coarse_region|location_visibility|journal_entries|media_assets|body|quarantine|derivative/i,
     );
@@ -319,6 +333,7 @@ describe("lineage provenance repository query contracts", () => {
       "pending_identity",
       "proposed",
       "active",
+      scope.userId,
     ]);
   });
 
@@ -364,31 +379,110 @@ describe("lineage provenance repository query contracts", () => {
     const compiled = buildLineageClaimInboxQuery(testDb, scope).compile();
 
     expect(compiled.sql).toContain('from "lineage_provenance_edges"');
+    // The proposer's public name and handle (`OVE-495`): their active public
+    // profile, and nothing when a block stands between them and the reader —
+    // the two viewer parameters are the block check's.
+    expect(compiled.sql).toContain("from user_public_profiles as profiles");
+    expect(compiled.sql).toContain("profiles.profile_visibility = 'public'");
+    expect(compiled.sql).toContain("from profile_blocks as blocks");
+    // An object with no catalogue match has no kind — not "breed" (OVE-495).
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."source_owner_user_id" = $1',
+      "when source_catalog_items.node_kind is null then null",
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."owner_user_id" != $2',
+      '"lineage_provenance_edges"."source_owner_user_id" = $3',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."source_kind" = $3',
+      '"lineage_provenance_edges"."owner_user_id" != $4',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."consent_state" = $4',
+      '"lineage_provenance_edges"."source_kind" = $5',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."erasure_state" = $5',
+      '"lineage_provenance_edges"."consent_state" = $6',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."erasure_state" = $7',
     );
     expect(compiled.sql).not.toMatch(
-      /journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip|user_agent|email|phone|coarse_region|location_visibility|source_reference_label/i,
+      /journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip_address|user_agent|email|phone|coarse_region|location_visibility|source_reference_label/i,
     );
     expect(compiled.parameters).toEqual([
+      scope.userId,
+      scope.userId,
       scope.userId,
       scope.userId,
       "own_object",
       "proposed",
       "active",
     ]);
+  });
+
+  it("reads one claim back in any state, with the inbox's privacy (OVE-495)", () => {
+    const compiled = buildLineageClaimRecordQuery(
+      testDb,
+      scope,
+      edgeId,
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."source_owner_user_id" = $3',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."owner_user_id" != $4',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."erasure_state" = $6',
+    );
+    expect(compiled.sql).toContain('"lineage_provenance_edges"."id" = $7');
+    // Answered or not: the state is what the outcome reports.
+    expect(compiled.sql).not.toContain('"consent_state" =');
+    expect(compiled.sql).not.toMatch(
+      /journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip_address|user_agent|email|phone|coarse_region|location_visibility|source_reference_label/i,
+    );
+    expect(compiled.parameters).toEqual([
+      scope.userId,
+      scope.userId,
+      scope.userId,
+      scope.userId,
+      "own_object",
+      "active",
+      edgeId,
+    ]);
+  });
+
+  it("reads no claim for an id that is not a uuid", async () => {
+    await expect(
+      getLineageClaimRecord(scope, "not-an-edge'); drop table x; --"),
+    ).resolves.toBeNull();
+  });
+
+  it("answers a broken or expired invitation without reading storage (OVE-495)", async () => {
+    await expect(
+      getLineageInvitationClaimState("v1.broken.signature", scope.userId),
+    ).resolves.toEqual({ state: "invalid" });
+
+    const expired = signLineageInviteToken({
+      pendingIdentityId,
+      edgeId,
+      createdAt: new Date("2020-01-01T00:00:00.000Z"),
+    });
+    await expect(
+      getLineageInvitationClaimState(expired, scope.userId),
+    ).resolves.toEqual({ state: "expired" });
+  });
+
+  it("refuses a decision on a broken invitation as unavailable, not as a crash", async () => {
+    const error = await resolveLineageInvitationClaim(scope, {
+      token: "v1.broken.signature",
+      decision: "confirmed",
+    }).catch((caught: unknown) => caught);
+
+    expect(isLineageDecisionUnavailableError(error)).toBe(true);
+    expect(error).toBeInstanceOf(LineageDecisionUnavailableError);
+    expect((error as LineageDecisionUnavailableError).subject).toBe(
+      "invitation",
+    );
   });
 
   it("confirms or declines only proposed active claims scoped to the target owner", () => {
