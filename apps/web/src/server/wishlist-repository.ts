@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { type Kysely, type Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -26,6 +26,8 @@ import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+
 export interface AddCatalogItemToWishlistInput {
   catalogItemId: string;
   sourceSurface?: WishlistSourceSurface;
@@ -38,6 +40,14 @@ export interface AddCatalogPublicSlugToWishlistInput {
 
 export interface WishlistShelfItem {
   key: string;
+  /** What the row takes off the list: the catalogue item, whatever its state. */
+  catalogItemId: string;
+  /**
+   * False once the catalogue no longer offers it — merged, retired, or never
+   * public. The shelf says so and still lets it be removed (`OVE-502`); it
+   * used to be dropped from the list, and removing needed an offered item.
+   */
+  available: boolean;
   catalog: {
     canonicalName: string;
     publicSlug: string | null;
@@ -73,6 +83,8 @@ export interface WishlistShelfRow {
   catalogKind: string;
   catalogLocale: string;
   catalogSource: string;
+  catalogIdentityState?: string | null;
+  catalogIsPublic?: boolean | null;
 }
 
 export async function addCatalogItemToWishlist(
@@ -104,24 +116,52 @@ export async function addCatalogPublicSlugToWishlist(
   return upsertWishlistCatalogItem(scope, item, input.sourceSurface, executor);
 }
 
-export async function removeCatalogPublicSlugFromWishlist(
+/**
+ * Takes one catalogue item off the reader's list, whatever the catalogue now
+ * says about it (`OVE-502`). It went through the item's public slug and
+ * refused an item the catalogue no longer offers — exactly the row a reader
+ * most wants to remove.
+ */
+export async function removeWishlistCatalogItem(
   scope: RequestScope,
-  publicSlug: string,
+  catalogItemId: string,
   executor: QueryExecutor = db,
 ): Promise<RemoveWishlistResult> {
-  const item = await findSelectableCatalogItemByPublicSlug(
-    publicSlug,
-    executor,
-  );
-  if (!item) return { removed: false };
-
+  if (!UUID.test(catalogItemId)) return { removed: false };
   const deleted = await buildDeleteWishlistCatalogItemQuery(
     executor,
     scope,
-    item.id,
+    catalogItemId,
   ).executeTakeFirst();
 
   return { removed: Boolean(deleted) };
+}
+
+/**
+ * A catalogue item's name, for the shelf's "…removed" notice, and whether the
+ * catalogue still offers it — the only case in which an Undo can put it back.
+ */
+export async function findWishlistCatalogName(
+  catalogItemId: string,
+  executor: QueryExecutor = db,
+): Promise<{ name: string; available: boolean } | null> {
+  if (!UUID.test(catalogItemId)) return null;
+  const row = await executor
+    .selectFrom("catalog_items")
+    .select([
+      "canonical_name as name",
+      "identity_state as identityState",
+      "created_by_user_id as createdByUserId",
+    ])
+    .where("id", "=", catalogItemId)
+    .executeTakeFirst();
+  return row
+    ? {
+        name: row.name,
+        available:
+          row.identityState === "active" && row.createdByUserId === null,
+      }
+    : null;
 }
 
 export async function listWishlistShelfItems(
@@ -198,10 +238,12 @@ export function buildListWishlistShelfItemsQuery(
       catalogKindSql("catalog_items").as("catalogKind"),
       "catalog_items.locale as catalogLocale",
       "catalog_items.source as catalogSource",
+      "catalog_items.identity_state as catalogIdentityState",
+      sql<boolean>`${sql.ref("catalog_items.created_by_user_id")} is null`.as(
+        "catalogIsPublic",
+      ),
     ])
     .where("wishlist_items.owner_user_id", "=", scope.userId)
-    .where("catalog_items.identity_state", "=", "active")
-    .where("catalog_items.created_by_user_id", "is", null)
     .orderBy("wishlist_items.created_at", "desc")
     .orderBy("wishlist_items.id", "asc");
 }
@@ -209,10 +251,16 @@ export function buildListWishlistShelfItemsQuery(
 export function serializeWishlistShelfItem(
   row: WishlistShelfRow,
 ): WishlistShelfItem {
-  const publicSlug = row.catalogPublicSlug;
+  // A row without the two columns is from before they were read: offered.
+  const available =
+    (row.catalogIdentityState ?? "active") === "active" &&
+    row.catalogIsPublic !== false;
+  const publicSlug = available ? row.catalogPublicSlug : null;
 
   return {
     key: stableWishlistKey(row.wishlistId),
+    catalogItemId: row.catalogItemId,
+    available,
     catalog: {
       canonicalName: row.catalogCanonicalName,
       publicSlug,

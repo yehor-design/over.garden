@@ -14,9 +14,10 @@ import {
   type QueryCompiler,
   type QueryResult,
 } from "kysely";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { buildPublicFeedMediaQuery } from "@/server/public-feed-repository";
 import { scopedToUser } from "@/server/request-scope";
 import type {
   NotificationCandidateRow,
@@ -888,6 +889,134 @@ describe("OVE-501 activity that names the exact next action", () => {
       ),
     ).rejects.toThrow("Notification event is not available.");
     expect(recorded.events).toEqual([]);
+  });
+});
+
+describe("OVE-502 saved entries drawn as the feed draws them", () => {
+  const SAVED = "00000000-0000-4000-8000-000000000201";
+  const WITHDRAWN = "00000000-0000-4000-8000-000000000203";
+  const savedRow = {
+    entryId: SAVED,
+    publicSlug: "late-summer-check",
+    entryNumber: 14,
+    title: "Late summer check",
+    body: "The leaves stayed firm after a hot day.",
+    entryDate: "2026-07-30",
+    publishedAt: "2026-07-30T08:00:00.000Z",
+    sourceLanguage: "uk",
+    ownerHandle: "green_thumb",
+    addressHandle: "green_thumb",
+    ownerDisplayName: "Green Thumb",
+    objectId: "00000000-0000-4000-8000-000000000202",
+    objectPublicSlug: "balcony-tomato",
+    objectDisplayName: "Balcony tomato",
+    objectKind: "plant",
+    varietyText: "Red Cherry",
+    catalogKind: "plant_variety",
+  };
+
+  it("reads only entries still public, by a current author, and not behind a block either way", async () => {
+    const repository = await loadRepository();
+    const compiled = repository
+      .buildSavedEntryCardsQuery(testDb, scope, [SAVED, WITHDRAWN])
+      .compile();
+
+    expect(compiled.sql).toContain('from "journal_entries" as "entries"');
+    expect(compiled.sql).toContain('"entries"."id" in (');
+    expect(compiled.sql).toContain('"entries"."visibility" =');
+    expect(compiled.sql).toContain('"entries"."lifecycle_state" =');
+    expect(compiled.sql).toContain('"entries"."public_gone_at" is null');
+    expect(compiled.sql).toContain('"entries"."public_slug" is not null');
+    expect(compiled.sql).toContain('"entries"."published_at" is not null');
+    expectCurrentEligibleIdentity(compiled, "owner_handles", "profiles");
+    expectMutualBlockExclusion(compiled.sql, '"entries"."owner_user_id"');
+    expect(compiled.parameters).toEqual(
+      expect.arrayContaining([SAVED, WITHDRAWN, scope.userId, "public"]),
+    );
+    expect(compiled.sql).not.toMatch(forbiddenPrivatePattern);
+  });
+
+  it("asks nothing for a shelf with no saved entries", async () => {
+    const repository = await loadRepository();
+    const recorded = recordingDb();
+
+    const cards = await repository.listSavedEntryCards(
+      scope,
+      [],
+      "uk",
+      recorded.database,
+    );
+
+    expect(cards.size).toBe(0);
+    expect(recorded.events).toEqual([]);
+  });
+
+  it("keys each public entry's card by its id, as the feed draws it, with its first photograph", async () => {
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "https://media.over.garden");
+    const repository = await loadRepository();
+    const entries = foldWhitespace(
+      repository
+        .buildSavedEntryCardsQuery(testDb, scope, [SAVED, WITHDRAWN])
+        .compile().sql,
+    );
+    const media = foldWhitespace(
+      buildPublicFeedMediaQuery(testDb, [SAVED]).compile().sql,
+    );
+    // The withdrawn entry is not in the answer: the statement filtered it.
+    const database = activityDb({
+      [entries]: [savedRow],
+      [media]: [
+        { entryId: SAVED, derivativeKey: "public/entries/one-640.webp" },
+        { entryId: SAVED, derivativeKey: "public/entries/two-640.webp" },
+      ],
+    });
+
+    try {
+      const cards = await repository.listSavedEntryCards(
+        scope,
+        [SAVED, WITHDRAWN],
+        "bg",
+        database.database,
+      );
+
+      expect([...cards.keys()]).toEqual([SAVED]);
+      const card = cards.get(SAVED);
+      expect(card).toMatchObject({
+        href: "/@green_thumb/post/14",
+        title: "Late summer check",
+        author: { label: "Green Thumb", href: "/bg/@green_thumb" },
+        object: { href: "/@green_thumb/objects/balcony-tomato" },
+        reasons: [],
+        mediaUrl: "https://media.over.garden/public/entries/one-640.webp",
+      });
+      // The same card the followed feed draws for the same entry, reasons
+      // and photograph aside.
+      const [feedCard] = repository.serializeFollowedFeedPage(
+        [
+          {
+            ...savedRow,
+            followedByProfile: true,
+            followedByObject: false,
+            followedByTopic: false,
+            followedByLineage: false,
+          },
+        ],
+        12,
+        "bg",
+      ).items;
+      expect({ ...card, reasons: [], mediaUrl: null }).toEqual({
+        ...feedCard,
+        reasons: [],
+        mediaUrl: null,
+      });
+      // The entries, then their photographs: two round trips, no more.
+      expect(database.rounds()).toHaveLength(2);
+      expect(database.parametersOf(entries)).toEqual(
+        expect.arrayContaining([SAVED, WITHDRAWN, scope.userId]),
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

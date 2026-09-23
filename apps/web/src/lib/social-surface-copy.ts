@@ -121,8 +121,21 @@ export interface SocialSurfaceCopy {
     varieties: string;
     topics: string;
     filtersLabel: string;
+    /** "«{name}» прибрано із закладок" — the removal says what it removed. */
     removedNotice: string;
+    /** When the removed thing has no public name any more. */
+    removedNoticeUnnamed: string;
     restoredNotice: string;
+    restoredNoticeUnnamed: string;
+    removeLabel: string;
+    failed: { remove: string; restore: string };
+    unavailableTitle: string;
+    unavailable: {
+      journal_entry: string;
+      lineage_object: string;
+      variety: string;
+      topic: string;
+    };
   };
   wishlist: {
     title: string;
@@ -135,11 +148,17 @@ export interface SocialSurfaceCopy {
     plants: string;
     species: string;
     breeds: string;
-    tryLater: string;
+    /** What one row is: "Сорт рослини", "Вид", "Порода". */
+    kinds: { plant_variety: string; species: string; breed: string };
     start: string;
     filtersLabel: string;
     removedNotice: string;
+    removedNoticeUnnamed: string;
     restoredNotice: string;
+    restoredNoticeUnnamed: string;
+    removeLabel: string;
+    failed: { remove: string; restore: string };
+    unavailable: string;
   };
   common: {
     saved: string;
@@ -168,7 +187,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       feed: "Стрічка",
       notifications: "Події",
       bookmarks: "Закладки",
-      wishlist: "Хочу спробувати",
+      wishlist: "Список бажань",
     },
     feed: {
       title: "Стрічка підписок",
@@ -280,36 +299,63 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       },
     },
     bookmarks: {
-      removedNotice: "Прибрано із закладок",
-      restoredNotice: "Повернуто до закладок",
+      removedNotice: "«{name}» прибрано із закладок",
+      removedNoticeUnnamed: "Прибрано із закладок",
+      restoredNotice: "«{name}» повернуто до закладок",
+      restoredNoticeUnnamed: "Повернуто до закладок",
+      removeLabel: "Прибрати із закладок: {name}",
+      failed: {
+        remove: "Не вдалося прибрати, закладка лишилася. Спробуйте ще раз.",
+        restore: "Не вдалося повернути до закладок. Спробуйте ще раз.",
+      },
+      unavailableTitle: "Більше недоступно",
+      unavailable: {
+        journal_entry:
+          "Цей запис прибрали, або автор більше не показує його публічно.",
+        lineage_object:
+          "Цю рослину чи тварину автор більше не показує публічно.",
+        variety: "Цієї сторінки більше немає в каталозі.",
+        topic: "Цієї теми більше немає.",
+      },
       emptyTitle: "Закладок поки немає",
       emptyAction: "Знайти журнали",
       title: "Закладки",
-      description: "Збережені публічні матеріали для повернення пізніше.",
-      signIn: "Увійдіть, щоб відкрити закладки.",
-      empty: "Збережіть запис, об'єкт, сорт або тему, і вони з'являться тут.",
+      description:
+        "Записи, рослини й тварини, сорти й теми, які ви зберегли, щоб повернутися до них.",
+      signIn: "Увійдіть, щоб відкрити свої закладки.",
+      empty:
+        "Збережіть запис, рослину чи тварину, сорт або тему — вони з'являться тут.",
       all: "Усі",
       journals: "Записи",
-      objects: "Об'єкти",
+      objects: "Рослини й тварини",
       varieties: "Сорти",
       topics: "Теми",
       filtersLabel: "Тип закладок",
     },
     wishlist: {
-      removedNotice: "Прибрано зі списку",
-      restoredNotice: "Повернуто до списку",
-      emptyTitle: "Список поки порожній",
+      removedNotice: "«{name}» прибрано зі списку бажань",
+      removedNoticeUnnamed: "Прибрано зі списку бажань",
+      restoredNotice: "«{name}» повернуто до списку бажань",
+      restoredNoticeUnnamed: "Повернуто до списку бажань",
+      removeLabel: "Прибрати зі списку бажань: {name}",
+      failed: {
+        remove:
+          "Не вдалося прибрати, запис у списку лишився. Спробуйте ще раз.",
+        restore: "Не вдалося повернути до списку бажань. Спробуйте ще раз.",
+      },
+      unavailable: "Цього більше немає в каталозі.",
+      emptyTitle: "Список бажань порожній",
       emptyAction: "Відкрити каталог",
-      title: "Хочу спробувати",
-      description: "Види, сорти й породи, які ви хочете додати згодом.",
-      signIn: "Увійдіть, щоб відкрити список бажань.",
+      title: "Список бажань",
+      description: "Види, сорти й породи, які ви хочете виростити чи завести.",
+      signIn: "Увійдіть, щоб відкрити свій список бажань.",
       empty:
-        "Додайте каталожний об'єкт до списку, не створюючи його у своєму просторі.",
+        "Додайте вид, сорт чи породу з каталогу, не додаючи їх у свій сад.",
       all: "Усі",
       plants: "Сорти рослин",
       species: "Види",
       breeds: "Породи",
-      tryLater: "Спробувати пізніше",
+      kinds: { plant_variety: "Сорт рослини", species: "Вид", breed: "Порода" },
       start: "Почати вести журнал",
       filtersLabel: "Тип списку бажань",
     },
@@ -326,7 +372,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       open: "Відкрити",
       previous: "Назад",
       next: "Далі",
-      itemCount: (count) => `${count} елементів`,
+      itemCount: (count) =>
+        `${count} ${pluralForm("uk", count, {
+          one: "елемент",
+          few: "елементи",
+          many: "елементів",
+          other: "елемента",
+        })}`,
       unreadCount: (count) => `Непрочитані: ${count}`,
       loadError: (surface) => `Не вдалося завантажити: ${surface}`,
       retry: "Спробувати ще раз",
@@ -338,7 +390,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       feed: "Емисия",
       notifications: "Известия",
       bookmarks: "Отметки",
-      wishlist: "Искам да опитам",
+      wishlist: "Списък с желания",
     },
     feed: {
       title: "Емисия от следвани",
@@ -451,37 +503,67 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       },
     },
     bookmarks: {
-      removedNotice: "Премахнато от отметките",
-      restoredNotice: "Върнато в отметките",
+      removedNotice: "„{name}“ е премахнато от отметките",
+      removedNoticeUnnamed: "Премахнато от отметките",
+      restoredNotice: "„{name}“ е върнато в отметките",
+      restoredNoticeUnnamed: "Върнато в отметките",
+      removeLabel: "Премахни от отметките: {name}",
+      failed: {
+        remove: "Премахването не успя, отметката остава. Опитайте отново.",
+        restore: "Връщането в отметките не успя. Опитайте отново.",
+      },
+      unavailableTitle: "Вече не е достъпно",
+      unavailable: {
+        journal_entry:
+          "Този запис е премахнат или авторът вече не го показва публично.",
+        lineage_object:
+          "Авторът вече не показва това растение или животно публично.",
+        variety: "Тази страница вече я няма в каталога.",
+        topic: "Тази тема вече я няма.",
+      },
       emptyTitle: "Още няма отметки",
       emptyAction: "Разгледай дневниците",
       title: "Отметки",
-      description: "Запазени публични материали, към които да се върнете.",
-      signIn: "Влезте, за да отворите отметките.",
-      empty: "Запазете запис, обект, сорт или тема и те ще се появят тук.",
+      description:
+        "Записи, растения и животни, сортове и теми, които сте запазили, за да се върнете към тях.",
+      signIn: "Влезте, за да отворите отметките си.",
+      empty:
+        "Запазете запис, растение или животно, сорт или тема — ще се появят тук.",
       all: "Всички",
       journals: "Записи",
-      objects: "Обекти",
+      objects: "Растения и животни",
       varieties: "Сортове",
       topics: "Теми",
       filtersLabel: "Тип отметки",
     },
     wishlist: {
-      removedNotice: "Премахнато от списъка",
-      restoredNotice: "Върнато в списъка",
-      emptyTitle: "Списъкът още е празен",
+      removedNotice: "„{name}“ е премахнато от списъка с желания",
+      removedNoticeUnnamed: "Премахнато от списъка с желания",
+      restoredNotice: "„{name}“ е върнато в списъка с желания",
+      restoredNoticeUnnamed: "Върнато в списъка с желания",
+      removeLabel: "Премахни от списъка с желания: {name}",
+      failed: {
+        remove:
+          "Премахването не успя, записът в списъка остава. Опитайте отново.",
+        restore: "Връщането в списъка с желания не успя. Опитайте отново.",
+      },
+      unavailable: "Това вече го няма в каталога.",
+      emptyTitle: "Списъкът с желания е празен",
       emptyAction: "Отвори каталога",
-      title: "Искам да опитам",
-      description:
-        "Видове, сортове и породи, които искате да добавите по-късно.",
-      signIn: "Влезте, за да отворите списъка с желания.",
+      title: "Списък с желания",
+      description: "Видове, сортове и породи, които искате да отгледате.",
+      signIn: "Влезте, за да отворите списъка си с желания.",
       empty:
-        "Добавете каталожен обект, без още да създавате обект в пространството си.",
+        "Добавете вид, сорт или порода от каталога, без да ги добавяте в градината си.",
       all: "Всички",
       plants: "Растителни сортове",
       species: "Видове",
       breeds: "Породи",
-      tryLater: "Опитай по-късно",
+      kinds: {
+        plant_variety: "Растителен сорт",
+        species: "Вид",
+        breed: "Порода",
+      },
       start: "Започни дневник",
       filtersLabel: "Тип списък с желания",
     },
@@ -498,7 +580,11 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       open: "Отвори",
       previous: "Назад",
       next: "Напред",
-      itemCount: (count) => `${count} елемента`,
+      itemCount: (count) =>
+        `${count} ${pluralForm("bg", count, {
+          one: "елемент",
+          other: "елемента",
+        })}`,
       unreadCount: (count) => `Непрочетени: ${count}`,
       loadError: (surface) => `Неуспешно зареждане: ${surface}`,
       retry: "Опитай отново",
@@ -510,7 +596,7 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       feed: "Лента",
       notifications: "События",
       bookmarks: "Закладки",
-      wishlist: "Хочу попробовать",
+      wishlist: "Список желаний",
     },
     feed: {
       title: "Лента подписок",
@@ -623,36 +709,68 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       },
     },
     bookmarks: {
-      removedNotice: "Убрано из закладок",
-      restoredNotice: "Возвращено в закладки",
+      removedNotice: "«{name}» убрано из закладок",
+      removedNoticeUnnamed: "Убрано из закладок",
+      restoredNotice: "«{name}» возвращено в закладки",
+      restoredNoticeUnnamed: "Возвращено в закладки",
+      removeLabel: "Убрать из закладок: {name}",
+      failed: {
+        remove: "Не удалось убрать, закладка осталась. Попробуйте ещё раз.",
+        restore: "Не удалось вернуть в закладки. Попробуйте ещё раз.",
+      },
+      unavailableTitle: "Больше недоступно",
+      unavailable: {
+        journal_entry:
+          "Эту запись убрали, или автор больше не показывает её публично.",
+        lineage_object:
+          "Автор больше не показывает это растение или животное публично.",
+        variety: "Этой страницы больше нет в каталоге.",
+        topic: "Этой темы больше нет.",
+      },
       emptyTitle: "Закладок пока нет",
       emptyAction: "Найти журналы",
       title: "Закладки",
       description:
-        "Сохранённые публичные материалы, к которым можно вернуться.",
-      signIn: "Войдите, чтобы открыть закладки.",
-      empty: "Сохраните запись, объект, сорт или тему, и они появятся здесь.",
+        "Записи, растения и животные, сорта и темы, которые вы сохранили, чтобы к ним вернуться.",
+      signIn: "Войдите, чтобы открыть свои закладки.",
+      empty:
+        "Сохраните запись, растение или животное, сорт или тему — они появятся здесь.",
       all: "Все",
       journals: "Записи",
-      objects: "Объекты",
+      objects: "Растения и животные",
       varieties: "Сорта",
       topics: "Темы",
       filtersLabel: "Тип закладок",
     },
     wishlist: {
-      removedNotice: "Убрано из списка",
-      restoredNotice: "Возвращено в список",
-      emptyTitle: "Список пока пуст",
+      removedNotice: "«{name}» убрано из списка желаний",
+      removedNoticeUnnamed: "Убрано из списка желаний",
+      restoredNotice: "«{name}» возвращено в список желаний",
+      restoredNoticeUnnamed: "Возвращено в список желаний",
+      removeLabel: "Убрать из списка желаний: {name}",
+      failed: {
+        remove:
+          "Не удалось убрать, запись в списке осталась. Попробуйте ещё раз.",
+        restore: "Не удалось вернуть в список желаний. Попробуйте ещё раз.",
+      },
+      unavailable: "Этого больше нет в каталоге.",
+      emptyTitle: "Список желаний пуст",
       emptyAction: "Открыть каталог",
-      title: "Хочу попробовать",
-      description: "Виды, сорта и породы, которые вы хотите добавить позже.",
-      signIn: "Войдите, чтобы открыть список желаний.",
-      empty: "Добавьте объект каталога, не создавая его в своём пространстве.",
+      title: "Список желаний",
+      description:
+        "Виды, сорта и породы, которые вы хотите вырастить или завести.",
+      signIn: "Войдите, чтобы открыть свой список желаний.",
+      empty:
+        "Добавьте вид, сорт или породу из каталога, не добавляя их в свой сад.",
       all: "Все",
       plants: "Сорта растений",
       species: "Виды",
       breeds: "Породы",
-      tryLater: "Попробовать позже",
+      kinds: {
+        plant_variety: "Сорт растения",
+        species: "Вид",
+        breed: "Порода",
+      },
       start: "Начать журнал",
       filtersLabel: "Тип списка желаний",
     },
@@ -669,7 +787,13 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       open: "Открыть",
       previous: "Назад",
       next: "Далее",
-      itemCount: (count) => `${count} элементов`,
+      itemCount: (count) =>
+        `${count} ${pluralForm("ru", count, {
+          one: "элемент",
+          few: "элемента",
+          many: "элементов",
+          other: "элемента",
+        })}`,
       unreadCount: (count) => `Непрочитанные: ${count}`,
       loadError: (surface) => `Не удалось загрузить: ${surface}`,
       retry: "Попробовать снова",
@@ -690,4 +814,17 @@ export function fillSocialTemplate(
     (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
     template,
   );
+}
+
+/**
+ * The word that goes with a number (`OVE-502`): "2 елементів" read wrong on
+ * every shelf of two, three or four things.
+ */
+function pluralForm(
+  locale: PublicLocale,
+  count: number,
+  forms: Partial<Record<Intl.LDMLPluralRule, string>> & { other: string },
+): string {
+  const rule = new Intl.PluralRules(locale).select(count);
+  return forms[rule] ?? forms.other;
 }

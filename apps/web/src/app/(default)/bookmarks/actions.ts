@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 import {
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
-  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { publicEngagementChangeTags } from "@/lib/public-cache-tags";
+import { shelfOutcomeHref, shelfViewPath } from "@/lib/social/shelf-view";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import {
   normalizeEngagementTarget,
@@ -30,6 +31,17 @@ import {
  * bookmark, removing it is destructive, and a destructive outcome owes the
  * reader an Undo (DESIGN.md §5.5). So these two say what they do rather than
  * flip, and the page turns the redirect they leave behind into a toast.
+ *
+ * Every answer comes back to the view the reader was in — its filter and its
+ * page — with what happened to which row (`OVE-502`):
+ *
+ * - a removal or a restore names the item it changed, and a restore lands
+ *   on its row;
+ * - a write the database refused lands on the same row, still there, with the
+ *   failure beside it; it used to escape as the shelf's error page, and the
+ *   whole shelf went with it;
+ * - an ended session goes to sign-in and back to this view, and nothing is
+ *   written. It used to be a notice the shelf never showed.
  *
  * Both are `(previousState, formData)`, the shape `useActionState` calls and
  * the only one that gives the form a real endpoint before hydration
@@ -55,40 +67,53 @@ async function setShelfBookmark(
 ) {
   const target = readTargetField(formData);
   const locale = normalizeLocaleField(formData.get("locale"));
+  const view = shelfViewPath("bookmarks", formData.get("returnTo"), locale);
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
   });
   if (admission.status === "rejected") {
+    if (admission.code === "session_required") {
+      redirect(buildSignInHref({ returnTo: view }));
+    }
     return { mutationScope: admission.code };
   }
 
-  await setEngagementBookmark(admission.scope, { target, bookmarkState });
-  revalidatePublicCacheTags(
-    publicEngagementChangeTags(target.kind, target.ref),
-    "update",
-  );
-  revalidatePath(localizedPath(locale, "/bookmarks"));
+  let failed = false;
+  try {
+    await setEngagementBookmark(admission.scope, { target, bookmarkState });
+  } catch (error) {
+    console.error("[bookmarks] shelf write failed", {
+      bookmarkState,
+      kind: target.kind,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    failed = true;
+  }
 
-  redirect(shelfHref(locale, bookmarkState === "removed" ? target : null));
+  if (!failed) {
+    revalidatePublicCacheTags(
+      publicEngagementChangeTags(target.kind, target.ref),
+      "update",
+    );
+    revalidatePath(view.split("?")[0]!);
+  }
+
+  redirect(
+    shelfOutcomeHref(view, {
+      outcome: failed
+        ? "failed"
+        : bookmarkState === "removed"
+          ? "removed"
+          : "restored",
+      action: bookmarkState === "removed" ? "remove" : "restore",
+      target: bookmarkTargetParam(target),
+    }),
+  );
 }
 
-/**
- * Where the shelf goes next, and what it says when it gets there.
- *
- * The removed target rides in the address rather than in a hidden field,
- * because the field is gone with the row: a redirect is the only channel a
- * form without JavaScript has back to the next document. It is a kind and a
- * reference, both re-normalised on the way in, and never a label — reflected
- * free text on a page is a habit worth not having.
- */
-function shelfHref(locale: PublicLocale, undo: EngagementTarget | null) {
-  const path = localizedPath(locale, "/bookmarks");
-  if (!undo) return path;
-  const params = new URLSearchParams({
-    undoKind: undo.kind,
-    undoRef: undo.ref,
-  });
-  return `${path}?${params}`;
+/** The target as one opaque parameter: `{kind}:{ref}`, re-checked on read. */
+function bookmarkTargetParam(target: EngagementTarget) {
+  return `${target.kind}:${target.ref}`;
 }
 
 function readTargetField(formData: FormData): EngagementTarget {

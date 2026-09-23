@@ -1,0 +1,31 @@
+{
+  "issue": "OVE-502",
+  "proof": "saved-shelves-failure",
+  "baseUrl": "http://localhost:3179",
+  "pages": [
+    {
+      "path": "/bookmarks?kind=topic",
+      "table": "engagement_bookmarks",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/bookmarks?kind=topic",
+      "frameTitle": "Закладки",
+      "skeletonLeft": false,
+      "saidEmpty": false,
+      "contentAfterRetry": true
+    },
+    {
+      "path": "/wishlist",
+      "table": "wishlist_items",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/wishlist",
+      "frameTitle": "Список бажань",
+      "skeletonLeft": false,
+      "saidEmpty": false,
+      "contentAfterRetry": true
+    }
+  ],
+  "elapsedMs": 6516,
+  "passed": true
+}

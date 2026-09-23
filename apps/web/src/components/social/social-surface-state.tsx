@@ -18,15 +18,12 @@ export function SocialSurfaceLoading({ surface }: { surface: SocialSurface }) {
       data-state="loading"
       className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-4 py-4 sm:px-6 sm:py-5"
     >
-      <header className="grid gap-3 border-b border-border pb-4">
+      {/* The page's header: no strip of four tabs under it any more
+          (`OVE-502`), so the frame draws none either. */}
+      <header className="grid gap-3 pb-4">
         <Skeleton className="h-3 w-16" />
         <Skeleton className="h-7 w-56 max-w-full" />
         <Skeleton className="h-4 w-full max-w-xl" />
-        <div className="flex gap-2 overflow-hidden pt-2">
-          {Array.from({ length: 4 }, (_, index) => (
-            <Skeleton key={index} className="h-10 w-32 shrink-0" />
-          ))}
-        </div>
       </header>
       <div className="flex gap-2 overflow-hidden">
         {Array.from({ length: 3 }, (_, index) => (

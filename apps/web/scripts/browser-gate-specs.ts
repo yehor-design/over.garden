@@ -58,6 +58,7 @@ export const BROWSER_GATE_SPECS = [
   "account-settings.spec.ts",
   "personal-surfaces.spec.ts",
   "notification-activity.spec.ts",
+  "saved-shelves.spec.ts",
   "garden-workspace.spec.ts",
   "garden-collection.spec.ts",
   "space-page.spec.ts",

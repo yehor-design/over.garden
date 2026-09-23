@@ -160,6 +160,7 @@ export function PublicJournalEntryView({
           href={directoryReturnTo}
           label={copy.journals}
           feedLabel={copy.feed}
+          savedLabel={copy.saved}
         />
         {ownerControl}
       </nav>

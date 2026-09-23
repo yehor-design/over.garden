@@ -127,17 +127,24 @@ test.describe("personal pages use primary navigation and account utilities", () 
   test("a filter chip is a real control, and the filter lands in the URL", async ({
     page,
   }) => {
-    await page.goto("/bookmarks", { waitUntil: "load" });
-    const filters = page.locator('[data-bookmark-filters="true"]');
-    const chip = filters.getByRole("button", { name: "Записи" });
-    await expect(chip).toHaveAttribute("aria-pressed", "false");
-    await chip.click();
-    await page.waitForURL(/\/bookmarks\?kind=journal_entry/u);
-    await expect(
-      page
-        .locator('[data-bookmark-filters="true"]')
-        .getByRole("button", { name: "Записи" }),
-    ).toHaveAttribute("aria-pressed", "true");
+    // The chips are drawn only on a shelf with something to filter
+    // (`OVE-502`), so this one holds a saved variety.
+    await seedShelves();
+    try {
+      await page.goto("/bookmarks", { waitUntil: "load" });
+      const filters = page.locator('[data-bookmark-filters="true"]');
+      const chip = filters.getByRole("button", { name: "Записи" });
+      await expect(chip).toHaveAttribute("aria-pressed", "false");
+      await chip.click();
+      await page.waitForURL(/\/bookmarks\?kind=journal_entry/u);
+      await expect(
+        page
+          .locator('[data-bookmark-filters="true"]')
+          .getByRole("button", { name: "Записи" }),
+      ).toHaveAttribute("aria-pressed", "true");
+    } finally {
+      await clearShelves();
+    }
   });
 });
 
@@ -171,17 +178,25 @@ test.describe("removing something, and taking it back", () => {
         .locator('[data-shelf-remove="true"]')
         .first()
         .click({ timeout: 15_000 });
-      await page.waitForURL(/undoSlug=/u);
+      await page.waitForURL(/outcome=removed/u);
       const notice = page.locator('[data-shelf-notice="true"]');
       await expect(notice).toBeVisible();
-      await expect(page.getByText("Де Барао")).toHaveCount(0);
+      // The notice names what it removed (`OVE-502`).
+      await expect(notice).toContainText(
+        "«Де Барао» прибрано зі списку бажань",
+      );
+      await expect(
+        page.locator('[data-saved-shelf="wishlist"]').getByText("Де Барао"),
+      ).toHaveCount(0);
 
       await notice.getByRole("button", { name: "Повернути" }).click();
       // The address it lands on, not "an address containing /wishlist": the
       // page it is leaving already matches that, so the looser pattern
       // resolves before the navigation and asserts the old document.
-      await page.waitForURL(/\/wishlist\?wishlist=saved/u);
-      await expect(page.getByText("Де Барао")).toBeVisible();
+      await page.waitForURL(/\/wishlist\?outcome=restored/u);
+      await expect(
+        page.locator('[data-saved-shelf="wishlist"]').getByText("Де Барао"),
+      ).toBeVisible();
     } finally {
       await clearShelves();
     }
