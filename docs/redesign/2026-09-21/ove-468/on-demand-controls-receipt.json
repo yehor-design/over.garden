@@ -12,9 +12,6 @@
         "/_next/static/chunks/06ft6frhkis3j.js"
       ],
       "heldBeforePress": [
-        "/_next/static/chunks/1od_q4munkb12.js",
-        "/_next/static/chunks/04odqly5j-_cr.js",
-        "/_next/static/chunks/1sls6jy10dcc9.js",
         "/_next/static/chunks/3jok-ijf8lhl9.js",
         "/_next/static/chunks/1tiufdtideh2u.js"
       ],
@@ -49,11 +46,7 @@
         "/_next/static/chunks/40h89-g83zic2.js",
         "/_next/static/chunks/06ft6frhkis3j.js"
       ],
-      "heldBeforePress": [
-        "/_next/static/chunks/1od_q4munkb12.js",
-        "/_next/static/chunks/04odqly5j-_cr.js",
-        "/_next/static/chunks/1sls6jy10dcc9.js"
-      ],
+      "heldBeforePress": [],
       "openWhileHeld": false,
       "openedAfterRelease": true
     },
@@ -66,7 +59,6 @@
         "/_next/static/chunks/06ft6frhkis3j.js"
       ],
       "heldBeforePress": [
-        "/_next/static/chunks/1sls6jy10dcc9.js",
         "/_next/static/chunks/3jok-ijf8lhl9.js",
         "/_next/static/chunks/1tiufdtideh2u.js"
       ],
@@ -80,10 +72,15 @@
       "heldScripts": [
         "/_next/static/chunks/19sxpib5ps2wo.js",
         "/_next/static/chunks/22s95vzek8lei.js",
-        "/_next/static/chunks/2ltincb9q6csm.js",
-        "/_next/static/chunks/1415my1d1c9y3.js"
+        "/_next/static/chunks/2ltincb9q6csm.js"
       ],
-      "heldBeforePress": [],
+      "heldBeforePress": [
+        "/_next/static/chunks/2f2ru9bwgjklk.js",
+        "/_next/static/chunks/1ybs6gtekkoq5.js",
+        "/_next/static/chunks/3jok-ijf8lhl9.js",
+        "/_next/static/chunks/3f3mo6e__sa29.js",
+        "/_next/static/chunks/1tiufdtideh2u.js"
+      ],
       "openWhileHeld": false,
       "openedAfterRelease": true
     },
@@ -97,6 +94,7 @@
         "/_next/static/chunks/1pt2tqtd_nmti.js"
       ],
       "heldBeforePress": [
+        "/_next/static/chunks/1415my1d1c9y3.js",
         "/_next/static/chunks/3e2_0dpw1i3nt.js",
         "/_next/static/chunks/0w7ktjd5qj-3c.js",
         "/_next/static/chunks/1hefulujozh5q.js",

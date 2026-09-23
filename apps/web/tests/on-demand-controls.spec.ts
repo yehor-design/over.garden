@@ -298,6 +298,9 @@ test.describe("controls whose code arrives on the first press", () => {
     page,
   }) => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
+    // Sign-up and sign-in wait out the rate limiter when another worker is
+    // signing people in (`helpers/auth-rate-limit.ts`).
+    test.setTimeout(120_000);
     await selectLocale(context, baseURL);
     const gardener = await signInSyntheticGardener({
       baseURL,

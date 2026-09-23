@@ -1,0 +1,624 @@
+{
+  "issue": "OVE-468",
+  "method": "Chunks each page fetched before its load event (guest, uk, local production build) mapped to `next experimental-analyze` output by byte size; raw (unminified-module) sizes.",
+  "pages": [
+    {
+      "page": "/",
+      "route": "[locale]",
+      "before": {
+        "beforeLoadTransfer": 340619,
+        "beforeLoadDecoded": 1156502,
+        "executed": 545059,
+        "rawModuleBytesByOrigin": {
+          "framework (next, react, react-dom)": 530395,
+          "app: lib (copy, navigation, contracts)": 197646,
+          "base-ui and floating-ui": 179955,
+          "Phosphor icons": 71300,
+          "app: other": 68406,
+          "app: shell, auth and palette": 44684,
+          "Better Auth client": 30525,
+          "npm: tailwind-merge": 27776,
+          "npm: use-sync-external-store": 1635,
+          "npm: defu": 810,
+          "npm: class-variance-authority": 777,
+          "npm: @swc/helpers": 707,
+          "npm: clsx": 525
+        },
+        "unmatchedChunks": []
+      },
+      "after": {
+        "beforeLoadTransfer": 238484,
+        "beforeLoadDecoded": 811029,
+        "executed": 400747,
+        "rawModuleBytesByOrigin": {
+          "framework (next, react, react-dom)": 530254,
+          "app: lib (copy, navigation, contracts)": 71897,
+          "Phosphor icons": 70063,
+          "app: other": 56013,
+          "app: shell, auth and palette": 46125,
+          "npm: tailwind-merge": 27776,
+          "base-ui and floating-ui": 5359,
+          "npm: class-variance-authority": 777,
+          "npm: @swc/helpers": 707,
+          "npm: clsx": 525
+        },
+        "unmatchedChunks": []
+      },
+      "leftTheBeforeLoadPath": [
+        {
+          "module": "/src/lib/trust-surface-copy.ts",
+          "rawBytes": 126207
+        },
+        {
+          "module": "/src/lib/public-surface-localization.ts",
+          "rawBytes": 28319
+        },
+        {
+          "module": "npm:@better-fetch/fetch/dist/index.js",
+          "rawBytes": 9937
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs",
+          "rawBytes": 9496
+        },
+        {
+          "module": "npm:@floating-ui/dom/dist/floating-ui.dom.mjs",
+          "rawBytes": 8276
+        },
+        {
+          "module": "npm:@floating-ui/core/dist/floating-ui.core.mjs",
+          "rawBytes": 7085
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs",
+          "rawBytes": 6940
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useDismiss.mjs",
+          "rawBytes": 6680
+        },
+        {
+          "module": "npm:@base-ui/react/menu/root/MenuRoot.mjs",
+          "rawBytes": 5666
+        },
+        {
+          "module": "npm:@base-ui/react/utils/useAnchorPositioning.mjs",
+          "rawBytes": 5511
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs",
+          "rawBytes": 4834
+        },
+        {
+          "module": "npm:@base-ui/react/utils/popups/popupStoreUtils.mjs",
+          "rawBytes": 4273
+        },
+        {
+          "module": "npm:@base-ui/react/menu/positioner/MenuPositioner.mjs",
+          "rawBytes": 4092
+        },
+        {
+          "module": "npm:@base-ui/utils/useScrollLock.mjs",
+          "rawBytes": 3809
+        },
+        {
+          "module": "npm:@base-ui/react/menu/trigger/MenuTrigger.mjs",
+          "rawBytes": 3797
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/utils/tabbable.mjs",
+          "rawBytes": 3233
+        },
+        {
+          "module": "npm:@base-ui/react/menu/store/MenuStore.mjs",
+          "rawBytes": 3213
+        },
+        {
+          "module": "npm:@base-ui/react/utils/usePopupViewport.mjs",
+          "rawBytes": 2830
+        },
+        {
+          "module": "npm:@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+          "rawBytes": 2784
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs",
+          "rawBytes": 2703
+        },
+        {
+          "module": "/src/components/ui/sheet.tsx",
+          "rawBytes": 2693
+        },
+        {
+          "module": "npm:@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+          "rawBytes": 2691
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/components/FloatingPortal.mjs",
+          "rawBytes": 2631
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/safePolygon.mjs",
+          "rawBytes": 2616
+        },
+        {
+          "module": "npm:@better-auth/core/dist/error/codes.mjs",
+          "rawBytes": 2515
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useFocus.mjs",
+          "rawBytes": 2286
+        },
+        {
+          "module": "npm:better-auth/dist/client/config.mjs",
+          "rawBytes": 2267
+        },
+        {
+          "module": "npm:@base-ui/react/utils/popups/store.mjs",
+          "rawBytes": 2031
+        },
+        {
+          "module": "npm:better-call/dist/error.mjs",
+          "rawBytes": 2020
+        },
+        {
+          "module": "npm:@base-ui/react/utils/usePopupAutoResize.mjs",
+          "rawBytes": 2005
+        },
+        {
+          "module": "npm:@base-ui/react/dialog/root/useDialogRoot.mjs",
+          "rawBytes": 1968
+        },
+        {
+          "module": "npm:@base-ui/react/menu/popup/MenuPopup.mjs",
+          "rawBytes": 1903
+        },
+        {
+          "module": "/src/components/ui/menu.tsx",
+          "rawBytes": 1899
+        },
+        {
+          "module": "npm:@base-ui/react/internals/composite/list/CompositeList.mjs",
+          "rawBytes": 1888
+        },
+        {
+          "module": "npm:@base-ui/react/menu/submenu-trigger/MenuSubmenuTrigger.mjs",
+          "rawBytes": 1879
+        },
+        {
+          "module": "npm:better-auth/dist/client/parser.mjs",
+          "rawBytes": 1835
+        },
+        {
+          "module": "npm:better-auth/dist/client/session-refresh.mjs",
+          "rawBytes": 1818
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs",
+          "rawBytes": 1806
+        },
+        {
+          "module": "npm:@base-ui/react/dialog/store/DialogStore.mjs",
+          "rawBytes": 1787
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useFloating.mjs",
+          "rawBytes": 1758
+        }
+      ],
+      "leftTheBeforeLoadPathTotal": 374422
+    },
+    {
+      "page": "/@gardener_204eb9e6f1c84657/post/1",
+      "route": "[locale]/[profileHandle]/post/[entryNumber]",
+      "before": {
+        "beforeLoadTransfer": 343091,
+        "beforeLoadDecoded": 1166841,
+        "executed": 533003,
+        "rawModuleBytesByOrigin": {
+          "framework (next, react, react-dom)": 530395,
+          "app: lib (copy, navigation, contracts)": 197646,
+          "base-ui and floating-ui": 179955,
+          "Phosphor icons": 80506,
+          "app: other": 69539,
+          "app: shell, auth and palette": 44684,
+          "Better Auth client": 30525,
+          "npm: tailwind-merge": 27776,
+          "npm: use-sync-external-store": 1635,
+          "npm: defu": 810,
+          "npm: class-variance-authority": 777,
+          "npm: @swc/helpers": 707,
+          "npm: clsx": 525
+        },
+        "unmatchedChunks": []
+      },
+      "after": {
+        "beforeLoadTransfer": 241820,
+        "beforeLoadDecoded": 822085,
+        "executed": 388009,
+        "rawModuleBytesByOrigin": {
+          "framework (next, react, react-dom)": 530254,
+          "Phosphor icons": 77385,
+          "app: lib (copy, navigation, contracts)": 73734,
+          "app: other": 57953,
+          "app: shell, auth and palette": 46125,
+          "npm: tailwind-merge": 27776,
+          "base-ui and floating-ui": 5359,
+          "npm: class-variance-authority": 777,
+          "npm: @swc/helpers": 707,
+          "npm: clsx": 525
+        },
+        "unmatchedChunks": []
+      },
+      "leftTheBeforeLoadPath": [
+        {
+          "module": "/src/lib/trust-surface-copy.ts",
+          "rawBytes": 126207
+        },
+        {
+          "module": "/src/lib/public-surface-localization.ts",
+          "rawBytes": 28319
+        },
+        {
+          "module": "npm:@better-fetch/fetch/dist/index.js",
+          "rawBytes": 9937
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs",
+          "rawBytes": 9496
+        },
+        {
+          "module": "npm:@floating-ui/dom/dist/floating-ui.dom.mjs",
+          "rawBytes": 8276
+        },
+        {
+          "module": "npm:@floating-ui/core/dist/floating-ui.core.mjs",
+          "rawBytes": 7085
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs",
+          "rawBytes": 6940
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useDismiss.mjs",
+          "rawBytes": 6680
+        },
+        {
+          "module": "npm:@base-ui/react/menu/root/MenuRoot.mjs",
+          "rawBytes": 5666
+        },
+        {
+          "module": "npm:@base-ui/react/utils/useAnchorPositioning.mjs",
+          "rawBytes": 5511
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs",
+          "rawBytes": 4834
+        },
+        {
+          "module": "npm:@base-ui/react/utils/popups/popupStoreUtils.mjs",
+          "rawBytes": 4273
+        },
+        {
+          "module": "npm:@base-ui/react/menu/positioner/MenuPositioner.mjs",
+          "rawBytes": 4092
+        },
+        {
+          "module": "npm:@base-ui/utils/useScrollLock.mjs",
+          "rawBytes": 3809
+        },
+        {
+          "module": "npm:@base-ui/react/menu/trigger/MenuTrigger.mjs",
+          "rawBytes": 3797
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/utils/tabbable.mjs",
+          "rawBytes": 3233
+        },
+        {
+          "module": "npm:@base-ui/react/menu/store/MenuStore.mjs",
+          "rawBytes": 3213
+        },
+        {
+          "module": "npm:@base-ui/react/utils/usePopupViewport.mjs",
+          "rawBytes": 2830
+        },
+        {
+          "module": "npm:@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+          "rawBytes": 2784
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs",
+          "rawBytes": 2703
+        },
+        {
+          "module": "/src/components/ui/sheet.tsx",
+          "rawBytes": 2693
+        },
+        {
+          "module": "npm:@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+          "rawBytes": 2691
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/components/FloatingPortal.mjs",
+          "rawBytes": 2631
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/safePolygon.mjs",
+          "rawBytes": 2616
+        },
+        {
+          "module": "npm:@better-auth/core/dist/error/codes.mjs",
+          "rawBytes": 2515
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useFocus.mjs",
+          "rawBytes": 2286
+        },
+        {
+          "module": "npm:better-auth/dist/client/config.mjs",
+          "rawBytes": 2267
+        },
+        {
+          "module": "npm:@base-ui/react/utils/popups/store.mjs",
+          "rawBytes": 2031
+        },
+        {
+          "module": "npm:better-call/dist/error.mjs",
+          "rawBytes": 2020
+        },
+        {
+          "module": "npm:@base-ui/react/utils/usePopupAutoResize.mjs",
+          "rawBytes": 2005
+        },
+        {
+          "module": "npm:@base-ui/react/dialog/root/useDialogRoot.mjs",
+          "rawBytes": 1968
+        },
+        {
+          "module": "npm:@base-ui/react/menu/popup/MenuPopup.mjs",
+          "rawBytes": 1903
+        },
+        {
+          "module": "/src/components/ui/menu.tsx",
+          "rawBytes": 1899
+        },
+        {
+          "module": "npm:@base-ui/react/internals/composite/list/CompositeList.mjs",
+          "rawBytes": 1888
+        },
+        {
+          "module": "npm:@base-ui/react/menu/submenu-trigger/MenuSubmenuTrigger.mjs",
+          "rawBytes": 1879
+        },
+        {
+          "module": "npm:better-auth/dist/client/parser.mjs",
+          "rawBytes": 1835
+        },
+        {
+          "module": "npm:better-auth/dist/client/session-refresh.mjs",
+          "rawBytes": 1818
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs",
+          "rawBytes": 1806
+        },
+        {
+          "module": "npm:@base-ui/react/dialog/store/DialogStore.mjs",
+          "rawBytes": 1787
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useFloating.mjs",
+          "rawBytes": 1758
+        }
+      ],
+      "leftTheBeforeLoadPathTotal": 376412
+    },
+    {
+      "page": "/variety/pomidor-cheri-0000000101",
+      "route": "[locale]/variety/[slug]",
+      "before": {
+        "beforeLoadTransfer": 342168,
+        "beforeLoadDecoded": 1163213,
+        "executed": 555334,
+        "rawModuleBytesByOrigin": {
+          "framework (next, react, react-dom)": 530395,
+          "app: lib (copy, navigation, contracts)": 197646,
+          "base-ui and floating-ui": 179955,
+          "Phosphor icons": 79010,
+          "app: other": 67407,
+          "app: shell, auth and palette": 44684,
+          "Better Auth client": 30525,
+          "npm: tailwind-merge": 27776,
+          "npm: use-sync-external-store": 1635,
+          "npm: defu": 810,
+          "npm: class-variance-authority": 777,
+          "npm: @swc/helpers": 707,
+          "npm: clsx": 525
+        },
+        "unmatchedChunks": []
+      },
+      "after": {
+        "beforeLoadTransfer": 240405,
+        "beforeLoadDecoded": 818343,
+        "executed": 408526,
+        "rawModuleBytesByOrigin": {
+          "framework (next, react, react-dom)": 530254,
+          "Phosphor icons": 75892,
+          "app: lib (copy, navigation, contracts)": 73734,
+          "app: other": 55661,
+          "app: shell, auth and palette": 46125,
+          "npm: tailwind-merge": 27776,
+          "base-ui and floating-ui": 5359,
+          "npm: class-variance-authority": 777,
+          "npm: @swc/helpers": 707,
+          "npm: clsx": 525
+        },
+        "unmatchedChunks": []
+      },
+      "leftTheBeforeLoadPath": [
+        {
+          "module": "/src/lib/trust-surface-copy.ts",
+          "rawBytes": 126207
+        },
+        {
+          "module": "/src/lib/public-surface-localization.ts",
+          "rawBytes": 28319
+        },
+        {
+          "module": "npm:@better-fetch/fetch/dist/index.js",
+          "rawBytes": 9937
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs",
+          "rawBytes": 9496
+        },
+        {
+          "module": "npm:@floating-ui/dom/dist/floating-ui.dom.mjs",
+          "rawBytes": 8276
+        },
+        {
+          "module": "npm:@floating-ui/core/dist/floating-ui.core.mjs",
+          "rawBytes": 7085
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs",
+          "rawBytes": 6940
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useDismiss.mjs",
+          "rawBytes": 6680
+        },
+        {
+          "module": "npm:@base-ui/react/menu/root/MenuRoot.mjs",
+          "rawBytes": 5666
+        },
+        {
+          "module": "npm:@base-ui/react/utils/useAnchorPositioning.mjs",
+          "rawBytes": 5511
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs",
+          "rawBytes": 4834
+        },
+        {
+          "module": "npm:@base-ui/react/utils/popups/popupStoreUtils.mjs",
+          "rawBytes": 4273
+        },
+        {
+          "module": "npm:@base-ui/react/menu/positioner/MenuPositioner.mjs",
+          "rawBytes": 4092
+        },
+        {
+          "module": "npm:@base-ui/utils/useScrollLock.mjs",
+          "rawBytes": 3809
+        },
+        {
+          "module": "npm:@base-ui/react/menu/trigger/MenuTrigger.mjs",
+          "rawBytes": 3797
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/utils/tabbable.mjs",
+          "rawBytes": 3233
+        },
+        {
+          "module": "npm:@base-ui/react/menu/store/MenuStore.mjs",
+          "rawBytes": 3213
+        },
+        {
+          "module": "npm:@base-ui/react/utils/usePopupViewport.mjs",
+          "rawBytes": 2830
+        },
+        {
+          "module": "npm:@floating-ui/react-dom/dist/floating-ui.react-dom.mjs",
+          "rawBytes": 2784
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs",
+          "rawBytes": 2703
+        },
+        {
+          "module": "/src/components/ui/sheet.tsx",
+          "rawBytes": 2693
+        },
+        {
+          "module": "npm:@floating-ui/utils/dist/floating-ui.utils.dom.mjs",
+          "rawBytes": 2691
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/components/FloatingPortal.mjs",
+          "rawBytes": 2631
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/safePolygon.mjs",
+          "rawBytes": 2616
+        },
+        {
+          "module": "npm:@better-auth/core/dist/error/codes.mjs",
+          "rawBytes": 2515
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useFocus.mjs",
+          "rawBytes": 2286
+        },
+        {
+          "module": "npm:better-auth/dist/client/config.mjs",
+          "rawBytes": 2267
+        },
+        {
+          "module": "npm:@base-ui/react/utils/popups/store.mjs",
+          "rawBytes": 2031
+        },
+        {
+          "module": "npm:better-call/dist/error.mjs",
+          "rawBytes": 2020
+        },
+        {
+          "module": "npm:@base-ui/react/utils/usePopupAutoResize.mjs",
+          "rawBytes": 2005
+        },
+        {
+          "module": "npm:@base-ui/react/dialog/root/useDialogRoot.mjs",
+          "rawBytes": 1968
+        },
+        {
+          "module": "npm:@base-ui/react/menu/popup/MenuPopup.mjs",
+          "rawBytes": 1903
+        },
+        {
+          "module": "/src/components/ui/menu.tsx",
+          "rawBytes": 1899
+        },
+        {
+          "module": "npm:@base-ui/react/internals/composite/list/CompositeList.mjs",
+          "rawBytes": 1888
+        },
+        {
+          "module": "npm:@base-ui/react/menu/submenu-trigger/MenuSubmenuTrigger.mjs",
+          "rawBytes": 1879
+        },
+        {
+          "module": "npm:better-auth/dist/client/parser.mjs",
+          "rawBytes": 1835
+        },
+        {
+          "module": "npm:better-auth/dist/client/session-refresh.mjs",
+          "rawBytes": 1818
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs",
+          "rawBytes": 1806
+        },
+        {
+          "module": "npm:@base-ui/react/dialog/store/DialogStore.mjs",
+          "rawBytes": 1787
+        },
+        {
+          "module": "npm:@base-ui/react/floating-ui-react/hooks/useFloating.mjs",
+          "rawBytes": 1758
+        }
+      ],
+      "leftTheBeforeLoadPathTotal": 376412
+    }
+  ]
+}

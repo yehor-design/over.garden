@@ -8,6 +8,7 @@ import {
 import type { Pool } from "pg";
 
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../../src/lib/auth/public-identity-compatibility";
+import { AUTH_RETRY_ATTEMPTS, authRetryDelayMs } from "./auth-rate-limit";
 
 /**
  * A gardener with a session, for a browser proof that needs one.
@@ -24,9 +25,9 @@ import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../../src/lib/auth/public-ident
  * Playwright runs spec *files* in parallel, so several specs signing a
  * gardener in at once used to push one of them over the limit — and the
  * failure read "Synthetic gardener was not persisted", which names the symptom
- * and hides the cause. This retries, and says what it saw if it gives up.
+ * and hides the cause. This retries for as long as the limiter says to
+ * (`auth-rate-limit.ts`), and says what it saw if it gives up.
  */
-const RETRY_DELAYS_MS = [1_500, 4_000, 9_000] as const;
 
 export const SYNTHETIC_GARDENER_PASSWORD = "OverGarden-local-password-1!";
 
@@ -50,7 +51,7 @@ export async function signInSyntheticGardener(input: {
   const request = input.context.request;
   const statuses: number[] = [];
 
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
+  for (let attempt = 0; attempt < AUTH_RETRY_ATTEMPTS; attempt += 1) {
     const response = await request.post(
       `${input.baseURL}/api/auth/sign-up/email`,
       {
@@ -74,7 +75,7 @@ export async function signInSyntheticGardener(input: {
       // persisted signup does not mean its immediately following signin is admitted.
       const signInStatuses: number[] = [];
       let signedIn = false;
-      for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      for (let attempt = 0; attempt < AUTH_RETRY_ATTEMPTS; attempt++) {
         const response = await request.post(
           `${input.baseURL}/api/auth/sign-in/email`,
           {
@@ -87,8 +88,8 @@ export async function signInSyntheticGardener(input: {
           signedIn = true;
           break;
         }
-        const delay = RETRY_DELAYS_MS[attempt];
-        if (response.status() !== 429 || delay === undefined) break;
+        const delay = authRetryDelayMs(response, attempt);
+        if (response.status() !== 429 || delay === null) break;
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
       if (!signedIn) {
@@ -113,8 +114,8 @@ export async function signInSyntheticGardener(input: {
       return { id, email, handle };
     }
 
-    const delay = RETRY_DELAYS_MS[attempt];
-    if (delay === undefined) break;
+    const delay = authRetryDelayMs(response, attempt);
+    if (delay === null) break;
     // A 429 is a window, not a verdict. Waiting it out is the whole fix.
     await new Promise((resolve) => setTimeout(resolve, delay));
   }
