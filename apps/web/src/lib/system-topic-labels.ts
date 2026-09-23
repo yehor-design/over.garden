@@ -44,6 +44,19 @@ export function isSystemTopicSlug(slug: string): boolean {
   return Object.hasOwn(SYSTEM_TOPIC_LABELS, slug);
 }
 
+/**
+ * The two system topics that are the plant-or-animal split again (`OVE-492`,
+ * OG-UX-015). A listing that already offers plants or animals as a mode or a
+ * facet does not offer them a second time as topics — the same choice under
+ * two names reads as two concepts. The one in the URL is still shown, so a
+ * reader can remove it.
+ */
+const KIND_TOPIC_SLUGS: ReadonlySet<string> = new Set(["plants", "animals"]);
+
+export function isKindTopicSlug(slug: string): boolean {
+  return KIND_TOPIC_SLUGS.has(slug);
+}
+
 /** The label a page in `locale` shows for a topic; the stored one unless the topic is the product's. */
 export function localizeTopicLabel(
   locale: PublicLocale,

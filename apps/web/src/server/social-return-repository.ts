@@ -16,7 +16,10 @@ import {
   publicObjectPassportAddress,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import type { PublicLocale } from "@/lib/public-localization";
+import {
+  normalizePublicContentLanguage,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { buildPublicFeedMediaQuery } from "@/server/public-feed-repository";
 import type { RequestScope } from "@/server/request-scope";
@@ -54,6 +57,8 @@ export interface FollowedFeedCandidateRow {
   body: string;
   entryDate: Date | string;
   publishedAt: Date | string | null;
+  /** The language the gardener wrote in; absent on a fixture row. */
+  sourceLanguage?: string | null;
   ownerHandle: string;
   /** The registry handle the addresses hang from (ADR-0029 D9). */
   addressHandle: string;
@@ -75,6 +80,11 @@ export interface FollowedFeedItem {
   href: string;
   title: string;
   excerpt: string;
+  /**
+   * The language the gardener wrote in, so a card can mark the gardener's own
+   * words with it when it is not the page's (WCAG 3.1.2, `OVE-492`).
+   */
+  sourceLanguage?: PublicLocale;
   entryDate: Date | string;
   publishedAt: Date | string;
   author: {
@@ -328,6 +338,7 @@ export function buildFollowedFeedCandidatesQuery(
       "entries.body",
       "entries.entry_date as entryDate",
       "entries.published_at as publishedAt",
+      "entries.source_language as sourceLanguage",
       "profiles.handle as ownerHandle",
       "owner_handles.normalized_handle as addressHandle",
       "profiles.display_name as ownerDisplayName",
@@ -410,6 +421,7 @@ export function serializeFollowedFeedPage(
         }),
         title: row.title,
         excerpt: summarizePublicText(row.body, 240),
+        sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
         entryDate: row.entryDate,
         publishedAt: row.publishedAt,
         author: {

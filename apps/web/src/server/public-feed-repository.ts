@@ -81,6 +81,8 @@ export interface PublicFeedEntry {
   id: string;
   title: string;
   excerpt: string;
+  /** The excerpt stopped short of the entry, so a card offers "Read more". */
+  excerptTruncated?: boolean;
   /**
    * The language of this entry's own words, so a card can carry `lang` when it
    * is not the page's. A Bulgarian entry in a Ukrainian feed is read aloud in
@@ -584,6 +586,7 @@ export function serializePublicFeedPage(input: {
       id: row.entryId,
       title: row.title,
       excerpt: buildPublicFeedExcerpt(row.body),
+      excerptTruncated: isPublicFeedExcerptTruncated(row.body),
       sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
@@ -652,6 +655,12 @@ export function serializePublicFeedPage(input: {
         })
       : null,
   };
+}
+
+function isPublicFeedExcerptTruncated(body: string) {
+  return (
+    body.replace(/\s+/g, " ").trim().length > MAX_PUBLIC_FEED_EXCERPT_LENGTH
+  );
 }
 
 function buildPublicFeedExcerpt(body: string) {

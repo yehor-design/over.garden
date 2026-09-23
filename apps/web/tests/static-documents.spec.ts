@@ -823,24 +823,18 @@ test.describe("a public page is a static document", () => {
   test("a filtered feed renders from its twin, and the twin is not an address", async ({
     request,
   }) => {
-    // The first chip is "recent": pressed on the plain feed, released once a
-    // kind is chosen. Asked of the chips' own attributes, in the order they are
-    // served — the twin renders at request time, so a chip's *label* arrives in
-    // a later segment and is not in the bytes beside its button.
-    const chips = (html: string) =>
-      [
-        ...html.matchAll(
-          /data-slot="toggle-chip" aria-pressed="(true|false)"/gu,
-        ),
-      ]
-        .slice(0, 3)
-        .map((match) => match[1]);
+    // The discovery bar counts the filters it was given (`OVE-492`): none on
+    // the plain feed, one once a kind is chosen. Asked of the bar's own
+    // attribute, in the order it is served — the twin renders at request
+    // time, so its labels arrive in a later segment.
+    const applied = (html: string) =>
+      html.match(/data-filter-bar-active="(\d+)"/u)?.[1] ?? null;
     const plain = await getDocument(request, "/");
     const filtered = await getDocument(request, "/?kind=plant");
     expect(filtered.status).toBe(200);
-    expect(chips(plain.html)).toEqual(["true", "false", "false"]);
+    expect(applied(plain.html)).toBe("0");
     // The query string was read — by the twin, since the page at `/` cannot.
-    expect(chips(filtered.html)).toEqual(["false", "true", "false"]);
+    expect(applied(filtered.html)).toBe("1");
     // A parameter the policy for a change of language drops is still the
     // feed's own: `topic` renders from the twin too.
     const byTopic = await getDocument(request, "/?topic=no-such-topic");

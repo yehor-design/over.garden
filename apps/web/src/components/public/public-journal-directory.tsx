@@ -23,8 +23,9 @@ import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
+import { entryCardDates, getEntryCardCopy } from "@/lib/entry-card-dates";
+import { entryCardMedia } from "@/lib/entry-card-media";
 import { resolveIllustration } from "@/lib/illustrations";
-import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import type { PublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
@@ -33,9 +34,8 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
-import { localizeTopicLabel } from "@/lib/system-topic-labels";
+import { isKindTopicSlug, localizeTopicLabel } from "@/lib/system-topic-labels";
 import type {
   PublicJournalDirectoryCard,
   PublicJournalDirectoryFacets,
@@ -342,11 +342,16 @@ function buildFilterFacets(
       label: copy.topicLabel,
       anyLabel: copy.allTopics,
       value: request.topic ? [request.topic] : [],
-      options: facets.topics.map((topic) => ({
-        value: topic.slug,
-        label: localizeTopicLabel(locale, topic.slug, topic.label),
-        count: topic.count,
-      })),
+      options: facets.topics
+        .filter(
+          (topic) =>
+            topic.slug === request.topic || !isKindTopicSlug(topic.slug),
+        )
+        .map((topic) => ({
+          value: topic.slug,
+          label: localizeTopicLabel(locale, topic.slug, topic.label),
+          count: topic.count,
+        })),
     },
     {
       key: "season",
@@ -386,8 +391,9 @@ function DirectoryResultCard({
 }) {
   const directoryHref = buildPublicJournalDirectoryHref(locale, request);
   const entryHref = addDirectoryReturnTo(card.publicPath, directoryHref);
-  const [cover] = card.media;
-  const sourceSet = cover ? buildPublicMediaSourceSet(cover) : null;
+  // The observation date, with its season; publication only when it fell on
+  // another day — the same meaning the feed's cards give a date (OG-UX-016).
+  const dates = entryCardDates(locale, card.entryDate, card.publishedAt);
 
   return (
     <EntryCard
@@ -412,23 +418,14 @@ function DirectoryResultCard({
           </>
         ) : undefined,
       }}
-      dateTime={toIsoDate(card.entryDate)}
-      dateLabel={`${formatDate(card.entryDate, locale)} · ${copy.seasons[card.season]}`}
+      dateTime={dates.dateTime}
+      dateLabel={`${dates.dateLabel} · ${copy.seasons[card.season]}`}
+      published={dates.published}
       excerpt={card.excerpt}
-      cover={
-        cover && sourceSet
-          ? {
-              src: sourceSet.src,
-              srcSet: sourceSet.srcSet,
-              alt: publicCardMediaAltText(cover),
-              placeholderDataUri: cover.placeholderDataUri,
-              focalX: cover.focalX,
-              focalY: cover.focalY,
-              intrinsicWidth: cover.intrinsicWidth,
-              intrinsicHeight: cover.intrinsicHeight,
-            }
-          : null
+      readMoreLabel={
+        card.excerptTruncated ? getEntryCardCopy(locale).readMore : undefined
       }
+      media={entryCardMedia(card.media)}
       author={
         card.author
           ? {
@@ -488,10 +485,11 @@ function DirectoryLoading({ label }: { label: string }) {
           key={item}
           className="grid gap-3 rounded-lg border border-border p-4 sm:p-5"
         >
+          <Skeleton className="h-8 w-48" />
           <Skeleton className="h-3 w-40" />
           <Skeleton className="h-6 w-4/5" />
-          <Skeleton className="aspect-card w-full" />
-          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
         </div>
       ))}
     </div>
@@ -597,14 +595,17 @@ export function buildPublicJournalDirectoryContextModules(
     {
       key: "journal-topics",
       title: copy.contextTopicsTitle,
-      items: facets.topics.slice(0, 6).map((topic) => ({
-        href: buildPublicJournalDirectoryHref(locale, {
-          ...defaultRequest(),
-          topic: topic.slug,
-        }),
-        label: localizeTopicLabel(locale, topic.slug, topic.label),
-        meta: String(topic.count),
-      })),
+      items: facets.topics
+        .filter((topic) => !isKindTopicSlug(topic.slug))
+        .slice(0, 6)
+        .map((topic) => ({
+          href: buildPublicJournalDirectoryHref(locale, {
+            ...defaultRequest(),
+            topic: topic.slug,
+          }),
+          label: localizeTopicLabel(locale, topic.slug, topic.label),
+          meta: String(topic.count),
+        })),
     },
     {
       key: "journal-catalogs",
@@ -709,14 +710,6 @@ function addDirectoryReturnTo(publicPath: string, directoryHref: string) {
   return `${publicPath}?${params.toString()}`;
 }
 
-function formatDate(value: Date | string, locale: PublicLocale) {
-  return new Intl.DateTimeFormat(localeTag(locale), {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
 function formatPageLabel(
   label: string,
   page: number,
@@ -725,12 +718,4 @@ function formatPageLabel(
 ) {
   const joiner = { uk: "з", bg: "от", ru: "из" }[locale];
   return `${label} ${page} ${joiner} ${totalPages}`;
-}
-
-function localeTag(locale: PublicLocale) {
-  return { uk: "uk-UA", bg: "bg-BG", ru: "ru-RU" }[locale];
-}
-
-function toIsoDate(value: Date | string) {
-  return new Date(value).toISOString();
 }

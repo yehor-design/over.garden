@@ -154,20 +154,22 @@ describe("/", () => {
     );
     expect(html).toContain('lang="bg"');
     expect(html).toContain(">Поток</h1>");
-    // The active filter is in the URL, and it stays there while the other one
-    // changes: it travels as a hidden field in the chip row's GET form.
+    // The active filters are in the URL and travel as hidden fields of the
+    // discovery bar's GET form, so a change to one keeps the other.
     expect(html).toContain('type="hidden" name="topic" value="winter-care"');
     expect(html).toContain('type="hidden" name="kind" value="animal"');
     expect(html).toContain('action="/bg"');
-    expect(html).not.toContain('href="/bg/feed"');
+    // Following is a mode of the feed, localized with the page (OVE-492).
+    expect(html).toContain('href="/bg/feed"');
     expect(html).not.toContain('aria-label="Смяна на езика"');
   });
 
-  it("never asks who is reading: the followed destination is a region of its own", async () => {
-    // A signed-in gardener gets a chip to their followed feed. The page used to
-    // read the session to decide, which made the whole document request-time.
-    // It is `SignedInOnly` now (ADR-0032 D2): absent from the served bytes,
-    // drawn once the document's session settles.
+  it("never asks who is reading: Following is the same link for everyone", async () => {
+    // The page used to read the session to decide whether to link the
+    // followed feed, which made the whole document request-time. Since
+    // `OVE-492` Following is one of the feed's two modes for every reader —
+    // `/feed` shows a guest the public feed and what signing in adds — so the
+    // link is in the served bytes and the session is never read (ADR-0032 D2).
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "ru" }),
@@ -175,7 +177,7 @@ describe("/", () => {
     );
 
     expect(html).toContain(">Лента</h1>");
-    expect(html).not.toContain('href="/ru/feed"');
+    expect(html).toContain('href="/ru/feed"');
     expect(mocks.getSiteShellSessionState).not.toHaveBeenCalled();
   });
 

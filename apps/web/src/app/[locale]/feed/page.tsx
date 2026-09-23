@@ -9,13 +9,14 @@ import { notFound } from "next/navigation";
 import { MySocialLayout } from "@/components/social/my-social-layout";
 import { buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
-import { ToggleChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EntryCard } from "@/components/ui/entry-card";
-import { HiddenField } from "@/components/ui/hidden-field";
+import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
 import { Pagination } from "@/components/ui/pagination";
+import { PublicFeedEntryCard } from "@/components/public/public-home-feed";
+import { entryCardDates } from "@/lib/entry-card-dates";
+import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";
-import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
 import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import {
@@ -113,10 +114,11 @@ export default async function LocalizedFollowedFeedRoute({
       description={copy.feed.description}
       count={page.items.length}
       controls={
-        <FeedFilters
+        <FollowedFeedBar
           locale={localeParam}
           source={source}
           objectKind={objectKind}
+          signedIn
         />
       }
     >
@@ -210,6 +212,14 @@ async function renderSignedOutFollowedFeed({
       active="feed"
       title={title}
       description={description}
+      controls={
+        <FollowedFeedBar
+          locale={locale}
+          source="all"
+          objectKind="all"
+          signedIn={false}
+        />
+      }
     >
       <div data-screen-state="signed-out" className="grid gap-4">
         {/* One way in, and no heading of its own: the page header above
@@ -255,6 +265,7 @@ async function renderSignedOutFollowedFeed({
                 <PublicFeedEntryCard
                   entry={entry}
                   locale={locale}
+                  copy={homeCopy}
                   priority={index === 0}
                 />
               </li>
@@ -266,160 +277,111 @@ async function renderSignedOutFollowedFeed({
   );
 }
 
-function PublicFeedEntryCard({
-  entry,
-  locale,
-  priority,
-}: {
-  entry: PublicFeedEntry;
-  locale: PublicLocale;
-  priority: boolean;
-}) {
-  const copy = getLocalizedHomeContent(locale).feed;
-  const [cover] = entry.media;
-  const sourceSet = cover ? buildPublicMediaSourceSet(cover) : null;
-
-  return (
-    <EntryCard
-      id={entry.id}
-      href={entry.publicPath}
-      title={entry.title}
-      contentLanguage={
-        contentLanguageAttribute(entry.sourceLanguage, locale).lang
-      }
-      subject={{
-        label: entry.object.displayName,
-        href: entry.object.publicPath,
-        kindLabel: copy.kindLabels[entry.object.kind],
-        icon: KIND_ICONS[entry.object.kind],
-      }}
-      dateTime={toIsoDateTime(entry.publishedAt)}
-      dateLabel={formatDate(entry.publishedAt, locale)}
-      excerpt={entry.excerpt}
-      cover={
-        cover && sourceSet
-          ? {
-              src: sourceSet.src,
-              srcSet: sourceSet.srcSet,
-              alt: publicCardMediaAltText(cover),
-              placeholderDataUri: cover.placeholderDataUri,
-              focalX: cover.focalX,
-              focalY: cover.focalY,
-              intrinsicWidth: cover.intrinsicWidth,
-              intrinsicHeight: cover.intrinsicHeight,
-            }
-          : null
-      }
-      author={
-        entry.author
-          ? {
-              displayName: entry.author.displayName,
-              href: entry.author.profilePath,
-              avatarUrl: entry.author.avatarUrl,
-            }
-          : null
-      }
-      authorPrefix={copy.publishedBy}
-      engagement={
-        <Link
-          href={`${entry.publicPath}#comments`}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-        >
-          <MessageCircle aria-hidden="true" />
-          {copy.discuss}
-        </Link>
-      }
-      priority={priority}
-    />
-  );
-}
-
 /**
- * The filters, as chips in two GET forms.
- *
- * Six full-width controls in two bordered strips became two rows of chips that
- * say whether they are on. The same shape as the home feed's, and for the same
- * reason: `aria-pressed` is valid on a button and an ARIA error on a link, and
- * a GET form is what keeps the press working before hydration (DESIGN.md §5.1).
+ * The feed's two modes, Latest (`/`) and Following (here), then this feed's
+ * own facets behind one "Filters" button — who the entry came through, and
+ * plants or animals (`OVE-492`, DESIGN.md §5.1). A guest gets the modes and no
+ * facets: what they read here is the public feed.
  */
-function FeedFilters({
+function FollowedFeedBar({
   locale,
   source,
   objectKind,
+  signedIn,
 }: {
   locale: PublicLocale;
   source: FollowedFeedSource;
   objectKind: FollowedFeedObjectKind;
+  signedIn: boolean;
 }) {
   const copy = getSocialSurfaceCopy(locale);
+  const home = getLocalizedHomeContent(locale).feed;
+  const chrome = getFilterBarChromeCopy(locale);
   const action = localizedPath(locale, "/feed");
-  const sources: Array<[Exclude<FollowedFeedSource, "all">, string]> = [
-    ["people", copy.feed.people],
-    ["objects", copy.feed.objects],
-    ["topics", copy.feed.topics],
-  ];
-  const kinds: Array<[Exclude<FollowedFeedObjectKind, "all">, string]> = [
-    ["plant", copy.feed.plants],
-    ["animal", copy.feed.animals],
-  ];
+  const facets: FilterBarFacet[] = signedIn
+    ? [
+        {
+          key: "source",
+          label: copy.feed.sourceFiltersLabel,
+          anyLabel: copy.feed.all,
+          value: source === "all" ? [] : [source],
+          options: [
+            { value: "people", label: copy.feed.people },
+            { value: "objects", label: copy.feed.objects },
+            { value: "topics", label: copy.feed.topics },
+          ],
+        },
+        {
+          key: "kind",
+          label: copy.feed.kindFiltersLabel,
+          anyLabel: copy.feed.everyKind,
+          value: objectKind === "all" ? [] : [objectKind],
+          options: [
+            { value: "plant", label: copy.feed.plants },
+            { value: "animal", label: copy.feed.animals },
+          ],
+        },
+      ]
+    : [];
+  const sourceLabels: Record<Exclude<FollowedFeedSource, "all">, string> = {
+    people: copy.feed.people,
+    objects: copy.feed.objects,
+    topics: copy.feed.topics,
+  };
+  const chips = [
+    ...(source === "all"
+      ? []
+      : [
+          {
+            key: "source",
+            label: sourceLabels[source],
+            removeHref: feedHref(locale, "all", objectKind, null),
+          },
+        ]),
+    ...(objectKind === "all"
+      ? []
+      : [
+          {
+            key: "kind",
+            label:
+              objectKind === "plant" ? copy.feed.plants : copy.feed.animals,
+            removeHref: feedHref(locale, source, "all", null),
+          },
+        ]),
+  ].map((chip) => ({
+    ...chip,
+    removeLabel: `${home.removeFilter}: ${chip.label}`,
+  }));
 
-  // No wrapping `role="group"`: each form names itself, and a group around two
-  // named forms adds a node a screen reader reads and a reader cannot act on —
-  // the same shape as the bordered filter box `OVE-456` removed from the other
-  // three pages of this family.
   return (
-    <div className="grid w-full gap-3">
-      <form
-        method="get"
-        action={action}
-        aria-label={copy.feed.sourceFiltersLabel}
-        data-followed-feed-source-filters="true"
-        className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
-      >
-        {objectKind === "all" ? null : (
-          <HiddenField name="kind" value={objectKind} />
-        )}
-        <ToggleChip label={copy.feed.all} pressed={source === "all"} />
-        {sources.map(([value, label]) => {
-          const pressed = source === value;
-          return (
-            <ToggleChip
-              key={value}
-              {...(pressed ? {} : { name: "source", value })}
-              label={label}
-              pressed={pressed}
-            />
-          );
-        })}
-      </form>
-      <form
-        method="get"
-        action={action}
-        data-followed-feed-kind-filters="true"
-        className="feed-filter-scroll flex max-w-full items-center gap-2 overflow-x-auto py-1"
-      >
-        {source === "all" ? null : <HiddenField name="source" value={source} />}
-        <span className="shrink-0 text-overline text-text-muted uppercase">
-          {copy.feed.kindFiltersLabel}
-        </span>
-        <ToggleChip
-          label={copy.feed.everyKind}
-          pressed={objectKind === "all"}
-        />
-        {kinds.map(([value, label]) => {
-          const pressed = objectKind === value;
-          return (
-            <ToggleChip
-              key={value}
-              {...(pressed ? {} : { name: "kind", value })}
-              icon={KIND_ICONS[value]}
-              label={label}
-              pressed={pressed}
-            />
-          );
-        })}
-      </form>
-    </div>
+    <FilterBar
+      action={action}
+      facets={facets}
+      modes={[
+        {
+          label: home.recentFilter,
+          href: localizedPath(locale, "/"),
+          current: false,
+        },
+        { label: home.followedFilter, href: action, current: true },
+      ]}
+      chips={chips}
+      clearAllHref={chips.length > 1 ? action : undefined}
+      clearFiltersHref={action}
+      labels={{
+        filters: home.filterLabel,
+        openFilters: chrome.filtersWithCount(chips.length),
+        sheetDescription: chrome.panelDescription,
+        apply: chrome.showResults,
+        close: chrome.close,
+        clear: chrome.clearFilters,
+        clearAll: home.emptyPrimary,
+        activeFilters: home.activeFiltersLabel,
+        sort: home.filterLabel,
+        modes: chrome.modes,
+        pending: chrome.pending,
+      }}
+    />
   );
 }
 
@@ -435,12 +397,18 @@ function FollowedFeedEntryCard({
   const copy = getSocialSurfaceCopy(locale);
   const homeCopy = getLocalizedHomeContent(locale).feed;
   const reason = item.reasons[0];
+  const dates = entryCardDates(locale, item.entryDate, item.publishedAt);
 
   return (
     <EntryCard
       id={item.key}
       href={item.href}
       title={item.title}
+      contentLanguage={
+        item.sourceLanguage
+          ? contentLanguageAttribute(item.sourceLanguage, locale).lang
+          : undefined
+      }
       subject={{
         label: item.object.displayName,
         href: item.object.href,
@@ -448,8 +416,9 @@ function FollowedFeedEntryCard({
         icon: KIND_ICONS[item.object.kind],
         meta: item.object.varietyText ?? undefined,
       }}
-      dateTime={toIsoDateTime(item.publishedAt)}
-      dateLabel={formatDate(item.publishedAt, locale)}
+      dateTime={dates.dateTime}
+      dateLabel={dates.dateLabel}
+      published={dates.published}
       excerpt={item.excerpt}
       cover={
         item.mediaUrl
@@ -512,18 +481,4 @@ function parseObjectKind(value: string | undefined): FollowedFeedObjectKind {
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function formatDate(value: Date | string, locale: PublicLocale) {
-  return new Date(value).toLocaleDateString(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function toIsoDateTime(value: Date | string) {
-  return value instanceof Date
-    ? value.toISOString()
-    : new Date(value).toISOString();
 }

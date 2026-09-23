@@ -70,6 +70,16 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**The feed's cards and bar (OVE-492):** every list of journal entries uses
+one author-first `EntryCard` — who and when, the object, the words, then the
+photographs at their own bounded shape (none for a text note) — dated by the
+observation, with the publication named when it fell on another day, the same
+in the feed, `/feed` and `/journals`. The feed's bar is the shared
+`FilterBar`: Latest and Following as modes (`/feed` for everyone), plants or
+animals and the trusted topics behind Filters, and the `plants`/`animals`
+system topics are not offered a second time. See
+`docs/redesign/2026-09-21/OVE-492-PROOF.md`.
+
 **An owned object's three pages (OVE-491):** `/garden/objects/[objectId]` is
 the object's history — one `h1`, the name under it with its space and kind, the
 breadcrumb (My garden › space › object), the public passport and the organism's

@@ -65,36 +65,136 @@ describe("EntryCard", () => {
     expect(screen.getByText("Регіон UA-30")).toBeTruthy();
   });
 
-  it("reserves the same box with a photograph and without one", () => {
-    const { container: withCover } = render(
+  // OVE-492 (OG-UX-041): a photograph keeps its own proportions, bounded; a
+  // text note draws no box for a picture it does not have.
+  it("reserves each photograph's own bounded box, and none for a text note", () => {
+    const { container: portrait } = render(
       <EntryCard
         {...base}
-        cover={{
-          src: "https://media.over.garden/one.webp",
-          srcSet: "https://media.over.garden/one_480.webp 480w",
-          alt: "Томат Черрі: підсумок тижня",
-        }}
+        media={[
+          {
+            src: "https://media.over.garden/one.webp",
+            srcSet: "https://media.over.garden/one_480.webp 480w",
+            alt: "Нижній ярус без плям",
+            intrinsicWidth: 1440,
+            intrinsicHeight: 2560,
+          },
+        ]}
       />,
     );
-    const cover = withCover.querySelector('[data-entry-card-media="cover"]');
-    expect(cover?.className).toContain("aspect-card");
-    // The alt text is the caller's real sentence, never an empty string: a
-    // photograph of the thing the entry is about carries meaning.
+    const single = portrait.querySelector<HTMLElement>(
+      '[data-entry-card-media="single"]',
+    );
+    // 9:16 is clamped to 4:5, and the width follows from the height bound.
+    expect(single?.style.aspectRatio).toMatch(/^0\.8( \/ 1)?$/u);
+    expect(single?.style.width).toBe("min(100%, 25.600rem)");
+    // The alt is the gardener's own description, never the title again.
     expect(
       screen
-        .getByRole("img", { name: "Томат Черрі: підсумок тижня" })
+        .getByRole("img", { name: "Нижній ярус без плям" })
         .getAttribute("srcset"),
     ).toBe("https://media.over.garden/one_480.webp 480w");
 
-    const { container: withoutCover } = render(
-      <EntryCard {...base} id="entry-2" />,
+    const { container: landscape } = render(
+      <EntryCard
+        {...base}
+        id="entry-wide"
+        cover={{
+          src: "https://media.over.garden/wide.webp",
+          alt: "",
+          intrinsicWidth: 4000,
+          intrinsicHeight: 1000,
+        }}
+      />,
     );
-    const fallback = withoutCover.querySelector(
-      '[data-entry-card-media="fallback"]',
+    expect(
+      landscape.querySelector<HTMLElement>('[data-entry-card-media="single"]')
+        ?.style.aspectRatio,
+    ).toMatch(/^1\.777/u);
+
+    const { container: text } = render(<EntryCard {...base} id="entry-2" />);
+    expect(text.querySelector("[data-entry-card-media]")).toBeNull();
+  });
+
+  it("shows two or three photographs side by side, and never more than three", () => {
+    const photo = (n: number) => ({
+      src: `https://media.over.garden/${n}.webp`,
+      alt: "",
+      intrinsicWidth: 1200,
+      intrinsicHeight: 900,
+    });
+    const { container } = render(
+      <EntryCard {...base} media={[photo(1), photo(2), photo(3), photo(4)]} />,
     );
-    expect(fallback?.className).toContain("aspect-card");
-    // Decorative: the heading beside it already says what the entry is.
-    expect(fallback?.getAttribute("aria-hidden")).toBe("true");
+    const grid = container.querySelector('[data-entry-card-media="grid"]');
+    expect(grid?.getAttribute("data-entry-card-media-count")).toBe("3");
+    expect(grid?.querySelectorAll("img")).toHaveLength(3);
+  });
+
+  // OVE-492 (OG-UX-014): who and when, then where, then what was written.
+  it("reads author and date first, then the object, then the words", () => {
+    const { container } = render(
+      <EntryCard
+        {...base}
+        author={{ displayName: "Олена", href: "/@olena" }}
+        subject={{ label: "Томат Черрі", kindLabel: "Рослина" }}
+        excerpt="Новий приріст рівний."
+        published={{
+          dateTime: "2026-09-12T18:40:00.000Z",
+          label: "Опубліковано 12 вер. 2026 р.",
+        }}
+      />,
+    );
+    const text = container.textContent ?? "";
+    const order = [
+      "Олена",
+      "10 лип.",
+      "Опубліковано 12 вер. 2026 р.",
+      "Томат Черрі",
+      "Підсумок тижня для томата",
+      "Новий приріст рівний.",
+    ].map((part) => text.indexOf(part));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(
+      container
+        .querySelector('[data-entry-card-published="true"]')
+        ?.getAttribute("datetime"),
+    ).toBe("2026-09-12T18:40:00.000Z");
+  });
+
+  it("starts at the date when there is no public author, inventing no one", () => {
+    const { container } = render(<EntryCard {...base} author={null} />);
+    const byline = container.querySelector('[data-entry-card-byline="true"]');
+    expect(byline?.querySelector("a")).toBeNull();
+    expect(byline?.textContent).toBe("10 лип.");
+  });
+
+  // OG-UX-030: the gardener's language on their words, never on the dates.
+  it("keeps the dates and the byline out of the entry's language", () => {
+    const { container } = render(
+      <EntryCard
+        {...base}
+        contentLanguage="bg"
+        title="Седмичен преглед"
+        author={{ displayName: "Олена", href: "/@olena" }}
+        readMoreLabel="Читати далі"
+      />,
+    );
+    const marked = [...container.querySelectorAll('[lang="bg"]')];
+    expect(marked.length).toBeGreaterThan(0);
+    for (const element of marked) {
+      expect(element.querySelector("time")).toBeNull();
+      expect(element.textContent).not.toContain("Олена");
+    }
+  });
+
+  it("offers Read more with the entry's name in it", () => {
+    render(<EntryCard {...base} readMoreLabel="Читати далі" />);
+    const readMore = screen.getByRole("link", {
+      name: "Читати далі Підсумок тижня для томата",
+    });
+    expect(readMore.getAttribute("href")).toBe(base.href);
   });
 
   it("carries the entry's own language only when it differs from the page's", () => {
