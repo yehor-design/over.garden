@@ -29,18 +29,25 @@ vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: localeMocks.getRequestInterfaceLocale,
 }));
 
-vi.mock("@/server/erasure-request-repository", () => ({
-  getLatestErasureRequestForUser: vi.fn(async () => ({
-    id: "00000000-0000-4000-8000-00000000abcd",
-    requesterUserId: "00000000-0000-4000-8000-000000000001",
-    requestScope: "account_data_erasure",
-    status: "handled",
-    submittedAt: new Date("2026-06-27T08:00:00.000Z"),
-    handledAt: new Date("2026-06-27T09:00:00.000Z"),
-    handledStatus: "needs_identity_verification",
-    intakeDisclosureVersion: ERASURE_REQUEST_INTAKE_VERSION,
-  })),
+const repositoryMocks = vi.hoisted(() => ({
+  latest: vi.fn(),
 }));
+
+vi.mock("@/server/erasure-request-repository", () => ({
+  getLatestErasureRequestForUser: (...args: unknown[]) =>
+    repositoryMocks.latest(...args),
+}));
+
+const DEFAULT_REQUEST = {
+  id: "00000000-0000-4000-8000-00000000abcd",
+  requesterUserId: "00000000-0000-4000-8000-000000000001",
+  requestScope: "account_data_erasure",
+  status: "handled",
+  submittedAt: new Date("2026-06-27T08:00:00.000Z"),
+  handledAt: new Date("2026-06-27T09:00:00.000Z"),
+  handledStatus: "needs_identity_verification",
+  intakeDisclosureVersion: ERASURE_REQUEST_INTAKE_VERSION,
+};
 
 vi.mock("./actions", () => ({
   submitErasureRequestAction: vi.fn(),
@@ -49,6 +56,7 @@ vi.mock("./actions", () => ({
 describe("/erasure", () => {
   beforeEach(() => {
     localeMocks.getRequestInterfaceLocale.mockResolvedValue("ru");
+    repositoryMocks.latest.mockResolvedValue(DEFAULT_REQUEST);
   });
 
   it("renders a real latest status path without raw private evidence", async () => {
@@ -64,7 +72,10 @@ describe("/erasure", () => {
     expect(html).toContain(
       formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
     );
-    expect(html).toContain("ничего не удаляет автоматически");
+    // What the page is for, and that sending deletes nothing, before any
+    // status or version (`OVE-505`).
+    expect(html).toContain("Сама отправка ничего не удаляет");
+    expect(html).not.toMatch(/<h1[^>]*>[^<]*MVP/u);
     expect(html).toContain("данные аккаунта удаляются или обезличиваются");
     expect(html).toContain("только по возможности");
     expect(html).toContain(SUPPORT_EMAIL);
@@ -115,6 +126,100 @@ describe("/erasure", () => {
       expect(at, line).toBeGreaterThan(cursor);
       cursor = at;
     }
+  });
+});
+
+describe("/erasure, told apart and read back (OVE-505)", () => {
+  beforeEach(() => {
+    localeMocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    repositoryMocks.latest.mockResolvedValue(DEFAULT_REQUEST);
+  });
+
+  async function render(result?: string) {
+    const { default: ErasureRequestPage } = await import("./page");
+    return renderToStaticMarkup(
+      await ErasureRequestPage({
+        searchParams: Promise.resolve(result ? { result } : {}),
+      }),
+    );
+  }
+
+  it("tells one entry, the account and outside copies apart before asking", async () => {
+    repositoryMocks.latest.mockResolvedValue(null);
+    const html = await render();
+
+    expect(html).toContain('id="erasure-choices"');
+    expect(html).toContain("Один запис");
+    expect(html).toContain("Для цього запит не потрібен");
+    expect(html).toContain('href="/garden"');
+    expect(html).toContain("Акаунт і все, що з ним пов&#x27;язано");
+    expect(html).toContain("Копії поза OverGarden");
+    // What is deleted and what survives come before the form.
+    expect(html.indexOf('id="erasure-what-survives"')).toBeLessThan(
+      html.indexOf('name="erasureAcknowledgementAccepted"'),
+    );
+    // The legal status and the version close the page; they do not open it.
+    expect(html.indexOf('id="erasure-about"')).toBeGreaterThan(
+      html.indexOf('id="erasure-process"'),
+    );
+    expect(html).not.toContain('data-slot="badge"');
+  });
+
+  it("puts where a request stands first, with what happens next", async () => {
+    repositoryMocks.latest.mockResolvedValue({
+      ...DEFAULT_REQUEST,
+      status: "reviewing",
+      handledAt: null,
+      handledStatus: null,
+    });
+    const html = await render();
+
+    expect(html).toContain('data-erasure-request-status="reviewing"');
+    expect(html.indexOf("data-erasure-request-status")).toBeLessThan(
+      html.indexOf('id="erasure-choices"'),
+    );
+    expect(html).toContain("Що далі");
+    expect(html).toContain("Команда перевіряє, які дані охопить видалення");
+    // An open request offers no second form.
+    expect(html).not.toContain('name="erasureAcknowledgementAccepted"');
+  });
+
+  it("says how to go on when identity must be confirmed", async () => {
+    const html = await render();
+
+    expect(html).toContain("Потрібне підтвердження особи");
+    expect(html).toContain("з адреси, прив&#x27;язаної до акаунта");
+  });
+
+  it("reads a received request back, with its reference", async () => {
+    repositoryMocks.latest.mockResolvedValue({
+      ...DEFAULT_REQUEST,
+      status: "submitted",
+      handledAt: null,
+      handledStatus: null,
+    });
+    const html = await render("received");
+
+    expect(html).toContain('data-action-outcome="received"');
+    expect(html).toContain("Запит отримано");
+    expect(html).toContain(
+      formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
+    );
+    expect(html).toContain('role="status"');
+  });
+
+  it("says a request was not sent when its conditions were not accepted", async () => {
+    repositoryMocks.latest.mockResolvedValue(null);
+    const html = await render("acknowledgement-required");
+
+    expect(html).toContain('data-action-outcome="acknowledgement-required"');
+    expect(html).toContain("Запит не надіслано");
+    expect(html).toContain('role="alert"');
+  });
+
+  it("ignores an outcome it cannot read", async () => {
+    const html = await render("deleted");
+    expect(html).not.toContain("data-action-outcome");
   });
 });
 

@@ -77,6 +77,23 @@ vi.mock("./actions", () => ({
   markErasureRequestDryRunReviewedAction: vi.fn(),
 }));
 
+function request(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "00000000-0000-4000-8000-00000000abcd",
+    requesterUserId: "00000000-0000-4000-8000-000000000001",
+    requesterHandle: "anna_gardens",
+    requestScope: "account_data_erasure",
+    status: "reviewing",
+    submittedAt: new Date("2026-06-27T08:00:00.000Z"),
+    handledAt: null,
+    handledStatus: null,
+    intakeDisclosureVersion: ERASURE_REQUEST_INTAKE_VERSION,
+    dryRunReviewedAt: new Date("2026-06-29T09:00:00.000Z"),
+    dryRunReviewedByUserId: "00000000-0000-4000-8000-000000000999",
+    ...overrides,
+  };
+}
+
 describe("/garden/privacy/erasure-requests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -93,20 +110,7 @@ describe("/garden/privacy/erasure-requests", () => {
         "erasure:execute",
       ],
     });
-    mocks.listOperatorErasureRequests.mockResolvedValue([
-      {
-        id: "00000000-0000-4000-8000-00000000abcd",
-        requesterUserId: "00000000-0000-4000-8000-000000000001",
-        requestScope: "account_data_erasure",
-        status: "reviewing",
-        submittedAt: new Date("2026-06-27T08:00:00.000Z"),
-        handledAt: null,
-        handledStatus: null,
-        intakeDisclosureVersion: ERASURE_REQUEST_INTAKE_VERSION,
-        dryRunReviewedAt: new Date("2026-06-29T09:00:00.000Z"),
-        dryRunReviewedByUserId: "00000000-0000-4000-8000-000000000999",
-      },
-    ]);
+    mocks.listOperatorErasureRequests.mockResolvedValue([request()]);
     mocks.getErasureDryRunPreviewForRequest.mockResolvedValue({
       requestId: "00000000-0000-4000-8000-00000000abcd",
       requesterUserId: "00000000-0000-4000-8000-000000000001",
@@ -153,26 +157,43 @@ describe("/garden/privacy/erasure-requests", () => {
     expect(mocks.getErasureDryRunPreviewForRequest).not.toHaveBeenCalled();
   });
 
-  it("renders dry-run preview counts without private journal evidence", async () => {
+  it("reads each request as a task, with its identity, state and next step (OVE-505)", async () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = await renderServerHtml(await ErasureRequestsOperatorPage());
 
     expect(html).toContain('data-operator-surface="erasure-requests"');
     expect(html).toContain('data-operator-access-state="allowed"');
-    expect(html).toContain("Режим доступу: лише захищений власник з паролем");
-    expect(html).toContain("Роль: Власник");
+    expect(html).toContain(
+      "Ваш доступ: лише захищений власник з паролем · роль: Власник",
+    );
     expect(mocks.listOperatorErasureRequests).toHaveBeenCalledOnce();
     expect(mocks.getErasureDryRunPreviewForRequest).toHaveBeenCalledOnce();
-    expect(html).toContain("Недеструктивний dry-run-перегляд");
+    // Who, by handle — the account id only as a diagnostic.
+    expect(html).toContain("@anna_gardens");
+    const technical = html.indexOf("Технічні дані");
+    expect(
+      html.indexOf("00000000-0000-4000-8000-000000000001"),
+    ).toBeGreaterThan(technical);
+    // The state and the next step, in words.
+    expect(html).toContain("Наступний крок");
+    expect(html).toContain(
+      "Сотріть дані (потрібна фраза підтвердження) або зафіксуйте інший результат.",
+    );
+    expect(html).toContain("Попередній звіт: що буде стерто");
     expect(html).toContain("Записи журналу");
-    expect(html).toContain("Зафіксувати dry-run повторно");
-    expect(html).toContain("Незворотне видалення, схвалене супроводжувачем");
-    expect(html).toContain("Виконати схвалене видалення");
+    expect(html).toContain("Позначити звіт переглянутим ще раз");
+    expect(html).toContain("Стерти дані акаунта");
+    // The confirmation names what erasing covers, from the preview.
+    expect(html).toContain("записи: 2");
     expect(html).toContain("APPROVE request-0000abcd IRREVERSIBLE ERASURE");
     expect(html).toContain("request-0000abcd");
-    expect(html).toContain("Позначити опрацьованим");
+    expect(html).toContain("Зафіксувати результат");
     expect(html).toContain("Потрібне підтвердження особи");
     expect(html).not.toContain('<option value="completed">');
+    // No jargon in the main flow; definitions and caveats are a disclosure.
+    expect(html.replaceAll(/<details[\s\S]*?<\/details>/g, "")).not.toMatch(
+      /dry-run|супроводжувач|\b410\b/i,
+    );
     // Icons are inline SVG and carry `xmlns="http://www.w3.org/2000/svg"`,
     // which is markup rather than evidence. The rule is about what the page
     // says, so the namespace is removed before the page is read.
@@ -180,6 +201,67 @@ describe("/garden/privacy/erasure-requests", () => {
       /quarantine|derivative|https?:\/\//i,
     );
   });
+
+  it("offers to start a new request, and no erasure yet", async () => {
+    mocks.listOperatorErasureRequests.mockResolvedValue([
+      request({ status: "submitted", dryRunReviewedAt: null }),
+    ]);
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
+
+    expect(html).toContain("Почніть розгляд.");
+    expect(html).toContain("Почати розгляд");
+    expect(html).not.toContain("Стерти дані акаунта");
+  });
+
+  it("offers to resume a stalled cleanup, and never a preview for a closed request", async () => {
+    mocks.listOperatorErasureRequests.mockResolvedValue([
+      request({
+        status: "handled",
+        handledStatus: "cleanup_pending",
+        handledAt: new Date("2026-06-30T09:00:00.000Z"),
+        requesterHandle: null,
+      }),
+      request({
+        id: "00000000-0000-4000-8000-00000000beef",
+        status: "handled",
+        handledStatus: "declined",
+        handledAt: new Date("2026-06-30T09:00:00.000Z"),
+      }),
+    ]);
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = await renderServerHtml(await ErasureRequestsOperatorPage());
+
+    expect(mocks.getErasureDryRunPreviewForRequest).not.toHaveBeenCalled();
+    expect(html).toContain('data-erasure-request-state="cleanup_pending"');
+    expect(html).toContain("Продовжити очищення");
+    expect(html).toContain("уже стерто");
+    expect(html).toContain("Нічого робити не треба.");
+    expect(html).not.toContain("Зафіксувати результат");
+  });
+
+  it.each([
+    ["done", "Збережено", "request-0000abcd: На розгляді оператора."],
+    ["stale", "Нічого не змінено", "request-0000abcd уже в іншому стані"],
+    ["approval", "Нічого не стерто", "Фраза підтвердження не збігається"],
+  ] as const)(
+    "reads a %s action back from the stored request",
+    async (result, title, sentence) => {
+      const { default: ErasureRequestsOperatorPage } = await import("./page");
+      const html = await renderServerHtml(
+        await ErasureRequestsOperatorPage({
+          searchParams: Promise.resolve({
+            request: "00000000-0000-4000-8000-00000000abcd",
+            result,
+          }),
+        }),
+      );
+
+      expect(html).toContain(`data-action-outcome="${result}"`);
+      expect(html).toContain(title);
+      expect(html).toContain(sentence);
+    },
+  );
 
   it("renders its own shell and a bounded failure when the relation is missing", async () => {
     mocks.listOperatorErasureRequests.mockRejectedValue(

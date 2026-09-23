@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type Insertable, type Kysely, type Transaction } from "kysely";
+import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -86,11 +86,28 @@ export async function getLatestErasureRequestForUser(
   return request ? mapErasureRequestRow(request) : null;
 }
 
+/**
+ * A request as the owner's list shows it: the request, and the account it
+ * came from by its handle — the least that identifies it (`OVE-505`,
+ * criterion 7). The account id stays available as a diagnostic; no name,
+ * address or contact is read.
+ */
+export interface OperatorErasureRequestReadModel extends ErasureRequestReadModel {
+  /** Null once the account is erased, or when it never claimed one. */
+  requesterHandle: string | null;
+}
+
 export async function listOperatorErasureRequests(
   limit = MAX_OPERATOR_ERASURE_REQUESTS,
-): Promise<ErasureRequestReadModel[]> {
+): Promise<OperatorErasureRequestReadModel[]> {
   const rows = await buildListOperatorErasureRequestsQuery(db, limit).execute();
-  return rows.map(mapErasureRequestRow);
+  return rows.map((row) => ({
+    ...mapErasureRequestRow(row),
+    requesterHandle:
+      typeof row.requesterHandle === "string" && row.requesterHandle.length > 0
+        ? row.requesterHandle
+        : null,
+  }));
 }
 
 export async function markErasureRequestDryRunReviewed(
@@ -200,7 +217,15 @@ export function buildListOperatorErasureRequestsQuery(
 
   return executor
     .selectFrom("erasure_requests")
-    .select([...ERASURE_REQUEST_RETURNING])
+    .select([
+      ...ERASURE_REQUEST_RETURNING,
+      sql<string | null>`(
+        select profiles.handle
+          from user_public_profiles as profiles
+         where profiles.user_id = erasure_requests.requester_user_id
+         limit 1
+      )`.as("requesterHandle"),
+    ])
     .orderBy("submitted_at", "desc")
     .limit(boundedLimit);
 }

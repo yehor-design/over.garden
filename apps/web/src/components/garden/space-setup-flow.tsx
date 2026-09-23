@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Link } from "@/components/ui/link";
 import { RadioCard } from "@/components/ui/radio-card";
 import {
+  openStep,
   ProgressiveActions as StepActions,
   ProgressiveStep,
 } from "@/components/garden/progressive-steps";
@@ -110,11 +111,10 @@ export function SpaceSetupFlow({
   const id = "space-setup";
 
   // Focus follows the open question, but never on first paint: the page's
-  // own heading is where a reader lands.
+  // own heading is where a reader lands. The step comes to the top with it.
   useEffect(() => {
     if (!moved.current) return;
-    if (step === "name") nameRef.current?.focus();
-    else headingRefs.current[step]?.focus();
+    openStep(step === "name" ? nameRef.current : headingRefs.current[step]);
   }, [step]);
 
   useEffect(() => {

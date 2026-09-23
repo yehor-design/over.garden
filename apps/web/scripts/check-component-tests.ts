@@ -43,6 +43,8 @@ export const NAMELESS_COMPONENTS: Readonly<Record<string, string>> = {
   "badge.tsx": "a badge is its own text; it carries no accessible name",
   "callout.tsx":
     "an alert or status region takes its name from nothing — the message is its content",
+  "action-outcome-notice.tsx":
+    "a Callout's alert or status region: the outcome is its content, not its name",
   "separator.tsx": "a separator names nothing; it divides",
   "accordion.tsx":
     "a browser names the group from its <summary>; testing-library does not compute that, so the name is asserted through the summary",

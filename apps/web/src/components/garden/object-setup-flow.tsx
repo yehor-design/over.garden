@@ -7,6 +7,7 @@ import { materializeCatalogNodeAction } from "@/app/(default)/garden/catalog-ful
 import { CatalogPicker } from "@/components/garden/catalog-picker";
 import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
 import {
+  openStep,
   ProgressiveActions,
   ProgressiveStep,
 } from "@/components/garden/progressive-steps";
@@ -138,13 +139,13 @@ export function ObjectSetupFlow({
 
   useEffect(() => {
     if (!moved.current) return;
-    if (step === "name") {
-      document
-        .querySelector<HTMLInputElement>("[data-object-setup-name] input")
-        ?.focus();
-    } else {
-      headingRefs.current[step]?.focus();
-    }
+    openStep(
+      step === "name"
+        ? document.querySelector<HTMLInputElement>(
+            "[data-object-setup-name] input",
+          )
+        : headingRefs.current[step],
+    );
   }, [step]);
 
   useEffect(() => {

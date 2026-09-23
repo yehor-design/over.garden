@@ -92,14 +92,40 @@ export function ProgressiveStep({
   );
 }
 
-/** Kept in view above a phone keyboard: the actions stick to the bottom. */
+/**
+ * Opens a step the way a reader expects to meet it: its question (or its
+ * first field) takes focus, and the step comes to the top of the screen,
+ * just below the header (`scroll-padding-top`).
+ *
+ * Focus alone scrolled only as far as it had to, so a new question landed
+ * wherever the last click had left the page — often low on a phone, its
+ * fields under the tab bar and the consent notice, and the answered step
+ * above it resting half under the sticky header, a "Change" too small to
+ * press (`OVE-505`). At the top, the new question and its fields are in view
+ * and the answered steps are either wholly above it or out of view.
+ */
+export function openStep(target: HTMLElement | null) {
+  if (!target) return;
+  target.focus({ preventScroll: true });
+  const step = target.closest<HTMLElement>("li[data-state]");
+  // A document without layout (a test's jsdom) has no `scrollIntoView`.
+  if (typeof step?.scrollIntoView === "function") {
+    step.scrollIntoView({ block: "start" });
+  }
+}
+
+/**
+ * Kept in view above a phone keyboard: the actions stick to the bottom — on
+ * top of the tab bar and the consent notice, never underneath them (`OVE-505`;
+ * `above-bottom-chrome` in `globals.css`).
+ */
 export function ProgressiveActions({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-4 pt-3 pb-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:pb-0">
+    <div className="sticky above-bottom-chrome -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-4 pt-3 pb-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:pb-0">
       {children}
     </div>
   );

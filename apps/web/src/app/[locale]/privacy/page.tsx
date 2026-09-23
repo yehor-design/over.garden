@@ -11,6 +11,7 @@ import {
   PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
+  ERASURE_REQUEST_INTAKE_VERSION,
   FIRST_PUBLICATION_DISCLOSURE_VERSION,
   SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
@@ -58,6 +59,10 @@ export default async function LocalizedPrivacyNoticePage({
 
   return (
     // Public-first processing and deletion notice, versioned with the API.
+    // In the order a reader asks (`OVE-505`): what becomes public, how long
+    // anything is kept, what they can choose, where to ask — and only then
+    // what this text is and which versions it carries. The status line and
+    // the form's version tag used to open the page.
     <PublicArticle
       locale={localeParam}
       dataset={{ "data-trust-surface": "privacy" }}
@@ -66,13 +71,8 @@ export default async function LocalizedPrivacyNoticePage({
       contentsLabel={copy.title}
       sections={[
         {
-          id: "privacy-status",
-          heading: copy.statusPrefix,
-          body: <strong>{copy.statusLabel}</strong>,
-        },
-        {
-          id: "privacy-controls",
-          heading: copy.controlsTitle,
+          id: "privacy-public",
+          heading: copy.publicTitle,
           body: <PolicyList lines={copy.controls} />,
         },
         {
@@ -81,48 +81,65 @@ export default async function LocalizedPrivacyNoticePage({
           body: <PolicyList lines={copy.retention} />,
         },
         {
-          id: "privacy-boundaries",
-          heading: copy.boundariesTitle,
-          body: <PolicyList lines={copy.boundaries} />,
-        },
-        {
+          // The consent notice links here.
           id: "privacy-choices",
-          heading: copy.contactTitle,
+          heading: copy.choicesTitle,
           body: (
             <div className="grid gap-4">
               <AnalyticsPrivacyControls locale={localeParam} />
               <MetaMarketingPrivacyControls locale={localeParam} />
+            </div>
+          ),
+        },
+        {
+          id: "privacy-contact",
+          heading: copy.contactTitle,
+          body: (
+            <div className="grid gap-4">
               <p className="text-text-secondary">
                 {copy.contactBeforeEmail}
                 <Link href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>
                 {copy.contactAfterEmail}
               </p>
+              <ul className="flex list-none flex-wrap gap-4">
+                <li>
+                  <Link href="/erasure">{copy.erasureLink}</Link>
+                </li>
+                <li>
+                  <Link href="/support">{copy.supportLink}</Link>
+                </li>
+                <li>
+                  <Link
+                    href={localizedPath(
+                      localeParam,
+                      "/first-publication-disclosure",
+                    )}
+                  >
+                    {copy.firstPublicationLink}
+                  </Link>
+                </li>
+              </ul>
             </div>
           ),
         },
         {
-          id: "privacy-related",
-          heading: copy.relatedTitle,
+          id: "privacy-about",
+          heading: copy.aboutTitle,
           body: (
-            <ul className="flex list-none flex-wrap gap-4">
-              <li>
-                <Link href="/erasure">{copy.erasureLink}</Link>
-              </li>
-              <li>
-                <Link href="/support">{copy.supportLink}</Link>
-              </li>
-              <li>
-                <Link
-                  href={localizedPath(
-                    localeParam,
-                    "/first-publication-disclosure",
-                  )}
-                >
-                  {copy.firstPublicationLink}{" "}
-                  {FIRST_PUBLICATION_DISCLOSURE_VERSION}
-                </Link>
-              </li>
-            </ul>
+            <div className="grid gap-3 text-text-secondary">
+              <p>
+                {copy.statusPrefix} {copy.statusLabel}
+              </p>
+              <PolicyList lines={copy.boundaries} />
+              <p className="text-caption text-text-muted">
+                {copy.versionsLabel
+                  .replace(
+                    "{firstPublication}",
+                    FIRST_PUBLICATION_DISCLOSURE_VERSION,
+                  )
+                  .replace("{erasure}", ERASURE_REQUEST_INTAKE_VERSION)}
+              </p>
+            </div>
           ),
         },
       ]}

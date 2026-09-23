@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,15 @@ import {
 } from "@/lib/analytics-routes";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
+import { localizedPath } from "@/lib/public-localization";
+import { Link } from "@/components/ui/link";
+import {
+  ANALYTICS_CONSENT_NOTICE_HEIGHT_PROPERTY,
+  useNoticeHeightOnRoot,
+} from "@/lib/consent-notice-room";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
+
+export { ANALYTICS_CONSENT_NOTICE_HEIGHT_PROPERTY };
 
 const GOOGLE_ANALYTICS_MEASUREMENT_ID = "G-71LP7XZ5NE";
 const GOOGLE_TAG_MANAGER_ID = "GTM-W979KSX3";
@@ -108,54 +116,102 @@ export function GoogleAnalytics() {
  * every client-side navigation, never flashes for a reader who answered, and
  * is never a late LCP candidate — on a text page it *is* the largest thing on
  * a phone's screen.
+ *
+ * What it asks is one question and two equal answers (`OVE-505`). It used to
+ * be a paragraph naming routes and callbacks, with "accept" drawn as the
+ * product's primary button and "decline" as the lesser one; then two
+ * sentences that took 42% of a 320 px screen with the tab bar. It names who
+ * measures and which pages — only the tools this deployment runs, so
+ * Microsoft only where Clarity is configured — and the rest is one link away,
+ * on the privacy page. It is a named region, not a dialog: it takes no focus
+ * and holds none, and a non-modal "dialog" on every page also answered every
+ * test that looked for the page's real one.
+ *
+ * While it is owed, the page keeps clear of it (`globals.css`, "The bottom of
+ * the screen"): a control a keyboard reaches is scrolled above it, never left
+ * beneath it (WCAG 2.4.11), a row that sticks to the bottom sits on top of it,
+ * and the last row of a page can be scrolled past it. How much room that is
+ * is this element's own height, which it measures and writes on `<html>`.
  */
 export function AnalyticsConsentNotice({
   locale = "uk",
+  clarityEnabled = resolveMicrosoftClarityPublicConfig().enabled,
 }: {
   locale?: InterfaceLocale;
+  /** Whether this deployment runs Microsoft Clarity after consent. */
+  clarityEnabled?: boolean;
 }) {
   const copy = getPublicSurfaceCopy(locale).analyticsConsent;
+  const messageId = "analytics-consent-message";
+  const noticeRef = useRef<HTMLElement>(null);
+  useNoticeHeightOnRoot(noticeRef, ANALYTICS_CONSENT_NOTICE_HEIGHT_PROPERTY);
 
   return (
-    <div
-      aria-label={copy.label}
-      data-analytics-consent-banner="true"
-      // The system's tokens, not the palette before it: since ADR-0032 D7 this
-      // element is in the bytes of every public document, and "nothing on the
-      // page reaches for the old palette" is asserted against those bytes.
-      //
-      // Chrome, not a toast: `z-header`, above the page and the tab bar and
-      // beneath everything a reader opens. It is on every page until it is
-      // answered, and at `z-toast` it covered the language menu's options on
-      // the workspace — and would have covered every menu, sheet and dialog
-      // that reaches the bottom of the screen (DESIGN.md §2.11).
-      className="analytics-consent-banner fixed inset-x-3 z-header mx-auto max-w-3xl rounded-md border border-border bg-surface/95 p-4 text-text shadow-overlay backdrop-blur sm:flex sm:items-center sm:gap-4"
-      role="dialog"
-    >
-      <p className="text-body-sm text-text-secondary">{copy.message}</p>
-      <div
-        data-analytics-consent-actions="true"
-        className="mt-3 grid min-w-0 gap-2 sm:mt-0 sm:flex sm:shrink-0 sm:flex-wrap"
+    <>
+      <div aria-hidden="true" data-analytics-consent-spacer="true" />
+      <section
+        ref={noticeRef}
+        aria-label={copy.label}
+        data-analytics-consent-banner="true"
+        // The system's tokens, not the palette before it: since ADR-0032 D7
+        // this element is in the bytes of every public document, and "nothing
+        // on the page reaches for the old palette" is asserted against those
+        // bytes.
+        //
+        // Chrome, not a toast: `z-header`, above the page and the tab bar and
+        // beneath everything a reader opens. At `z-toast` it covered the
+        // language menu's options on the workspace — and would have covered
+        // every menu, sheet and dialog that reaches the bottom of the screen
+        // (DESIGN.md §2.11).
+        className="analytics-consent-banner fixed inset-x-3 z-header mx-auto grid max-w-3xl gap-3 rounded-lg border border-border bg-surface p-3 text-text shadow-overlay sm:flex sm:items-center sm:gap-4 sm:p-4"
       >
-        <Button
-          className="w-full min-w-0 sm:w-auto"
-          onClick={() => writeStoredGoogleAnalyticsConsent("accepted")}
-          size="sm"
-          type="button"
+        <p
+          id={messageId}
+          className="min-w-0 flex-1 text-body-sm text-text-secondary"
         >
-          {copy.accept}
-        </Button>
-        <Button
-          className="w-full min-w-0 sm:w-auto"
-          onClick={() => writeStoredGoogleAnalyticsConsent("declined")}
-          size="sm"
-          type="button"
-          variant="secondary"
+          {clarityEnabled ? copy.messageWithClarity : copy.message}{" "}
+          <Link
+            href={`${localizedPath(locale, "/privacy")}#privacy-choices`}
+            // A prefixed address from an unprefixed page: the proxy cannot
+            // see a prefetch, so it is not made (ADR-0029 D10).
+            prefetch={false}
+            className="whitespace-nowrap"
+          >
+            {copy.details}
+          </Link>
+        </p>
+        <div
+          data-analytics-consent-actions="true"
+          // Two answers of one weight, side by side at every width: neither
+          // is the product's primary action, and declining is not a second
+          // look (`OVE-505`, criterion 2).
+          className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:shrink-0"
         >
-          {copy.decline}
-        </Button>
-      </div>
-    </div>
+          <Button
+            aria-describedby={messageId}
+            className="min-w-0"
+            data-analytics-consent-answer="accepted"
+            onClick={() => writeStoredGoogleAnalyticsConsent("accepted")}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
+            {copy.accept}
+          </Button>
+          <Button
+            aria-describedby={messageId}
+            className="min-w-0"
+            data-analytics-consent-answer="declined"
+            onClick={() => writeStoredGoogleAnalyticsConsent("declined")}
+            size="sm"
+            type="button"
+            variant="secondary"
+          >
+            {copy.decline}
+          </Button>
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -266,15 +322,32 @@ export function AnalyticsPrivacyControls({
     setSessionConsent(nextConsent);
   };
 
+  // A section of the privacy page's "your choice", in the system's type and
+  // colours (`OVE-505`): the answer is said in words and announced when it
+  // changes, both answers weigh the same, and where the choice is kept is a
+  // detail for whoever asks, not the page's second paragraph.
   return (
-    <section className="grid gap-2 rounded-lg border border-border p-4">
-      <h2 className="text-base font-semibold text-foreground">{copy.title}</h2>
-      <p className="text-muted-foreground">
-        {copy.statusPrefix} <strong>{statusLabel}</strong>. {copy.description}
+    <section
+      aria-labelledby="privacy-analytics-title"
+      data-privacy-choice="analytics"
+      className="grid gap-3 rounded-lg border border-border p-4"
+    >
+      <h3 id="privacy-analytics-title" className="text-h4 text-text-heading">
+        {copy.title}
+      </h3>
+      <p aria-live="polite" className="text-body-sm text-text">
+        {copy.statusPrefix}{" "}
+        <strong data-privacy-choice-status={consent}>{statusLabel}</strong>
       </p>
-      <p className="text-xs leading-5 text-muted-foreground">{clarityStatus}</p>
+      <p className="text-body-sm text-text-secondary">{copy.description}</p>
+      <p className="text-caption text-text-muted">{clarityStatus}</p>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" onClick={() => setConsent("accepted")}>
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          onClick={() => setConsent("accepted")}
+        >
           {copy.allow}
         </Button>
         <Button
@@ -286,10 +359,18 @@ export function AnalyticsPrivacyControls({
           {copy.turnOff}
         </Button>
       </div>
-      <p className="text-xs leading-5 text-muted-foreground">
-        {copy.preferenceKey} {GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY}.{" "}
-        {copy.preferenceDescription}
-      </p>
+      <details className="text-caption text-text-muted">
+        <summary className="w-fit cursor-pointer rounded-sm text-text-secondary outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">
+          {copy.technicalSummary}
+        </summary>
+        <p className="mt-2">
+          {copy.preferenceKey}{" "}
+          <code className="font-mono">
+            {GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY}
+          </code>
+          . {copy.preferenceDescription}
+        </p>
+      </details>
     </section>
   );
 }

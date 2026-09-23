@@ -41,11 +41,13 @@ export default async function SupportPage({ params }: SupportRouteProps) {
       locale={locale}
       dataset={{ "data-trust-surface": "support" }}
       title={copy.title}
+      // The copy's legal status is the last thing on the page, not part of
+      // its first sentence (`OVE-505`).
       description={
         <>
           {copy.introBeforeEmail}
           <Link href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>
-          {copy.introAfterEmail} {copy.statusLabel}.
+          {copy.introAfterEmail}
         </>
       }
       contentsLabel={copy.pathsTitle}
@@ -59,6 +61,12 @@ export default async function SupportPage({ params }: SupportRouteProps) {
                 {copy.accountBeforeLink}
                 <Link href="/auth/help">{copy.accountLink}</Link>
                 {copy.accountAfterLink}
+              </li>
+              {/* One entry is not an erasure request (`OVE-505`). */}
+              <li>
+                {copy.entryBeforeLink}
+                <Link href="/garden">{copy.entryLink}</Link>
+                {copy.entryAfterLink}
               </li>
               <li>
                 {copy.erasureBeforeLink}
@@ -74,6 +82,11 @@ export default async function SupportPage({ params }: SupportRouteProps) {
               </li>
             </ul>
           ),
+        },
+        {
+          id: "support-about",
+          heading: copy.aboutTitle,
+          body: <p className="text-text-secondary">{copy.statusLabel}.</p>,
         },
       ]}
     />

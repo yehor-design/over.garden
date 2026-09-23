@@ -103,8 +103,10 @@ describe("public analytics consent", () => {
       expect(isGoogleAnalyticsRoute(path), path).toBe(true);
       // And in every locale, because a prefixed spelling is the same page.
       for (const locale of ["uk", "bg", "ru"]) {
-        expect(isGoogleAnalyticsRoute(`/${locale}${path === "/" ? "" : path}`), 
-          `/${locale}${path}`).toBe(true);
+        expect(
+          isGoogleAnalyticsRoute(`/${locale}${path === "/" ? "" : path}`),
+          `/${locale}${path}`,
+        ).toBe(true);
       }
     }
 
@@ -153,19 +155,42 @@ describe("public analytics consent", () => {
 
     const html = renderToStaticMarkup(
       <>
-        <AnalyticsConsentNotice locale="bg" />
+        <AnalyticsConsentNotice locale="bg" clarityEnabled />
         <GoogleAnalytics />
       </>,
     );
 
-    expect(html).toContain("Приемете аналитиката");
-    expect(html).toContain("Откажете");
-    expect(html).toContain("Microsoft Clarity");
-    expect(html).toContain("публични, правни и страници за поддръжка");
+    expect(html).toContain("Разрешавам");
+    expect(html).toContain("Не разрешавам");
+    // Who measures and which pages, in one question; the routes and tools in
+    // full are a link away, on the reader's own language's privacy page
+    // (`OVE-505`).
+    expect(html).toContain(
+      "Разрешавате ли на Google и Microsoft да измерват посещенията на началната страница, статиите и справочните страници?",
+    );
+    expect(html).toContain('href="/bg/privacy#privacy-choices"');
+    expect(html).not.toMatch(/callback|API/);
     expect(html).toContain('data-analytics-consent-banner="true"');
     expect(html).toContain('data-analytics-consent-actions="true"');
     expect(html).toContain("analytics-consent-banner");
-    expect(html).toContain("w-full min-w-0 sm:w-auto");
+    // A named region, never a non-modal "dialog" on every page.
+    expect(html).toMatch(/<section aria-label="Съгласие за анализ"/);
+    expect(html).not.toContain('role="dialog"');
+    // Two answers of one weight: the same variant, the same size.
+    const answers = [
+      ...html.matchAll(
+        /<button[^>]*class="([^"]*)"[^>]*data-analytics-consent-answer="(accepted|declined)"/g,
+      ),
+    ];
+    expect(answers.map((match) => match[2])).toEqual(["accepted", "declined"]);
+    expect(answers[0]![1]).toBe(answers[1]![1]);
+    expect(answers[0]![1]).toContain("border-border-control");
+    // Each answer is described by the question it answers.
+    expect(
+      html.match(/aria-describedby="analytics-consent-message"/g),
+    ).toHaveLength(2);
+    // The room the notice takes at the end of the page, while it is owed.
+    expect(html).toContain('data-analytics-consent-spacer="true"');
     expect(html).not.toContain("GTM-W979KSX3");
     expect(html).not.toContain("clarity-project");
     expect(html).not.toContain("clarity.ms");
@@ -190,7 +215,8 @@ describe("public analytics consent", () => {
       mockedPathname = path;
       const notice = renderToStaticMarkup(<AnalyticsConsentNotice />);
       expect(notice, path).toContain('data-analytics-consent-banner="true"');
-      expect(notice, path).toContain("Прийняти аналітику");
+      expect(notice, path).toContain("Дозволити");
+      expect(notice, path).toContain("Не дозволяти");
       expect(notice, path).not.toContain("GTM-W979KSX3");
       expect(renderToStaticMarkup(<GoogleAnalytics />), path).toBe("");
     }
