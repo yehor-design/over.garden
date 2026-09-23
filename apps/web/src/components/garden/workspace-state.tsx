@@ -42,7 +42,9 @@ export type WorkspaceSurface =
   | "object-setup"
   | "entry-composer"
   | "space"
-  | "space-settings";
+  | "space-settings"
+  | "object-settings"
+  | "object-provenance";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",

@@ -1152,53 +1152,6 @@ export function publicObjectKindLabel(
   return copy.plant;
 }
 
-export function publicCatalogIdentityLabel(
-  locale: InterfaceLocale,
-  value: string | null | undefined,
-  objectKind?: string | null,
-  catalogSource?: string | null,
-) {
-  const labels = {
-    uk: {
-      catalog: "Каталог",
-      plantSpecies: "Вид рослини",
-      plantVariety: "Сорт рослини",
-      breed: "Порода",
-      animalBreed: "Порода тварини",
-      beeBreed: "Порода бджіл",
-    },
-    bg: {
-      catalog: "Каталог",
-      plantSpecies: "Растителен вид",
-      plantVariety: "Растителен сорт",
-      breed: "Порода",
-      animalBreed: "Порода животно",
-      beeBreed: "Пчелна порода",
-    },
-    ru: {
-      catalog: "Каталог",
-      plantSpecies: "Вид растения",
-      plantVariety: "Сорт растения",
-      breed: "Порода",
-      animalBreed: "Порода животного",
-      beeBreed: "Порода пчёл",
-    },
-  } satisfies Record<InterfaceLocale, Record<string, string>>;
-  const copy = labels[locale];
-
-  if (value === "species") return copy.plantSpecies;
-  if (value === "plant_variety") return copy.plantVariety;
-  if (value !== "breed") return copy.catalog;
-  if (catalogSource === "ua_official_bee_breed") return copy.beeBreed;
-  if (
-    objectKind === "animal" ||
-    catalogSource === "vertebrate_breed_ontology"
-  ) {
-    return copy.animalBreed;
-  }
-  return copy.breed;
-}
-
 export function publicVarietyStateLabel(
   locale: InterfaceLocale,
   value: string | null | undefined,

@@ -1,7 +1,6 @@
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   buildObjectProgressTimeline,
-  formatEntryBodyExcerpt,
   pickProgressPhotoComparison,
   type ObjectProgressTimelineEntry,
 } from "@/lib/garden/object-progress-moment";
@@ -72,47 +71,6 @@ export function ObjectProgressMoment({
           />
         </div>
       ) : null}
-
-      <ol className="grid gap-2 border-t border-border pt-3">
-        {timeline.map((entry, index) => (
-          <li
-            key={entry.id}
-            className="flex flex-col gap-3 rounded-md border border-border/70 bg-surface p-3 sm:flex-row sm:items-start"
-          >
-            <time className="shrink-0 text-caption font-medium text-text-muted sm:w-28">
-              {formatGardenWorkspaceDate(locale, entry.entryDate)}
-            </time>
-            <div className="grid min-w-0 flex-1 gap-1">
-              <p className="text-h4 text-text-heading">{entry.title}</p>
-              <p className="text-body-sm leading-6 text-text-muted">
-                {formatEntryBodyExcerpt(entry.body)}
-              </p>
-            </div>
-            {entry.mediaPublicUrl ? (
-              <SubjectAwareMediaImage
-                src={entry.mediaPublicUrl}
-                alt={formatOwnerObjectTemplate(copy.photoAlt, {
-                  title: entry.title,
-                })}
-                width={96}
-                height={96}
-                sizes="96px"
-                loading={index === 0 ? "eager" : "lazy"}
-                unoptimized
-                presentationMode="cover"
-                focalX={entry.mediaFocalX}
-                focalY={entry.mediaFocalY}
-                intrinsicWidth={entry.mediaIntrinsicWidth}
-                intrinsicHeight={entry.mediaIntrinsicHeight}
-                className="size-20 shrink-0 rounded-md border border-border sm:size-24"
-              />
-            ) : null}
-            {index < timeline.length - 1 ? (
-              <span className="sr-only">{copy.nextEntry}</span>
-            ) : null}
-          </li>
-        ))}
-      </ol>
     </section>
   );
 }

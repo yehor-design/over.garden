@@ -220,6 +220,7 @@ export async function getObjectProvenancePanel(
       db,
       scope,
       subjectPlantObjectId,
+      subject.objectKind,
     ).execute(),
     buildObjectProvenanceEdgesQuery(db, scope, subjectPlantObjectId).execute(),
   ]);
@@ -272,6 +273,14 @@ export async function getObjectProvenancePanel(
   };
 }
 
+/** A relation the domain does not allow, refused with a reason the form can say. */
+export class ProvenanceRelationError extends Error {
+  constructor(readonly reason: "cross_kind") {
+    super(`Provenance relation refused: ${reason}.`);
+    this.name = "ProvenanceRelationError";
+  }
+}
+
 export async function createProvenanceEdge(
   scope: RequestScope,
   input: CreateProvenanceEdgeInput,
@@ -309,6 +318,12 @@ export async function createProvenanceEdge(
 
       if (!sourceRow) {
         throw new Error("Provenance source object was not found.");
+      }
+      // A plant comes from a plant and an animal from an animal; the form
+      // offers only those, and a request that names another kind is refused
+      // here rather than recorded (`OVE-491`, OG-UX-045).
+      if (sourceRow.objectKind !== subjectObject.objectKind) {
+        throw new ProvenanceRelationError("cross_kind");
       }
 
       sourceObject = mapPlantObjectOption(sourceRow);
@@ -590,10 +605,18 @@ export function buildLineagePlantObjectByIdQuery(
     .where("plant_objects.id", "=", plantObjectId ?? "");
 }
 
+/**
+ * The objects a subject may name as its source: the owner's own, never the
+ * subject itself, and — when the subject's kind is known — only of that kind
+ * (`OVE-491`, OG-UX-045). A tomato is not grown from a bee colony, and a list
+ * that offers one invites the mistake; `createProvenanceEdge` refuses it
+ * whatever the form sent.
+ */
 export function buildLineageSourceObjectOptionsQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   subjectPlantObjectId: string,
+  objectKind?: string,
 ) {
   return executor
     .selectFrom("plant_objects")
@@ -612,6 +635,9 @@ export function buildLineageSourceObjectOptionsQuery(
     ])
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("plant_objects.id", "!=", subjectPlantObjectId)
+    .$if(objectKind !== undefined, (query) =>
+      query.where("plant_objects.object_kind", "=", objectKind ?? ""),
+    )
     .orderBy("plant_objects.created_at", "desc")
     .orderBy("plant_objects.id", "asc");
 }

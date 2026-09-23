@@ -95,8 +95,8 @@ describe("prove:workspace-resilience", () => {
     expect(new Set(paths).size).toBe(paths.length);
     // ADR-0023 named eleven; the three Release Center surfaces left with the
     // Stable Registry (ADR-0025); a space's page and its settings joined with
-    // OVE-490.
-    expect(WORKSPACE_SURFACE_PROBES).toHaveLength(10);
+    // OVE-490, an object's settings and provenance pages with OVE-491.
+    expect(WORKSPACE_SURFACE_PROBES).toHaveLength(12);
     expect(SKELETON_MARKERS).toContain('data-workspace-section="loading"');
   });
 

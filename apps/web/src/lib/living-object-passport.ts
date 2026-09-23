@@ -103,6 +103,8 @@ interface LivingObjectPassportPresentationBase {
   provenance: {
     count: number;
     label: string;
+    /** Where the record lives: the owner's own provenance page (`OVE-491`). */
+    href?: string;
   };
   primaryAction: LivingObjectPassportAction | null;
   secondaryActions: LivingObjectPassportAction[];
@@ -167,6 +169,11 @@ export interface LivingObjectPassportCopy {
    * catalogue" beside the gardener's own object (OVE-489 criterion 6).
    */
   openCatalog: string;
+  /**
+   * The owner's way to their specimen's public page — beside, and never
+   * confused with, the organism's catalogue card (`OVE-491` criterion 2).
+   */
+  openPublicPassport: string;
   openProfile: string;
   publicEntry: string;
   directObjectUpdate: string;
@@ -193,7 +200,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     publicPassport: "Публічний паспорт",
     ownerPassport: "Мій паспорт об'єкта",
     livingObjects: "Живі об'єкти",
-    myGarden: "Моя градина",
+    myGarden: "Мій сад",
     caretaker: "Доглядальник",
     you: "Ви",
     defaultCaretaker: "Доглядальник OverGarden",
@@ -220,6 +227,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     addUpdate: "Новий запис",
     backToGarden: "До мого саду",
     openCatalog: "{name} у каталозі",
+    openPublicPassport: "Публічний паспорт цього об'єкта",
     openProfile: "Відкрити профіль",
     publicEntry: "Публічний запис",
     directObjectUpdate: "Запис об'єкта",
@@ -273,6 +281,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     addUpdate: "Нов запис",
     backToGarden: "Към моята градина",
     openCatalog: "{name} в каталога",
+    openPublicPassport: "Публичният паспорт на този обект",
     openProfile: "Отворете профила",
     publicEntry: "Публичен запис",
     directObjectUpdate: "Запис за обекта",
@@ -326,6 +335,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     addUpdate: "Новая запись",
     backToGarden: "В мой сад",
     openCatalog: "{name} в каталоге",
+    openPublicPassport: "Публичный паспорт этого объекта",
     openProfile: "Открыть профиль",
     publicEntry: "Публичная запись",
     directObjectUpdate: "Запись объекта",

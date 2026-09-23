@@ -295,15 +295,6 @@ const UK_COPY = {
       unknown: "Відповідності каталогу ще немає",
       unset: "Відповідність каталогу не задано",
     },
-    catalogKinds: {
-      beeBreed: "Порода бджіл",
-      animalBreed: "Порода тварини",
-      breed: "Порода",
-      species: "Вид рослини",
-      plantVariety: "Сорт рослини",
-      match: "Відповідність каталогу",
-      identity: "Каталог",
-    },
     messages: {
       savingPrivate: "Публікуємо запис…",
       saved: "Запис опубліковано.",
@@ -722,15 +713,6 @@ const BG_COPY = {
       unknown: "Все още няма съответствие в каталога",
       unset: "Не е зададено съответствие в каталога",
     },
-    catalogKinds: {
-      beeBreed: "Порода пчели",
-      animalBreed: "Порода животно",
-      breed: "Порода",
-      species: "Растителен вид",
-      plantVariety: "Растителен сорт",
-      match: "Съответствие в каталога",
-      identity: "Каталог",
-    },
     messages: {
       savingPrivate: "Публикуване на записа…",
       saved: "Записът е публикуван.",
@@ -1144,15 +1126,6 @@ const RU_COPY = {
       freeText: "Сохранено без соответствия каталогу",
       unknown: "Соответствия каталогу пока нет",
       unset: "Соответствие каталогу не задано",
-    },
-    catalogKinds: {
-      beeBreed: "Порода пчёл",
-      animalBreed: "Порода животного",
-      breed: "Порода",
-      species: "Вид растения",
-      plantVariety: "Сорт растения",
-      match: "Соответствие каталогу",
-      identity: "Каталог",
     },
     messages: {
       savingPrivate: "Публикуем запись…",

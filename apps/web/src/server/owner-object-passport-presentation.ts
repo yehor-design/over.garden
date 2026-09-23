@@ -23,6 +23,11 @@ export function buildOwnerObjectPassportPresentation(
   locale: InterfaceLocale,
   /** The owner's registry handle; every public link hangs from it (ADR-0029 D9). */
   authorHandle: string | null = null,
+  /**
+   * The specimen's public page, when it has one to show (an active public
+   * entry). Offered beside the catalogue link and never as it (`OVE-491`).
+   */
+  publicPassportPath: string | null = null,
 ): OwnerLivingObjectPassportPresentation {
   const copy = getLivingObjectPassportCopy(locale);
   const object = page.plantObject;
@@ -111,7 +116,11 @@ export function buildOwnerObjectPassportPresentation(
     passportLabel: copy.ownerPassport,
     breadcrumbs: [
       { href: "/garden", label: copy.myGarden },
-      { href: "/garden", label: page.space.display_name },
+      // The object's space has a page of its own (`OVE-490`).
+      {
+        href: `/garden/spaces/${encodeURIComponent(page.space.id)}`,
+        label: page.space.display_name,
+      },
       { href: null, label: object.display_name },
     ],
     identity: {
@@ -135,8 +144,10 @@ export function buildOwnerObjectPassportPresentation(
       label: statusLabel,
       latestDate: latestEntry?.entryDate ?? null,
     },
+    // Only what the header does not already say: the identity is its
+    // description line, the latest observation and the journal state its
+    // badges (`OVE-491` criterion 1).
     facts: [
-      { key: "kind", label: domain.kindLabel, value: identityValue },
       {
         key: "context",
         label: domain.contextLabel,
@@ -152,24 +163,12 @@ export function buildOwnerObjectPassportPresentation(
           : copy.noObservations,
       },
       {
-        key: "latest-observation",
-        label: copy.latestObservation,
-        value: latestEntry
-          ? formatLivingObjectPassportDate(latestEntry.entryDate, locale)
-          : copy.noObservations,
-      },
-      {
         key: "chronology",
         label: copy.chronology,
         value: formatLivingObjectPassportEntryCount(
           locale,
           page.entries.length,
         ),
-      },
-      {
-        key: "state",
-        label: copy.currentState,
-        value: statusLabel,
       },
     ],
     cover: gallery[0] ?? null,
@@ -183,13 +182,19 @@ export function buildOwnerObjectPassportPresentation(
     provenance: {
       count: provenance.edges.length,
       label: copy.provenanceRecords,
+      href: `/garden/objects/${encodeURIComponent(object.id)}/provenance`,
     },
     primaryAction: {
       href: "#follow-up-composer",
       label: copy.addUpdate,
     },
+    // The garden is the breadcrumb's first step, so it is not a button too.
+    // The specimen's public page and the organism's catalogue card are two
+    // named links, never one ambiguous "open" (`OVE-491` criterion 2).
     secondaryActions: [
-      { href: "/garden", label: copy.backToGarden },
+      publicPassportPath
+        ? { href: publicPassportPath, label: copy.openPublicPassport }
+        : null,
       catalogPath
         ? {
             href: catalogPath,

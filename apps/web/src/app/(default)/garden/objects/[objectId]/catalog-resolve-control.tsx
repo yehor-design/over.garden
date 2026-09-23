@@ -21,7 +21,10 @@ import {
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
+import {
+  formatOwnerObjectTemplate,
+  getOwnerObjectCopy,
+} from "@/lib/owner-object-copy";
 
 import { materializeCatalogNodeAction } from "../../catalog-full-catalogue-actions";
 import { recordCatalogPickEventAction } from "../../catalog-pick-event-actions";
@@ -119,9 +122,17 @@ export function CatalogResolveControl({
           materializeFromCatalogue={materializeCatalogNodeAction}
         />
 
-        {selection ? null : (
-          <p className="text-caption text-text-muted">{copy.noMatch}</p>
-        )}
+        {/* The change is named before it is saved: what the object will
+            be matched to, and what it replaces (`OVE-491` criterion 3). */}
+        <p
+          className="text-caption text-text-muted"
+          aria-live="polite"
+          data-catalog-resolve-proposal={selection ? "named" : "none"}
+        >
+          {selection
+            ? proposalSentence(copy, selection, currentVarietyText)
+            : copy.noMatch}
+        </p>
 
         <button
           type="submit"
@@ -135,6 +146,19 @@ export function CatalogResolveControl({
       </OwnerScopedProgressiveForm>
     </section>
   );
+}
+
+function proposalSentence(
+  copy: ReturnType<typeof getOwnerObjectCopy>["catalog"],
+  selection: CatalogPickerSelection,
+  currentVarietyText: string | null,
+) {
+  const proposed =
+    selection.kind === "item" ? selection.row.displayName : selection.name;
+  const current = currentVarietyText?.trim();
+  return current
+    ? formatOwnerObjectTemplate(copy.proposed, { proposed, current })
+    : formatOwnerObjectTemplate(copy.proposedFirst, { proposed });
 }
 
 function localizedVarietyStateLabel(

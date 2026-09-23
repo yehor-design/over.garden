@@ -46,6 +46,16 @@ export const WORKSPACE_SURFACE_PROBES: readonly WorkspaceSurfaceProbe[] = [
     heading: "Живий об",
   },
   {
+    surface: "object-settings",
+    path: "/garden/objects/00000000-0000-4000-8000-000000000001/settings",
+    heading: "Налаштування об",
+  },
+  {
+    surface: "object-provenance",
+    path: "/garden/objects/00000000-0000-4000-8000-000000000001/provenance",
+    heading: "Походження об",
+  },
+  {
     surface: "space",
     path: "/garden/spaces/00000000-0000-4000-8000-000000000001",
     heading: "Простір",

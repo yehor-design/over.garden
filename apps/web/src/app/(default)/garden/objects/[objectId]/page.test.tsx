@@ -87,6 +87,8 @@ vi.mock("./object-progress-moment", () => ({
   ObjectProgressMoment: () => <section>Private progress timeline</section>,
 }));
 
+const OBJECT_ID = "10000000-0000-4000-8000-000000000001";
+
 describe("/garden/objects/[objectId]", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -120,22 +122,90 @@ describe("/garden/objects/[objectId]", () => {
     );
   });
 
-  it("preserves manual catalog resolution without rendering external photo identification", async () => {
+  // OVE-491 (OG-UX-007): the history is the page; settings and provenance
+  // are pages of their own, reached from the object's sections.
+  it("keeps the rare settings off the history page and links its three pages", async () => {
     const page = plantObjectPage([]);
     page.plantObject.variety_state = "unknown";
+    mocks.getPlantObjectPage.mockResolvedValue(page);
+    mocks.getObjectProvenancePanel.mockResolvedValueOnce({
+      sourceObjectOptions: [],
+      edges: [provenanceEdge()],
+    });
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = await renderServerHtml(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: OBJECT_ID }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Follow-up composer");
+    expect(html).not.toContain("Catalog resolve");
+    expect(html).not.toContain("Location privacy");
+    expect(html).not.toContain('id="passport-management"');
+    expect(html).not.toContain('id="passport-provenance"');
+    expect(html).not.toContain("passport-photo-identification");
+    expect(html).toMatch(
+      new RegExp(
+        `aria-current="page" data-object-section="history"[^>]*href="/garden/objects/${OBJECT_ID}"`,
+        "u",
+      ),
+    );
+    expect(html).toContain(`href="/garden/objects/${OBJECT_ID}/settings"`);
+    expect(html).toContain(`href="/garden/objects/${OBJECT_ID}/provenance"`);
+    // The provenance count rides on its section link, not a block here.
+    expect(html).toMatch(
+      /data-object-section="provenance"[^>]*>Походження<span[^>]*>1<\/span>/u,
+    );
+    // One page heading: the shell's. The object's name is the next one.
+    expect(html.match(/<h1\b/gu)).toHaveLength(1);
+    expect(html).toMatch(/<h2[^>]*>Cherry tomato<\/h2>/u);
+  });
+
+  // OVE-491 criterion 2: the specimen's public page, the organism's
+  // catalogue card and the garden are three different things, each named.
+  it("names the public passport and the catalogue apart from the garden breadcrumb", async () => {
+    const page = plantObjectPage([
+      {
+        id: "entry-1",
+        title: "First public flowers",
+        body: "Public story.",
+        entryDate: "2026-07-04",
+        visibility: "public",
+        publicSlug: "first-public-flowers",
+      },
+    ]);
+    page.plantObject.catalog_canonical_name = "Solanum lycopersicum";
+    page.plantObject.catalog_public_slug = "solanum-lycopersicum";
+    page.plantObject.catalogKind = "species";
     mocks.getPlantObjectPage.mockResolvedValue(page);
     const { default: PlantObjectReadbackPage } = await import("./page");
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
 
-    expect(html).toContain("Catalog resolve");
-    expect(html).toContain("Follow-up composer");
-    expect(html).not.toContain("passport-photo-identification");
+    expect(html).toMatch(/<a[^>]*href="\/garden"[^>]*>Мій сад<\/a>/u);
+    expect(html).toMatch(
+      /<a[^>]*href="\/garden\/spaces\/space-1"[^>]*>Balcony<\/a>/u,
+    );
+    expect(html).toMatch(
+      new RegExp(
+        `<a[^>]*href="/lineage/objects/${OBJECT_ID}"[^>]*>Публічний паспорт цього об&#x27;єкта</a>`,
+        "u",
+      ),
+    );
+    expect(html).toMatch(
+      /<a[^>]*href="\/species\/solanum-lycopersicum"[^>]*>Solanum lycopersicum у каталозі<\/a>/u,
+    );
+    // The garden is the breadcrumb, not a third button; "you" is not a line.
+    expect(html).not.toContain("До мого саду");
+    expect(html).not.toContain("Доглядальник");
   });
 
   it("keeps Ukrainian chrome on deep object readback without translating user content", async () => {
@@ -153,13 +223,13 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
 
     expect(html).toContain('lang="uk"');
-    expect(html).toContain("До мого саду");
+    expect(html).toContain("Мій сад");
     expect(html).toContain("Cherry tomato");
     expect(html).toContain("First flowers");
     expect(html).not.toContain("Перші квіти");
@@ -180,7 +250,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({ saveProgress: "first-entry" }),
       }),
     );
@@ -215,7 +285,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({ saveProgress: "follow-up" }),
       }),
     );
@@ -235,19 +305,19 @@ describe("/garden/objects/[objectId]", () => {
       "uk",
       "Відкрити публічну сторінку",
       "/journal/first-public-flowers",
-      "/lineage/objects/object-1",
+      `/lineage/objects/${OBJECT_ID}`,
     ],
     [
       "bg",
       "Отвори публичната страница",
       "/journal/first-public-flowers",
-      "/bg/lineage/objects/object-1",
+      `/bg/lineage/objects/${OBJECT_ID}`,
     ],
     [
       "ru",
       "Открыть публичную страницу",
       "/journal/first-public-flowers",
-      "/ru/lineage/objects/object-1",
+      `/ru/lineage/objects/${OBJECT_ID}`,
     ],
   ] as const)(
     "localizes owner actions in %s while preserving journal content and locale-aware public links",
@@ -269,7 +339,7 @@ describe("/garden/objects/[objectId]", () => {
 
       const html = await renderServerHtml(
         await PlantObjectReadbackPage({
-          params: Promise.resolve({ objectId: "object-1" }),
+          params: Promise.resolve({ objectId: OBJECT_ID }),
           searchParams: Promise.resolve({}),
         }),
       );
@@ -289,135 +359,36 @@ describe("/garden/objects/[objectId]", () => {
     },
   );
 
-  it.each([
-    [
-      "uk",
-      "Походження",
-      "Походить від Maria&#x27;s saved seeds · Пакет насіння",
-      "Джерело: EU Official Journal / EUR-Lex Common Catalogue. Нормалізовано OverGarden.",
-      "Відкрити джерело",
-    ],
-    [
-      "bg",
-      "Произход",
-      "Произхожда от Maria&#x27;s saved seeds · Пакет семена",
-      "Източник: EU Official Journal / EUR-Lex Common Catalogue. Нормализирано от OverGarden.",
-      "Отваряне на източника",
-    ],
-    [
-      "ru",
-      "Происхождение",
-      "Происходит от Maria&#x27;s saved seeds · Пакет семян",
-      "Источник: EU Official Journal / EUR-Lex Common Catalogue. Нормализовано OverGarden.",
-      "Открыть источник",
-    ],
-  ] as const)(
-    "localizes provenance and source attribution in %s without translating source values",
-    async (locale, title, edgeLabel, sourceSummary, openSource) => {
-      mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
-      mocks.getObjectProvenancePanel.mockResolvedValueOnce({
-        sourceObjectOptions: [],
-        edges: [
-          {
-            id: "edge-1",
-            sourceKind: "source_reference",
-            consentState: "confirmed",
-            visibilityPolicy: "owner_only_until_confirmed",
-            erasureState: "active",
-            sourceObject: null,
-            pendingIdentity: null,
-            sourceReferenceKind: "seed_packet",
-            sourceReferenceLabel: "Maria's saved seeds",
-            sourcePersonMention: null,
-            createdAt: "2026-07-04T12:00:00.000Z",
-          },
-        ],
-      });
-      mocks.getPlantObjectPage.mockResolvedValue(
-        plantObjectPage([], false, {
-          sourceCredit: {
-            sourceSlug: "eu_oj_eur_lex_common_catalogue",
-            sourceName: "EU Official Journal / EUR-Lex Common Catalogue",
-            sourceUrl: "https://eur-lex.europa.eu/",
-            attributionText:
-              "European Union, Official Journal of the European Union / EUR-Lex, Common Catalogue.",
-          },
-        }),
-      );
-      const { default: PlantObjectReadbackPage } = await import("./page");
-
-      const html = await renderServerHtml(
-        await PlantObjectReadbackPage({
-          params: Promise.resolve({ objectId: "object-1" }),
-          searchParams: Promise.resolve({}),
-        }),
-      );
-
-      expect(html).toContain(title);
-      expect(html).toContain(edgeLabel);
-      expect(html).toContain(sourceSummary);
-      expect(html).toContain(openSource);
-      expect(html).toContain("EU Plant Variety Portal");
-      expect(html).toContain("Official Journal of the European Union");
-      expect(html).not.toMatch(
-        />Provenance<|>Record private source<|>Open source</,
-      );
-      expect(html).not.toMatch(/owner_user_id|latitude|longitude|quarantine/i);
-    },
-  );
-
-  it("renders the current structured person mention without rewriting a stored label", async () => {
+  it("leaves provenance records and the data source to their own pages", async () => {
     mocks.getObjectProvenancePanel.mockResolvedValueOnce({
       sourceObjectOptions: [],
-      edges: [
-        {
-          id: "edge-person-1",
-          sourceKind: "source_reference",
-          consentState: "confirmed",
-          visibilityPolicy: "owner_only_until_confirmed",
-          erasureState: "active",
-          sourceObject: null,
-          pendingIdentity: null,
-          sourceReferenceKind: "person",
-          sourceReferenceLabel: null,
-          sourcePersonMention: "@renamed_gardener",
-          createdAt: "2026-07-04T12:00:00.000Z",
-        },
-      ],
+      edges: [provenanceEdge()],
     });
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([], false, {
+        sourceCredit: {
+          sourceSlug: "eu_oj_eur_lex_common_catalogue",
+          sourceName: "EU Official Journal / EUR-Lex Common Catalogue",
+          sourceUrl: "https://eur-lex.europa.eu/",
+          attributionText: null,
+        },
+      }),
+    );
     const { default: PlantObjectReadbackPage } = await import("./page");
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
 
-    expect(html).toContain("@renamed_gardener");
-    expect(html).not.toContain("handle previous_gardener");
-    expect(html).not.toMatch(/source_owner_user_id|owner_user_id|email/i);
+    expect(html).not.toContain("Maria&#x27;s saved seeds");
+    expect(html).not.toContain("EU Official Journal");
+    expect(html).not.toContain("Записати приватне джерело");
   });
 
-  it("fails a person reference closed to the generic private source when no safe current identity resolves", async () => {
-    mocks.getObjectProvenancePanel.mockResolvedValueOnce({
-      sourceObjectOptions: [],
-      edges: [
-        {
-          id: "edge-person-private",
-          sourceKind: "source_reference",
-          consentState: "confirmed",
-          visibilityPolicy: "owner_only_until_confirmed",
-          erasureState: "active",
-          sourceObject: null,
-          pendingIdentity: null,
-          sourceReferenceKind: "person",
-          sourceReferenceLabel: null,
-          sourcePersonMention: null,
-          createdAt: "2026-07-04T12:00:00.000Z",
-        },
-      ],
-    });
+  it("answers a malformed id with the missing record, before any read", async () => {
     const { default: PlantObjectReadbackPage } = await import("./page");
 
     const html = await renderServerHtml(
@@ -427,8 +398,8 @@ describe("/garden/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain("приватне джерело");
-    expect(html).not.toMatch(/@renamed_gardener|source_owner_user_id|email/i);
+    expect(html).toContain('data-workspace-record="missing"');
+    expect(mocks.getPlantObjectPage).not.toHaveBeenCalled();
   });
 
   // OVE-353 / AC-03, reshaped by `OVE-488` (OG-UX-045): deletion is no longer
@@ -460,7 +431,7 @@ describe("/garden/objects/[objectId]", () => {
 
       const html = await renderServerHtml(
         await PlantObjectReadbackPage({
-          params: Promise.resolve({ objectId: "object-1" }),
+          params: Promise.resolve({ objectId: OBJECT_ID }),
           searchParams: Promise.resolve({}),
         }),
       );
@@ -472,7 +443,7 @@ describe("/garden/objects/[objectId]", () => {
       // Editing returns to this entry's place in the timeline.
       expect(html).toContain(editLabel);
       expect(html).toContain(
-        "returnTo=%2Fgarden%2Fobjects%2Fobject-1%23passport-entry-entry-active",
+        `returnTo=%2Fgarden%2Fobjects%2F${OBJECT_ID}%23passport-entry-entry-active`,
       );
       // Active history stays readable; deletion is the only way it leaves.
       expect(html).toContain("Winter pruning note");
@@ -502,7 +473,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
@@ -537,7 +508,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({
           authIntent: "publish",
           authControl: "publish-ref-entry-2",
@@ -569,7 +540,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
@@ -589,7 +560,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
@@ -607,7 +578,7 @@ describe("/garden/objects/[objectId]", () => {
 
     const html = await renderServerHtml(
       await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
+        params: Promise.resolve({ objectId: OBJECT_ID }),
         searchParams: Promise.resolve({}),
       }),
     );
@@ -647,13 +618,13 @@ function plantObjectPage(
       coarse_region_code: null,
     },
     plantObject: {
-      id: "object-1",
+      id: OBJECT_ID,
       display_name: "Cherry tomato",
       object_kind: "plant",
-      catalogKind: "plant_variety",
+      catalogKind: "plant_variety" as string,
       catalog_item_id: null,
-      catalog_canonical_name: null,
-      catalog_public_slug: null,
+      catalog_canonical_name: null as string | null,
+      catalog_public_slug: null as string | null,
       variety_text: "Cherry tomato",
       variety_state: "selected",
       location_visibility: "hidden",
@@ -676,5 +647,21 @@ function plantObjectPage(
       media: null,
     })),
     gallery_media: [],
+  };
+}
+
+function provenanceEdge() {
+  return {
+    id: "edge-1",
+    sourceKind: "source_reference",
+    consentState: "confirmed",
+    visibilityPolicy: "owner_only_until_confirmed",
+    erasureState: "active",
+    sourceObject: null,
+    pendingIdentity: null,
+    sourceReferenceKind: "seed_packet",
+    sourceReferenceLabel: "Maria's saved seeds",
+    sourcePersonMention: null,
+    createdAt: "2026-07-04T12:00:00.000Z",
   };
 }
