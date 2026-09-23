@@ -15,7 +15,7 @@ import {
   getSiteShellSessionState,
   type SiteShellSessionState,
 } from "@/server/site-shell-session";
-import { geistMono, googleSans } from "@/app/fonts";
+import { geistMono, googleSansFaces } from "@/app/fonts";
 import {
   AnalyticsConsentNotice,
   GoogleAnalytics,
@@ -181,7 +181,7 @@ function DocumentFrame({
   return (
     <html
       lang={lang}
-      className={`${googleSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${googleSansFaces} ${geistMono.variable} h-full antialiased`}
       // The inline script below writes two `data-*` attributes here before
       // React hydrates; they are the document's, not the tree's.
       suppressHydrationWarning

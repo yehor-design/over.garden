@@ -15,6 +15,7 @@
 export const BROWSER_GATE_SPECS = [
   // The document and what holds it (ADR-0032).
   "static-documents.spec.ts",
+  "lcp-element.spec.ts",
   "analytics-consent.spec.ts",
   "public-hydration.spec.ts",
   // Addresses, asked over HTTP without following a redirect.
