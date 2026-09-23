@@ -204,7 +204,7 @@ created once, and its dialog is a sibling of the page, not its parent.
 
 ## Validation
 
-- Unit and contract suite: 601 files, 5,261 passed, 29 existing skips. Every
+- Unit and contract suite: 602 files, 5,264 passed, 29 existing skips. Every
   repository check (icons, design tokens, component tests, browser-spec
   registration, settled reads) passes, and lint passes with no warnings.
 - Two source-reading tests followed the account menu into its own module. The
