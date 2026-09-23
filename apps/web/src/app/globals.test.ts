@@ -467,19 +467,43 @@ describe("global responsive floor", () => {
     expect(globals).toContain("--aspect-card: 4 / 3;");
   });
 
-  it("keeps the consent banner clear of the mobile tab bar", () => {
-    // `OVE-447` criterion 7. The banner is `position: fixed`, so it shifts
-    // nothing; the failure it actually had was covering the tab bar, which
-    // carries the product's one primary action on a phone. Below `lg` it
-    // clears the bar by the same 5rem the content column reserves, and the
-    // 40rem breakpoint that used to drop the offset was wrong — the bar is
-    // `lg:hidden` and exists at every width beneath it.
-    const banner = globals.slice(globals.indexOf(".analytics-consent-banner"));
-    expect(banner).toContain(
-      "bottom: calc(5rem + env(safe-area-inset-bottom));",
+  it("keeps the bottom of the screen clear of the tab bar and the consent notice", () => {
+    // `OVE-447` criterion 7, then `OVE-505`. The notice is `position: fixed`,
+    // so it shifts nothing; the failure it had first was covering the tab bar,
+    // which carries the product's one primary action on a phone. Then focus,
+    // and the rows that stick to the bottom, went under both. One number is
+    // kept clear now: the bar wherever it is drawn — below `lg`, at every
+    // width beneath it, which a 40rem breakpoint once forgot — and the
+    // notice's measured height while an answer is owed.
+    expect(globals).toMatch(
+      /@media \(width < 64rem\) \{\s*html:has\(\[data-site-shell-region="mobile-navigation"\]\) \{\s*--bottom-bar-room: calc\(3\.5rem \+ 1px \+ env\(safe-area-inset-bottom, 0px\)\);/u,
     );
-    expect(banner).toMatch(/@media \(width >= 64rem\)/u);
-    expect(banner).not.toContain("bottom: 12px;");
+    expect(globals).toContain(
+      "var(--analytics-consent-notice-height, var(--consent-notice-estimate))",
+    );
+    // Focus, the sticky rows and the end of the page all read it.
+    expect(globals).toContain(
+      "scroll-padding-bottom: calc(var(--bottom-chrome-height) + 0.5rem);",
+    );
+    expect(globals).toMatch(
+      /@utility above-bottom-chrome \{\s*bottom: var\(--bottom-chrome-height, 0px\);/u,
+    );
+    expect(globals).toMatch(
+      /\[data-analytics-consent-spacer\] \{\s*height: var\(--consent-notice-room\);/u,
+    );
+    const banner = globals.slice(
+      globals.indexOf(".analytics-consent-banner {"),
+    );
+    expect(banner).toContain(
+      "bottom: calc(var(--bottom-bar-room) + var(--consent-notice-gap));",
+    );
+    // The marketing question, once it takes the notice's place, is given the
+    // same room from its own measured height.
+    expect(globals).toMatch(
+      /var\(\s*--meta-marketing-consent-notice-height,\s*var\(--consent-notice-estimate\)\s*\)/u,
+    );
+    // No guessed height is left to be wrong in another language.
+    expect(globals).not.toContain("11rem");
   });
 
   it("still collapses every duration for a reader who asked for less motion", () => {

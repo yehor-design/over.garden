@@ -1,8 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { NoResultError } from "kysely";
 
-import { executeApprovedErasureRequest } from "@/server/erasure-execution";
+import {
+  ErasureApprovalPhraseError,
+  ErasureRequestNotExecutableError,
+  executeApprovedErasureRequest,
+} from "@/server/erasure-execution";
 import {
   assertErasureExecutionAccess,
   assertErasureRequestMutationAccess,
@@ -19,7 +25,29 @@ import {
 import { allPublicCacheFamilyTags } from "@/lib/public-cache-tags";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
+import { operatorErasureOutcomePath } from "./outcome";
+
 const ERASURE_REQUESTS_PATH = "/garden/privacy/erasure-requests";
+
+/**
+ * Every control lands back on the list with its request named, and the list
+ * reads the request back (`OVE-505`). A transition the request is no longer
+ * in a state for — started or answered already, in another tab — writes
+ * nothing and says so; so does a mistyped approval phrase. Anything else is a
+ * failure and reaches the error boundary.
+ */
+function landOnRefusal(requestId: string, error: unknown): never {
+  if (error instanceof ErasureApprovalPhraseError) {
+    redirect(operatorErasureOutcomePath(requestId, "approval"));
+  }
+  if (
+    error instanceof NoResultError ||
+    error instanceof ErasureRequestNotExecutableError
+  ) {
+    redirect(operatorErasureOutcomePath(requestId, "stale"));
+  }
+  throw error;
+}
 
 /**
  * Every control on this surface is `(previousState, formData)` — the shape
@@ -41,12 +69,16 @@ export async function markErasureRequestReviewingAction(
   const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
 
-  await markErasureRequestReviewing({
-    requestId: String(formData.get("requestId") ?? ""),
-  });
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    await markErasureRequestReviewing({ requestId });
+  } catch (error) {
+    landOnRefusal(requestId, error);
+  }
 
   revalidatePath(ERASURE_REQUESTS_PATH);
   revalidatePath("/erasure");
+  redirect(operatorErasureOutcomePath(requestId, "done"));
 }
 
 export async function markErasureRequestHandledAction(
@@ -70,13 +102,16 @@ export async function markErasureRequestHandledAction(
     );
   }
 
-  await markErasureRequestHandled(scope, {
-    requestId: String(formData.get("requestId") ?? ""),
-    handledStatus,
-  });
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    await markErasureRequestHandled(scope, { requestId, handledStatus });
+  } catch (error) {
+    landOnRefusal(requestId, error);
+  }
 
   revalidatePath(ERASURE_REQUESTS_PATH);
   revalidatePath("/erasure");
+  redirect(operatorErasureOutcomePath(requestId, "done"));
 }
 
 export async function executeApprovedErasureRequestAction(
@@ -93,15 +128,24 @@ export async function executeApprovedErasureRequestAction(
   const scope = admission.scope;
   await assertErasureExecutionAccess(scope);
 
-  await executeApprovedErasureRequest(scope, {
-    requestId: String(formData.get("requestId") ?? ""),
-    approvalText: String(formData.get("maintainerApprovalText") ?? ""),
-  });
+  const requestId = String(formData.get("requestId") ?? "");
+  // Idempotent (`executeApprovedErasureRequest`): a request in
+  // `cleanup_pending` resumes its cleanup and is `completed` only once that is
+  // verified; a completed one is a no-op. So "resume cleanup" is this action.
+  try {
+    await executeApprovedErasureRequest(scope, {
+      requestId,
+      approvalText: String(formData.get("maintainerApprovalText") ?? ""),
+    });
+  } catch (error) {
+    landOnRefusal(requestId, error);
+  }
 
   revalidatePublicCacheTags(allPublicCacheFamilyTags(), "update");
   revalidatePath(ERASURE_REQUESTS_PATH);
   revalidatePath("/erasure");
   revalidatePath("/garden");
+  redirect(operatorErasureOutcomePath(requestId, "done"));
 }
 
 export async function markErasureRequestDryRunReviewedAction(
@@ -118,10 +162,14 @@ export async function markErasureRequestDryRunReviewedAction(
   const scope = admission.scope;
   await assertErasureRequestMutationAccess(scope);
 
-  await markErasureRequestDryRunReviewed(scope, {
-    requestId: String(formData.get("requestId") ?? ""),
-  });
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    await markErasureRequestDryRunReviewed(scope, { requestId });
+  } catch (error) {
+    landOnRefusal(requestId, error);
+  }
 
   revalidatePath(ERASURE_REQUESTS_PATH);
   revalidatePath("/erasure");
+  redirect(operatorErasureOutcomePath(requestId, "done"));
 }

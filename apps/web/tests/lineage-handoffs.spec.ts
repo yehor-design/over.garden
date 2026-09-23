@@ -531,7 +531,7 @@ async function openInvitation(page: Page, token: string) {
   await expect(
     page
       .locator(
-        '[data-invitation-state]:not([data-invitation-state="preparing"]):visible, [data-lineage-outcome]:visible',
+        '[data-invitation-state]:not([data-invitation-state="preparing"]):visible, [data-action-outcome]:visible',
       )
       .first(),
   ).toBeVisible({ timeout: 20_000 });
@@ -609,7 +609,7 @@ test.describe("lineage as tasks between two named gardeners (OVE-495)", () => {
     await page.waitForURL(
       `**/garden/lineage/claims?claim=${edges.tomato}&result=done`,
     );
-    const outcome = page.locator('[data-lineage-outcome="confirmed"]');
+    const outcome = page.locator('[data-action-outcome="confirmed"]');
     await expect(outcome).toContainText("Походження підтверджено");
     await expect(outcome).toContainText(
       `«Томат ${PREFIX}» походить від вашого «Томат ${PREFIX}»`,
@@ -702,7 +702,7 @@ test.describe("lineage as tasks between two named gardeners (OVE-495)", () => {
       `**/garden/lineage/claims?claim=${edges.pepper}&result=done`,
     );
     await expect(
-      first.locator('[data-lineage-outcome="declined"]'),
+      first.locator('[data-action-outcome="declined"]'),
     ).toContainText("Заявку відхилено");
     expect((await edgeRow(edges.pepper)).consent_state).toBe("declined");
 
@@ -721,7 +721,7 @@ test.describe("lineage as tasks between two named gardeners (OVE-495)", () => {
     await second.waitForURL(
       `**/garden/lineage/claims?claim=${edges.pepper}&result=stale`,
     );
-    const stale = second.locator('[data-lineage-outcome="stale"]');
+    const stale = second.locator('[data-action-outcome="stale"]');
     await expect(stale).toContainText("Відповідь не збережено");
     await expect(stale).toContainText("Ви вже відхилили цю заявку раніше");
     await expect(stale.locator('[role="alert"]')).toHaveCount(1);
@@ -874,7 +874,7 @@ test.describe("lineage as tasks between two named gardeners (OVE-495)", () => {
       )
       .click();
     await guestPage.waitForURL(`**${INVITATION_PATH}?result=done`);
-    const confirmed = guestPage.locator('[data-lineage-outcome="confirmed"]');
+    const confirmed = guestPage.locator('[data-action-outcome="confirmed"]');
     await expect(confirmed).toContainText("Ви підтвердили походження");
     await expect.poll(() => isFocusedWithin(confirmed)).toBe(true);
 
@@ -1020,7 +1020,7 @@ test.describe("lineage as tasks between two named gardeners (OVE-495)", () => {
       )
       .click();
     await late.waitForURL(`**${INVITATION_PATH}?result=stale`);
-    const refused = late.locator('[data-lineage-outcome="stale"]');
+    const refused = late.locator('[data-action-outcome="stale"]');
     await expect(refused).toContainText(
       "Відповідь не збережено. На це запрошення вже відповіли",
     );

@@ -583,26 +583,110 @@
   }
 }
 
-/* The consent banner floats over the page rather than in it — `position:
-   fixed`, so it cannot shift the column and contributes nothing to CLS
-   (DESIGN.md §9). What it *could* do, and did until `OVE-447`, is sit on top
-   of the mobile tab bar: the banner is `z-toast` and the bar is `z-rail`, and
-   both were anchored to the bottom of the viewport, so the product's one
-   primary action was underneath a cookie notice on every phone. Below `lg` it
-   now clears the bar by the same 5rem the content column reserves; at `lg` and
-   above there is no bar, and it sits 20px off the edge. */
+/* ═══════════════════════════════════════════════════════════════════════════
+   The bottom of the screen (`OVE-505`).
+
+   Two things can be fixed there: the tab bar — below `lg`, on every page but
+   the two writing screens (`isSiteShellComposerRoute`) — and the consent
+   notice while an answer is owed (ADR-0032 D7). What they cover is one
+   number, `--bottom-chrome-height`, and three things keep clear of it:
+
+   - focus. `scroll-padding-bottom` scrolls a control the keyboard reaches
+     above both (WCAG 2.4.11). There was none for the tab bar at all: at
+     320 px a focused link on /journals sat 44 px beneath it, answered or not;
+   - a row that sticks to the bottom of the screen — the composer's publish
+     row, a setup step's "Next" — which sits on top of them
+     (`above-bottom-chrome`). A setup flow opened at 320 px with its "Next"
+     under the tab bar;
+   - the end of the page. The column already clears the tab bar, and the
+     spacer after the shell clears the notice, so the last row can be
+     scrolled above it rather than read through it.
+
+   The tab bar's share is CSS alone, from whether the bar is in the document:
+   its 3.5rem row, its 1px top border and the device's bottom inset, which the
+   bar pads itself by. The
+   notice's share is its measured height, which the notice writes on `<html>`
+   as `--analytics-consent-notice-height`: it is as tall as its text, in three
+   languages, at a phone's text size and at 200% zoom, and the fixed guesses
+   this replaces were each wrong somewhere — by 14 px at 320 px in Ukrainian,
+   by 52 px in Bulgarian. Until the bundle has measured it, the estimate for
+   the width stands in. */
+html {
+  --bottom-bar-room: env(safe-area-inset-bottom, 0px);
+  --consent-notice-gap: 0.75rem;
+  --consent-notice-estimate: 10rem;
+  --consent-notice-room: 0px;
+  --bottom-chrome-height: calc(
+    var(--bottom-bar-room) + var(--consent-notice-room)
+  );
+  /* Room for the focus ring as well: 2px of outline 2px off the control. */
+  scroll-padding-bottom: calc(var(--bottom-chrome-height) + 0.5rem);
+}
+
+@media (width < 64rem) {
+  html:has([data-site-shell-region="mobile-navigation"]) {
+    --bottom-bar-room: calc(3.5rem + 1px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (width >= 40rem) {
+  html {
+    --consent-notice-estimate: 6.5rem;
+  }
+}
+
+@media (width >= 64rem) {
+  html {
+    --consent-notice-gap: 1.25rem;
+    --consent-notice-estimate: 6rem;
+  }
+}
+
+html[data-analytics-consent="undecided"] {
+  --consent-notice-room: calc(
+    var(--analytics-consent-notice-height, var(--consent-notice-estimate)) +
+      var(--consent-notice-gap)
+  );
+}
+
+/* The marketing question takes the notice's place once analytics is answered
+   (`meta-marketing.tsx`), and the page keeps it the same room. It is in the
+   document only while it is owed. */
+html:not([data-analytics-consent="undecided"]):has(
+    [data-meta-marketing-consent-banner]
+  ) {
+  --consent-notice-room: calc(
+    var(
+        --meta-marketing-consent-notice-height,
+        var(--consent-notice-estimate)
+      ) +
+      var(--consent-notice-gap)
+  );
+}
+
+/* The notice floats over the page rather than in it — `position: fixed`, so
+   it shifts nothing and contributes nothing to CLS (DESIGN.md §9) — just above
+   the tab bar where there is one (it once sat on top of it, `OVE-447`). It is
+   never taller than half the screen: past that, its own text scrolls. */
 .analytics-consent-banner {
-  bottom: calc(5rem + env(safe-area-inset-bottom));
-  max-height: calc(100dvh - 7rem);
+  bottom: calc(var(--bottom-bar-room) + var(--consent-notice-gap));
+  max-height: 50dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-@media (width >= 64rem) {
-  .analytics-consent-banner {
-    bottom: 20px;
-    max-height: calc(100dvh - 40px);
-  }
+/* As tall as the room for whichever question is owed, and nothing once none
+   is. */
+[data-analytics-consent-spacer] {
+  height: var(--consent-notice-room);
+}
+
+@utility above-bottom-chrome {
+  bottom: var(--bottom-chrome-height, 0px);
+}
+
+@utility above-bottom-chrome-gap {
+  bottom: calc(var(--bottom-chrome-height, 0px) + 0.5rem);
 }
 
 /* The current navigation item, before React is there to say so.
@@ -651,6 +735,12 @@ html[data-shell-section="notifications"] [data-site-shell-tab="notifications"] {
 [data-analytics-consent-banner]:not(
   html[data-analytics-consent="undecided"] *
 ) {
+  display: none;
+}
+
+/* One question at a time: the marketing notice waits for the analytics
+   answer, in the same place (`OVE-505`). */
+html[data-analytics-consent="undecided"] [data-meta-marketing-consent-banner] {
   display: none;
 }
 

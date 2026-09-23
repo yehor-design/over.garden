@@ -152,9 +152,10 @@ test.describe("an overlay keeps focus, and gives it back", () => {
     await expect(trigger).toBeVisible();
     await trigger.click();
 
-    // The sheet by name of its slot: the consent notice is a dialog too, and
-    // on every page for a reader who has not answered it (`OVE-473`) — first
-    // in the document, ahead of the sheet's portal.
+    // The sheet by name of its slot, so no other overlay can answer for it:
+    // the consent notice was a dialog on every page, first in the document
+    // ahead of the sheet's portal (`OVE-473`), until it became a named region
+    // (`OVE-505`).
     const SHEET = '[role="dialog"][data-slot="sheet-content"]';
     const sheet = page.locator(SHEET);
     await expect(sheet).toBeVisible();

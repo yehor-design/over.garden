@@ -349,8 +349,9 @@ test.describe("the journals directory: search, one mode, a draft filter panel", 
     ).toBeHidden();
 
     await open.click();
-    // The sheet by name of its slot: the consent notice is a dialog too, and
-    // on every page for a reader who has not answered it (`OVE-473`).
+    // The sheet by name of its slot, so no other overlay can answer for it:
+    // the consent notice was a dialog on every page (`OVE-473`) until it
+    // became a named region (`OVE-505`).
     const sheet = page.locator('[role="dialog"][data-slot="filter-panel"]');
     await expect(sheet).toBeVisible();
     await expect(sheet).toHaveAccessibleName("Фільтри журналів");

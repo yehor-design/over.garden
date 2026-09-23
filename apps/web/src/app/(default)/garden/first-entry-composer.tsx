@@ -1093,7 +1093,7 @@ export function FirstEntryComposer({
         {atomicCopy.publishMeaning}
       </p>
 
-      <div className="sticky bottom-2 z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      <div className="sticky above-bottom-chrome-gap z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"

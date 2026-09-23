@@ -62,6 +62,7 @@ export const BROWSER_GATE_SPECS = [
   "space-page.spec.ts",
   "object-pages.spec.ts",
   "lineage-handoffs.spec.ts",
+  "consent-and-erasure.spec.ts",
   "public-feed-cards.spec.ts",
   "entry-reading.spec.ts",
   "catalog.spec.ts",

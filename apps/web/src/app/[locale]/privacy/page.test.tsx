@@ -20,7 +20,9 @@ describe("/{locale}/privacy", () => {
     });
     expect(metadata.alternates).toBeUndefined();
     expect(html).toContain('lang="bg"');
-    expect(html).toContain("Уведомление за поверителност за MVP");
+    expect(html).toContain(
+      '<h1 class="text-h1 break-words text-text-heading">Уведомление за поверителност</h1>',
+    );
     expect(html).toContain("одобрен от основателя");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).toContain("след два часа");
@@ -43,9 +45,9 @@ describe("/{locale}/privacy", () => {
   });
 
   it.each([
-    ["uk", "Повідомлення про приватність для MVP"],
-    ["bg", "Уведомление за поверителност за MVP"],
-    ["ru", "Уведомление о конфиденциальности для MVP"],
+    ["uk", "Повідомлення про приватність"],
+    ["bg", "Уведомление за поверителност"],
+    ["ru", "Уведомление о конфиденциальности"],
   ] as const)("renders complete %s authored copy", async (locale, title) => {
     const html = renderToStaticMarkup(
       await LocalizedPrivacyNoticePage({
@@ -55,6 +57,8 @@ describe("/{locale}/privacy", () => {
 
     expect(html).toContain(`lang="${locale}"`);
     expect(html).toContain(title);
+    // The heading names the page; its review status closes it (`OVE-505`).
+    expect(html).not.toMatch(/<h1[^>]*>[^<]*MVP/u);
     expect(html).not.toMatch(
       /Founder-approved|Data retention|Review boundaries|Public analytics|Turn off/i,
     );

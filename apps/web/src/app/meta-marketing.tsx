@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  META_MARKETING_CONSENT_NOTICE_HEIGHT_PROPERTY,
+  useNoticeHeightOnRoot,
+} from "@/lib/consent-notice-room";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   META_MARKETING_CONSENT_STORAGE_KEY,
@@ -111,15 +115,23 @@ export function MetaMarketingPrivacyControls({
   };
 
   return (
-    <section className="grid gap-2 rounded-lg border border-border p-4">
-      <h2 className="text-base font-semibold text-foreground">{copy.title}</h2>
-      <p className="text-muted-foreground">
-        {copy.statusPrefix} <strong>{statusLabel}</strong>. {copy.description}
+    <section
+      aria-labelledby="privacy-marketing-title"
+      data-privacy-choice="marketing"
+      className="grid gap-3 rounded-lg border border-border p-4"
+    >
+      <h3 id="privacy-marketing-title" className="text-h4 text-text-heading">
+        {copy.title}
+      </h3>
+      <p aria-live="polite" className="text-body-sm text-text">
+        {copy.statusPrefix} <strong>{statusLabel}</strong>
       </p>
+      <p className="text-body-sm text-text-secondary">{copy.description}</p>
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
           size="sm"
+          variant="secondary"
           onClick={() => setConsent("accepted")}
           disabled={!config.enabled}
         >
@@ -134,10 +146,18 @@ export function MetaMarketingPrivacyControls({
           {copy.turnOff}
         </Button>
       </div>
-      <p className="text-xs leading-5 text-muted-foreground">
-        {copy.preferenceKey} {META_MARKETING_CONSENT_STORAGE_KEY}.{" "}
-        {copy.preferenceDescription}
-      </p>
+      <details className="text-caption text-text-muted">
+        <summary className="w-fit cursor-pointer rounded-sm text-text-secondary outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">
+          {copy.technicalSummary}
+        </summary>
+        <p className="mt-2">
+          {copy.preferenceKey}{" "}
+          <code className="font-mono">
+            {META_MARKETING_CONSENT_STORAGE_KEY}
+          </code>
+          . {copy.preferenceDescription}
+        </p>
+      </details>
     </section>
   );
 }
@@ -189,6 +209,14 @@ function MetaMarketingPublicRouteTracker({ pathname }: { pathname: string }) {
   return null;
 }
 
+/**
+ * The marketing question, in the analytics notice's place and shape
+ * (`OVE-505`): one sentence and two answers of one weight. It is never drawn
+ * while the analytics answer is still owed (`globals.css`), so a reader is
+ * asked one thing at a time instead of reading two notices stacked over the
+ * page. Once it is drawn, the page keeps the same room for it that it kept
+ * for the analytics notice, from its own measured height.
+ */
 function MetaMarketingConsentBanner({
   locale,
   onAccept,
@@ -199,25 +227,49 @@ function MetaMarketingConsentBanner({
   onDecline: () => void;
 }) {
   const copy = getTrustSurfaceCopy(locale).privacy.marketing;
+  const messageId = "meta-marketing-consent-message";
+  const noticeRef = useRef<HTMLElement>(null);
+  useNoticeHeightOnRoot(
+    noticeRef,
+    META_MARKETING_CONSENT_NOTICE_HEIGHT_PROPERTY,
+  );
 
   return (
-    <div
+    <section
+      ref={noticeRef}
       aria-label={copy.consentLabel}
-      className="fixed inset-x-3 bottom-24 z-toast mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:bottom-28 sm:flex sm:items-center sm:gap-4"
-      role="dialog"
+      data-meta-marketing-consent-banner="true"
+      className="analytics-consent-banner fixed inset-x-3 z-header mx-auto grid max-w-3xl gap-3 rounded-lg border border-border bg-surface p-3 text-text shadow-overlay sm:flex sm:items-center sm:gap-4 sm:p-4"
     >
-      <p className="text-sm leading-6 text-muted-foreground">
+      <p
+        id={messageId}
+        className="min-w-0 flex-1 text-body-sm text-text-secondary"
+      >
         {copy.consentMessage}
       </p>
-      <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
-        <Button onClick={onAccept} size="sm" type="button">
+      <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:shrink-0">
+        <Button
+          aria-describedby={messageId}
+          className="min-w-0"
+          onClick={onAccept}
+          size="sm"
+          type="button"
+          variant="secondary"
+        >
           {copy.allow}
         </Button>
-        <Button onClick={onDecline} size="sm" type="button" variant="secondary">
+        <Button
+          aria-describedby={messageId}
+          className="min-w-0"
+          onClick={onDecline}
+          size="sm"
+          type="button"
+          variant="secondary"
+        >
           {copy.keepOff}
         </Button>
       </div>
-    </div>
+    </section>
   );
 }
 

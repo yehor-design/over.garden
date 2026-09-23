@@ -12,7 +12,9 @@ describe("/privacy MVP notice", () => {
     const html = renderToStaticMarkup(await PrivacyNoticePage());
     const metadata = await generateMetadata();
 
-    expect(metadata.description).toContain("Затверджене засновником");
+    // What a reader gets from the page, first; who approved the text and how
+    // far it was reviewed is still said, where the page ends (`OVE-505`).
+    expect(metadata.description).toContain("що зберігається і як довго");
     expect(html).toContain("затверджено засновником");
     expect(html).toContain("Строки зберігання даних");
     expect(html).toContain("після двох годин");
@@ -24,7 +26,8 @@ describe("/privacy MVP notice", () => {
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
     expect(html).toContain("Видалення запису остаточне");
     expect(html).toContain('lang="uk"');
-    expect(html).toContain("Повідомлення про приватність для MVP");
+    expect(html).toContain("Повідомлення про приватність");
+    expect(html).not.toMatch(/<h1[^>]*>[^<]*MVP/u);
     expect(html).not.toContain("Русский");
     expect(html).not.toContain("410 Gone");
     expect(html).not.toMatch(/placeholder|public release remains blocked/i);

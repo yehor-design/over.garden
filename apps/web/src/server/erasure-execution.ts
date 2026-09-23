@@ -57,6 +57,28 @@ export interface ErasureExecutionSummary {
   handledStatus: "cleanup_pending" | "completed";
 }
 
+/**
+ * The approval phrase did not match: nothing was erased (`OVE-505`). A class,
+ * so the owner's page can say so in words instead of the error page.
+ */
+export class ErasureApprovalPhraseError extends Error {
+  constructor(expected: string) {
+    super(`Maintainer approval phrase is required. Type: ${expected}`);
+    this.name = "ErasureApprovalPhraseError";
+  }
+}
+
+/**
+ * The request is not in a state that can be erased — not reviewed, already
+ * answered another way, or gone. Nothing was erased.
+ */
+export class ErasureRequestNotExecutableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ErasureRequestNotExecutableError";
+  }
+}
+
 export async function executeApprovedErasureRequest(
   scope: RequestScope,
   input: ExecuteApprovedErasureRequestInput,
@@ -75,7 +97,7 @@ export async function executeApprovedErasureRequest(
   ).executeTakeFirst();
 
   if (!existing) {
-    throw new Error(
+    throw new ErasureRequestNotExecutableError(
       "Erasure request must be open and dry-run reviewed, or already in cleanup_pending, before irreversible execution.",
     );
   }
@@ -106,7 +128,7 @@ export async function executeApprovedErasureRequest(
       ).executeTakeFirst();
 
       if (!request) {
-        throw new Error(
+        throw new ErasureRequestNotExecutableError(
           "Erasure request must remain open and dry-run reviewed during execution.",
         );
       }
@@ -1232,9 +1254,7 @@ async function deleteR2MediaObject(reference: ErasureMediaObjectReference) {
 function assertMaintainerApprovalPhrase(requestId: string, value: string) {
   const expected = expectedErasureMaintainerApprovalText(requestId);
   if (value.trim() !== expected) {
-    throw new Error(
-      `Maintainer approval phrase is required. Type: ${expected}`,
-    );
+    throw new ErasureApprovalPhraseError(expected);
   }
 }
 

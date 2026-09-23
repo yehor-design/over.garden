@@ -12,7 +12,10 @@ describe("/first-publication-disclosure", () => {
     const html = renderToStaticMarkup(await FirstPublicationDisclosurePage());
     const metadata = await generateMetadata();
 
-    expect(metadata.description).toContain("Затверджене засновником");
+    // What publishing means, first; the version and who approved the text
+    // close the page (`OVE-505`).
+    expect(metadata.description).toContain("Що стає публічним");
+    expect(html).toContain("затверджено засновником");
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
     expect(html).toContain("Опубліковані записи відкриті для всіх");
     expect(html).toContain("не зберігає вибрані оригінали");

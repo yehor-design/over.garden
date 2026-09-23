@@ -443,6 +443,26 @@ every page until the reader answers it (ADR-0032 D7), so anything the reader
 opens — a menu, a popover, a sheet, a dialog — must be above it; at `--z-toast`
 it covered the language menu's options (`OVE-473`).
 
+**The bottom of the screen is one number** (`OVE-505`). Two things can be
+fixed there — the tab bar below `lg`, and the consent question while it is
+owed — and what they cover is `--bottom-chrome-height` on `<html>`: the bar's
+row, border and the device's bottom inset, from whether the bar is in the
+document, plus the question's own measured height, which it writes on
+`<html>` because it is as tall as its text in three languages at any text
+size. Three things keep clear of it, and none may do it another way:
+
+- **Focus.** `scroll-padding-bottom` scrolls a control the keyboard reaches
+  above both (WCAG 2.4.11). Before it, a focused link sat 44 px under the tab
+  bar at 320 px whether or not the reader had answered.
+- **A row that sticks to the bottom** — a composer's publish row, a setup
+  step's "Next" — is `sticky above-bottom-chrome` (or `-gap`), never a raw
+  `bottom-*` offset: a setup flow opened at 320 px with "Next" under the bar.
+- **The end of the page.** The column clears the tab bar; the spacer after the
+  shell clears the question, so the last row can be scrolled above it.
+
+A new fixed element at the bottom of the screen joins this number, or it is
+the next thing a keyboard reaches and cannot see.
+
 ---
 
 ## 3. Layout
@@ -744,6 +764,22 @@ Grounded in the Plain, Twenty, Gorgias and Workable references.
   names what to do next, not what went wrong internally.
 - A form that changes server state is a Server Action on a real endpoint
   (ADR-0024 D3). No exceptions on public pages.
+- **Its outcome is read back, and focus goes to it.** An action that redirects
+  lands on its page with the outcome in the address, and the page says what is
+  stored now in an `ActionOutcomeNotice`: polite when saved, interrupting when
+  not. It takes focus when it appears **and whenever what it reports
+  changes** — its `about` is the record and the state it is in now — because
+  React keeps one notice across outcomes that share a place: a member's "not
+  sent" became "received" in place, and focus stayed at the top of a document
+  the pressed button had left (`OVE-505`).
+- **A progressive setup asks one question at a time** (space and object setup,
+  `ProgressiveStep`): an answered question folds into one line that says what
+  was chosen, with a named "Change" that reopens it. Opening a question brings
+  it to the top of the screen, just below the header, with focus on the
+  question or its first field (`openStep`). Focus alone scrolled only as far
+  as it had to: a new question could open low on a phone with its fields
+  under the bottom chrome, and the answered step above rested half under the
+  sticky header with a "Change" too small to press.
 - A **password field** carries a show/hide control whose _accessible name_
   changes with its state — "show password" becomes "hide password". A name that
   never changes leaves a screen-reader user pressing a button whose effect they
@@ -1273,6 +1309,49 @@ them, never a technical record (`OVE-495`, OG-UX-019/032/045).
   lineage only when there is some: the confirmed ancestry, each link a
   sentence with this page's object marked. Its own gardener, signed in, gets a
   write to exactly this object, in a region that streams for them alone.
+
+### 5.16 Consent, privacy and erasure say what happens to a person's data
+
+These pages are read by someone deciding what happens to their own data, and
+they answer in that order: what the choice is, what it changes, where it
+stands — and only then who approved the text and which version it is
+(`OVE-505`, OG-UX-004/037/044).
+
+- **One consent question, on every page until answered** (ADR-0032 D7). It
+  names who measures and which pages — only the tools this deployment runs —
+  with two answers of one weight (both `secondary`, side by side at every
+  width) and a link to the privacy page's choices. It is a named region, not a
+  dialog: it takes no focus and holds none. It keeps its room at the bottom of
+  the screen (§2.11), and the marketing question, when a deployment has one,
+  waits for the analytics answer and then takes the same place and room.
+- **The privacy page's choices say the answer in words** and announce a
+  change; the storage key and the tool details are a disclosure away.
+- **A trust page leads with what the reader gets.** Privacy: what becomes
+  public, what is kept and for how long, what the reader chooses, where to
+  write. The first-publication page: what publishing means. Support: where to
+  go for what. Each ends with "About this text": the founder-approved status,
+  the pending legal review and the versions. A heading names the page, never
+  its review status.
+- **Erasure tells three things apart before it asks anything**: deleting one
+  entry (in the garden, no request needed), erasing the account and all that
+  hangs from it (the request), and copies outside OverGarden (removed only as
+  far as possible). What is deleted, what survives and how long an address
+  still answers come before the form, and the form says that sending deletes
+  nothing.
+- **Where a request stands comes first**, for a reader who has one — its state
+  in words, when it was sent, its reference, and what happens next. Sending
+  lands back on the page with the reference read back from the record.
+- **The owner's queue reads a request as a task**: whose it is (their handle,
+  the least that identifies them), when it arrived, its state in words and the
+  next step the owner may take. The preview is counts only, one list per data
+  class. The destructive confirmation names the request and what erasing it
+  covers — spaces, objects, entries, photos — on the card and in the dialog. A
+  request whose cleanup is not yet proved can be resumed, and is completed
+  only once it is. Ids, versions and data-class definitions are a disclosure
+  away, and no step says "dry run", "tombstone" or "410".
+- **Only the owner sees the queue.** A member who opens it is told so; the
+  erasure pages draw no garden chrome at all (the safe exit), so a failed
+  session recheck cannot trap a person in an account.
 
 ---
 

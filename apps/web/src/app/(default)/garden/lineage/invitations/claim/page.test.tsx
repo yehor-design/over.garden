@@ -304,7 +304,7 @@ describe("/garden/lineage/invitations/claim page", () => {
 
     const html = await renderClaimPage({ result: "done" });
 
-    expect(html).toContain('data-lineage-outcome="confirmed"');
+    expect(html).toContain('data-action-outcome="confirmed"');
     expect(html).toContain('role="status"');
     expect(html).toContain("Ви підтвердили походження");
   });
@@ -317,7 +317,7 @@ describe("/garden/lineage/invitations/claim page", () => {
 
     const html = await renderClaimPage({ result: "stale" });
 
-    expect(html).toContain('data-lineage-outcome="stale"');
+    expect(html).toContain('data-action-outcome="stale"');
     expect(html).toContain('role="alert"');
     expect(html).toContain(
       "Відповідь не збережено. Термін дії запрошення минув",
@@ -331,7 +331,7 @@ describe("/garden/lineage/invitations/claim page", () => {
 
     const html = await renderClaimPage({ result: "stale" });
 
-    expect(html).toContain('data-lineage-outcome="stale"');
+    expect(html).toContain('data-action-outcome="stale"');
     expect(html).toContain("Відповідь не збережено.");
     expect(mocks.getLineageInvitationClaimState).not.toHaveBeenCalled();
   });

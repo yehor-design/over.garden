@@ -47,7 +47,7 @@ import {
 } from "@/server/workspace-failure";
 import { LineageShell } from "../../lineage-shell";
 import { LineageGardener, lineageObjectMeta } from "../../lineage-parts";
-import { LineageOutcomeNotice } from "../../outcome-notice";
+import { ActionOutcomeNotice } from "@/components/ui/action-outcome-notice";
 import {
   confirmLineageInvitationClaimAction,
   declineLineageInvitationClaimAction,
@@ -121,8 +121,9 @@ export default async function LineageInvitationClaimPage({
     return (
       <LineageShell locale={locale} section="invitation">
         {outcome === "stale" ? (
-          <LineageOutcomeNotice
+          <ActionOutcomeNotice
             outcome="stale"
+            about="no-invitation"
             tone="warning"
             title={copy.invitation.states.notSaved}
           />
@@ -220,8 +221,9 @@ async function LineageInvitationClaimSection({
   // focused. Opened any other way, it is simply what the page says.
   if (outcome) {
     return (
-      <LineageOutcomeNotice
+      <ActionOutcomeNotice
         outcome={outcome === "done" ? message.state : "stale"}
+        about={message.state}
         tone={outcome === "done" ? message.tone : "warning"}
         title={
           outcome === "done"
@@ -231,7 +233,7 @@ async function LineageInvitationClaimSection({
       >
         <p>{message.body}</p>
         {message.action}
-      </LineageOutcomeNotice>
+      </ActionOutcomeNotice>
     );
   }
   return (
@@ -354,8 +356,9 @@ function LineageInvitationClaimCard({
       className="grid gap-4 rounded-lg border border-border p-4"
     >
       {notSaved ? (
-        <LineageOutcomeNotice
+        <ActionOutcomeNotice
           outcome="stale"
+          about="ready"
           tone="warning"
           title={copy.invitation.states.notSaved}
         />

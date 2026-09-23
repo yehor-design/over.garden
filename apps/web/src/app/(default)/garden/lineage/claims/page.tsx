@@ -33,7 +33,7 @@ import {
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { LineageShell, LINEAGE_CLAIMS_PATH } from "../lineage-shell";
 import { LineageGardener, lineageObjectMeta } from "../lineage-parts";
-import { LineageOutcomeNotice } from "../outcome-notice";
+import { ActionOutcomeNotice } from "@/components/ui/action-outcome-notice";
 import {
   confirmLineageClaimAction,
   declineLineageClaimAction,
@@ -184,6 +184,9 @@ function ClaimOutcome({
   result: "done" | "stale";
   claim: LineageClaimInboxItem | null;
 }) {
+  // The claim as it stands now: an answer to a second claim is a second
+  // outcome, and takes focus again.
+  const about = claim ? `${claim.id}:${claim.consentState}` : "gone";
   const names = claim
     ? {
         subject: claim.subjectObject.displayName,
@@ -194,24 +197,26 @@ function ClaimOutcome({
   if (result === "done" && claim && names) {
     if (claim.consentState === "confirmed") {
       return (
-        <LineageOutcomeNotice
+        <ActionOutcomeNotice
           outcome="confirmed"
+          about={about}
           tone="success"
           title={copy.claims.outcome.confirmedTitle}
         >
           {formatOwnerLineageTemplate(copy.claims.outcome.confirmedBody, names)}
-        </LineageOutcomeNotice>
+        </ActionOutcomeNotice>
       );
     }
     if (claim.consentState === "declined") {
       return (
-        <LineageOutcomeNotice
+        <ActionOutcomeNotice
           outcome="declined"
+          about={about}
           tone="success"
           title={copy.claims.outcome.declinedTitle}
         >
           {formatOwnerLineageTemplate(copy.claims.outcome.declinedBody, names)}
-        </LineageOutcomeNotice>
+        </ActionOutcomeNotice>
       );
     }
   }
@@ -219,8 +224,9 @@ function ClaimOutcome({
   if (result === "done") return null;
 
   return (
-    <LineageOutcomeNotice
+    <ActionOutcomeNotice
       outcome="stale"
+      about={about}
       tone="warning"
       title={copy.claims.outcome.staleTitle}
     >
@@ -229,7 +235,7 @@ function ClaimOutcome({
         : claim?.consentState === "declined"
           ? copy.claims.outcome.staleDeclined
           : copy.claims.outcome.staleGone}
-    </LineageOutcomeNotice>
+    </ActionOutcomeNotice>
   );
 }
 

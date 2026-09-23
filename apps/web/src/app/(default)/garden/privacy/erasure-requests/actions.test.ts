@@ -10,7 +10,12 @@ const mocks = vi.hoisted(() => ({
   markErasureRequestHandled: vi.fn(),
   markErasureRequestReviewing: vi.fn(),
   revalidatePath: vi.fn(),
+  redirect: vi.fn((location: string) => {
+    throw new Error(`NEXT_REDIRECT:${location}`);
+  }),
 }));
+
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
@@ -31,9 +36,15 @@ vi.mock("@/server/erasure-request-access", () => ({
   assertErasureRequestMutationAccess: mocks.assertErasureRequestMutationAccess,
 }));
 
-vi.mock("@/server/erasure-execution", () => ({
-  executeApprovedErasureRequest: mocks.executeApprovedErasureRequest,
-}));
+vi.mock("@/server/erasure-execution", () => {
+  class ErasureApprovalPhraseError extends Error {}
+  class ErasureRequestNotExecutableError extends Error {}
+  return {
+    executeApprovedErasureRequest: mocks.executeApprovedErasureRequest,
+    ErasureApprovalPhraseError,
+    ErasureRequestNotExecutableError,
+  };
+});
 
 vi.mock("@/server/erasure-request-repository", () => ({
   markErasureRequestDryRunReviewed: mocks.markErasureRequestDryRunReviewed,
@@ -95,12 +106,31 @@ describe("erasure request operator actions", () => {
     const formData = new FormData();
     formData.set("requestId", "request-1");
 
-    await markErasureRequestReviewingAction(undefined, formData);
+    await expect(
+      markErasureRequestReviewingAction(undefined, formData),
+    ).rejects.toThrow(
+      "NEXT_REDIRECT:/garden/privacy/erasure-requests?request=request-1&result=done",
+    );
 
     expect(mocks.markErasureRequestReviewing).toHaveBeenCalledOnce();
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/privacy/erasure-requests",
     );
+  });
+
+  it("writes nothing and says so when the request moved on in another tab (OVE-505)", async () => {
+    const { NoResultError } = await import("kysely");
+    mocks.markErasureRequestReviewing.mockRejectedValueOnce(
+      new NoResultError({} as never),
+    );
+    const { markErasureRequestReviewingAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("requestId", "request-1");
+
+    await expect(
+      markErasureRequestReviewingAction(undefined, formData),
+    ).rejects.toThrow("result=stale");
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("rejects completed outcomes through the non-destructive handled action", async () => {
@@ -147,7 +177,11 @@ describe("erasure request operator actions", () => {
       "APPROVE request-0000abcd IRREVERSIBLE ERASURE",
     );
 
-    await executeApprovedErasureRequestAction(undefined, formData);
+    await expect(
+      executeApprovedErasureRequestAction(undefined, formData),
+    ).rejects.toThrow(
+      "NEXT_REDIRECT:/garden/privacy/erasure-requests?request=00000000-0000-4000-8000-00000000abcd&result=done",
+    );
 
     expect(mocks.executeApprovedErasureRequest).toHaveBeenCalledWith(
       {
@@ -164,5 +198,40 @@ describe("erasure request operator actions", () => {
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/erasure");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
+  });
+
+  it("erases nothing and says so when the approval phrase does not match", async () => {
+    const { ErasureApprovalPhraseError } =
+      await import("@/server/erasure-execution");
+    mocks.executeApprovedErasureRequest.mockRejectedValueOnce(
+      new ErasureApprovalPhraseError("APPROVE"),
+    );
+    const { executeApprovedErasureRequestAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("requestId", "00000000-0000-4000-8000-00000000abcd");
+    formData.set("maintainerApprovalText", "approve");
+
+    await expect(
+      executeApprovedErasureRequestAction(undefined, formData),
+    ).rejects.toThrow("result=approval");
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("lets an unexpected failure reach the error boundary", async () => {
+    mocks.executeApprovedErasureRequest.mockRejectedValueOnce(
+      new Error("pool closed"),
+    );
+    const { executeApprovedErasureRequestAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("requestId", "00000000-0000-4000-8000-00000000abcd");
+    formData.set(
+      "maintainerApprovalText",
+      "APPROVE request-0000abcd IRREVERSIBLE ERASURE",
+    );
+
+    await expect(
+      executeApprovedErasureRequestAction(undefined, formData),
+    ).rejects.toThrow("pool closed");
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

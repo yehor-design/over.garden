@@ -201,7 +201,7 @@ describe("/garden/lineage/claims", () => {
       }),
       EDGE_ID,
     );
-    expect(html).toContain('data-lineage-outcome="confirmed"');
+    expect(html).toContain('data-action-outcome="confirmed"');
     expect(html).toContain("Походження підтверджено");
     expect(html).toContain(
       "«Balcony tomato» походить від вашого «Seed mother»",
@@ -216,7 +216,7 @@ describe("/garden/lineage/claims", () => {
 
     const html = await renderClaims({ claim: EDGE_ID, result: "done" });
 
-    expect(html).toContain('data-lineage-outcome="declined"');
+    expect(html).toContain('data-action-outcome="declined"');
     expect(html).toContain("Заявку відхилено");
     expect(html).toContain("ніде не показується");
   });
@@ -231,7 +231,7 @@ describe("/garden/lineage/claims", () => {
 
       const html = await renderClaims({ claim: EDGE_ID, result: "stale" });
 
-      expect(html).toContain('data-lineage-outcome="stale"');
+      expect(html).toContain('data-action-outcome="stale"');
       expect(html).toContain("Відповідь не збережено");
       expect(html).toContain(sentence);
       expect(html).toContain('role="alert"');
@@ -250,7 +250,7 @@ describe("/garden/lineage/claims", () => {
     const html = await renderClaims({ claim: EDGE_ID, result: "published" });
 
     expect(mocks.getLineageClaimRecord).not.toHaveBeenCalled();
-    expect(html).not.toContain("data-lineage-outcome");
+    expect(html).not.toContain("data-action-outcome");
   });
 
   it("says what to expect when nothing is waiting", async () => {

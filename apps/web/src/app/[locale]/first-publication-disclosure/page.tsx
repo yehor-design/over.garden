@@ -50,24 +50,38 @@ export default async function LocalizedFirstPublicationDisclosurePage({
 
   return (
     // Public-first processing and deletion notice, versioned with the API.
+    // What publishing means comes first, under its own heading; which
+    // version this is and how versions work close the page (`OVE-505`). The
+    // lines themselves are the versioned text a gardener accepts, and are
+    // not reworded here.
     <PublicArticle
       locale={localeParam}
       dataset={{ "data-trust-surface": "first-publication" }}
       title={copy.title}
-      description={`${copy.version} ${FIRST_PUBLICATION_DISCLOSURE_VERSION}. ${copy.statusLabel}.`}
+      description={copy.lead}
       contentsLabel={copy.title}
       sections={[
         {
           id: "first-publication-body",
-          heading: copy.title,
+          heading: copy.linesTitle,
           body: (
-            <div className="grid gap-4">
+            <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
+              {copy.lines.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ),
+        },
+        {
+          id: "first-publication-about",
+          heading: copy.aboutTitle,
+          body: (
+            <div className="grid gap-2 text-text-secondary">
+              <p>
+                {copy.version} {FIRST_PUBLICATION_DISCLOSURE_VERSION}.{" "}
+                {copy.statusLabel}.
+              </p>
               <p>{copy.body}</p>
-              <ul className="grid list-disc gap-2 pl-5 text-text-secondary">
-                {copy.lines.map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
             </div>
           ),
         },

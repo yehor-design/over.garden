@@ -99,6 +99,32 @@ Server changes:
 
 See `docs/redesign/2026-09-21/OVE-495-PROOF.md`.
 
+**Consent, privacy and erasure (OVE-505):** these pages answer in the order a
+person deciding about their own data asks.
+- The consent notice is one question — who measures (only the tools the
+  deployment runs; Microsoft only where Clarity is configured) and which
+  pages — with two equal answers and a link to the privacy page's choices. It
+  is a named region, on every page until answered (ADR-0032 D7).
+- The bottom of the screen is one number, `--bottom-chrome-height` (tab bar +
+  the question's measured height): focus scrolls clear of it, rows that stick
+  to the bottom sit above it (`above-bottom-chrome`), and the page ends with
+  room for it. Before, focused links sat under the tab bar at 320 px and a
+  setup step's "Next" opened beneath it.
+- Privacy, support and the first-publication page lead with what the reader
+  gets; "MVP" left their headings, and the founder-approved status and
+  versions close each page. The first-publication lines are unchanged.
+- A member's erasure page puts their request's state and next step first,
+  tells one entry, the account and outside copies apart, and reads a sent
+  request back with its reference. The owner's queue reads a request as a
+  task: handle, received, state in words, next permitted step, a counts-only
+  preview, a confirmation that names what erasing covers, and a resume for
+  `cleanup_pending` that completes only once proved.
+- `ActionOutcomeNotice` takes focus whenever what it reports (`about`)
+  changes, not only when it mounts: React kept one notice across outcomes, so
+  "received" never took focus after "not sent".
+
+See `docs/redesign/2026-09-21/OVE-505-PROOF.md`.
+
 **Authentication (OVE-504):** sign-in, sign-up, help and a new password are
 one focused column. Sign-in and sign-up share a mode switch that carries `next`.
 Each reason a reader arrives has its own sentence: an action, an expired

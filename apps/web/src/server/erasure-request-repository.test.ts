@@ -120,12 +120,21 @@ describe("erasure request repository privacy contracts", () => {
   });
 
   it("lists operator readback rows without joining journal content or auth session data", () => {
-    const compiled = buildListOperatorErasureRequestsQuery(testDb, 20).compile();
+    const compiled = buildListOperatorErasureRequestsQuery(
+      testDb,
+      20,
+    ).compile();
 
     expect(compiled.sql).toContain('from "erasure_requests"');
     expect(compiled.sql).toContain('"requester_user_id" as "requesterUserId"');
     expect(compiled.sql).toContain('"submitted_at" as "submittedAt"');
-    expect(compiled.sql).toContain('"dry_run_reviewed_at" as "dryRunReviewedAt"');
+    expect(compiled.sql).toContain(
+      '"dry_run_reviewed_at" as "dryRunReviewedAt"',
+    );
+    // The account by its handle, and nothing else about it (OVE-505).
+    expect(compiled.sql).toContain("select profiles.handle");
+    expect(compiled.sql).toContain('as "requesterHandle"');
+    expect(compiled.sql).not.toMatch(/display_name|bio|avatar/i);
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("media_assets");
     expect(compiled.sql).not.toContain('"user"');
