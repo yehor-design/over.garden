@@ -1,11 +1,13 @@
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import {
   generateMetadata as generateLocalizedRegisterHubMetadata,
+  normalizeRegisterHubView,
   renderPublicRegisterHubPage,
 } from "@/app/[locale]/species/[slug]/register/page";
 
 interface RootRegisterHubRouteProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({ params }: RootRegisterHubRouteProps) {
@@ -25,7 +27,12 @@ export async function generateMetadata({ params }: RootRegisterHubRouteProps) {
  */
 export default async function RootRegisterHubRoute({
   params,
+  searchParams,
 }: RootRegisterHubRouteProps) {
   const { slug } = await params;
-  return renderPublicRegisterHubPage(DEFAULT_PUBLIC_LOCALE, slug);
+  return renderPublicRegisterHubPage(
+    DEFAULT_PUBLIC_LOCALE,
+    slug,
+    normalizeRegisterHubView((await searchParams) ?? {}),
+  );
 }

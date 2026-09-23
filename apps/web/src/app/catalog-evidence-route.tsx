@@ -4,14 +4,21 @@ import { notFound, permanentRedirect, unstable_rethrow } from "next/navigation";
 import { cache, Suspense } from "react";
 import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
 import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
-import { NotebookIcon as NotebookPen } from "@/components/icons/Notebook";
+import { CaretRightIcon as ChevronRight } from "@/components/icons/CaretRight";
+import { PlusIcon as Plus } from "@/components/icons/Plus";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { PublicVarietySourceCredits } from "@/app/(default)/variety/[slug]/source-credits";
 import { addCatalogPublicSlugToWishlistAction } from "@/app/(default)/wishlist/actions";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
-import { getPublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy";
+import {
+  catalogFactValue,
+  catalogIdentifierSchemeName,
+  catalogQualifierName,
+  registerNumber,
+} from "@/lib/catalog/source-names";
+import { getPublicCatalogBrowseCopy } from "@/lib/public-catalog-browse-copy";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +35,10 @@ import { catalogIdentifierUrl } from "@/lib/catalog/addresses";
 import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import { cn } from "@/lib/utils";
 import type { CatalogKind } from "@/db/schema";
-import { gardenObjectSetupPreselectionPath } from "@/lib/garden/public-paths";
+import {
+  gardenObjectSetupPreselectionPath,
+  publicCatalogEvidencePath,
+} from "@/lib/garden/public-paths";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
@@ -54,7 +64,10 @@ import {
   hasAcceptedNameDisagreement,
   type PublicOrganismAssertionLine,
 } from "@/server/public-organism-card-query";
-import { buildPublicVarietyDiscoverySource } from "@/server/public-variety-repository";
+import {
+  buildPublicVarietyDiscoverySource,
+  type PublicVarietyPage,
+} from "@/server/public-variety-repository";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 import { isOwnerUserId } from "@/server/admin-access";
 import {
@@ -211,7 +224,9 @@ export async function generatePublicCatalogEvidenceMetadata(
   return {
     ...surface.metadata,
     title: `${page.catalog.canonicalName} · ${routeCopy.metadataSuffix} | OverGarden`,
-    description: `${routeCopy.title}: ${page.catalog.canonicalName}.`,
+    // The fact paragraph, which says what the organism is and whether anyone
+    // here wrote about it, rather than "Публічний вид: …" (`OVE-497`).
+    description: organismFactParagraph(page, locale),
   };
 }
 
@@ -270,7 +285,6 @@ async function renderCatalogEvidenceCard(
 
   const catalogKind = page.catalog.catalogKind;
   const publicCopy = getPublicSurfaceCopy(locale);
-  const routeCopy = getCatalogEvidenceCopy(locale, catalogKind);
   const publicPath = localizedPath(routeLocale, page.catalog.canonicalPath);
   const surface = buildPublicVarietySurfaceMetadata(page, locale, {
     routeLocale,
@@ -310,15 +324,7 @@ async function renderCatalogEvidenceCard(
     kingdom: page.catalog.kingdom,
     hostCount: page.card.hosts.length,
   });
-  const factParagraph = formatOrganismFactParagraph(locale, {
-    canonicalName: page.catalog.canonicalName,
-    catalogKind,
-    speciesName: page.catalog.species?.canonicalName ?? null,
-    formCount: page.card.formCount,
-    gardenerCount: page.card.gardenerCount,
-    regionCount: page.card.regions.length,
-    organismRole,
-  });
+  const factParagraph = organismFactParagraph(page, locale);
   const hasExperience = page.entries.length > 0 || page.card.regions.length > 0;
   const firstPhotograph = firstPhotographIndex(page.entries, (entry) =>
     Boolean(entry.media),
@@ -330,6 +336,42 @@ async function renderCatalogEvidenceCard(
   ].filter((group) => group.items.length > 0);
   const disagreement = hasAcceptedNameDisagreement(
     page.card.acceptedNameClaims,
+  );
+  // The name a gardener knows it by leads (`OVE-497`): a species' own name
+  // in the reader's language when the catalogue holds one, with the
+  // scientific name beneath it. A form's name is its own — a cultivar is
+  // called what it was registered as — and a name the catalogue does not
+  // hold is never a blank: it is the accepted name.
+  const displayName =
+    catalogKind === "species" && page.catalog.vernacularName
+      ? capitalizeFirst(page.catalog.vernacularName, locale)
+      : page.catalog.canonicalName;
+  const showsScientificName = displayName !== page.catalog.canonicalName;
+  // What a gardener can keep: a cultivar, a breed, a plant or an animal —
+  // and not a pest or a disease of one. Nothing is offered for the rest
+  // (`OVE-496`, the rows).
+  const keepable =
+    organismRole === null &&
+    (catalogKind === "plant_variety" ||
+      catalogKind === "breed" ||
+      page.catalog.kingdom === "Plantae" ||
+      page.catalog.kingdom === "Animalia");
+  const species = page.catalog.species;
+  const speciesPath = species
+    ? localizedPath(
+        routeLocale,
+        publicCatalogEvidencePath({
+          catalogKind: "species",
+          publicSlug: species.publicSlug,
+          speciesSlug: null,
+        }),
+      )
+    : null;
+  const formsPath = localizedPath(
+    routeLocale,
+    publicCatalogRegisterHubPath(
+      species?.publicSlug ?? page.catalog.publicSlug,
+    ),
   );
 
   return (
@@ -362,51 +404,118 @@ async function renderCatalogEvidenceCard(
         className="flex flex-col gap-5 border-b border-border pb-6"
       >
         <div className="flex flex-col gap-3">
+          {/* Where this organism sits, and the way back up: the catalogue,
+              and for a form its species and every other form of it — the
+              register view, whose search and page the browser's own Back
+              keeps (`OVE-497`). */}
+          <nav aria-label={cardCopy.crumbsLabel} className="min-w-0">
+            <ol className="flex min-w-0 list-none flex-wrap items-center gap-1.5 text-caption text-text-muted">
+              <li className="flex min-w-0 items-center gap-1.5">
+                <Link
+                  href={localizedPath(routeLocale, CATALOG_BROWSE_PATH)}
+                  variant="muted"
+                  data-organism-crumb="catalogue"
+                >
+                  {getPublicCatalogBrowseCopy(routeLocale).eyebrow}
+                </Link>
+              </li>
+              {species && speciesPath ? (
+                <>
+                  <li className="flex min-w-0 items-center gap-1.5">
+                    <ChevronRight
+                      className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <Link
+                      href={speciesPath}
+                      variant="muted"
+                      data-organism-crumb="species"
+                      className="max-w-52 truncate"
+                    >
+                      {capitalizeFirst(species.displayName, locale)}
+                    </Link>
+                  </li>
+                  <li className="flex min-w-0 items-center gap-1.5">
+                    <ChevronRight
+                      className="size-4 shrink-0"
+                      aria-hidden="true"
+                    />
+                    <Link
+                      href={formsPath}
+                      variant="muted"
+                      data-organism-crumb="forms"
+                    >
+                      {cardCopy.sections.allForms}
+                    </Link>
+                  </li>
+                </>
+              ) : null}
+            </ol>
+          </nav>
           <p className="text-overline text-text-muted uppercase">
-            {routeCopy.title}
+            {organismRole
+              ? cardCopy.fact.role[organismRole]
+              : cardCopy.fact.kind[catalogKind]}
           </p>
           {/* A species' canonical name is a Latin binomial and is marked as
               one (WCAG 3.1.2), so a screen reader does not read it with
-              Ukrainian or Bulgarian phonetics. A variety's or a breed's
-              canonical name is a cultivar or a breed name in somebody's
-              language and is deliberately left unmarked — claiming Latin for
-              it would be a different error in the same place. */}
+              Ukrainian or Bulgarian phonetics — whether it is the heading or
+              the line beneath the heading. A variety's or a breed's name is
+              a cultivar or a breed name in somebody's language and is
+              deliberately left unmarked: claiming Latin for it would be a
+              different error in the same place. */}
           <h1
-            {...(catalogKind === "species" ? { lang: "la" } : {})}
+            {...(catalogKind === "species" && !showsScientificName
+              ? { lang: "la" }
+              : {})}
             className="text-h1 break-words text-text-heading"
           >
-            {page.catalog.canonicalName}
+            {displayName}
           </h1>
+          {showsScientificName ? (
+            <p
+              lang="la"
+              data-organism-scientific-name="true"
+              className="-mt-2 text-body-lg break-words text-text-secondary italic"
+            >
+              {page.catalog.canonicalName}
+            </p>
+          ) : null}
           {/* The fact-only first paragraph, built from structured fields
               (ADR-0026 D9). It is the page's answer, so it is first and it is
               prose — not a table, not behind anything. */}
           <p data-organism-fact className="max-w-prose text-body-lg text-text">
             {factParagraph}
           </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="neutral">
-              {formatPublicCount(locale, "entry", page.entryCount)}
-            </Badge>
-            <Badge tone="neutral">
-              {formatPublicCount(locale, "photo", page.photoCount)}
-            </Badge>
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          {/* Counts of nothing are not facts about an organism (DESIGN.md
+              §5.10): the paragraph above already says nobody has written. */}
+          {page.entryCount > 0 || page.photoCount > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {page.entryCount > 0 ? (
+                <Badge tone="neutral">
+                  {formatPublicCount(locale, "entry", page.entryCount)}
+                </Badge>
+              ) : null}
+              {page.photoCount > 0 ? (
+                <Badge tone="neutral">
+                  {formatPublicCount(locale, "photo", page.photoCount)}
+                </Badge>
+              ) : null}
+            </div>
+          ) : null}
+          {keepable ? (
+            // Object setup, which first offers the objects of this organism
+            // the reader already keeps — each a link to write about it —
+            // and otherwise adds one (`OVE-485`).
             <NextLink
               href={gardenObjectSetupPreselectionPath(page.catalog.publicSlug)}
               data-organism-add-to-garden="true"
-              className={buttonVariants({ size: "lg" })}
+              className={cn(buttonVariants({ size: "lg" }), "mt-2 w-fit")}
             >
-              <NotebookPen aria-hidden="true" />
-              {routeCopy.logThisIdentity}
+              <Plus aria-hidden="true" />
+              {getPublicCatalogBrowseCopy(routeLocale).addToGarden}
             </NextLink>
-            <NextLink
-              href={localizedPath(routeLocale, CATALOG_BROWSE_PATH)}
-              className={buttonVariants({ variant: "secondary", size: "lg" })}
-            >
-              {routeCopy.backToCatalog}
-            </NextLink>
-          </div>
+          ) : null}
           {isPlantVariety ? (
             <OwnerScopedProgressiveForm
               action={addCatalogPublicSlugToWishlistAction}
@@ -439,25 +548,6 @@ async function renderCatalogEvidenceCard(
           ) : null}
         </div>
       </header>
-
-      {isPlantVariety && page.seedProof ? (
-        <Section
-          id="organism-growing"
-          className="border-b border-border pb-6"
-          level={2}
-          title={page.seedProof.title}
-          description={page.seedProof.summary}
-        >
-          <p className="max-w-prose text-body-sm whitespace-pre-wrap text-text">
-            {page.seedProof.body}
-          </p>
-          {page.seedProof.sourceLabel ? (
-            <p className="text-caption text-text-muted">
-              {page.seedProof.sourceLabel}
-            </p>
-          ) : null}
-        </Section>
-      ) : null}
 
       {hasExperience ? (
         <Section
@@ -606,6 +696,34 @@ async function renderCatalogEvidenceCard(
         </Section>
       ) : null}
 
+      {isPlantVariety && page.seedProof ? (
+        // The editors' note, after what gardeners wrote and labelled as the
+        // editors' (`OVE-497`): it is orientation, not a first-hand journal,
+        // and a reader should never have to guess which of the two they are
+        // reading.
+        <Section
+          id="organism-growing"
+          data-organism-section="editorial"
+          className="border-b border-border pb-6"
+          level={2}
+          title={page.seedProof.title}
+          description={page.seedProof.summary}
+        >
+          <p
+            data-organism-editorial="true"
+            className="text-caption text-text-muted"
+          >
+            {cardCopy.sections.editorial}
+            {page.seedProof.sourceLabel
+              ? ` · ${page.seedProof.sourceLabel}`
+              : ""}
+          </p>
+          <p className="max-w-prose text-body-sm whitespace-pre-wrap text-text">
+            {page.seedProof.body}
+          </p>
+        </Section>
+      ) : null}
+
       {relationGroups.length > 0 ? (
         <Section
           id="organism-relations"
@@ -638,28 +756,40 @@ async function renderCatalogEvidenceCard(
                   </li>
                 ))}
               </ul>
+              {group.key === "forms" && catalogKind === "species" ? (
+                // A dozen forms, the written-about first, and the way to all
+                // of them (`OVE-497`): the register view searches and pages,
+                // and carries the registration number a seed packet quotes,
+                // which this card cannot hold. 621 chips were the page.
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <Link
+                    href={formsPath}
+                    data-organism-register-hub="true"
+                    variant="quiet"
+                    className="inline-flex min-h-11 w-fit items-center rounded-lg border border-border px-3 text-body-sm font-medium"
+                  >
+                    {`${cardCopy.sections.allForms} (${page.card.formCount.toLocaleString(locale)})`}
+                  </Link>
+                  {page.card.formCount > group.items.length ? (
+                    <p
+                      data-organism-forms-shown="true"
+                      className="text-body-sm text-text-muted"
+                    >
+                      {cardCopy.sections.formsShown
+                        .replace(
+                          "{shown}",
+                          group.items.length.toLocaleString(locale),
+                        )
+                        .replace(
+                          "{total}",
+                          page.card.formCount.toLocaleString(locale),
+                        )}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ))}
-          {catalogKind === "species" && page.card.formCount > 0 ? (
-            // The way into the register hub (OVE-433). The card shows the
-            // forms it can name; the hub shows every one of them with the
-            // registration number a seed packet quotes, which is the fact this
-            // card cannot hold and nobody else publishes.
-            <Link
-              href={localizedPath(
-                routeLocale,
-                publicCatalogRegisterHubPath(page.catalog.publicSlug),
-              )}
-              data-organism-register-hub="true"
-              variant="quiet"
-              className="inline-flex min-h-11 w-fit items-center rounded-lg border border-border px-3 text-body-sm"
-            >
-              {getPublicCatalogRegisterCopy(routeLocale).heading(
-                page.catalog.canonicalName,
-                page.card.formCount,
-              )}
-            </Link>
-          ) : null}
         </Section>
       ) : null}
 
@@ -817,7 +947,10 @@ async function renderCatalogEvidenceCard(
                         className="flex flex-wrap items-baseline gap-x-2 text-body-sm"
                       >
                         <span className="text-text-muted">
-                          {identifierSchemeLabel(identifier.scheme)}
+                          {catalogIdentifierSchemeName(
+                            identifier.scheme,
+                            locale,
+                          )}
                         </span>
                         {href ? (
                           <Link
@@ -826,7 +959,8 @@ async function renderCatalogEvidenceCard(
                             rel="noreferrer"
                             target="_blank"
                           >
-                            {identifier.value}
+                            {registerNumber(identifier.value) ??
+                              identifier.value}
                             <ExternalLink
                               className="size-4"
                               aria-hidden="true"
@@ -834,7 +968,8 @@ async function renderCatalogEvidenceCard(
                           </Link>
                         ) : (
                           <span className="text-code font-mono text-text">
-                            {identifier.value}
+                            {registerNumber(identifier.value) ??
+                              identifier.value}
                           </span>
                         )}
                       </li>
@@ -871,7 +1006,7 @@ async function renderCatalogEvidenceCard(
                         className="flex flex-wrap gap-x-2"
                       >
                         <span className="text-text-muted">
-                          {assertionLabel(cardCopy, line)}:
+                          {assertionLabel(cardCopy, line, locale)}:
                         </span>
                         {/* A name is written in a language, and the source
                             says which one — so the markup says it too (WCAG
@@ -885,11 +1020,15 @@ async function renderCatalogEvidenceCard(
                             : {})}
                           className="text-text"
                         >
-                          {line.value}
+                          {assertionValue(line, locale)}
                         </span>
                         {line.qualifier ? (
                           <span className="text-text-muted">
-                            ({line.qualifier})
+                            {`(${catalogQualifierName(
+                              line.qualifier,
+                              line.kind,
+                              locale,
+                            )})`}
                           </span>
                         ) : null}
                       </li>
@@ -945,6 +1084,33 @@ async function renderCatalogEvidenceCard(
       />
     </main>
   );
+}
+
+/** The fact-only first paragraph (ADR-0026 D9), for the page and its description. */
+function organismFactParagraph(
+  page: PublicVarietyPage,
+  locale: InterfaceLocale,
+) {
+  const species = page.catalog.species;
+  return formatOrganismFactParagraph(locale, {
+    canonicalName: page.catalog.canonicalName,
+    catalogKind: page.catalog.catalogKind,
+    // A form's species as its reader knows it, quoted the way the language
+    // quotes a name — "сорт виду «помідор їстівний»" — and its accepted name
+    // when the catalogue holds no other (`OVE-497`).
+    speciesName: species
+      ? species.displayName !== species.canonicalName
+        ? quotedName(species.displayName, locale)
+        : species.canonicalName
+      : null,
+    formCount: page.card.formCount,
+    gardenerCount: page.card.gardenerCount,
+    regionCount: page.card.regions.length,
+    organismRole: organismRoleFor({
+      kingdom: page.catalog.kingdom,
+      hostCount: page.card.hosts.length,
+    }),
+  });
 }
 
 /** "Saved to your wishlist" — a receipt the redirect leaves in the address. */
@@ -1052,14 +1218,48 @@ function presenceRegionLabel(copy: OrganismCopy, regionCode: string) {
   );
 }
 
-function assertionLabel(copy: OrganismCopy, line: PublicOrganismAssertionLine) {
+function assertionLabel(
+  copy: OrganismCopy,
+  line: PublicOrganismAssertionLine,
+  locale: InterfaceLocale,
+) {
   if (line.kind === "name") {
     return (copy.nameType as Record<string, string>)[line.label] ?? line.label;
   }
   if (line.kind === "fact") {
     return (copy.predicate as Record<string, string>)[line.label] ?? line.label;
   }
-  return `${copy.sections.identifier} ${line.label}`;
+  // The register or database the number points into, by its name — not
+  // `UA_REGISTER` (`OVE-497`).
+  return catalogIdentifierSchemeName(line.label, locale);
+}
+
+/** A line's value as a reader would say it: a number as printed, a status in words. */
+function assertionValue(
+  line: PublicOrganismAssertionLine,
+  locale: InterfaceLocale,
+) {
+  if (line.kind === "identifier") {
+    return registerNumber(line.value) ?? line.value;
+  }
+  if (line.kind === "fact") {
+    return catalogFactValue(line.label, line.value, locale);
+  }
+  return line.value;
+}
+
+/** A name in the quotation marks its language uses. */
+function quotedName(value: string, locale: InterfaceLocale) {
+  return locale === "bg" ? `„${value}“` : `«${value}»`;
+}
+
+/**
+ * A name as a heading writes it. The catalogue stores common names as a
+ * dictionary does — "помідор їстівний" — and a heading starts with a capital
+ * in all three languages.
+ */
+function capitalizeFirst(value: string, locale: InterfaceLocale) {
+  return value.charAt(0).toLocaleUpperCase(locale) + value.slice(1);
 }
 
 function getCatalogEvidenceCopy(
@@ -1071,55 +1271,41 @@ function getCatalogEvidenceCopy(
     return {
       title: publicCopy.variety.title,
       metadataSuffix: publicCopy.variety.metadataSuffix,
-      logThisIdentity: publicCopy.variety.logThisVariety,
-      backToCatalog: CATALOG_EVIDENCE_COPY[locale].backToCatalog,
     };
   }
 
-  return {
-    ...CATALOG_EVIDENCE_COPY[locale][catalogKind],
-    backToCatalog: CATALOG_EVIDENCE_COPY[locale].backToCatalog,
-  };
+  return CATALOG_EVIDENCE_COPY[locale][catalogKind];
 }
 
 const CATALOG_EVIDENCE_COPY = {
   uk: {
-    backToCatalog: "До каталогу",
     species: {
       title: "Публічний вид",
       metadataSuffix: "вид",
-      logThisIdentity: "Записати цей вид",
     },
     breed: {
       title: "Публічна порода або лінія",
       metadataSuffix: "порода або лінія",
-      logThisIdentity: "Записати цю породу або лінію",
     },
   },
   bg: {
-    backToCatalog: "Към каталога",
     species: {
       title: "Публичен вид",
       metadataSuffix: "вид",
-      logThisIdentity: "Запишете този вид",
     },
     breed: {
       title: "Публична порода или линия",
       metadataSuffix: "порода или линия",
-      logThisIdentity: "Запишете тази порода или линия",
     },
   },
   ru: {
-    backToCatalog: "В каталог",
     species: {
       title: "Публичный вид",
       metadataSuffix: "вид",
-      logThisIdentity: "Записать этот вид",
     },
     breed: {
       title: "Публичная порода или линия",
       metadataSuffix: "порода или линия",
-      logThisIdentity: "Записать эту породу или линию",
     },
   },
 } as const;
@@ -1149,16 +1335,6 @@ function isLanguageQualifier(qualifier: string | null): qualifier is string {
   return (
     qualifier !== null && /^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/u.test(qualifier)
   );
-}
-
-/**
- * The scheme a reader sees beside an identifier.
- *
- * Upper-case, because these are the names the sources use for themselves —
- * COL, GBIF, WFO, EPPO — and Wikidata is the one that is not an acronym.
- */
-function identifierSchemeLabel(scheme: string): string {
-  return scheme === "wikidata" ? "Wikidata" : scheme.toUpperCase();
 }
 
 /** `<time datetime>` wants ISO, whatever the row holds. */

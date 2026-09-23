@@ -45,6 +45,8 @@ const FIXTURE_PREFIX = "ove452";
 const D9_SECTION_ORDER = [
   "facts",
   "experience",
+  // The editors' growing note comes after what gardeners wrote (`OVE-497`).
+  "editorial",
   "relations",
   "presence",
   "mentions",

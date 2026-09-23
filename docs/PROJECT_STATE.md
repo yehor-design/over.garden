@@ -99,6 +99,29 @@ facet.
 
 See `docs/redesign/2026-09-21/OVE-496-PROOF.md`.
 
+**Organism pages (OVE-497):** an organism's card leads with who it is and what
+gardeners wrote (DESIGN.md §5.18; ADR-0026 D9 amended).
+- The header: crumbs (catalogue › species › all forms), the kind in plain
+  words, the reader's common name with the Latin name beneath it (the
+  accepted name when the catalogue holds none), counts only when there is
+  something to count, and "Додати в мій сад" for what a gardener can keep.
+  The meta description is the fact paragraph.
+- Then gardeners' experience, then the editors' growing note labelled as the
+  editors', then a dozen forms (the written-about first) with "Усі форми (N)".
+  The card statement counts forms and aggregates only the dozen; maize has
+  4,197.
+- Names and sources in words: a source by its name (never the ingest's
+  `ua_state_register`), one group per source, registers by name, numbers as
+  printed, statuses, countries and languages in the reader's language
+  (`lib/catalog/source-names.ts`).
+- The register view (`/species/{slug}/register`) holds every form: cultivars
+  or breeds by kingdom, the registration where there is one, a `?q=` search
+  on a word of a name and `?page=` pages of 100. Searched and later pages are
+  `noindex, follow`, and past the last page is not found. Its queries exclude
+  inactive and user-created forms, like the card's.
+
+See `docs/redesign/2026-09-21/OVE-497-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

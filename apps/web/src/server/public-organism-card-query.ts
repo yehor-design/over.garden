@@ -23,7 +23,10 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export interface PublicOrganismCardRow {
   firstHandContentAt: Date | string | null;
   indexableOverride: boolean | null;
+  /** The first forms only (`ORGANISM_CARD_FORM_PREVIEW`); `formCount` is all. */
   forms: PublicOrganismRelatedRow[];
+  /** Every public form; the statement always carries it. */
+  formCount?: number;
   pests: PublicOrganismRelatedRow[];
   hosts: PublicOrganismRelatedRow[];
   names: PublicOrganismNameRow[];
@@ -104,6 +107,14 @@ export interface PublicOrganismExperienceRow {
   totalGardeners: number;
 }
 
+/**
+ * How many of a species' forms its card names (`OVE-497`). The tomato has 621
+ * and the largest species over four thousand: the card is about the species
+ * and what gardeners wrote, and the whole list is the register's, one link
+ * away with search and pages. Forms somebody here wrote about come first.
+ */
+export const ORGANISM_CARD_FORM_PREVIEW = 12;
+
 const PUBLIC_ASSERTION = sql`assertion.rights_class = 'source_public' and assertion.decision in ('automatic', 'curator_accepted')`;
 
 /** A related node the card may link to: active, selectable, global, addressed. */
@@ -146,7 +157,25 @@ export function buildPublicOrganismCardStatement(catalogItemId: string) {
       item.first_hand_content_at as "firstHandContentAt",
       item.indexable_override as "indexableOverride",
       coalesce((
-        select json_agg(${relatedJson("form", false)} order by form.canonical_name, form.id)
+        select json_agg(preview.related order by preview.unwritten, preview.name, preview.id)
+        from (
+          select ${relatedJson("form", false)} as related,
+            form.first_hand_content_at is null as unwritten,
+            form.canonical_name as name,
+            form.id as id
+          from catalog_item_relations as relation
+          join catalog_items as form on form.id = relation.from_catalog_item_id
+          join catalog_source_assertions as assertion on assertion.id = relation.assertion_id
+          where relation.to_catalog_item_id = item.id
+            and relation.relation_type = 'form_of'
+            and ${publicNode("form")}
+            and ${PUBLIC_ASSERTION}
+          order by form.first_hand_content_at is null, form.canonical_name, form.id
+          limit ${ORGANISM_CARD_FORM_PREVIEW}
+        ) as preview
+      ), '[]'::json) as "forms",
+      (
+        select count(*)::int
         from catalog_item_relations as relation
         join catalog_items as form on form.id = relation.from_catalog_item_id
         join catalog_source_assertions as assertion on assertion.id = relation.assertion_id
@@ -154,7 +183,7 @@ export function buildPublicOrganismCardStatement(catalogItemId: string) {
           and relation.relation_type = 'form_of'
           and ${publicNode("form")}
           and ${PUBLIC_ASSERTION}
-      ), '[]'::json) as "forms",
+      ) as "formCount",
       coalesce((
         select json_agg(${relatedJson("pest", true)} order by pest.canonical_name, pest.id)
         from catalog_item_relations as relation
@@ -651,6 +680,22 @@ export function assemblePublicOrganismCard(input: {
     });
   }
 
+  // A name no assertion backs is shown under the organism's own source, by
+  // name (`OVE-497`). When that source also asserted something here, it is
+  // one source and one group, not two headings reading the same.
+  for (const [key, group] of groups) {
+    if (group.sourceSlug !== null) continue;
+    const named = [...groups.values()].find(
+      (other) =>
+        other !== group &&
+        other.sourceSlug !== null &&
+        other.sourceName === group.sourceName,
+    );
+    if (!named) continue;
+    named.lines.unshift(...group.lines);
+    groups.delete(key);
+  }
+
   // One badge per country, from the fact whose region is exactly that country.
   // A sub-national row (`UA-30`) is not a country row and never becomes one.
   const presence = new Map<string, PublicOrganismPresence>();
@@ -757,7 +802,7 @@ export function assemblePublicOrganismCard(input: {
     indexableOverride,
     hasFirstHandContent:
       firstHandContentAt !== null || indexableOverride === true,
-    formCount: row?.forms.length ?? 0,
+    formCount: Number(row?.formCount ?? row?.forms.length ?? 0),
     gardenerCount,
     regions,
     forms: (row?.forms ?? []).map(toRelated),

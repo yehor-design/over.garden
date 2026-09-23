@@ -47,6 +47,14 @@ const FILTERED_LISTINGS: Readonly<Record<string, readonly string[]>> = {
   ],
 };
 
+/**
+ * A species' forms (`OVE-497`), searched by name and paged a hundred at a
+ * time. Its canonical is the first page of all of them, so a search and a
+ * later page are views of it: kept out of the index, every form they list
+ * still followed.
+ */
+const REGISTER_HUB_PATH = /^\/species\/[^/]+\/register$/u;
+
 export function paginatedListingPageSize(pathname: string): number | null {
   const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
   return PAGINATED_LISTINGS[path] ?? null;
@@ -95,6 +103,11 @@ export function paginatedListingRobotsTag(
   const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
   const filters = FILTERED_LISTINGS[path] ?? [];
   if (filters.some((filter) => search.get(filter))) return "noindex, follow";
+  if (REGISTER_HUB_PATH.test(path)) {
+    return search.get("q") || requestedListingPage(search) !== null
+      ? "noindex, follow"
+      : null;
+  }
   // A profile's lists page too (`OVE-494`), under the same rule and for the
   // same reason: the profile's canonical is its first page, so page two is
   // kept out of the index while every entry it lists stays reachable. The

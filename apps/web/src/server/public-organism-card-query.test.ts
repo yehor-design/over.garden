@@ -367,6 +367,56 @@ describe("assemblePublicOrganismCard", () => {
     });
   });
 
+  it("folds a name no assertion backs into its source's own group, when that source asserted something too", () => {
+    // `OVE-497`: the card printed "Ukraine State Register of Plant Varieties"
+    // twice — once for the registered name the import stored without an
+    // assertion, once for the number it asserted. To a reader it is one
+    // source.
+    const card = assemblePublicOrganismCard({
+      locale: "uk",
+      fallbackSource: {
+        slug: "ua_state_register",
+        name: "Ukraine State Register of Plant Varieties",
+      },
+      experience: [],
+      row: row({
+        names: [
+          {
+            displayName: "Де Барао",
+            nameType: "denomination",
+            locale: "uk",
+            authorship: null,
+            isPrimary: true,
+            sourceSlug: null,
+            sourceName: null,
+            sourceVersion: null,
+            observedAt: null,
+          },
+        ],
+        identifiers: [
+          {
+            scheme: "ua_register",
+            value: "RegisterVarietis:09040016",
+            sourceSlug: "ua-state-register",
+            sourceName: "Ukraine State Register of Plant Varieties",
+            sourceVersion: "2025-07-15",
+            observedAt: "2026-09-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    });
+
+    expect(card.sourceGroups).toHaveLength(1);
+    expect(card.sourceGroups[0]).toMatchObject({
+      sourceSlug: "ua-state-register",
+      sourceVersion: "2025-07-15",
+    });
+    expect(card.sourceGroups[0]!.lines.map((line) => line.kind)).toEqual([
+      "name",
+      "identifier",
+    ]);
+  });
+
   it("treats the owner's override as first-hand content and an untouched node as an empty card", () => {
     expect(
       assemblePublicOrganismCard({

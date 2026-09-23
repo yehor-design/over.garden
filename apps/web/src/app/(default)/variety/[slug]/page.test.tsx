@@ -77,6 +77,7 @@ describe("/variety/[slug]", () => {
         rank: null,
         kingdom: null,
         canonicalName: "Pomidor Cheri",
+        vernacularName: null,
         scientificName: "Pomidor Cheri",
         publicSlug: "pomidor-cheri-0000000101",
         speciesSlug: null,
@@ -248,7 +249,10 @@ describe("/variety/[slug]", () => {
     );
 
     expect(metadata.title).toBe("Pomidor Cheri · сорт | OverGarden");
-    expect(html).toContain("Публічний сорт");
+    // The kind in plain words (`OVE-497`), and the cultivar's own name as
+    // the heading.
+    expect(html).toContain(">сорт</p>");
+    expect(html).not.toContain("Публічний");
     expect(html).toContain("Pomidor Cheri");
     expect(html).toContain("First ripe cluster");
   });

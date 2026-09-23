@@ -121,3 +121,38 @@ describe("a filtered view of the catalogue's one door (OVE-451)", () => {
     ).toBeNull();
   });
 });
+
+describe("a species' register, searched or paged (OVE-497)", () => {
+  it("keeps a search and a later page out of the index, every form they list followed", () => {
+    for (const path of [
+      "/species/solanum-lycopersicum/register",
+      "/bg/species/solanum-lycopersicum/register",
+    ]) {
+      for (const search of ["q=%D0%B1%D0%B0%D1%80%D0%B0%D0%BE", "page=2"]) {
+        expect(
+          paginatedListingRobotsTag(path, new URLSearchParams(search)),
+          `${path}?${search}`,
+        ).toBe("noindex, follow");
+      }
+    }
+  });
+
+  it("leaves its first page, the canonical, alone", () => {
+    for (const search of ["", "page=1", "q=", "page=abc"]) {
+      expect(
+        paginatedListingRobotsTag(
+          "/species/solanum-lycopersicum/register",
+          new URLSearchParams(search),
+        ),
+        search,
+      ).toBeNull();
+    }
+    // A form's own page is not a view of the register.
+    expect(
+      paginatedListingRobotsTag(
+        "/species/solanum-lycopersicum/de-barao",
+        new URLSearchParams("page=2"),
+      ),
+    ).toBeNull();
+  });
+});

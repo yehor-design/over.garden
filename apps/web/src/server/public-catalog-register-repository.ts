@@ -5,6 +5,8 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+import { catalogVernacularNameSql } from "@/server/catalog-address-sql";
+import { normalizedSearchPrefix } from "@/server/public-catalog-browse-repository";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -30,14 +32,33 @@ export interface CatalogRegisterForm {
 
 export interface CatalogRegisterHub {
   readonly speciesId: string;
+  /** The species' accepted name. */
   readonly speciesName: string;
+  /** Its name in the reader's language when the catalogue holds one. */
+  readonly speciesDisplayName: string;
+  /** Plants have cultivars and animals breeds: the page says which. */
+  readonly speciesKingdom: string | null;
   readonly speciesSlug: string;
   readonly speciesPath: string;
+  /** Every public form of the species, whatever the reader searched for. */
   readonly total: number;
   readonly registeredUa: number;
   readonly registeredEu: number;
+  /** What the reader searched for, normalized; empty when nothing. */
+  readonly query: string;
+  /** How many forms the search leaves: `total` when there is none. */
+  readonly matching: number;
+  readonly page: number;
+  readonly pageCount: number;
+  /** One page of what the search leaves, alphabetically. */
   readonly forms: readonly CatalogRegisterForm[];
 }
+
+/**
+ * A page of a register (`OVE-497`). The tomato has 621 forms and the largest
+ * species over four thousand; one table of all of them was the page.
+ */
+export const CATALOG_REGISTER_PAGE_SIZE = 100;
 
 /**
  * A species' registered forms, or `null` when the species has none.
@@ -53,14 +74,25 @@ export interface CatalogRegisterHub {
  */
 export async function getCatalogRegisterHub(
   speciesSlug: string,
+  options: {
+    query?: string;
+    page?: number;
+    locale?: string;
+  } = {},
   executor: QueryExecutor = db,
 ): Promise<CatalogRegisterHub | null> {
+  const query = normalizedSearchPrefix(options.query ?? "");
+  const page = Math.max(1, Math.trunc(options.page ?? 1));
   const species = await executor
     .selectFrom("catalog_items")
     .select([
       "catalog_items.id as id",
       "catalog_items.canonical_name as name",
       "catalog_items.public_slug as slug",
+      "catalog_items.kingdom as kingdom",
+      catalogVernacularNameSql("catalog_items", options.locale ?? "uk").as(
+        "displayName",
+      ),
     ])
     .where("catalog_items.public_slug", "=", speciesSlug)
     .where("catalog_items.node_kind", "=", "taxon")
@@ -68,9 +100,48 @@ export async function getCatalogRegisterHub(
     .executeTakeFirst();
   if (!species?.slug) return null;
 
-  const rows = await executor
-    .selectFrom("catalog_item_relations as relation")
-    .innerJoin("catalog_items as form", "form.id", "relation.from_catalog_item_id")
+  // Every public form of the species: the same rows the card counts, and
+  // never a node a gardener created for themselves.
+  const formsOfSpecies = () =>
+    executor
+      .selectFrom("catalog_item_relations as relation")
+      .innerJoin(
+        "catalog_items as form",
+        "form.id",
+        "relation.from_catalog_item_id",
+      )
+      .where("relation.relation_type", "=", "form_of")
+      .where("relation.to_catalog_item_id", "=", species.id)
+      .where("form.public_slug", "is not", null)
+      .where("form.merged_into_catalog_item_id", "is", null)
+      .where("form.identity_state", "=", "active")
+      .where("form.created_by_user_id", "is", null);
+
+  const counts = await formsOfSpecies()
+    .select(({ fn }) => [
+      fn.countAll<string>().as("total"),
+      sql<string>`count(*) filter (where form.registered_ua)`.as(
+        "registeredUa",
+      ),
+      sql<string>`count(*) filter (where form.registered_eu)`.as(
+        "registeredEu",
+      ),
+      // A name typed any way finds it anywhere in the name: a cultivar is
+      // remembered by a word of it ("пунто"), not by how it begins.
+      sql<string>`count(*) filter (where ${
+        query ? sql`form.normalized_name like ${`%${query}%`}` : sql`true`
+      })`.as("matching"),
+    ])
+    .executeTakeFirst();
+  const total = Number(counts?.total ?? 0);
+  if (total === 0) return null;
+  const matching = Number(counts?.matching ?? 0);
+  const pageCount = Math.max(
+    1,
+    Math.ceil(matching / CATALOG_REGISTER_PAGE_SIZE),
+  );
+
+  const rows = await formsOfSpecies()
     .select([
       "form.id as id",
       "form.canonical_name as name",
@@ -94,15 +165,14 @@ export async function getCatalogRegisterHub(
         limit 1
       )`.as("euCatalogueReference"),
     ])
-    .where("relation.relation_type", "=", "form_of")
-    .where("relation.to_catalog_item_id", "=", species.id)
-    .where("form.public_slug", "is not", null)
-    .where("form.merged_into_catalog_item_id", "is", null)
+    .$if(query.length > 0, (select) =>
+      select.where("form.normalized_name", "like", `%${query}%`),
+    )
     .orderBy("form.canonical_name", "asc")
     .orderBy("form.id", "asc")
+    .limit(CATALOG_REGISTER_PAGE_SIZE)
+    .offset((page - 1) * CATALOG_REGISTER_PAGE_SIZE)
     .execute();
-
-  if (rows.length === 0) return null;
 
   const forms = rows.map((row) => ({
     id: row.id,
@@ -121,15 +191,21 @@ export async function getCatalogRegisterHub(
   return {
     speciesId: species.id,
     speciesName: species.name,
+    speciesDisplayName: species.displayName ?? species.name,
+    speciesKingdom: species.kingdom ?? null,
     speciesSlug: species.slug,
     speciesPath: publicCatalogEvidencePath({
       catalogKind: "species",
       publicSlug: species.slug,
       speciesSlug: null,
     }),
-    total: forms.length,
-    registeredUa: forms.filter((form) => form.registeredUa).length,
-    registeredEu: forms.filter((form) => form.registeredEu).length,
+    total,
+    registeredUa: Number(counts?.registeredUa ?? 0),
+    registeredEu: Number(counts?.registeredEu ?? 0),
+    query,
+    matching,
+    page,
+    pageCount,
     forms,
   };
 }
@@ -165,7 +241,9 @@ export async function hasCatalogRegisterHub(
           .whereRef("relation.to_catalog_item_id", "=", "species.id")
           .where("relation.relation_type", "=", "form_of")
           .where("form.public_slug", "is not", null)
-          .where("form.merged_into_catalog_item_id", "is", null),
+          .where("form.merged_into_catalog_item_id", "is", null)
+          .where("form.identity_state", "=", "active")
+          .where("form.created_by_user_id", "is", null),
       ),
     )
     .executeTakeFirst();
@@ -200,6 +278,8 @@ export async function listCatalogRegisterHubSpecies(
     .where("species.merged_into_catalog_item_id", "is", null)
     .where("form.public_slug", "is not", null)
     .where("form.merged_into_catalog_item_id", "is", null)
+    .where("form.identity_state", "=", "active")
+    .where("form.created_by_user_id", "is", null)
     .groupBy(["species.public_slug", "species.canonical_name"])
     .orderBy(({ fn }) => fn.count("form.id"), "desc")
     .orderBy("species.canonical_name", "asc")
