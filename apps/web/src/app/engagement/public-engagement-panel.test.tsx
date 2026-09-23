@@ -258,4 +258,87 @@ describe("buildCommentThreads", () => {
     ).toHaveLength(2);
     expect(html).toContain('dateTime="2026-07-04T08:00:00.000Z"');
   });
+
+  // OVE-493, criterion 1: one row for what a reader can do with an entry.
+  it("puts like, comment, save and share in one row", () => {
+    const html = renderToStaticMarkup(
+      <PublicEngagementPanel
+        isAuthenticated={false}
+        locale="uk"
+        target={{ kind: "journal_entry", ref: "entry-1" }}
+        returnTo="/@olena/post/7"
+        likeState={{ activeLikeCount: 3, viewerLiked: false }}
+        share={{ url: "https://over.garden/@olena/post/7", title: "Томат" }}
+        summary={{
+          target: { kind: "journal_entry", ref: "entry-1" },
+          activeLikeCount: 3,
+          comments: [],
+        }}
+      />,
+    );
+    const bar = html.slice(
+      html.indexOf('data-slot="engagement-bar"'),
+      html.indexOf('id="comment-compose"'),
+    );
+    expect(bar).toContain("Подобається");
+    expect(bar).toContain("Зберегти");
+    expect(bar).toMatch(/href="#comment-compose"[^>]*>[\s\S]*?Коментувати/u);
+    // Sharing needs a script, so its button is not in a document a reader
+    // without one would press in vain.
+    expect(bar).not.toContain("Поділитися");
+    expect(html).toContain('id="comment-compose"');
+  });
+
+  // OVE-493, criterion 3: whom a reply answers, and what became of a comment.
+  it("names the reply's target and says in words what became of a comment", () => {
+    const html = renderToStaticMarkup(
+      <PublicEngagementPanel
+        isAuthenticated
+        locale="bg"
+        target={{ kind: "journal_entry", ref: "entry-1" }}
+        returnTo="/@olena/post/7"
+        likeState={{ activeLikeCount: 0, viewerLiked: false }}
+        summary={{
+          target: { kind: "journal_entry", ref: "entry-1" },
+          activeLikeCount: 0,
+          comments: [
+            {
+              key: "comment:1",
+              replyToken: "c1",
+              body: "Здрави листа.",
+              authorLabel: "Олена",
+              authorHandle: "olena",
+              parentReplyToken: null,
+              createdAt: "2026-07-04T08:00:00.000Z",
+            },
+            {
+              key: "comment:2",
+              replyToken: "c2",
+              body: "Comment deleted by its author.",
+              authorLabel: "Петър",
+              authorHandle: "petar",
+              parentReplyToken: null,
+              createdAt: "2026-07-05T08:00:00.000Z",
+              state: "deleted",
+            },
+            {
+              key: "comment:3",
+              replyToken: "c3",
+              body: "Comment is under review.",
+              authorLabel: "Иван",
+              authorHandle: "ivan",
+              parentReplyToken: null,
+              createdAt: "2026-07-06T08:00:00.000Z",
+              state: "reported",
+            },
+          ],
+        }}
+      />,
+    );
+    expect(html).toContain("Отговор на Олена");
+    expect(html).toContain("Авторът изтри този коментар.");
+    expect(html).toContain("Коментарът се преглежда от модератор.");
+    expect(html).not.toContain("Comment deleted by its author.");
+    expect(html).not.toContain("Comment is under review.");
+  });
 });

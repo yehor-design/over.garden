@@ -31,6 +31,7 @@ import {
 import type { ViewerLikeState } from "./engagement-viewer";
 import { buttonVariants } from "@/components/ui/button";
 import { EngagementBar } from "@/components/ui/engagement-bar";
+import { ShareControl } from "./share-control";
 import type {
   AuthIntentAction,
   AuthIntentTarget,
@@ -66,6 +67,12 @@ interface PublicEngagementPanelProps {
   likeState?: ViewerLikeState | null;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
+  /**
+   * The canonical permalink and the title a share sends (`OVE-493`). Built by
+   * the route, never read from the address bar, which may carry a return
+   * path, a cursor or a sign-in intent.
+   */
+  share?: { url: string; title: string } | null;
 }
 
 export function EngagementFollowControl({
@@ -132,6 +139,7 @@ export function PublicEngagementPanel({
   likeState = null,
   resumeAction = null,
   resumeControl = null,
+  share = null,
 }: PublicEngagementPanelProps) {
   const copy = getPublicSurfaceCopy(locale);
   const intentTarget = engagementAuthIntentTarget(target);
@@ -204,6 +212,32 @@ export function PublicEngagementPanel({
               resumeAction={resumeControl ? null : resumeAction}
             />
           ) : null}
+          {/* The row names every thing a reader can do with the entry in one
+              place — like, comment, save, share (`OVE-493`, criterion 1). The
+              comment itself is written below, where the thread is. */}
+          <a
+            href="#comment-compose"
+            data-engagement-comment-jump="true"
+            className={buttonVariants({
+              variant: "secondary",
+              className: "self-start",
+            })}
+          >
+            <MessageCircle className="size-4" aria-hidden="true" />
+            {copy.engagement.commentsJump}
+          </a>
+          {share ? (
+            <ShareControl
+              url={share.url}
+              title={share.title}
+              labels={{
+                share: copy.engagement.share,
+                copied: copy.engagement.shareCopied,
+                failed: copy.engagement.shareFailed,
+                address: copy.engagement.shareAddress,
+              }}
+            />
+          ) : null}
         </EngagementBar>
       ) : null}
 
@@ -217,32 +251,35 @@ export function PublicEngagementPanel({
         </p>
       ) : null}
 
-      {isAuthenticated ? (
-        <EngagementCommentForm
-          targetKind={target.kind}
-          targetRef={target.ref}
-          clientMutationId={randomUUID()}
-          fieldId="engagement-comment"
-          autoFocus={resumeAction === "comment" && !resumeControl}
-          labels={{
-            field: copy.engagement.comment,
-            action: copy.engagement.comment,
-            unavailable: copy.engagement.interactionUnavailable,
-            rateLimited: copy.engagement.commentRateLimited,
-            signInRequired: copy.engagement.interactionUnavailable,
-          }}
-          submit={addCommentAction}
-        />
-      ) : (
-        <AuthIntentTrigger
-          action="comment"
-          returnTo={returnTo}
-          target={intentTarget}
-          label={copy.engagement.comment}
-          icon={<MessageCircle className="size-4" />}
-          className="w-fit"
-        />
-      )}
+      <div id="comment-compose" className="grid scroll-mt-20 gap-3">
+        {isAuthenticated ? (
+          <EngagementCommentForm
+            targetKind={target.kind}
+            targetRef={target.ref}
+            clientMutationId={randomUUID()}
+            fieldId="engagement-comment"
+            autoFocus={resumeAction === "comment" && !resumeControl}
+            labels={{
+              field: copy.engagement.comment,
+              action: copy.engagement.comment,
+              sending: copy.engagement.sending,
+              unavailable: copy.engagement.interactionUnavailable,
+              rateLimited: copy.engagement.commentRateLimited,
+              signInRequired: copy.engagement.interactionUnavailable,
+            }}
+            submit={addCommentAction}
+          />
+        ) : (
+          <AuthIntentTrigger
+            action="comment"
+            returnTo={returnTo}
+            target={intentTarget}
+            label={copy.engagement.comment}
+            icon={<MessageCircle className="size-4" />}
+            className="w-fit"
+          />
+        )}
+      </div>
 
       {threads.length === 0 ? (
         <p className="text-body-sm text-text-muted">
@@ -322,9 +359,14 @@ export function PublicEngagementPanel({
                     controlRef={replyControl}
                     fieldId={replyFieldId}
                     autoFocus={isResumedReply}
+                    replyTarget={copy.engagement.replyTo.replace(
+                      "{author}",
+                      root.authorLabel,
+                    )}
                     labels={{
                       field: copy.engagement.reply,
                       action: copy.engagement.reply,
+                      sending: copy.engagement.sending,
                       unavailable: copy.engagement.interactionUnavailable,
                       rateLimited: copy.engagement.commentRateLimited,
                       signInRequired: copy.engagement.interactionUnavailable,
@@ -404,9 +446,22 @@ function Comment({
   return (
     <article id={anchor} className="grid scroll-mt-20 gap-2">
       <CommentHeader comment={comment} locale={locale} anchor={anchor} />
-      <p className="text-body-sm whitespace-pre-wrap text-text">
-        {comment.body}
-      </p>
+      {isActiveComment(comment) ? (
+        <p className="text-body-sm whitespace-pre-wrap text-text">
+          {comment.body}
+        </p>
+      ) : (
+        // What happened to a comment, in the reader's language — never the
+        // repository's English placeholder (`OVE-493`, criterion 3).
+        <p
+          data-comment-state={comment.state}
+          className="text-body-sm text-text-muted italic"
+        >
+          {comment.state === "deleted"
+            ? getPublicSurfaceCopy(locale).engagement.commentRemovedByAuthor
+            : getPublicSurfaceCopy(locale).engagement.commentUnderReview}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         {replyFieldId && isActiveComment(comment) ? (
           <a

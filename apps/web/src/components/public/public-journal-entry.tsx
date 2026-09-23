@@ -27,6 +27,8 @@ import {
   type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { entryCardDates } from "@/lib/entry-card-dates";
+import { getLivingObjectPassportDomain } from "@/lib/living-object-passport";
 import type { PublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import type { PublicLocale } from "@/lib/public-localization";
 import { publicMediaAltText } from "@/lib/public-media-alt";
@@ -126,14 +128,24 @@ export function PublicJournalEntryView({
   // Removing the cover must not cost the page its LCP element: whatever is
   // drawn first is asked for first (DESIGN.md §9).
   const leadPhotographId = cover ? null : (inDocument[0] ?? null);
+  // The gardener's language on the gardener's words, and only there
+  // (ADR-0029 D11, `OVE-493`, OG-UX-030): the title, the story, the
+  // captions, the titles of their other entries. The page's own words — the
+  // byline, the dates, every label — are the reader's and keep the page's.
+  const ugc =
+    page.entry.sourceLanguage === locale
+      ? {}
+      : { lang: page.entry.sourceLanguage };
+  const dates = entryCardDates(
+    locale,
+    page.entry.entryDate,
+    page.entry.publishedAt,
+  );
+  const object = page.context.kind === "object" ? page.context.object : null;
 
   return (
     <main
-      // The gardener's language, not the reader's (ADR-0029 D11). This element
-      // holds the entry's own words, so a `lang` taken from the interface told
-      // a screen reader to read Ukrainian with Bulgarian phonetics whenever a
-      // Bulgarian reader opened a Ukrainian entry.
-      lang={page.entry.sourceLanguage}
+      lang={locale}
       data-public-journal-entry="true"
       data-entry-context={page.context.kind}
       className="flex w-full min-w-0 flex-col gap-8 px-4 py-8 sm:px-6 md:py-12"
@@ -144,55 +156,110 @@ export function PublicJournalEntryView({
         aria-label={copy.journal}
         className="flex flex-wrap items-center justify-between gap-2"
       >
-        <DirectoryReturnLink href={directoryReturnTo} label={copy.journals} />
+        <DirectoryReturnLink
+          href={directoryReturnTo}
+          label={copy.journals}
+          feedLabel={copy.feed}
+        />
         {ownerControl}
       </nav>
 
       <article className="grid min-w-0 gap-6">
-        <header className="grid gap-4">
-          <p className="text-overline text-text-muted uppercase">
-            {page.context.kind === "object"
-              ? copy.objectJournal
-              : copy.spaceJournal}
-          </p>
-          {/* The page's one `h1`. A level-1 heading inside the document
-              renders as an `h2` (ADR-0028), so this stays the only one. */}
-          <h1 className="text-display text-balance text-text-heading">
-            {page.entry.title}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption text-text-muted">
-            <time dateTime={serializeDate(page.entry.entryDate)}>
-              {formatDate(page.entry.entryDate, locale)}
+        {/* The feed's order, so the page reads as the card did (`OVE-493`,
+            criterion 1): who and when, where it belongs, then the words. */}
+        <header className="grid gap-3">
+          <div
+            data-entry-byline="true"
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text-muted"
+          >
+            {page.author ? (
+              <>
+                <Link
+                  href={page.author.profilePath}
+                  className="flex w-fit min-w-0 items-center gap-2 text-body-sm text-text underline-offset-2 hover:text-text-link hover:underline"
+                >
+                  {/* The picture is the name's, which follows it. */}
+                  <span aria-hidden="true" className="contents">
+                    <Avatar
+                      src={page.author.avatarUrl}
+                      name={page.author.displayName}
+                      size="md"
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="sr-only">{`${copy.by} `}</span>
+                    <strong>{page.author.displayName}</strong>
+                    {/* A gardener who has set no display name is shown by
+                        their handle, and then the mention beside it is the
+                        same string twice. */}
+                    {page.author.mention === page.author.displayName ? null : (
+                      <span className="text-text-muted">
+                        {" "}
+                        {page.author.mention}
+                      </span>
+                    )}
+                  </span>
+                </Link>
+                <span aria-hidden="true">·</span>
+              </>
+            ) : null}
+            <time dateTime={dates.dateTime} className="tabular-nums">
+              {dates.dateLabel}
             </time>
-            <span className="inline-flex items-center gap-1.5">
+            {dates.published ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <time
+                  dateTime={dates.published.dateTime}
+                  data-entry-published="true"
+                  className="tabular-nums"
+                >
+                  {dates.published.label}
+                </time>
+              </>
+            ) : null}
+          </div>
+          <p
+            data-entry-context="true"
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text-muted"
+          >
+            {object ? (
+              <>
+                <Link
+                  href={object.publicPath}
+                  className="inline-flex items-center gap-1.5 font-medium text-text-secondary underline-offset-2 hover:text-text-link hover:underline"
+                >
+                  <ObjectKindIcon kind={object.objectKind} />
+                  <span {...ugc}>{object.displayName}</span>
+                </Link>
+                <span aria-hidden="true">·</span>
+                <span>
+                  {
+                    getLivingObjectPassportDomain(locale, object.objectKind)
+                      .kindLabel
+                  }
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-text-secondary" {...ugc}>
+                  {page.context.space.displayName}
+                </span>
+                <span aria-hidden="true">·</span>
+                <span>{copy.spaceJournal}</span>
+              </>
+            )}
+            <span aria-hidden="true">·</span>
+            <span className="inline-flex items-center gap-1">
               <MapPin aria-hidden="true" className="size-4" />
               {location}
             </span>
-          </div>
-          {page.author ? (
-            <Link
-              href={page.author.profilePath}
-              className="flex w-fit items-center gap-2 text-body-sm text-text-secondary underline-offset-2 hover:text-text-link hover:underline"
-            >
-              <Avatar
-                src={page.author.avatarUrl}
-                name={page.author.displayName}
-                size="md"
-              />
-              <span>
-                {copy.by} <strong>{page.author.displayName}</strong>
-                {/* A gardener who has set no display name is shown by their
-                    handle, and then the mention beside it is the same string
-                    twice. */}
-                {page.author.mention === page.author.displayName ? null : (
-                  <span className="text-text-muted">
-                    {" "}
-                    {page.author.mention}
-                  </span>
-                )}
-              </span>
-            </Link>
-          ) : null}
+          </p>
+          {/* The page's one `h1`. A level-1 heading inside the document
+              renders as an `h2` (ADR-0028), so this stays the only one. */}
+          <h1 className="text-display text-balance text-text-heading" {...ugc}>
+            {page.entry.title}
+          </h1>
         </header>
 
         {cover ? (
@@ -206,9 +273,12 @@ export function PublicJournalEntryView({
             focalY={cover.focalY}
             intrinsicWidth={cover.intrinsicWidth}
             intrinsicHeight={cover.intrinsicHeight}
-            aspect="cover"
+            // A portrait stands at its own shape; a crop to 16:9 kept a strip
+            // of it (`OVE-493`, criterion 6).
+            aspect={isPortrait(cover) ? "auto" : "cover"}
             priority
             data-journal-cover="true"
+            {...ugc}
           />
         ) : null}
 
@@ -217,6 +287,7 @@ export function PublicJournalEntryView({
         <div
           data-journal-prose="true"
           className="grid gap-5 text-body-lg text-text"
+          {...ugc}
         >
           <PublicJournalEntryBody
             locale={locale}
@@ -247,8 +318,9 @@ export function PublicJournalEntryView({
                     focalY={media.focalY}
                     intrinsicWidth={media.intrinsicWidth}
                     intrinsicHeight={media.intrinsicHeight}
-                    aspect="card"
+                    aspect="auto"
                     sizes="(max-width: 639px) 100vw, 336px"
+                    {...ugc}
                   />
                 </li>
               ))}
@@ -256,7 +328,7 @@ export function PublicJournalEntryView({
           </Section>
         ) : null}
 
-        <JournalAboutBlock page={page} copy={copy} location={location} />
+        <JournalAboutBlock page={page} copy={copy} />
 
         {mentionedProfiles.length > 0 ? (
           <Section
@@ -286,34 +358,7 @@ export function PublicJournalEntryView({
 
       {children}
 
-      <JournalChronology page={page} copy={copy} locale={locale} />
-
-      {page.relatedEntries.length > 0 ? (
-        <Section id="related-journal-history" title={copy.relatedHistory}>
-          <ol className="grid list-none gap-3 sm:grid-cols-2">
-            {page.relatedEntries.map((entry) => (
-              <li key={entry.id} className="min-w-0">
-                <Card as="section" interactive className="h-full p-4">
-                  <time className="text-caption text-text-muted">
-                    {formatDate(entry.entryDate, locale)}
-                  </time>
-                  <h3 className="mt-1 text-h4 text-text-heading">
-                    <Link
-                      href={entry.publicPath}
-                      className="underline-offset-2 hover:text-text-link hover:underline"
-                    >
-                      {entry.title}
-                    </Link>
-                  </h3>
-                  <p className="mt-1 line-clamp-2 text-body-sm text-text-muted">
-                    {entry.bodyPreview}
-                  </p>
-                </Card>
-              </li>
-            ))}
-          </ol>
-        </Section>
-      ) : null}
+      <RelatedHistory page={page} copy={copy} locale={locale} ugc={ugc} />
     </main>
   );
 }
@@ -330,16 +375,19 @@ export function PublicJournalEntryView({
 function JournalAboutBlock({
   page,
   copy,
-  location,
 }: {
   page: PublicJournalEntryPage;
   copy: PublicJournalEntryCopy;
-  location: string;
 }) {
   const object = page.context.kind === "object" ? page.context.object : null;
   const organismPath = object ? getJournalEntryCatalogPath(object) : null;
   const mentioned =
     page.context.kind === "space" ? page.context.mentionedObjects : [];
+  // The object and the place are in the context line under the byline
+  // (`OVE-493`); this block adds only what that line does not say.
+  if (!object && page.topics.length === 0 && mentioned.length === 0) {
+    return null;
+  }
 
   return (
     <Section
@@ -348,32 +396,6 @@ function JournalAboutBlock({
       className="rounded-lg border border-border p-4"
     >
       <dl className="grid gap-3 text-body-sm sm:grid-cols-2">
-        {object ? (
-          <div className="grid min-w-0 gap-1">
-            <dt className="text-caption text-text-muted">
-              {copy.contextObject}
-            </dt>
-            <dd className="min-w-0">
-              <Link
-                href={object.publicPath}
-                className="inline-flex items-center gap-1.5 text-text underline-offset-2 hover:text-text-link hover:underline"
-              >
-                <ObjectKindIcon kind={object.objectKind} />
-                {object.displayName}
-              </Link>
-            </dd>
-          </div>
-        ) : (
-          <div className="grid min-w-0 gap-1">
-            <dt className="text-caption text-text-muted">
-              {copy.contextSpace}
-            </dt>
-            <dd className="min-w-0 text-text">
-              {page.context.space.displayName}
-            </dd>
-          </div>
-        )}
-
         {object?.catalogCanonicalName ? (
           <div className="grid min-w-0 gap-1">
             <dt className="text-caption text-text-muted">{copy.identity}</dt>
@@ -396,11 +418,6 @@ function JournalAboutBlock({
             </dd>
           </div>
         ) : null}
-
-        <div className="grid min-w-0 gap-1">
-          <dt className="text-caption text-text-muted">{copy.safeRegion}</dt>
-          <dd className="min-w-0 text-text">{location}</dd>
-        </div>
 
         {page.topics.length > 0 ? (
           <div className="grid min-w-0 gap-1">
@@ -495,14 +512,26 @@ function ScientificName({
   );
 }
 
-function JournalChronology({
+/**
+ * The rest of this journal, in one place (`OVE-493`, criterion 5, OG-UX-018).
+ *
+ * The page used to end with a previous/next strip and then a "more from this
+ * journal" grid that listed the same two entries again. It is one section
+ * now: the entry before and after this one, named as such, then this
+ * journal's other entries, each once. Everything here is the same object's
+ * (or the same space's) history — the page offers no recommendation from
+ * elsewhere, so there is nothing to tell it apart from.
+ */
+function RelatedHistory({
   page,
   copy,
   locale,
+  ugc,
 }: {
   page: PublicJournalEntryPage;
   copy: PublicJournalEntryCopy;
   locale: PublicLocale;
+  ugc: { lang?: string };
 }) {
   const adjacent = [
     page.adjacentEntries.older
@@ -522,37 +551,91 @@ function JournalChronology({
         }
       : null,
   ].filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+  const shown = new Set(adjacent.map((entry) => entry.id));
+  const others = page.relatedEntries.filter((entry) => !shown.has(entry.id));
 
-  if (adjacent.length === 0) return null;
+  if (adjacent.length === 0 && others.length === 0) return null;
 
   return (
-    <nav
-      aria-label={copy.contextHistory}
-      data-journal-chronology="true"
-      className="grid min-w-0 gap-3 sm:grid-cols-2"
+    <Section
+      id="related-journal-history"
+      title={copy.relatedHistory}
+      data-related-history="true"
     >
-      {adjacent.map((entry) => (
-        <Link
-          key={`${entry.label}:${entry.id}`}
-          href={entry.publicPath}
-          className={cn(
-            "flex min-h-20 max-w-full min-w-0 items-center gap-3 rounded-lg border border-border p-4 transition-colors duration-instant ease-out hover:bg-surface-hover",
-            entry.align === "end" && "sm:col-start-2 sm:text-right",
-          )}
+      {adjacent.length > 0 ? (
+        <nav
+          aria-label={copy.contextHistory}
+          data-journal-chronology="true"
+          className="grid min-w-0 gap-3 sm:grid-cols-2"
         >
-          {entry.align === "start" ? entry.icon : null}
-          <span className="min-w-0 flex-1">
-            <span className="block text-caption text-text-muted">
-              {entry.label} · {formatDate(entry.entryDate, locale)}
-            </span>
-            <strong className="mt-1 block truncate text-body-sm text-text-heading">
-              {entry.title}
-            </strong>
-          </span>
-          {entry.align === "end" ? entry.icon : null}
-        </Link>
-      ))}
-    </nav>
+          {adjacent.map((entry) => (
+            <Link
+              key={`${entry.label}:${entry.id}`}
+              href={entry.publicPath}
+              className={cn(
+                "flex min-h-20 max-w-full min-w-0 items-center gap-3 rounded-lg border border-border p-4 transition-colors duration-instant ease-out hover:bg-surface-hover",
+                entry.align === "end" && "sm:col-start-2 sm:text-right",
+              )}
+            >
+              {entry.align === "start" ? entry.icon : null}
+              <span className="min-w-0 flex-1">
+                <span className="block text-caption text-text-muted">
+                  {entry.label} · {formatDate(entry.entryDate, locale)}
+                </span>
+                <strong
+                  className="mt-1 block truncate text-body-sm text-text-heading"
+                  {...ugc}
+                >
+                  {entry.title}
+                </strong>
+              </span>
+              {entry.align === "end" ? entry.icon : null}
+            </Link>
+          ))}
+        </nav>
+      ) : null}
+      {others.length > 0 ? (
+        <ol
+          data-related-entries="true"
+          className="grid list-none gap-3 sm:grid-cols-2"
+        >
+          {others.map((entry) => (
+            <li key={entry.id} className="min-w-0">
+              <Card as="section" interactive className="h-full p-4">
+                <time className="text-caption text-text-muted">
+                  {formatDate(entry.entryDate, locale)}
+                </time>
+                <h3 className="mt-1 text-h4 text-text-heading" {...ugc}>
+                  <Link
+                    href={entry.publicPath}
+                    className="underline-offset-2 hover:text-text-link hover:underline"
+                  >
+                    {entry.title}
+                  </Link>
+                </h3>
+                <p
+                  className="mt-1 line-clamp-2 text-body-sm text-text-muted"
+                  {...ugc}
+                >
+                  {entry.bodyPreview}
+                </p>
+              </Card>
+            </li>
+          ))}
+        </ol>
+      ) : null}
+    </Section>
+  );
+}
+
+/** Taller than wide: a crop to 16:9 would keep a strip of it. */
+function isPortrait(media: {
+  intrinsicWidth?: number | null;
+  intrinsicHeight?: number | null;
+}) {
+  return (
+    (media.intrinsicHeight ?? 0) > 0 &&
+    (media.intrinsicHeight ?? 0) > (media.intrinsicWidth ?? 0)
   );
 }
 
@@ -803,10 +886,6 @@ function formatDate(value: Date | string, locale: PublicLocale) {
     locale === "uk" ? "uk-UA" : locale === "bg" ? "bg-BG" : "ru-RU",
     { day: "numeric", month: "long", year: "numeric" },
   ).format(new Date(value));
-}
-
-function serializeDate(value: Date | string) {
-  return new Date(value).toISOString();
 }
 
 export function getJournalEntryCatalogPath(object: PublicJournalEntryObject) {

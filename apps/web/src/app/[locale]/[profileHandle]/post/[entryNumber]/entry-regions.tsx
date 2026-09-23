@@ -34,11 +34,14 @@ export async function ViewerEngagementPanel({
   locale,
   target,
   returnTo,
+  share,
   searchParams,
 }: {
   locale: PublicLocale;
   target: { kind: "journal_entry"; ref: string };
   returnTo: string;
+  /** The canonical permalink and title a share sends (`OVE-493`). */
+  share: { url: string; title: string };
   searchParams: EntrySearchParams;
 }) {
   const [query, session] = await Promise.all([
@@ -64,6 +67,7 @@ export async function ViewerEngagementPanel({
       summary={engagement}
       likeState={likeState}
       returnTo={returnTo}
+      share={share}
       resumeAction={normalizeAuthIntentResumeAction(
         firstParam(query.authIntent) ?? undefined,
       )}

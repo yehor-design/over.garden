@@ -1093,6 +1093,16 @@ followed feed, the journals directory, a community, a profile (`OVE-492`):
 - **No link in a link.** Title, author, object, topics and actions are links
   side by side.
 
+The entry page reads in the same order as its card (`OVE-493`), and ends with
+one section for the rest of its journal — the entry before and after, then
+the others, each once. Its action row is like, comment, save and share, in
+that tab order; share sends the canonical address by the device's sheet or a
+copied link, and exists only once the page can act on it. **An engagement
+control answers a lost request where it stands**: it comes back showing what
+the server last said, with the reason in words, and a refused or lost comment
+keeps every word. A pending control says it is busy and refuses a second
+press.
+
 A listing's discovery bar offers plants or animals once: where the kind is a
 mode or a facet, the `plants` and `animals` system topics are not offered
 again as topics. The feed's modes are Latest and Following (`/feed`).

@@ -185,6 +185,11 @@ export function PublicHomeFeed({
                   copy={copy}
                   entry={entry}
                   priority={index === firstPhotograph}
+                  returnTo={buildPublicFeedHref(locale, {
+                    cursor: null,
+                    kind: request.kind,
+                    topic: request.topic,
+                  })}
                 />
               </li>
             ))}
@@ -367,18 +372,28 @@ export function PublicFeedEntryCard({
   copy,
   entry,
   priority,
+  returnTo,
 }: {
   locale: PublicLocale;
   copy: PublicHomeFeedCopy;
   entry: PublicFeedEntry;
   priority: boolean;
+  /**
+   * The feed view this card sits in, carried as `?from=` so the entry page's
+   * way back returns to it (`OVE-493`); the entry's canonical address is
+   * unchanged. Absent where there is no feed to go back to.
+   */
+  returnTo?: string;
 }) {
   const dates = entryCardDates(locale, entry.entryDate, entry.publishedAt);
+  const href = returnTo
+    ? `${entry.publicPath}?${new URLSearchParams({ from: returnTo })}`
+    : entry.publicPath;
 
   return (
     <EntryCard
       id={entry.id}
-      href={entry.publicPath}
+      href={href}
       title={entry.title}
       contentLanguage={
         contentLanguageAttribute(entry.sourceLanguage, locale).lang
@@ -427,7 +442,7 @@ export function PublicFeedEntryCard({
          the entry's own discussion, where the real controls live. */
       engagement={
         <Link
-          href={`${entry.publicPath}#comments`}
+          href={`${href}#comments`}
           className={buttonVariants({ variant: "ghost", size: "sm" })}
         >
           <MessageCircle aria-hidden="true" />

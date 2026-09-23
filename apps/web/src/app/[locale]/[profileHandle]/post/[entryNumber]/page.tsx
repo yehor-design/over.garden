@@ -218,6 +218,12 @@ async function renderPublicJournalEntry(
     null,
   ).catch(notPrerendered);
   const engagementReturnTo = lookup.page.entry.publicPath;
+  // A share sends the entry's one address — absolute, with no return path,
+  // cursor or sign-in intent — whatever the reader's address bar says.
+  const share = {
+    url: absolutePublicUrl(lookup.page.entry.publicPath),
+    title: lookup.page.entry.title,
+  };
   const surface = buildJournalSurface(locale, lookup.page);
   const serializedJsonLd = serializePublicSurfaceJsonLd(surface.jsonLd);
 
@@ -267,6 +273,7 @@ async function renderPublicJournalEntry(
                 viewerLiked: false,
               }}
               returnTo={engagementReturnTo}
+              share={share}
               resumeAction={null}
               resumeControl={null}
             />
@@ -276,6 +283,7 @@ async function renderPublicJournalEntry(
             locale={locale}
             target={engagementTarget}
             returnTo={engagementReturnTo}
+            share={share}
             searchParams={searchParams}
           />
         </Suspense>

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DirectoryReturnLink,
   readDirectoryReturnTarget,
+  readFeedReturnTarget,
 } from "./directory-return-link";
 
 const ORIGIN = "https://over.garden";
@@ -45,6 +46,28 @@ describe("the way back to the journals", () => {
       `/journals?q=${"x".repeat(2_000)}`,
     ]) {
       expect(readDirectoryReturnTarget(from, ORIGIN), String(from)).toBeNull();
+    }
+  });
+
+  // OVE-493: a reader who came from the feed goes back to that feed view.
+  it("returns to the feed view a reader came from, and to nothing else", () => {
+    expect(readFeedReturnTarget("/", ORIGIN)).toBe("/");
+    expect(readFeedReturnTarget("/bg?kind=plant&topic=tomaty", ORIGIN)).toBe(
+      "/bg?kind=plant&topic=tomaty",
+    );
+    expect(readFeedReturnTarget("/?kind=animal&token=opaque", ORIGIN)).toBe(
+      "/?kind=animal",
+    );
+    for (const from of [
+      null,
+      "/journals",
+      "https://evil.example/",
+      "//evil.example/",
+      "/#top",
+      "/garden",
+      "/de",
+    ]) {
+      expect(readFeedReturnTarget(from, ORIGIN), String(from)).toBeNull();
     }
   });
 });

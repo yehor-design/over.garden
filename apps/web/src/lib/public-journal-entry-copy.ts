@@ -4,6 +4,8 @@ export interface PublicJournalEntryCopy {
   metadataTitleSuffix: string;
   metadataDescription: string;
   journals: string;
+  /** The way back when the reader came from the feed (`OVE-493`). */
+  feed: string;
   journal: string;
   /** Heads the block that says what the entry is about (`OVE-449` crit. 6). */
   aboutTitle: string;
@@ -36,6 +38,7 @@ const COPY = {
     metadataDescription:
       "Датований публічний запис із журналу живого об'єкта в OverGarden.",
     journals: "Журнали",
+    feed: "Стрічка",
     journal: "Журнал",
     aboutTitle: "Про що цей запис",
     objectJournal: "Журнал об'єкта",
@@ -65,6 +68,7 @@ const COPY = {
     metadataDescription:
       "Датиран публичен запис от дневника на жив обект в OverGarden.",
     journals: "Дневници",
+    feed: "Поток",
     journal: "Дневник",
     aboutTitle: "За какво е този запис",
     objectJournal: "Дневник на обекта",
@@ -94,6 +98,7 @@ const COPY = {
     metadataDescription:
       "Датированная публичная запись из журнала живого объекта в OverGarden.",
     journals: "Журналы",
+    feed: "Лента",
     journal: "Журнал",
     aboutTitle: "О чём эта запись",
     objectJournal: "Журнал объекта",
