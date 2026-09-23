@@ -13,7 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EntryCard } from "@/components/ui/entry-card";
 import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
 import { Pagination } from "@/components/ui/pagination";
-import { PublicFeedEntryCard } from "@/components/public/public-home-feed";
+import { PublicFeedEntryCard } from "@/components/public/public-feed-entry-card";
 import { entryCardDates } from "@/lib/entry-card-dates";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";

@@ -795,14 +795,33 @@ control's accessible name states the action and the count
 ### 5.7 Profiles and tabs
 
 A profile is content, not a dashboard (ADR-0031 D4). `ProfileHeader` is the one
-shape: picture, name, handle, one line of bio, the facts that are not counts,
-the counts, and **one** action — the rest belong in a menu.
+shape, Threads' compact identity (`OVE-494`): the name — nothing above it — and
+the handle, the picture beside them, the bio whole in the gardener's own line
+breaks, the facts that are not counts (region and languages, in the reader's
+language), the relationship counts in words ("12 підписників"), and **one**
+action — the rest belong in a menu. A gardener without a display name is shown
+as their handle, one long word, so the name wraps anywhere rather than
+widening the page at 320 px.
 
+- **Two views: Entries, then Objects.** Entries are every observation the
+  gardener published, drawn with the feed's own card (`PublicFeedEntryCard`),
+  not a card of the profile's own. Objects are the journals those entries make
+  up, and each object's card says so — "Журнал: 5 записів", and when the last
+  one was written — so a reader tells a history from an observation before
+  opening either. Each tab says how many things are behind it.
+- **Every list pages through everything.** Ten entries or twelve objects to a
+  page, with real `Pagination` links (`?page=`, and `?tab=objects&page=` for
+  the objects); page two onwards is `noindex, follow` and a page past the end
+  is a 404 from the proxy, as `/journals` does.
 - **A count of zero is omitted rather than printed.** A row of zeros tells a
   visitor only that nothing is happening, and the empty state below already
   says it in words. A count that is *hidden* — a gardener who does not publish
-  their relationships — is omitted too, and the page says so in a sentence
-  instead of printing a blank.
+  their relationships — is omitted too, silently: that the counters are hidden
+  is a setting, not something a visitor needs to read.
+- **Nothing on the page names how it is built.** No lineage counts, no claim
+  queues, no context rail repeating the tabs. The owner's way to change what
+  the page says is one link to the private editor; no settings form is ever
+  embedded in the public page.
 - **A tab's selection lives in the URL.** A view a reader cannot share or
   reload back into is a view that forgot what it was for, so the selected tab
   is a search parameter and the server decides which panel is open on the
@@ -821,7 +840,12 @@ the counts, and **one** action — the rest belong in a menu.
 - **A public route carries only the parameters it declares.** The author-scoped
   rewrite rebuilds the search string from `lib/interface-route-policy.ts`, so a
   new parameter that is not registered there never reaches the page: the
-  address changes and the view does not.
+  address changes and the view does not. The profile's `/q` twin is chosen
+  from what survives that policy, so a link to a view that no longer exists
+  (`?tab=about`) gets the static document, which reads without a script.
+- **A page number belongs to the list it paged.** Switching tabs rewrites the
+  address to the page each panel was drawn at, so a reload shows the list the
+  reader was looking at.
 
 ### 5.8 One listing per thing
 

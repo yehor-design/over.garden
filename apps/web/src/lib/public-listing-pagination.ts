@@ -1,6 +1,7 @@
 import { PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE } from "@/server/public-journal-directory-query";
 import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import { stripLocalePrefix } from "@/lib/public-localization";
+import { matchPublicProfilePath } from "@/lib/public-profile-lifecycle";
 
 /**
  * Which listings paginate, and what a request asked for.
@@ -94,6 +95,13 @@ export function paginatedListingRobotsTag(
   const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
   const filters = FILTERED_LISTINGS[path] ?? [];
   if (filters.some((filter) => search.get(filter))) return "noindex, follow";
+  // A profile's lists page too (`OVE-494`), under the same rule and for the
+  // same reason: the profile's canonical is its first page, so page two is
+  // kept out of the index while every entry it lists stays reachable. The
+  // bound is the profile's own, in `isPublicProfilePageBeyondTheEnd`.
+  if (matchPublicProfilePath(pathname) !== null) {
+    return requestedListingPage(search) === null ? null : "noindex, follow";
+  }
   if (paginatedListingPageSize(pathname) === null) return null;
   return requestedListingPage(search) === null ? null : "noindex, follow";
 }

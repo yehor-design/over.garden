@@ -70,6 +70,19 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**Public profiles (OVE-494):** `/@handle` is who the gardener is — the name
+with nothing above it, the handle, the picture beside them, the whole bio,
+region and languages in the reader's language, relationship counts in words,
+one action (edit for the owner, follow and a menu for everyone else) — then two
+views: **Entries**, every public observation as the feed's own card
+(`components/public/public-feed-entry-card.tsx`, now shared by the feed, `/feed`
+and the profile), and **Objects**, each object's journal ("Журнал: 5 записів",
+the last entry's date). Both lists page through everything (`?page=`,
+`?tab=objects&page=`): later pages are `noindex, follow` and a page past the end
+is a 404 from the proxy. The "about" tab, the context rail, the lineage count and
+the "counters hidden" notice are gone; `?tab=about` lands on the static
+entries. See `docs/redesign/2026-09-21/OVE-494-PROOF.md`.
+
 **The entry page and its conversation (OVE-493):** a permanent entry reads
 in its card's order — author and date (and the publication, when later), the
 object, the title and story — with `lang` on the gardener's words only, one

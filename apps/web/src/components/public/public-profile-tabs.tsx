@@ -43,11 +43,14 @@ export function PublicProfileTabs({
   tabs,
   selectedId,
   parameter = "tab",
+  pageByTab,
 }: {
   label: string;
   tabs: readonly TabModel[];
   selectedId: string;
   parameter?: string;
+  /** The page each tab's list was drawn at; absent means the first. */
+  pageByTab?: Readonly<Record<string, number>>;
 }) {
   const [selected, setSelected] = useState(selectedId);
   const [fromServer, setFromServer] = useState(selectedId);
@@ -75,6 +78,12 @@ export function PublicProfileTabs({
         // written: absent means unset, here as everywhere else.
         if (id === tabs[0]?.id) next.delete(parameter);
         else next.set(parameter, id);
+        // A page number belongs to the list it paged (`OVE-494`): the address
+        // names the page of the list the reader is now looking at, which is
+        // the page that panel was drawn at — so a reload shows the same list.
+        next.delete("page");
+        const page = pageByTab?.[id] ?? 1;
+        if (page > 1) next.set("page", String(page));
         const query = next.toString();
         window.history.replaceState(
           null,

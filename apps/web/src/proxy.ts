@@ -86,6 +86,7 @@ import {
   paginatedListingRobotsTag,
   requestedListingPage,
 } from "@/lib/public-listing-pagination";
+import { normalizePublicProfileTab } from "@/lib/public-profile-tabs";
 import {
   matchPublicTopicPath,
   renderNotFoundPublicTopicHtml,
@@ -586,15 +587,17 @@ function getAuthorScopedRewriteResponse(
       new Headers(request.headers),
       localization,
     );
-    const twinPath = publicQueryTwinPath(
+    // The twin is chosen from what survives the policy, not from what was
+    // sent: a parameter the page would never read — `?tab=about` from before
+    // the tab was retired, `?page=abc` — must not cost a reader the static
+    // document, which is the one that reads without a script (`OVE-494`).
+    const search = sanitizeInterfaceRouteSearch(
       rootProfilePath,
       request.nextUrl.searchParams,
     );
+    const twinPath = publicQueryTwinPath(rootProfilePath, search);
     url.pathname = `/${locale}${twinPath ?? rootProfilePath}`;
-    url.search = sanitizeInterfaceRouteSearch(
-      rootProfilePath,
-      request.nextUrl.searchParams,
-    );
+    url.search = search;
     requestHeaders.set(
       INTERNAL_PROFILE_REWRITE_HEADER,
       INTERNAL_PROFILE_REWRITE_VERSION,
@@ -693,7 +696,20 @@ function getPublicDocumentRewriteResponse(
     return NextResponse.redirect(url, { status: 308 });
   }
 
-  const twinPath = publicQueryTwinPath(pathname, request.nextUrl.searchParams);
+  // A profile's twin is chosen from what survives its policy, as on the
+  // unprefixed address (`getAuthorScopedRewriteResponse`): `?tab=about` is not
+  // a view any more, and must not cost the reader the static document. The
+  // other listings choose from what was sent — the feed's `topic` is dropped
+  // by the policy and still read by the twin.
+  const twinPath = publicQueryTwinPath(
+    pathname,
+    matchPublicProfilePath(pathname) !== null
+      ? sanitizeInterfaceRouteSearch(
+          stripped.path,
+          request.nextUrl.searchParams,
+        )
+      : request.nextUrl.searchParams,
+  );
   // A prefixed address already names its subtree; only a twin moves it.
   if (stripped.locale !== null && twinPath === null) return null;
 
@@ -729,7 +745,7 @@ async function getPublicProfileLifecycleResponse(
     );
   }
 
-  const { getPublicProfileLifecycleLookup } =
+  const { getPublicProfileLifecycleLookup, isPublicProfilePageBeyondTheEnd } =
     await import("@/server/public-profile-repository");
   const lookup = await getPublicProfileLifecycleLookup(
     publicProfileHandle,
@@ -745,6 +761,24 @@ async function getPublicProfileLifecycleResponse(
     return notFoundDocument(
       renderNotFoundPublicProfileHtml(localization.locale, lifecycleLocation),
     );
+  }
+
+  // A page past the end of one of the profile's lists is nothing at all, and
+  // would answer `200` with an empty panel — the same hole the journal
+  // directory's bound closes below (`OVE-494`). Read only when a document
+  // asks past page one.
+  const requestedPage = requestedListingPage(request.nextUrl.searchParams);
+  if (requestedPage !== null && isDocumentNavigationRequest(request)) {
+    const beyond = await isPublicProfilePageBeyondTheEnd(
+      publicProfileHandle,
+      normalizePublicProfileTab(request.nextUrl.searchParams.get("tab")),
+      requestedPage,
+    ).catch(() => false);
+    if (beyond) {
+      return notFoundDocument(
+        renderNotFoundUnknownRouteHtml(localization.locale, lifecycleLocation),
+      );
+    }
   }
 
   return null;

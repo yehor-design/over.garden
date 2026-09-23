@@ -59,55 +59,64 @@ const PROFILE: PublicProfileEvidencePage = {
     publicEntryCount: 2,
     publicObjectCount: 1,
     objectKinds: { plant: 1, animal: 0 },
-    confirmedLineageEdgeCount: 3,
     relationships: { followers: 4, following: 2 },
   },
-  objects: [
-    {
-      objectId: "00000000-0000-4000-8000-000000000001",
-      displayName: "Balcony tomato",
-      objectKind: "plant",
-      identityLabel: "Solanum lycopersicum",
-      identityState: "confirmed",
-      latestEntryDate: "2026-07-10",
-      publicEntryCount: 2,
-      publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000001",
-      coverImageUrl: null,
-      coverFocalX: null,
-      coverFocalY: null,
-      coverIntrinsicWidth: null,
-      coverIntrinsicHeight: null,
-      coverPlaceholderDataUri: null,
-      coverVariantLongEdges: [],
-      coverImageAlt: "Balcony tomato",
-    },
-  ],
-  journals: [
-    {
-      entryId: "10000000-0000-4000-8000-000000000001",
-      title: "First harvest",
-      bodyPreview: "A short public entry.",
-      entryDate: "2026-07-10",
-      publishedAt: "2026-07-10T10:00:00.000Z",
-      publicPath: "/journal/first-harvest",
-      context: {
-        kind: "object",
-        label: "Balcony tomato",
-        publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000001",
+  objects: {
+    items: [
+      {
+        objectId: "00000000-0000-4000-8000-000000000001",
+        displayName: "Balcony tomato",
         objectKind: "plant",
+        identityLabel: "Solanum lycopersicum",
+        identityState: "confirmed",
+        latestEntryDate: "2026-07-10",
+        publicEntryCount: 2,
+        publicPath: "/@green_thumb/objects/balcony-tomato",
+        coverImageUrl: null,
+        coverFocalX: null,
+        coverFocalY: null,
+        coverIntrinsicWidth: null,
+        coverIntrinsicHeight: null,
+        coverPlaceholderDataUri: null,
+        coverVariantLongEdges: [],
+        coverImageAlt: "Balcony tomato",
       },
-      coverImageUrl: null,
-      coverFocalX: null,
-      coverFocalY: null,
-      coverIntrinsicWidth: null,
-      coverIntrinsicHeight: null,
-      coverPlaceholderDataUri: null,
-      coverVariantLongEdges: [],
-      coverImageAlt: "Balcony tomato",
-    },
-  ],
-  hasMoreObjects: false,
-  hasMoreJournals: false,
+    ],
+    page: 1,
+    pageCount: 1,
+  },
+  entries: {
+    items: [
+      {
+        id: "10000000-0000-4000-8000-000000000001",
+        title: "First harvest",
+        excerpt: "A short public entry.",
+        excerptTruncated: false,
+        sourceLanguage: "uk",
+        entryDate: "2026-07-10",
+        publishedAt: "2026-07-10T10:00:00.000Z",
+        publicPath: "/@green_thumb/post/1",
+        object: {
+          id: "00000000-0000-4000-8000-000000000001",
+          displayName: "Balcony tomato",
+          kind: "plant",
+          publicPath: "/@green_thumb/objects/balcony-tomato",
+          safeRegionCode: null,
+        },
+        space: null,
+        author: {
+          handle: "green_thumb",
+          displayName: "Green Thumb",
+          avatarUrl: null,
+          profilePath: "/@green_thumb",
+        },
+        media: [],
+        topics: [],
+      },
+    ],
+    page: 1,
+    pageCount: 1,
+  },
 };
 
 describe("/{locale}/@:handle public profile route", () => {
@@ -142,7 +151,7 @@ describe("/{locale}/@:handle public profile route", () => {
     });
   });
 
-  it("renders objects before journals and defers guest auth until interaction", async () => {
+  it("renders entries before objects and defers guest auth until interaction", async () => {
     const { default: LocalizedPublicProfileRoute } = await import("./page");
     const html = renderToStaticMarkup(
       await LocalizedPublicProfileRoute({
@@ -153,14 +162,17 @@ describe("/{locale}/@:handle public profile route", () => {
       }),
     );
 
+    // The static document is the first page of each list.
     expect(mocks.getPublicProfileEvidencePageByHandle).toHaveBeenCalledWith(
       "@green_thumb",
       "uk",
+      { entriesPage: 1, objectsPage: 1 },
     );
     expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
-    expect(html).toContain('data-public-profile="v2"');
-    expect(html.indexOf("Живі об’єкти")).toBeLessThan(
-      html.indexOf("Журнал догляду"),
+    expect(html).toContain('data-public-profile="v3"');
+    expect(html).toContain('data-profile-tab="entries"');
+    expect(html.indexOf('id="profile-entries"')).toBeLessThan(
+      html.indexOf('id="profile-objects"'),
     );
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("First harvest");
@@ -173,23 +185,63 @@ describe("/{locale}/@:handle public profile route", () => {
   it("opens the tab `?tab=` names, and ignores one that is not a tab", async () => {
     const { default: LocalizedPublicProfileRoute } =
       await import("../../q/[profileHandle]/page");
-    const open = async (tab?: string) =>
+    const open = async (query?: Record<string, string>) =>
       renderToStaticMarkup(
         await LocalizedPublicProfileRoute({
           params: Promise.resolve({
             locale: "uk",
             profileHandle: "@green_thumb",
           }),
-          ...(tab ? { searchParams: Promise.resolve({ tab }) } : {}),
+          ...(query ? { searchParams: Promise.resolve(query) } : {}),
         }),
       );
 
-    expect(await open("entries")).toContain('data-profile-tab="entries"');
-    expect(await open("about")).toContain('data-profile-tab="about"');
-    // A stale or hand-edited link lands on the gardener's objects rather than
-    // on an error: a tab is a view, and an unknown view is not a 404.
-    expect(await open("communities")).toContain('data-profile-tab="objects"');
-    expect(await open()).toContain('data-profile-tab="objects"');
+    expect(await open({ tab: "objects" })).toContain(
+      'data-profile-tab="objects"',
+    );
+    // A stale or hand-edited link lands on the gardener's entries rather than
+    // on an error: a tab is a view, and an unknown view is not a 404. The
+    // "about" tab is gone — its facts are the header (OVE-494).
+    expect(await open({ tab: "about" })).toContain(
+      'data-profile-tab="entries"',
+    );
+    expect(await open({ tab: "communities" })).toContain(
+      'data-profile-tab="entries"',
+    );
+    expect(await open()).toContain('data-profile-tab="entries"');
+  });
+
+  it("reads the page of the open tab's list, and the first page of the other", async () => {
+    const { default: LocalizedPublicProfileRoute } =
+      await import("../../q/[profileHandle]/page");
+    const open = (query: Record<string, string>) =>
+      LocalizedPublicProfileRoute({
+        params: Promise.resolve({
+          locale: "uk",
+          profileHandle: "@green_thumb",
+        }),
+        searchParams: Promise.resolve(query),
+      });
+
+    await open({ page: "3" });
+    expect(mocks.getPublicProfileEvidencePageByHandle).toHaveBeenLastCalledWith(
+      "green_thumb",
+      "uk",
+      { entriesPage: 3, objectsPage: 1 },
+    );
+    await open({ tab: "objects", page: "2" });
+    expect(mocks.getPublicProfileEvidencePageByHandle).toHaveBeenLastCalledWith(
+      "green_thumb",
+      "uk",
+      { entriesPage: 1, objectsPage: 2 },
+    );
+    // Not a page number is the first page, not an error.
+    await open({ page: "two" });
+    expect(mocks.getPublicProfileEvidencePageByHandle).toHaveBeenLastCalledWith(
+      "green_thumb",
+      "uk",
+      { entriesPage: 1, objectsPage: 1 },
+    );
   });
 
   it("uses the authenticated relationship state without exposing account data", async () => {
@@ -298,16 +350,18 @@ describe("/{locale}/@:handle public profile route", () => {
     );
     const { renderPublicProfile } = await import("./page");
     await expect(
-      renderPublicProfile("uk", "@green_thumb", undefined, "objects", "static"),
+      renderPublicProfile("uk", "@green_thumb", undefined, {
+        tab: "entries",
+        page: 1,
+        phase: "static",
+      }),
     ).rejects.toThrow("read_failed");
     await expect(
-      renderPublicProfile(
-        "uk",
-        "@green_thumb",
-        undefined,
-        "objects",
-        "request",
-      ),
+      renderPublicProfile("uk", "@green_thumb", undefined, {
+        tab: "entries",
+        page: 1,
+        phase: "request",
+      }),
     ).rejects.toThrow("database away");
   });
 

@@ -5,8 +5,8 @@ import type {
   PublicFeedPage,
   TrustedPublicFeedTopic,
 } from "@/server/public-feed-repository";
+import { buildPublicFeedHref } from "./public-feed-entry-card";
 import {
-  buildPublicFeedHref,
   buildPublicHomeFeedContextModules,
   PublicHomeFeed,
   type PublicHomeFeedCopy,

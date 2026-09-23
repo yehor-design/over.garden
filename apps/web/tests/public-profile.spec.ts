@@ -372,7 +372,7 @@ test.describe("the public profile and the object passport", () => {
     await selectLocale(context, baseURL);
     const surfaces = [
       `/@${fixture!.gardener.handle}`,
-      `/@${fixture!.gardener.handle}?tab=entries`,
+      `/@${fixture!.gardener.handle}?tab=objects`,
       `/@${fixture!.stranger.handle}`,
       `/@${fixture!.gardener.handle}/objects/${fixture!.objectSlugs[0]}`,
       `/lineage/objects/${fixture!.objectIds[0]}`,
@@ -405,8 +405,9 @@ test.describe("the public profile and the object passport", () => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
     await page.goto(`/@${fixture!.gardener.handle}`, { waitUntil: "load" });
-    const tabs = page.locator('[role="tab"]');
-    await expect(tabs).toHaveCount(3);
+    // Entries, then objects (OVE-494); the "about" tab is the header now.
+    const tabs = page.locator('[role="tab"]:visible');
+    await expect(tabs).toHaveCount(2);
 
     // The shell streams and hydration is not tied to `load`, so a press that
     // lands before React has attached its listener does nothing at all — and
@@ -428,26 +429,27 @@ test.describe("the public profile and the object passport", () => {
     await page.keyboard.press("ArrowRight");
     await expect(tabs.nth(1)).toBeFocused();
     await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
-    await expect(page).toHaveURL(/\?tab=entries$/u);
-    await page.keyboard.press("End");
-    await expect(tabs.nth(2)).toBeFocused();
-    await expect(page).toHaveURL(/\?tab=about$/u);
+    await expect(page).toHaveURL(/\?tab=objects$/u);
     // Home returns to the first tab, and the first tab is the bare address:
     // absent means unset, here as everywhere else.
     await page.keyboard.press("Home");
+    await expect(tabs.first()).toBeFocused();
     await expect(page).toHaveURL(
       new RegExp(`/@${fixture!.gardener.handle}$`, "u"),
     );
+    await page.keyboard.press("End");
+    await expect(tabs.nth(1)).toBeFocused();
+    await expect(page).toHaveURL(/\?tab=objects$/u);
 
     // A reload lands on the same view, which is the whole point of putting it
     // in the URL. The panel is open before hydration, from the server.
-    await page.goto(`/@${fixture!.gardener.handle}?tab=entries`, {
+    await page.goto(`/@${fixture!.gardener.handle}?tab=objects`, {
       waitUntil: "domcontentloaded",
     });
     await expect(
-      page.locator('[data-public-profile="v2"][data-profile-tab="entries"]'),
+      page.locator('[data-public-profile="v3"][data-profile-tab="objects"]'),
     ).toHaveCount(1);
-    await expect(page.locator("#profile-journals")).toBeVisible();
+    await expect(page.locator("#profile-objects")).toBeVisible();
   });
 
   test("a rename moves every address: 308 for a passport, 410 for the old profile", async ({

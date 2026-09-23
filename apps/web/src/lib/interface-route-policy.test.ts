@@ -407,16 +407,16 @@ describe("interface route policy", () => {
     ).toBe("");
   });
 
-  it("carries a profile's open tab, and only a tab that exists", () => {
+  it("carries a profile's open tab and its page, and only a tab that exists", () => {
     // The author-scoped rewrite rebuilds the search string from this list, so
     // an undeclared parameter never reaches the page: the address said
     // `?tab=entries` and the profile opened on its objects (`OVE-450`).
-    expect(
-      sanitizeInterfaceRouteSearch("/@olena", "?tab=entries"),
-    ).toBe("?tab=entries");
-    expect(sanitizeInterfaceRouteSearch("/@olena", "?tab=about")).toBe(
-      "?tab=about",
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?tab=objects")).toBe(
+      "?tab=objects",
     );
+    // The "about" tab is gone (`OVE-494`): an old link loses the parameter
+    // and lands on the entries.
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?tab=about")).toBe("");
     // A tab nobody built is dropped rather than reflected back into the page.
     expect(sanitizeInterfaceRouteSearch("/@olena", "?tab=communities")).toBe(
       "",
@@ -424,9 +424,13 @@ describe("interface route policy", () => {
     expect(
       sanitizeInterfaceRouteSearch(
         "/@olena",
-        "?tab=entries&profileAction=followed&token=secret",
+        "?tab=objects&page=3&profileAction=followed&token=secret",
       ),
-    ).toBe("?tab=entries&profileAction=followed");
+    ).toBe("?tab=objects&page=3&profileAction=followed");
+    // A page is a page number, bounded like every other listing's.
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?page=0")).toBe("");
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?page=1001")).toBe("");
+    expect(sanitizeInterfaceRouteSearch("/@olena", "?page=abc")).toBe("");
   });
 
   it("rewrites a sanitized journal-directory return path to the target locale", () => {

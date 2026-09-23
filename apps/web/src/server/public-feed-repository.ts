@@ -115,6 +115,30 @@ export interface PublicFeedPage {
   nextCursor: string | null;
 }
 
+/**
+ * An entry as a card draws it: the feed's entry, widened by one case. The feed
+ * lists object entries only, so its entries always carry `object`; a
+ * gardener's profile lists everything they published (`OVE-494`), and an
+ * entry about a whole space names the space, which has no public address.
+ */
+export type PublicFeedCardEntry = Omit<
+  PublicFeedEntry,
+  "object" | "qualityClass"
+> & {
+  object: PublicFeedEntry["object"] | null;
+  space?: { displayName: string } | null;
+};
+
+/**
+ * Which entries a listing's media and topic reads accept. The feed's own
+ * listing is object entries only, and so were these reads; a profile's list
+ * includes entries about a space, whose ids arrive already filtered by the
+ * profile's own query.
+ */
+export interface PublicFeedEntryScope {
+  includeSpaceEntries?: boolean;
+}
+
 export interface PublicFeedEntryRow {
   entryId: string;
   title: string;
@@ -384,8 +408,9 @@ export function buildPublicFeedEntriesQuery(
 export function buildPublicFeedMediaQuery(
   executor: QueryExecutor,
   entryIds: readonly string[],
+  scope: PublicFeedEntryScope = {},
 ) {
-  const rankedMedia = executor
+  let rankedMedia = executor
     .selectFrom("media_assets")
     .innerJoin(
       "journal_entries",
@@ -425,10 +450,13 @@ export function buildPublicFeedMediaQuery(
     .where("journal_entries.id", "in", [...entryIds])
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
-    .where("journal_entries.entry_scope", "=", "object")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    // The ids arrive filtered by their listing's own read; the policy is
+    // applied again here so a photograph is never the one thing a caller
+    // forgot to filter (`OVE-221`, `OVE-494`).
+    .where(publicLaunchSurfacePredicates())
     .where(publicMediaEligibilityPredicate())
     .where((eb) =>
       eb.or([
@@ -443,11 +471,17 @@ export function buildPublicFeedMediaQuery(
     .$narrowType<{
       entry_id: string;
       derivative_key: string;
-    }>()
-    .as("ranked_media");
+    }>();
+  if (!scope.includeSpaceEntries) {
+    rankedMedia = rankedMedia.where(
+      "journal_entries.entry_scope",
+      "=",
+      "object",
+    );
+  }
 
   return executor
-    .selectFrom(rankedMedia)
+    .selectFrom(rankedMedia.as("ranked_media"))
     .select([
       "ranked_media.media_id as id",
       "ranked_media.entry_id as entryId",
@@ -466,8 +500,9 @@ export function buildPublicFeedMediaQuery(
 export function buildPublicFeedTopicsForEntriesQuery(
   executor: QueryExecutor,
   entryIds: readonly string[],
+  scope: PublicFeedEntryScope = {},
 ) {
-  return executor
+  const query = executor
     .selectFrom("journal_entry_topic_signals")
     .innerJoin(
       "journal_topics",
@@ -494,12 +529,15 @@ export function buildPublicFeedTopicsForEntriesQuery(
     )
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
-    .where("journal_entries.entry_scope", "=", "object")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .orderBy("journal_entry_topic_signals.journal_entry_id", "asc")
     .orderBy("journal_topics.label", "asc");
+  return scope.includeSpaceEntries
+    ? query
+    : query.where("journal_entries.entry_scope", "=", "object");
 }
 
 export function buildTrustedPublicFeedTopicsQuery(
@@ -618,21 +656,10 @@ export function serializePublicFeedPage(input: {
             profilePath: publicProfilePath(input.locale, row.authorHandle),
           }
         : null,
-      media: (mediaByEntry[row.entryId] ?? [])
-        .slice(0, MAX_PUBLIC_FEED_MEDIA_PER_ENTRY)
-        .map((media) => ({
-          id: media.id,
-          publicUrl: publicMediaUrl(media.derivativeKey),
-          focalX: Number(media.focalX ?? 0.5),
-          focalY: Number(media.focalY ?? 0.5),
-          intrinsicWidth: media.intrinsicWidth ?? null,
-          intrinsicHeight: media.intrinsicHeight ?? null,
-          placeholderDataUri:
-            input.mediaExtras?.get(media.id)?.placeholderDataUri ?? null,
-          variantLongEdges:
-            input.mediaExtras?.get(media.id)?.variantLongEdges ?? [],
-          caption: media.caption?.trim() || null,
-        })),
+      media: serializePublicFeedMedia(mediaByEntry[row.entryId] ?? [], {
+        publicMediaUrl,
+        mediaExtras: input.mediaExtras,
+      }),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,
         label: localizeTopicLabel(input.locale, topic.slug, topic.label),
@@ -657,13 +684,41 @@ export function serializePublicFeedPage(input: {
   };
 }
 
-function isPublicFeedExcerptTruncated(body: string) {
+/**
+ * One entry's photographs as a card receives them: at most three, in the
+ * order the media read ranked them. Shared by every listing that draws the
+ * feed's card (`OVE-494`).
+ */
+export function serializePublicFeedMedia(
+  rows: readonly PublicFeedMediaRow[],
+  options: {
+    publicMediaUrl?: (derivativeKey: string) => string;
+    mediaExtras?: ReadonlyMap<string, MediaVariantExtras>;
+  } = {},
+): PublicFeedMedia[] {
+  const publicMediaUrl = options.publicMediaUrl ?? getPublicDerivativeUrl;
+  return rows.slice(0, MAX_PUBLIC_FEED_MEDIA_PER_ENTRY).map((media) => ({
+    id: media.id,
+    publicUrl: publicMediaUrl(media.derivativeKey),
+    focalX: Number(media.focalX ?? 0.5),
+    focalY: Number(media.focalY ?? 0.5),
+    intrinsicWidth: media.intrinsicWidth ?? null,
+    intrinsicHeight: media.intrinsicHeight ?? null,
+    placeholderDataUri:
+      options.mediaExtras?.get(media.id)?.placeholderDataUri ?? null,
+    variantLongEdges:
+      options.mediaExtras?.get(media.id)?.variantLongEdges ?? [],
+    caption: media.caption?.trim() || null,
+  }));
+}
+
+export function isPublicFeedExcerptTruncated(body: string) {
   return (
     body.replace(/\s+/g, " ").trim().length > MAX_PUBLIC_FEED_EXCERPT_LENGTH
   );
 }
 
-function buildPublicFeedExcerpt(body: string) {
+export function buildPublicFeedExcerpt(body: string) {
   const normalized = body.replace(/\s+/g, " ").trim();
   if (normalized.length <= MAX_PUBLIC_FEED_EXCERPT_LENGTH) return normalized;
 
