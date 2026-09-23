@@ -166,13 +166,13 @@ export function gardenCollectionWriteHref(
   return `/garden/new?${params.toString()}`;
 }
 
-/** An object's page, or a space's journal on the garden page. */
+/** An object's page, or a space's own page (`OVE-490`). */
 export function gardenCollectionItemHref(item: {
   kind: GardenCollectionItem["kind"];
   id: string;
 }): string {
   return item.kind === "space"
-    ? `/garden?space=${encodeURIComponent(item.id)}#space-journal`
+    ? `/garden/spaces/${encodeURIComponent(item.id)}`
     : `/garden/objects/${encodeURIComponent(item.id)}`;
 }
 

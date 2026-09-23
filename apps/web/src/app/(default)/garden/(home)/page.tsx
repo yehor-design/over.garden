@@ -3,7 +3,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
-import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
 import { PlusCircleIcon as CirclePlus } from "@/components/icons/PlusCircle";
 import { CompassIcon as Compass } from "@/components/icons/Compass";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
@@ -27,16 +26,12 @@ import {
   isDefaultGardenCollectionRequest,
   normalizeGardenCollectionRequest,
 } from "@/lib/garden/garden-collection";
-import {
-  formatGardenCollectionTemplate,
-  getGardenCollectionCopy,
-} from "@/lib/garden-collection-copy";
+import { getGardenCollectionCopy } from "@/lib/garden-collection-copy";
 import { pickerKindForCatalogKind } from "@/lib/garden/catalog-object-kind";
 import {
   gardenFirstEntryPreselectionPath,
   publicCatalogEvidencePath,
 } from "@/lib/garden/public-paths";
-import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
@@ -44,7 +39,6 @@ import {
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
-  formatGardenWorkspaceDate,
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
@@ -64,11 +58,7 @@ import {
 import { loadGardenWorkspaceContext } from "@/server/garden-workspace-repository";
 import { scheduleGardenWorkspaceActivationAnalytics } from "@/server/garden-workspace-after-response";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import {
-  getMySpaceJournalTimeline,
-  hasPriorPublicationDisclosure,
-  type SpaceJournalTimeline,
-} from "@/server/journal-repository";
+import { hasPriorPublicationDisclosure } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveWorkspaceViewer } from "@/server/workspace-access";
 import {
@@ -84,13 +74,10 @@ import { addCatalogPublicSlugToWishlistAction } from "../../wishlist/actions";
 import { FirstEntryComposer } from "../first-entry-composer";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { GardenWorkspaceServiceState } from "../garden-workspace-service-state";
-import { SaveProgressMoment } from "../save-progress-moment";
 import { HiddenField } from "@/components/ui/hidden-field";
 
 type GardenSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface GardenPageProps {
   searchParams?: Promise<GardenSearchParams>;
@@ -234,7 +221,6 @@ async function GardenHomeSections({
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
-  const requestedSpaceId = uuidParam(params.space);
   const today = new Date().toISOString().slice(0, 10);
   const collectionCopy = getGardenCollectionCopy(locale);
 
@@ -306,19 +292,6 @@ async function GardenHomeSections({
         </>
       ) : (
         <>
-          {requestedSpaceId ? (
-            <Suspense fallback={null}>
-              <GardenSelectedSpaceTimeline
-                locale={locale}
-                scope={scope}
-                spaceId={requestedSpaceId}
-                showSaveProgress={
-                  normalizeSaveProgressMomentKind(params.saveProgress) ===
-                  "space-entry"
-                }
-              />
-            </Suspense>
-          ) : null}
           <GardenActions locale={locale} />
           {explicitCreate ? composer : null}
           <GardenCollection
@@ -565,147 +538,6 @@ function GardenWriteTools({
   );
 }
 
-/**
- * One space's journal, opened from its row (`?space=`). Writing into it is the
- * one composer at `/garden/new` with the space named, not an editor inside the
- * garden page (`OVE-489`); the space's own page is `OVE-490`.
- */
-async function GardenSelectedSpaceTimeline({
-  locale,
-  scope,
-  spaceId,
-  showSaveProgress,
-}: {
-  locale: InterfaceLocale;
-  scope: ReturnType<typeof scopedToUser>;
-  spaceId: string;
-  showSaveProgress: boolean;
-}) {
-  // The space timeline is an addition to a page that already renders without it,
-  // so a failure here is an absent block rather than a panel — but it is still
-  // settled and bounded, never awaited bare.
-  const settled = await settleSection(
-    () =>
-      getMySpaceJournalTimeline(scope, spaceId, {
-        objectLimit: 20,
-        entryLimit: 5,
-      }),
-    {
-      deadlineMs: workspaceSectionDeadlineMs(2),
-      surface: "garden-home",
-      section: "space-timeline",
-    },
-  );
-  if (settled.status === "error" || !settled.value) return null;
-  const timeline = settled.value;
-
-  const copy = getGardenWorkspaceCopy(locale);
-  const writeHref = `/garden/new?${new URLSearchParams({
-    space: timeline.space.id,
-    returnTo: `/garden?space=${timeline.space.id}#space-journal`,
-  }).toString()}`;
-  return (
-    <>
-      {showSaveProgress ? (
-        <SaveProgressMoment
-          locale={locale}
-          kind="space-entry"
-          entryCount={timeline.entries.length}
-          spaceName={timeline.space.display_name}
-          entryTitle={timeline.entries[0]?.title ?? null}
-          primaryHref="#space-journal"
-          primaryLabel={copy.page.postSave.returnToSpaceJournal}
-          secondaryHref="/garden/objects/new"
-          secondaryLabel={copy.page.postSave.addAnotherObject}
-        />
-      ) : null}
-      <SpaceJournal locale={locale} timeline={timeline} writeHref={writeHref} />
-    </>
-  );
-}
-
-function SpaceJournal({
-  locale,
-  timeline,
-  writeHref,
-}: {
-  locale: InterfaceLocale;
-  timeline: SpaceJournalTimeline;
-  writeHref: string;
-}) {
-  const copy = getGardenWorkspaceCopy(locale);
-  const collectionCopy = getGardenCollectionCopy(locale);
-  return (
-    <section
-      id="space-journal"
-      aria-labelledby="space-journal-heading"
-      data-garden-space-journal={timeline.space.id}
-      className="scroll-mt-20"
-    >
-      <p className="text-overline text-text-muted uppercase">
-        {copy.page.spaceJournal.eyebrow}
-      </p>
-      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h2
-            id="space-journal-heading"
-            className="text-h2 break-words text-text-heading"
-          >
-            {timeline.space.display_name}
-          </h2>
-          <p className="mt-1 text-body-sm text-text-muted">
-            {copy.page.spaceJournal.description}
-          </p>
-        </div>
-        <Link
-          href={writeHref}
-          data-garden-write={timeline.space.id}
-          aria-label={formatGardenCollectionTemplate(
-            collectionCopy.row.writeLabel,
-            { name: timeline.space.display_name },
-          )}
-          className={buttonVariants()}
-        >
-          <NotePencil aria-hidden="true" />
-          {collectionCopy.row.write}
-        </Link>
-      </div>
-
-      <p className="mt-4 text-caption text-text-muted">
-        {formatGardenWorkspaceTemplate(copy.page.spaceJournal.showing, {
-          count: timeline.entries.length,
-        })}
-      </p>
-      {timeline.entries.length > 0 ? (
-        <ol className="mt-2 divide-y divide-border border-y border-border">
-          {timeline.entries.map((entry) => (
-            <li
-              key={entry.id}
-              className="flex items-start justify-between gap-3 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-h4 text-text-heading">
-                  {entry.title}
-                </p>
-                <p className="mt-1 text-caption text-text-muted">
-                  {copy.page.spaceJournal.public}
-                </p>
-              </div>
-              <time className="shrink-0 text-caption text-text-muted">
-                {formatGardenWorkspaceDate(locale, entry.entry_date)}
-              </time>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="mt-2 border-y border-dashed border-border py-5 text-body-sm text-text-muted">
-          {copy.page.spaceJournal.empty}
-        </p>
-      )}
-    </section>
-  );
-}
-
 async function resolveInitialCatalogSelection(
   searchParams: GardenSearchParams,
 ): Promise<FirstEntryCatalogSelection | null> {
@@ -799,9 +631,4 @@ function normalizeGardenReturnToParam(value: string | string[] | undefined) {
 function firstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0]?.trim() ?? "";
   return typeof value === "string" ? value.trim() : "";
-}
-
-function uuidParam(value: string | string[] | undefined) {
-  const candidate = firstParam(value);
-  return UUID_PATTERN.test(candidate) ? candidate : "";
 }

@@ -24,7 +24,7 @@ export const destinationKey = (value: OwnedDestination) =>
   `${value.kind}:${value.id}`;
 export function destinationJournalPath(value: OwnedDestination): string {
   return value.kind === "space"
-    ? `/garden?space=${encodeURIComponent(value.id)}#space-journal`
+    ? `/garden/spaces/${encodeURIComponent(value.id)}`
     : `/garden/objects/${encodeURIComponent(value.id)}#follow-up-composer`;
 }
 export const DESTINATION_COPY = {

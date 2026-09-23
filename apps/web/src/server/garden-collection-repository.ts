@@ -83,7 +83,8 @@ interface ObjectRow {
  * public, active catalogue identity is named, as everywhere else in the
  * workspace.
  */
-function ownedObjects(scope: RequestScope) {
+function ownedObjects(scope: RequestScope, spaceId?: string) {
+  const inSpace = spaceId ? sql`and o.space_id = ${spaceId}::uuid` : sql``;
   return sql`
     select o.id,
            o.display_name,
@@ -101,6 +102,7 @@ function ownedObjects(scope: RequestScope) {
      and c.identity_state = 'active'
      and c.created_by_user_id is null
     where o.owner_user_id = ${scope.userId}::uuid
+      ${inSpace}
   `;
 }
 
@@ -129,6 +131,8 @@ function objectMatches(q: string): RawBuilder<unknown> {
 export async function listGardenObjects(
   scope: RequestScope,
   request: GardenCollectionRequest,
+  /** One space's plants and animals, for the space's own page (`OVE-490`). */
+  options: { spaceId?: string } = {},
   executor: Kysely<Database> = db,
 ): Promise<GardenObjectsGroup> {
   const { limit, offset } = objectWindow(request);
@@ -145,7 +149,7 @@ export async function listGardenObjects(
       )
       .execute(tx);
     const counts = await sql<{ owned: number; total: number }>`
-      with owned as (${ownedObjects(scope)})
+      with owned as (${ownedObjects(scope, options.spaceId)})
       select count(*)::int as owned,
              (count(*) filter (where ${matches}))::int as total
       from owned
@@ -154,7 +158,7 @@ export async function listGardenObjects(
     if (limit === 0 || total === 0) return { items: [], total, owned };
 
     const rows = await sql<ObjectRow>`
-      with owned as (${ownedObjects(scope)}),
+      with owned as (${ownedObjects(scope, options.spaceId)}),
       last_entries as (
         select e.plant_object_id, max(e.entry_date) as last_entry_date
         from journal_entries as e

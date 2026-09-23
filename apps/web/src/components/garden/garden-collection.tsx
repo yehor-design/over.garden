@@ -471,13 +471,12 @@ function SpacesGroup({
       {group.items.length > 0 ? (
         <ul className="grid" data-garden-collection-list="space">
           {group.items.map((item) => (
-            <CollectionRow
+            <GardenItemRow
               key={item.id}
-              copy={copy}
               item={item}
               locale={locale}
-              request={request}
               today={today}
+              writeHref={gardenCollectionWriteHref(item, request)}
             />
           ))}
         </ul>
@@ -532,13 +531,12 @@ function ObjectsGroup({
       {group.items.length > 0 ? (
         <ul className="grid" data-garden-collection-list="object">
           {group.items.map((item) => (
-            <CollectionRow
+            <GardenItemRow
               key={item.id}
-              copy={copy}
               item={item}
               locale={locale}
-              request={request}
               today={today}
+              writeHref={gardenCollectionWriteHref(item, request)}
             />
           ))}
         </ul>
@@ -594,21 +592,24 @@ function GroupPagination({
 /**
  * One owned thing: what it is, where it lives, when it was last written about,
  * and Write. Two tomatoes differ by their space in the line under the name, so
- * the row that is pressed is the tomato that is meant (FAST_ENTRY.md).
+ * the row that is pressed is the tomato that is meant (FAST_ENTRY.md). A space's
+ * own page leaves the space out of its rows (`showSpace`): every row there is in
+ * it.
  */
-function CollectionRow({
-  copy,
+export function GardenItemRow({
   item,
   locale,
-  request,
   today,
+  writeHref,
+  showSpace = true,
 }: {
-  copy: GardenCollectionCopy;
   item: GardenCollectionItem;
   locale: InterfaceLocale;
-  request: GardenCollectionRequest;
   today: string;
+  writeHref: string;
+  showSpace?: boolean;
 }) {
+  const copy = getGardenCollectionCopy(locale);
   const Icon =
     item.kind === "space"
       ? SquaresFourIcon
@@ -625,7 +626,7 @@ function CollectionRow({
         // organism as the secondary disambiguation (FAST_ENTRY.md).
         [
           item.objectKind === "animal" ? copy.row.animal : copy.row.plant,
-          item.space.displayName,
+          showSpace ? item.space.displayName : null,
           item.species,
         ].filter((part): part is string => Boolean(part));
   const [before, after] = copy.row.lastEntry.split("{when}");
@@ -660,7 +661,7 @@ function CollectionRow({
       }
       actions={
         <Link
-          href={gardenCollectionWriteHref(item, request)}
+          href={writeHref}
           aria-label={template(copy.row.writeLabel, {
             name: item.displayName,
           })}

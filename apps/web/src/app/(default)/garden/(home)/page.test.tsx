@@ -174,7 +174,7 @@ describe("/garden, the collection home (OVE-489)", () => {
       `href="/garden/new?object=${OBJECT_ID}&amp;returnTo=%2Fgarden%23garden-object-${OBJECT_ID}"`,
     );
     expect(html).toContain('aria-label="Записати: Cherry tomato"');
-    expect(html).toContain(`href="/garden?space=${SPACE_ID}#space-journal"`);
+    expect(html).toContain(`href="/garden/spaces/${SPACE_ID}"`);
     // Recency is stated, never diagnosed (OG-UX-023).
     expect(html).not.toMatch(/Потребує уваги|Оновіть|needs attention/iu);
     // A small garden is read whole: no search over three things.
@@ -214,7 +214,7 @@ describe("/garden, the collection home (OVE-489)", () => {
         label: "Flowering changed",
       }),
       expect.objectContaining({
-        href: `/garden?space=${SPACE_ID}#space-journal`,
+        href: `/garden/spaces/${SPACE_ID}`,
         label: "Morning round",
       }),
     ]);
@@ -366,25 +366,10 @@ describe("/garden, the collection home (OVE-489)", () => {
     expect(html).not.toContain('data-garden-setup="true"');
   });
 
-  it("opens a space's journal from its row, with Write naming the space", async () => {
-    const html = await renderGarden({ space: SPACE_ID });
-
-    expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
-      expect.anything(),
-      SPACE_ID,
-      { objectLimit: 20, entryLimit: 5 },
-    );
-    expect(html).toContain(`data-garden-space-journal="${SPACE_ID}"`);
-    expect(html).toContain("Shared morning round");
-    expect(html).toContain(
-      `href="/garden/new?space=${SPACE_ID}&amp;returnTo=%2Fgarden%3Fspace%3D${SPACE_ID}%23space-journal"`,
-    );
-    // Writing is the one composer's route, not an editor on this page.
-    expect(html).not.toContain('data-entry-composer="true"');
-  });
-
-  it("ignores a malformed space instead of reading it", async () => {
-    await renderGarden({ space: "not-a-uuid" });
+  it("leaves a space's journal to the space's own page", async () => {
+    // `/garden?space=…` answers 308 in the proxy since OVE-490; the garden
+    // page itself never reads one space.
+    await renderGarden({ space: SPACE_ID });
 
     expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
   });

@@ -596,6 +596,10 @@ function buildAtomicCreateResponse(input: {
       input.body.context.target === "plant_object_entry"
         ? input.body.context.plantObjectId
         : input.plantObjectId,
+    spaceId:
+      input.body.context.target === "space_entry"
+        ? input.body.context.spaceId
+        : null,
   });
   const returnTo = normalizeJournalComposerReturnTo(
     input.body.returnTo,
@@ -644,6 +648,9 @@ function revalidateAtomicCreatePaths(
       ? body.context.plantObjectId
       : createdPlantObjectId;
   if (plantObjectId) revalidatePath(`/garden/objects/${plantObjectId}`);
+  if (body.context.target === "space_entry") {
+    revalidatePath(`/garden/spaces/${body.context.spaceId}`);
+  }
 }
 
 async function assertPublicMediaReady(

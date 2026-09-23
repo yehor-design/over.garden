@@ -56,6 +56,7 @@ export const BROWSER_GATE_SPECS = [
   "personal-surfaces.spec.ts",
   "garden-workspace.spec.ts",
   "garden-collection.spec.ts",
+  "space-page.spec.ts",
   "catalog.spec.ts",
   "organism-card.spec.ts",
   "editorial-surfaces.spec.ts",

@@ -141,6 +141,8 @@ export function buildOwnerObjectPassportPresentation(
         key: "context",
         label: domain.contextLabel,
         value: `${page.space.display_name} · ${locationLabel}`,
+        // The owner's object leads to its space's own page (`OVE-490`).
+        href: `/garden/spaces/${encodeURIComponent(page.space.id)}`,
       },
       {
         key: "first-observation",

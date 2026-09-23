@@ -70,6 +70,18 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**A space's own page (OVE-490):** `/garden/spaces/[spaceId]` names the
+space and offers Write (the one composer with the space named), Add a plant or
+animal here (object setup with the space preselected) and Settings; below are
+its plants and animals and its history — every active entry that belongs to the
+space, its own notes and its objects' entries, each once under its one
+permalink and labelled "Про простір" or "Про «…»", with views and pages of
+their own when they outgrow the page. `/garden?space={id}` answers 308 there.
+`/settings` renames the space or changes its region visibility and deletes an
+empty space only: the foreign keys from objects and entries cascade, so a space
+with either is never offered for deletion (the delete re-counts under a row
+lock). See `docs/redesign/2026-09-21/OVE-490-PROOF.md`.
+
 **My garden is a collection (OVE-489):** `/garden` leads with New entry, Add
 a plant or animal and New space, then one search over spaces and plants or
 animals listed as two groups — each its own settled read

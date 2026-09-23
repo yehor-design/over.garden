@@ -58,7 +58,10 @@ describe("the collection's address (OVE-489)", () => {
 
   it("sends Write to the one composer with the destination named and the row to return to", () => {
     const request = { ...DEFAULT, q: "tomato", page: 2 };
-    const href = gardenCollectionWriteHref({ kind: "object", id: "o-1" }, request);
+    const href = gardenCollectionWriteHref(
+      { kind: "object", id: "o-1" },
+      request,
+    );
     const url = new URL(href, "https://over.garden");
     expect(url.pathname).toBe("/garden/new");
     expect(url.searchParams.get("object")).toBe("o-1");
@@ -78,7 +81,7 @@ describe("the collection's address (OVE-489)", () => {
       "/garden/objects/o-1",
     );
     expect(gardenCollectionItemHref({ kind: "space", id: "s-1" })).toBe(
-      "/garden?space=s-1#space-journal",
+      "/garden/spaces/s-1",
     );
   });
 });
