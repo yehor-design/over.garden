@@ -9,6 +9,18 @@ import { Pool } from "pg";
 import type { Database } from "../src/db/schema";
 import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
 import {
+  applyCatalogQueueItem,
+  buildEnqueueCatalogSourceRefreshJobQuery,
+  listCatalogSources,
+  listOpenCurationQueue,
+  readCatalogSourceCoverage,
+  readCurationActionSummary,
+  readCurationQueueItemSummary,
+  rejectCatalogQueueItem,
+  revertCatalogAction,
+  skipCatalogQueueItem,
+} from "../src/server/catalog-curation-repository";
+import {
   CATALOG_PICK_EVENT_RETENTION_DAYS,
   purgeCatalogPickEvents,
   readCatalogAutoAcceptPrecision,
@@ -73,6 +85,274 @@ async function seedEvent(
      values (now() - ($1 || ' days')::interval, $2, 6, $3, 'uk', 'plant', $4)`,
     [input.daysAgo, input.outcome, input.msToPick, input.ownerUserId],
   );
+}
+
+/**
+ * The owner's work queues, executed (`OVE-506`).
+ *
+ * - Every open item the queue marks appliable is applied by
+ *   `catalog_apply_queue_item`, and every item it marks blocked is refused by
+ *   it: the page's "can be accepted" is the function's own answer, read before
+ *   the press. Before this, Accept was offered on items the function refuses,
+ *   and each press ended on the error page.
+ * - An automatic decision the owner takes back is counted as reverted. The
+ *   revert row is the owner's (`automatic = false`), so counting automatic
+ *   revert rows counted nothing and every rule read 0 reverted.
+ * - A rejection or a skip says whether it changed anything.
+ * - A source is identified from its newest imported snapshot, a newer
+ *   rejected one is reported beside it, its refresh job is found by its key,
+ *   and its counts are read on their own.
+ */
+async function proveCatalogWorkQueueReads(
+  pool: Pool,
+  db: Kysely<Database>,
+  ownerUserId: string,
+) {
+  const node = async (name: string, nodeKind: string, state = "active") => {
+    const id = randomUUID();
+    await pool.query(
+      `insert into catalog_items (
+         id, canonical_name, normalized_name, source, source_id, locale,
+         node_kind, kingdom, identity_state
+       )
+       values ($1, $2, catalog_normalize_name($2), 'species_backbone', $3, 'la',
+               $4, 'Plantae', $5)`,
+      [id, name, `ove506:${id}`, nodeKind, state],
+    );
+    return id;
+  };
+  const species = await node("Solanum lycopersicum L.", "taxon");
+  const cultivar = await node("Де Барао OVE-506", "cultivar");
+  const otherCultivar = await node("Бичаче серце OVE-506", "cultivar");
+  const retired = await node("Lycopersicon OVE-506", "taxon", "retired");
+
+  const item = async (input: {
+    itemType: string;
+    subject: string | null;
+    label: string | null;
+    proposal: Record<string, string>;
+    reason: string;
+  }) => {
+    const id = randomUUID();
+    await pool.query(
+      `insert into catalog_curation_queue (
+         id, item_type, subject_catalog_item_id, subject_label, proposal,
+         confidence, reasons, impact_score, state
+       )
+       values ($1, $2, $3, $4, $5::jsonb, 0.95, array[$6]::text[], 5, 'open')`,
+      [
+        id,
+        input.itemType,
+        input.subject,
+        input.label,
+        JSON.stringify(input.proposal),
+        input.reason,
+      ],
+    );
+    return id;
+  };
+  const expected: Record<string, string | null> = {};
+  const appliable = await item({
+    itemType: "label_link",
+    subject: species,
+    label: "помідор бабусі ove506",
+    proposal: { catalog_item_id: species, object_kind: "plant" },
+    reason: "label_scientific_name:stored",
+  });
+  expected[appliable] = null;
+  const intoRetired = await item({
+    itemType: "label_link",
+    subject: null,
+    label: "старий помідор ove506",
+    proposal: { catalog_item_id: retired, object_kind: "plant" },
+    reason: "denomination_equal",
+  });
+  expected[intoRetired] = "target_inactive";
+  const merge = await item({
+    itemType: "node_merge",
+    subject: cultivar,
+    label: null,
+    proposal: { survivor_id: species },
+    reason: "col_accepted_became_synonym",
+  });
+  expected[merge] = null;
+  const mergeWithoutSurvivor = await item({
+    itemType: "node_merge",
+    subject: otherCultivar,
+    label: null,
+    proposal: { catalog_item_id: species },
+    reason: "canonical_same_kingdom_rank",
+  });
+  expected[mergeWithoutSurvivor] = "no_target";
+  const split = await item({
+    itemType: "split_review",
+    subject: species,
+    label: null,
+    proposal: {},
+    reason: "homonym_kingdom_conflict",
+  });
+  expected[split] = "not_applied_here";
+  // The search miss queued above: a name, and no card to attach it to.
+  const missItem = await pool.query<{ id: string }>(
+    `select id::text from catalog_curation_queue
+      where item_type = 'label_link' and subject_label = 'поiмдор'`,
+  );
+  const miss = missItem.rows[0]?.id;
+  if (!miss) throw new Error("ove506_search_miss_item_missing");
+  expected[miss] = "no_target";
+
+  const listed = await listOpenCurationQueue({ limit: 50 }, db);
+  const blockedBy = new Map(listed.map((entry) => [entry.id, entry.blockedBy]));
+  for (const [id, block] of Object.entries(expected)) {
+    if (!blockedBy.has(id)) throw new Error(`ove506_item_not_listed:${id}`);
+    if (blockedBy.get(id) !== block) {
+      throw new Error(
+        `ove506_block_wrong:${id}:${String(blockedBy.get(id))}!=${String(block)}`,
+      );
+    }
+  }
+
+  // The function agrees with every mark: blocked ones are refused and change
+  // nothing; appliable ones apply.
+  let refusedAsMarked = 0;
+  for (const [id, block] of Object.entries(expected)) {
+    if (block === null) continue;
+    const refused = await pool
+      .query("select catalog_apply_queue_item($1::uuid, $2::uuid, false)", [
+        id,
+        ownerUserId,
+      ])
+      .then(() => false)
+      .catch(() => true);
+    if (!refused) throw new Error(`ove506_blocked_item_applied:${id}:${block}`);
+    const state = await readCurationQueueItemSummary(id, db);
+    if (state?.state !== "open") {
+      throw new Error(`ove506_refusal_changed_state:${id}`);
+    }
+    refusedAsMarked += 1;
+  }
+  const applied = await applyCatalogQueueItem(
+    { queueItemId: appliable, actorUserId: ownerUserId, automatic: false },
+    db,
+  );
+  const acceptedSummary = await readCurationQueueItemSummary(appliable, db);
+  if (
+    acceptedSummary?.state !== "accepted" ||
+    acceptedSummary.subjectName !== "Solanum lycopersicum L." ||
+    acceptedSummary.subjectLabel !== "помідор бабусі ove506"
+  ) {
+    throw new Error("ove506_summary_wrong_after_accept");
+  }
+  if (!applied.actionId) throw new Error("ove506_accept_returned_no_action");
+
+  // A merge the worker applied on its own, which the owner then takes back.
+  const automatic = await pool.query<{ action_id: string }>(
+    "select catalog_apply_queue_item($1::uuid, null, true)::text as action_id",
+    [merge],
+  );
+  const automaticActionId = automatic.rows[0]?.action_id;
+  if (!automaticActionId) throw new Error("ove506_automatic_apply_missing");
+  await revertCatalogAction(
+    { actionId: automaticActionId, actorUserId: ownerUserId },
+    db,
+  );
+  const precision = await readCatalogAutoAcceptPrecision(db);
+  const rule = precision.find(
+    (row) => row.ruleCode === "col_accepted_became_synonym",
+  );
+  if (!rule || rule.applied !== 1 || rule.reverted !== 1) {
+    throw new Error(
+      `ove506_precision_ignores_revert:${JSON.stringify(rule ?? null)}`,
+    );
+  }
+  const undone = await readCurationActionSummary(automaticActionId, db);
+  if (!undone?.reverted || undone.subjectNames.length !== 2) {
+    throw new Error("ove506_action_summary_wrong");
+  }
+
+  // A rejection says whether it changed anything; the second one did not.
+  const first = await rejectCatalogQueueItem(
+    { queueItemId: split, actorUserId: ownerUserId },
+    db,
+  );
+  const second = await rejectCatalogQueueItem(
+    { queueItemId: split, actorUserId: ownerUserId },
+    db,
+  );
+  const skipped = await skipCatalogQueueItem(
+    { queueItemId: split, actorUserId: ownerUserId },
+    db,
+  );
+  if (!first.changed || second.changed || skipped.changed) {
+    throw new Error("ove506_decision_changed_flag_wrong");
+  }
+
+  // A source: an imported snapshot with three records, one of them linked,
+  // and a newer snapshot that was rejected.
+  const imported = randomUUID();
+  const rejected = randomUUID();
+  for (const [id, status, age] of [
+    [imported, "imported", "3 days"],
+    [rejected, "rejected", "1 day"],
+  ] as const) {
+    await pool.query(
+      `insert into catalog_source_snapshots (id, source_slug, source_name, source_category,
+         source_version, source_url, license, parser_version, payload_sha256,
+         fetched_at, verified_at, status)
+       values ($1, 'ove506-source', 'OVE-506 proof source', 'taxonomy', $2,
+               'https://example.test/source', 'CC BY 4.0', 'ove506', $3,
+               now() - $4::interval, now() - $4::interval, $5)`,
+      [id, `ove506-${status}`, "0".repeat(64), age, status],
+    );
+  }
+  const recordIds: string[] = [];
+  for (const key of ["one", "two", "three"]) {
+    const record = await pool.query<{ id: string }>(
+      `insert into catalog_source_records (source_snapshot_id, source_record_id,
+         raw_payload, raw_payload_sha256)
+       values ($1, $2, '{}'::jsonb, $3) returning id::text`,
+      [imported, `ove506-${key}`, "a".repeat(64)],
+    );
+    recordIds.push(record.rows[0]!.id);
+  }
+  // One record linked to two cards — what a merge leaves behind, since it
+  // does not move source links. It is still one linked record.
+  for (const card of [species, cultivar]) {
+    await pool.query(
+      `insert into catalog_source_links (catalog_item_id, source_record_id, source_slug,
+         source_record_key)
+       values ($1, $2, 'ove506-source', 'ove506-one')`,
+      [card, recordIds[0]],
+    );
+  }
+  await buildEnqueueCatalogSourceRefreshJobQuery(db, "ove506-source").execute();
+  const sources = await listCatalogSources(db);
+  const source = sources.find((entry) => entry.sourceSlug === "ove506-source");
+  if (!source) throw new Error("ove506_source_not_listed");
+  if (source.snapshotId !== imported) {
+    throw new Error("ove506_source_counts_the_rejected_snapshot");
+  }
+  if (source.rejectedAfterAt === null) {
+    throw new Error("ove506_newer_rejection_not_reported");
+  }
+  if (source.refresh?.status !== "pending") {
+    throw new Error(`ove506_refresh_state_wrong:${source.refresh?.status}`);
+  }
+  const coverage = await readCatalogSourceCoverage(source.snapshotId, db);
+  if (coverage.recordCount !== 3 || coverage.linkedCount !== 1) {
+    throw new Error(`ove506_coverage_wrong:${JSON.stringify(coverage)}`);
+  }
+
+  return {
+    queueItemsMarked: Object.keys(expected).length,
+    blockedItemsRefusedByTheFunction: refusedAsMarked,
+    appliableItemApplied: true,
+    precisionCountsARevert: true,
+    rejectionReportsNoChangeTheSecondTime: true,
+    sourceUsesItsImportedSnapshot: true,
+    sourceRefreshFoundByItsKey: source.refresh.status,
+    sourceCoverage: coverage,
+  };
 }
 
 export async function runCatalogHealthDatabaseProof() {
@@ -282,6 +562,16 @@ export async function runCatalogHealthDatabaseProof() {
     const precision = await readCatalogAutoAcceptPrecision(db);
     const queueAge = await readOldestOpenQueueItemAgeDays(db);
 
+    // OVE-506: the figures carry their sample, and the work queues read what
+    // the functions will actually do.
+    if (week.timedPicks !== 6 || month.timedPicks !== 7) {
+      // Seven attempts in the week, one of them an abandonment with no time.
+      throw new Error(
+        `ove506_timed_picks_wrong:${week.timedPicks}/${month.timedPicks}`,
+      );
+    }
+    const workQueues = await proveCatalogWorkQueueReads(pool, db, ownerUserId);
+
     return {
       schemaVersion: "ove398.catalogHealth.v1",
       mode: "disposable" as const,
@@ -302,6 +592,8 @@ export async function runCatalogHealthDatabaseProof() {
       queueItemsCreatedByTwoPresses: Number(openItems.rows[0]?.n),
       autoAcceptRules: precision.length,
       oldestOpenQueueItemDays: queueAge,
+      weekTimedPicks: week.timedPicks,
+      ...workQueues,
     };
   } finally {
     await db.destroy().catch(() => undefined);

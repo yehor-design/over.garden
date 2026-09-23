@@ -1169,6 +1169,47 @@ and comment moderation — and the rules that make an hour bearable.
   files silently did nothing until the bundle ran. Slice 28 converted them all
   and deleted the shape. A form that cannot be imported cannot be reached for.
 
+The catalogue's two pages are work queues (`OVE-506`, OG-UX-038/039/040):
+the queue is decisions, the sources page is diagnostics.
+- **A table with one way in, and the decision beside it.** The open decisions
+  are a table: what it is, why in words, whether it can be accepted, its
+  impact, and one review link that opens it in the detail pane. The detail pane
+  keeps the rule's code beside its words. The narrow table cell keeps only the
+  words, because a forty-letter code broke into a column of fragments there. A
+  label decision draws the gardener's words and the card they would join; a
+  merge draws both cards; a split draws the one card under review.
+- **Offer Accept only where it can succeed.** Accept is shown only for items
+  `catalog_apply_queue_item` would apply (`CURATION_BLOCK_SQL`). An item with
+  nothing to attach to, a card retired since, or a split instead says why and
+  offers only Reject and Skip. Every one of those used to end on the error
+  page.
+- **An answer is read from the record.** Each decision, undo, refresh and
+  "to the queue" press comes back to its view. The notice names what it
+  concerns and says only what the database shows: already decided in another
+  tab is said, and nothing is written. A decision whose reply was lost after
+  it committed is the owner's own, not "already decided".
+- **A link to a decision opens that decision**, even below the twenty the
+  table lists; it never falls back to the top item and its Accept.
+- **A figure carries its sample.** A median is printed from five
+  measurements, a P95 from twenty, and a percentage share from five attempts
+  (`lib/catalog/pick-latency.ts`). Below that the cell says how many there
+  were and how many it takes. The window has dates; durations are seconds.
+  Production showed one attempt as a median and a P95 of 29672 ms.
+- **A read fails in its own part.** Each source's counts are their own read,
+  beside its name, snapshot date and refresh state, which stay on screen. The
+  pick figures, the misses, the precision and the unplaced records are one
+  read each, and so are the queue's decisions and its automatic list. Every
+  part says when it was read.
+- **An outage is not a refusal.** A role table that could not be read says
+  «Не вдалося перевірити доступ» with a retry. «Лише для власника каталогу»
+  is said only when the owner check refused, and then with no way to the other
+  owner page.
+- **Single-letter keys can be switched off** (WCAG 2.1.4). The choice is
+  remembered in the browser, and a held key decides once.
+- **One structure for a phone.** Below `md` the same table's rows are
+  labelled blocks (`catalog-work-table.tsx`). The roles are explicit, so the
+  table survives the display change, and nothing is rendered twice.
+
 ### 5.13 My garden is a collection
 
 `/garden` is where a gardener finds what they own and writes again (`OVE-489`,

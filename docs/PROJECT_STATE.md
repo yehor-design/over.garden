@@ -240,6 +240,35 @@ See `docs/redesign/2026-09-21/OVE-501-PROOF.md`.
 
 See `docs/redesign/2026-09-21/OVE-502-PROOF.md`.
 
+**Catalogue curation and sources (OVE-506):** the owner's two catalogue pages
+are work queues (DESIGN.md §5.12).
+- The queue is decisions:
+  - a table of the open ones, with what each is, why in words, whether it can
+    be accepted, and one review link;
+  - the decision itself in a pane beside the table.
+- Accept is offered only where `catalog_apply_queue_item` would apply it. An
+  item with nothing to attach to (a queued search miss), a retired target or
+  a split says why instead. Each of those used to end on the error page.
+- Every decision, undo and refresh comes back to its view with an outcome read
+  from the record, including "already decided in another tab". A member's
+  post writes nothing.
+- The merge confirmation now counts the objects on the item itself rather
+  than on a form field.
+- The sources page is diagnostics:
+  - each source's counts are their own read, beside its snapshot date and
+    refresh state;
+  - the pick figures show their sample and window;
+  - a median needs five measurements and a P95 twenty. Production had shown
+    one attempt as both.
+- Precision now counts a revert: the owner's revert is not automatic, so every
+  rule used to read 0 reverted.
+- Rule codes are named in words. An outage is no longer shown as «Доступ
+  заборонено». Single-letter keys can be switched off.
+- Both pages have their own loading frame. Below `md` their tables become
+  labelled blocks.
+
+See `docs/redesign/2026-09-21/OVE-506-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

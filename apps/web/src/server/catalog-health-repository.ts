@@ -117,10 +117,19 @@ export async function recordCatalogPickEvent(
 
 export interface CatalogPickHealthRow {
   windowDays: number;
+  /** The window itself, so the page can say which days it measured. */
+  windowStart: Date | string;
+  windowEnd: Date | string;
   attempts: number;
   picked: number;
   ownLabel: number;
   abandoned: number;
+  /**
+   * How many attempts carried a duration — the sample the median and P95 are
+   * computed over (`OVE-506`). An abandonment has no time to pick, so this is
+   * not `attempts`, and a percentile is only as good as this number.
+   */
+  timedPicks: number;
   medianMsToPick: number | null;
   p95MsToPick: number | null;
 }
@@ -130,7 +139,9 @@ export interface CatalogPickHealthRow {
  *
  * `percentile_cont` over an empty set answers null, which is what an owner
  * should see before anyone has picked anything — not a zero that reads like a
- * measured instant.
+ * measured instant. Over a set of one it answers that one duration, twice:
+ * the page, not this statement, decides how many are enough to call a median
+ * or a P95 (`lib/catalog/pick-latency.ts`).
  */
 export function buildCatalogPickHealthStatement(
   windows: readonly number[] = CATALOG_HEALTH_WINDOWS,
@@ -138,12 +149,15 @@ export function buildCatalogPickHealthStatement(
   return sql<CatalogPickHealthRow>`
     select
       window_days as "windowDays",
+      now() - (window_days || ' days')::interval as "windowStart",
+      now() as "windowEnd",
       count(event.id)::int as "attempts",
       count(event.id) filter (
         where event.outcome in ('picked_species', 'picked_form')
       )::int as "picked",
       count(event.id) filter (where event.outcome = 'own_label')::int as "ownLabel",
       count(event.id) filter (where event.outcome = 'abandoned')::int as "abandoned",
+      count(event.ms_to_pick)::int as "timedPicks",
       percentile_cont(0.5) within group (order by event.ms_to_pick)::int as "medianMsToPick",
       percentile_cont(0.95) within group (order by event.ms_to_pick)::int as "p95MsToPick"
     from unnest(${sql.val(windows.map(Number))}::int[]) as window_days
@@ -168,6 +182,7 @@ export async function readCatalogPickHealth(
     picked: Number(row.picked),
     ownLabel: Number(row.ownLabel),
     abandoned: Number(row.abandoned),
+    timedPicks: Number(row.timedPicks ?? 0),
     medianMsToPick:
       row.medianMsToPick === null ? null : Number(row.medianMsToPick),
     p95MsToPick: row.p95MsToPick === null ? null : Number(row.p95MsToPick),
@@ -186,23 +201,36 @@ export interface CatalogAutoAcceptPrecisionRow {
  * Precision is the owner's only handle on a threshold: a rule whose applied
  * decisions keep being reverted is one whose threshold is too low, and the
  * number is meaningless without the rule beside it.
+ *
+ * A revert is counted on the decision it undid, not as a row of its own
+ * (`OVE-506`). The owner's revert is written by `catalog_revert_action` with
+ * `automatic = false` — it is the owner's act — so counting automatic rows
+ * whose type is `revert` counted nothing, and every rule showed 0 reverted
+ * however many of its decisions had been taken back.
  */
 export function buildCatalogAutoAcceptPrecisionStatement(days = 30) {
   return sql<CatalogAutoAcceptPrecisionRow>`
     select
-      -- The rule lives on the queue item that produced the action: its first
-      -- reason is the rule code the threshold is keyed by. An action whose
-      -- item is gone is still counted, under 'unknown', because dropping it
-      -- would quietly improve the precision of every rule that remains.
-      coalesce(item.reasons[1], 'unknown') as "ruleCode",
-      count(*) filter (where action.action_type <> 'revert')::int as "applied",
-      count(*) filter (where action.action_type = 'revert')::int as "reverted"
+      -- The apply function records the rule it applied under — the first
+      -- reason's code, without its detail — on the action itself. An older
+      -- action without one falls back to its item's first reason, and one
+      -- whose item is gone is still counted, under 'unknown', because
+      -- dropping it would quietly improve the precision of every rule that
+      -- remains.
+      coalesce(
+        nullif(action.payload->>'rule_code', ''),
+        nullif(split_part(item.reasons[1], ':', 1), ''),
+        'unknown'
+      ) as "ruleCode",
+      count(*)::int as "applied",
+      count(*) filter (where action.reverted_by_action_id is not null)::int as "reverted"
     from catalog_curation_actions as action
     left join catalog_curation_queue as item on item.id = action.queue_item_id
     where action.automatic
+      and action.action_type <> 'revert'
       and action.performed_at >= now() - (${days} || ' days')::interval
-    group by coalesce(item.reasons[1], 'unknown')
-    order by count(*) desc
+    group by 1
+    order by count(*) desc, 1
   `;
 }
 

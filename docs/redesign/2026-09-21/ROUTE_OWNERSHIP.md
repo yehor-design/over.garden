@@ -39,8 +39,22 @@ This is coverage responsibility for all 114 baseline page files, not a claim tha
 | `apps/web/src/app/(default)/first-publication-disclosure/page.tsx` | [OVE-505](https://linear.app/overgarden/issue/OVE-505/redesign-consent-privacy-support-and-user-erasure-flows) | Default-locale alias of `[locale]/first-publication-disclosure`. |
 | `apps/web/src/app/(default)/garden/(home)/page.tsx` | [OVE-489](https://linear.app/overgarden/issue/OVE-489/rebuild-my-garden-as-a-scalable-collection-home) | Collection home; space/create/composer tasks are linked dependencies. |
 | `apps/web/src/app/(default)/garden/[...missing]/page.tsx` | [OVE-478](https://linear.app/overgarden/issue/OVE-478/migrate-every-interface-icon-to-phosphor-and-remove-mixed-icon) | Catch-all/retirement or source alias: verify current redirect/404 contract, do not restore a retired feature. |
-| `apps/web/src/app/(default)/garden/catalog/queue/page.tsx` | [OVE-506](https://linear.app/overgarden/issue/OVE-506/rebuild-owner-catalogue-curation-and-sources-as-focused-work-queues) | Owner curation and source diagnostics. |
-| `apps/web/src/app/(default)/garden/catalog/sources/page.tsx` | [OVE-506](https://linear.app/overgarden/issue/OVE-506/rebuild-owner-catalogue-curation-and-sources-as-focused-work-queues) | Owner curation and source diagnostics. |
+| `apps/web/src/app/(default)/garden/catalog/queue/page.tsx` | [OVE-506](https://linear.app/overgarden/issue/OVE-506/rebuild-owner-catalogue-curation-and-sources-as-focused-work-queues) | The owner's decision queue, a work queue:
+
+- the decision on screen in a pane, both sides drawn by its kind, with its reasons in words and code and Accept only where the apply function would apply it;
+- the open decisions as a table (`catalog-work-table.tsx`, labelled blocks below `md`), one review link each;
+- the week's automatic decisions with Undo.
+
+Every answer is a redirect to the same view, read back from the record (`queue/actions.ts`, `lib/catalog/curation-queue.ts`). The keys are printed and can be switched off. Its own `loading.tsx`. |
+| `apps/web/src/app/(default)/garden/catalog/sources/page.tsx` | [OVE-506](https://linear.app/overgarden/issue/OVE-506/rebuild-owner-catalogue-curation-and-sources-as-focused-work-queues) | The catalogue's diagnostics, each part its own settled read:
+
+- sources, with snapshot and refresh state beside counts read per source;
+- pick figures with their sample and window (`lib/catalog/pick-latency.ts`);
+- search misses, each one press into the queue;
+- automatic-decision precision with reverts counted;
+- unplaced records.
+
+Refresh and "to the queue" come back with what they did. Its own `loading.tsx`. |
 | `apps/web/src/app/(default)/garden/entries/[entryId]/edit/page.tsx` | [OVE-488](https://linear.app/overgarden/issue/OVE-488/unify-editing-dirty-exit-recovery-and-entry-deletion) | Shared editing and dirty-exit recovery. |
 | `apps/web/src/app/(default)/garden/lineage/claims/page.tsx` | [OVE-495](https://linear.app/overgarden/issue/OVE-495/redesign-public-object-passports-and-lineage-reading) | Claims that another gardener's object came from the reader's, as the "Заявки" tab of one lineage section (`garden/lineage/lineage-shell.tsx`). Each card names the claimant (public name and handle), both objects and what each answer does, per the backend; confirm and decline are `ConfirmSubmit`. An answer lands on `?claim=…&result=done|stale` and the page reads the claim back (`getLineageClaimRecord`), in a notice that takes focus. Server authorization unchanged (`resolveLineageClaim`). |
 | `apps/web/src/app/(default)/garden/lineage/invitations/claim/page.tsx` | [OVE-495](https://linear.app/overgarden/issue/OVE-495/redesign-public-object-passports-and-lineage-reading) | An invitation to be named as a source, reached from the link only. The fragment token goes to an `httpOnly` cookie (`handoff/route.ts`, which now tells `expired` from `invalid`); a newer link replaces a held one. `getLineageInvitationClaimState` gives each answer its own sentence: ready, expired, invalid, withdrawn, answered by you, answered by another account, your own. The writer can no longer answer their own invitation (`buildResolveLineageInvitationClaimEdgeQuery`). An answer lands on `?result=done|stale` and is read back. |

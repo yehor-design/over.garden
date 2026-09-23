@@ -144,6 +144,7 @@
     "prove:community-moderation-partial-failure": "tsx scripts/prove-community-moderation-partial-failure.ts",
     "prove:notification-activity-failure": "tsx scripts/prove-notification-activity-failure.ts",
     "prove:saved-shelves-failure": "tsx scripts/prove-saved-shelves-failure.ts",
+    "prove:catalog-queues-failure": "tsx scripts/prove-catalog-queues-failure.ts",
     "prove:workspace-failure-classes": "tsx scripts/prove-workspace-failure-classes.ts",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",

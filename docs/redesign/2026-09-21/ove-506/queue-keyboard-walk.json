@@ -1,0 +1,158 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "stops": [
+    {
+      "stop": 1,
+      "element": "a",
+      "name": "Перейти до основного вмісту",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 2,
+      "element": "a",
+      "name": "OverGarden",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 3,
+      "element": "a",
+      "name": "Пошук",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 4,
+      "element": "a",
+      "name": "Стрічка",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 5,
+      "element": "a",
+      "name": "Огляд",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 6,
+      "element": "a",
+      "name": "Мій сад",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 7,
+      "element": "a",
+      "name": "Події",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 8,
+      "element": "a",
+      "name": "Новий запис",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 9,
+      "element": "button",
+      "name": "Обліковий запис",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 10,
+      "element": "a",
+      "name": "Назад до журналу",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 11,
+      "element": "a",
+      "name": "Джерела каталогу",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 12,
+      "element": "a[data-catalog-queue-filter=all]",
+      "name": "Усі типи (4)",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 13,
+      "element": "a[data-catalog-queue-filter=label_link]",
+      "name": "Назва садівника (2)",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 14,
+      "element": "a[data-catalog-queue-filter=node_merge]",
+      "name": "Об'єднання карток (1)",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 15,
+      "element": "a[data-catalog-queue-filter=source_link]",
+      "name": "Зв'язок із джерелом (0)",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 16,
+      "element": "a[data-catalog-queue-filter=split_review]",
+      "name": "Перегляд поділу (1)",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 17,
+      "element": "a",
+      "name": "ove506-8fa42438-tomato",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 18,
+      "element": "button[data-catalog-queue-action=accept]",
+      "name": "Прийняти",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 19,
+      "element": "button[data-catalog-queue-action=reject]",
+      "name": "Відхилити",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 20,
+      "element": "button[data-catalog-queue-action=skip]",
+      "name": "Пропустити",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 21,
+      "element": "button[shortcuts-toggle]",
+      "name": "Вимкнути клавіші",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 22,
+      "element": "a[data-catalog-queue-nav=next]",
+      "name": "Наступне",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 23,
+      "element": "a[data-catalog-queue-review=ab760b59-881b-4327-b5f7-bb8b79534999]",
+      "name": "Переглянути: «OVE-506 кабачок-невидимка 8fa42438»",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 24,
+      "element": "a[data-catalog-queue-review=5d34a32d-fa48-4b47-9adf-00dc0d3cf4f1]",
+      "name": "Переглянути: Solanum-lycopersicum-var-cerasiforme-Extraordinarily-Long-Name-8fa4",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    },
+    {
+      "stop": 25,
+      "element": "a[data-catalog-queue-review=a1221bff-7b05-4b0e-ab49-4b61fe40f9b2]",
+      "name": "Переглянути: OVE-506 Solanum 8fa42438",
+      "ring": "solid 2px lab(7.86118 -1.72357 1.08758)"
+    }
+  ]
+}
