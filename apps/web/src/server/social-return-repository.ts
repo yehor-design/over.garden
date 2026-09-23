@@ -466,40 +466,12 @@ export function serializeFollowedFeedPage(
     if (row.followedByTopic) reasons.push("topics");
 
     return [
-      {
-        key: stableOpaqueKey("feed", row.entryId),
-        // Under the author (ADR-0029 D9); this feed used to link the legacy
-        // address, a 308 on every story.
-        href: publicJournalEntryAddress({
-          authorHandle: row.addressHandle,
-          entryNumber: row.entryNumber,
-          publicSlug: row.publicSlug,
-        }),
-        title: row.title,
-        excerpt: summarizePublicText(row.body, 240),
-        sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
-        entryDate: row.entryDate,
-        publishedAt: row.publishedAt,
-        author: {
-          handle: row.ownerHandle,
-          label: row.ownerDisplayName?.trim() || `@${row.ownerHandle}`,
-          href: publicProfilePath(locale, row.ownerHandle),
-        },
-        object: {
-          id: stableOpaqueKey("object", row.objectId),
-          displayName: row.objectDisplayName,
-          kind: row.objectKind as PlantObjectKind,
-          varietyText: row.varietyText,
-          catalogKind: row.catalogKind,
-          href: publicObjectPassportAddress({
-            authorHandle: row.addressHandle,
-            publicSlug: row.objectPublicSlug,
-            plantObjectId: row.objectId,
-          }),
-        },
-        reasons: Array.from(new Set(reasons)),
-        mediaUrl: mediaByEntry.get(row.entryId) ?? null,
-      } satisfies FollowedFeedItem,
+      mapFeedEntryRow(
+        { ...row, publicSlug: row.publicSlug, publishedAt: row.publishedAt },
+        locale,
+        mediaByEntry,
+        Array.from(new Set(reasons)),
+      ),
     ];
   });
   const last = visible.at(-1);
@@ -514,6 +486,165 @@ export function serializeFollowedFeedPage(
           })
         : null,
   };
+}
+
+/** One entry as a feed card: the followed feed's and the saved shelf's. */
+function mapFeedEntryRow(
+  row: Omit<
+    FollowedFeedCandidateRow,
+    | "followedByProfile"
+    | "followedByObject"
+    | "followedByTopic"
+    | "followedByLineage"
+  > & { publicSlug: string; publishedAt: Date | string },
+  locale: PublicLocale,
+  mediaByEntry: ReadonlyMap<string, string>,
+  reasons: FollowedFeedSource[],
+): FollowedFeedItem {
+  return {
+    key: stableOpaqueKey("feed", row.entryId),
+    // Under the author (ADR-0029 D9); this feed used to link the legacy
+    // address, a 308 on every story.
+    href: publicJournalEntryAddress({
+      authorHandle: row.addressHandle,
+      entryNumber: row.entryNumber,
+      publicSlug: row.publicSlug,
+    }),
+    title: row.title,
+    excerpt: summarizePublicText(row.body, 240),
+    sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
+    entryDate: row.entryDate,
+    publishedAt: row.publishedAt,
+    author: {
+      handle: row.ownerHandle,
+      label: row.ownerDisplayName?.trim() || `@${row.ownerHandle}`,
+      href: publicProfilePath(locale, row.ownerHandle),
+    },
+    object: {
+      id: stableOpaqueKey("object", row.objectId),
+      displayName: row.objectDisplayName,
+      kind: row.objectKind as PlantObjectKind,
+      varietyText: row.varietyText,
+      catalogKind: row.catalogKind,
+      href: publicObjectPassportAddress({
+        authorHandle: row.addressHandle,
+        publicSlug: row.objectPublicSlug,
+        plantObjectId: row.objectId,
+      }),
+    },
+    reasons,
+    mediaUrl: mediaByEntry.get(row.entryId) ?? null,
+  };
+}
+
+/**
+ * The entries a reader saved, drawn as the feed draws them (`OVE-502`): a
+ * saved entry reads on the shelf as it read where it was saved. Only what is
+ * still public, and not behind a block either way, comes back — the shelf
+ * says the rest is unavailable rather than dropping it. Keyed by entry id.
+ */
+export async function listSavedEntryCards(
+  scope: RequestScope,
+  entryIds: readonly string[],
+  locale: PublicLocale,
+  executor: QueryExecutor = db,
+): Promise<Map<string, FollowedFeedItem>> {
+  if (entryIds.length === 0) return new Map();
+  const rows = await buildSavedEntryCardsQuery(
+    executor,
+    scope,
+    entryIds,
+  ).execute();
+  const mediaRows = rows.length
+    ? await buildPublicFeedMediaQuery(
+        executor,
+        rows.map((row) => row.entryId),
+      ).execute()
+    : [];
+  const mediaByEntry = new Map<string, string>();
+  for (const media of mediaRows) {
+    if (!mediaByEntry.has(media.entryId)) {
+      mediaByEntry.set(
+        media.entryId,
+        getPublicDerivativeUrl(media.derivativeKey),
+      );
+    }
+  }
+  const cards = new Map<string, FollowedFeedItem>();
+  for (const row of rows) {
+    if (!row.publicSlug || !row.publishedAt) continue;
+    cards.set(
+      row.entryId,
+      mapFeedEntryRow(
+        { ...row, publicSlug: row.publicSlug, publishedAt: row.publishedAt },
+        locale,
+        mediaByEntry,
+        [],
+      ),
+    );
+  }
+  return cards;
+}
+
+export function buildSavedEntryCardsQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: readonly string[],
+) {
+  return executor
+    .selectFrom("journal_entries as entries")
+    .innerJoin("plant_objects as objects", (join) =>
+      join
+        .onRef("objects.id", "=", "entries.plant_object_id")
+        .onRef("objects.owner_user_id", "=", "entries.owner_user_id"),
+    )
+    .innerJoin("user_handle_registry as owner_handles", (join) =>
+      join
+        .onRef("owner_handles.user_id", "=", "entries.owner_user_id")
+        .on("owner_handles.lifecycle_state", "=", "current"),
+    )
+    .innerJoin("user_public_profiles as profiles", (join) =>
+      join
+        .onRef("profiles.user_id", "=", "owner_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "owner_handles.normalized_handle",
+        )
+        .on("profiles.profile_lifecycle_state", "=", "active")
+        .on("profiles.removed_at", "is", null),
+    )
+    .leftJoin("catalog_items as catalog", (join) =>
+      join
+        .onRef("catalog.id", "=", "objects.catalog_item_id")
+        .on("catalog.created_by_user_id", "is", null),
+    )
+    .select([
+      "entries.id as entryId",
+      "entries.public_slug as publicSlug",
+      "entries.author_entry_number as entryNumber",
+      "entries.title",
+      "entries.body",
+      "entries.entry_date as entryDate",
+      "entries.published_at as publishedAt",
+      "entries.source_language as sourceLanguage",
+      "profiles.handle as ownerHandle",
+      "owner_handles.normalized_handle as addressHandle",
+      "profiles.display_name as ownerDisplayName",
+      "objects.id as objectId",
+      "objects.public_slug as objectPublicSlug",
+      "objects.display_name as objectDisplayName",
+      "objects.object_kind as objectKind",
+      "objects.variety_text as varietyText",
+      catalogKindSql("catalog").as("catalogKind"),
+    ])
+    .where("entries.id", "in", [...entryIds])
+    .where("entries.visibility", "=", "public")
+    .where("entries.lifecycle_state", "=", "active")
+    .where("entries.public_gone_at", "is", null)
+    .where("entries.public_slug", "is not", null)
+    .where("entries.published_at", "is not", null)
+    .where(noActiveBlockPredicate(scope.userId, "entries.owner_user_id"));
 }
 
 /**

@@ -218,6 +218,28 @@ about and what to do next (DESIGN.md §5.22).
 
 See `docs/redesign/2026-09-21/OVE-501-PROOF.md`.
 
+**Bookmarks and the wishlist (OVE-502):** two shelves, each with one name
+(DESIGN.md §5.23).
+- «Закладки» is saved reading, and «Список бажань» is wanted species,
+  varieties and breeds. The menu, the title, the sign-in prompt and every
+  notice say the same words in UK, BG and RU; the wishlist page itself used to
+  say «Хочу спробувати».
+- A saved entry is drawn by the feed's card and opens with a way back to the
+  same shelf view. Plants, varieties and topics are reference rows, and
+  wishlist rows name the organism's kind.
+- An empty shelf shows one browse action and no filter chips.
+- A removal returns to its view, names what it removed, and offers Undo. A
+  refused write is said beside its row. An ended session goes to sign-in and
+  back.
+- A saved entry its author withdrew, or a catalogue item retired since, stays
+  on the shelf, says why, and can be removed. Both used to vanish and could
+  not be removed; removing one's own bookmark no longer requires a public
+  target.
+- Both shelves settle their reads. The unused personal tab-strip helper is
+  deleted, and the count says "2 елементи", not "2 елементів".
+
+See `docs/redesign/2026-09-21/OVE-502-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

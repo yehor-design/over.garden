@@ -42,6 +42,7 @@ const MAX_COMMENT_BODY_LENGTH = 600;
 export const ENGAGEMENT_COMMENT_PAGE_SIZE = 8;
 const MAX_COMMENT_READBACK = 24;
 const MAX_BOOKMARK_READBACK = 50;
+const BOOKMARK_LOOKUP_BATCH = 4;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -108,7 +109,18 @@ export interface EngagementLikeResult {
 
 export interface EngagementBookmarkShelfItem {
   key: string;
-  target: PublicEngagementTarget;
+  /**
+   * What was saved. The name and the address are there only while it is
+   * still public; `ref` always is, so an unavailable one can still be taken
+   * off the shelf.
+   */
+  target: EngagementTarget & { label: string | null; href: string | null };
+  /**
+   * False once the saved thing is not public any more — deleted, hidden by
+   * its author, or behind a block. The shelf says so instead of dropping it
+   * (`OVE-502`): it used to vanish, and with it the only way to remove it.
+   */
+  available: boolean;
   addedAt: Date | string;
   updatedAt: Date | string;
 }
@@ -415,7 +427,13 @@ export async function setEngagementBookmark(
 ) {
   const target = normalizeEngagementTarget(input.target.kind, input.target.ref);
   const bookmarkState = normalizeBookmarkState(input.bookmarkState);
-  await ensureEngagementTargetIsPublic(target, executor, scope);
+  // Saving needs a public target; taking one's own bookmark off does not
+  // (`OVE-502`). A saved entry its author withdrew could not be removed from
+  // the shelf, because the removal asked for the same public entry the
+  // shelf was telling the reader was gone.
+  if (bookmarkState === "active") {
+    await ensureEngagementTargetIsPublic(target, executor, scope);
+  }
   const row = await buildUpsertEngagementBookmarkQuery(executor, scope, {
     target,
     bookmarkState,
@@ -892,21 +910,31 @@ export async function listEngagementBookmarks(
   ).execute();
   const items: EngagementBookmarkShelfItem[] = [];
 
-  for (const row of rows) {
-    const target = normalizeEngagementTarget(row.targetKind, row.targetRef);
-    const publicTarget = await findPublicEngagementTarget(
-      target,
-      executor,
-      scope,
+  // Four at a time: each target is its own lookup, and a shelf of fifty read
+  // one by one was fifty round trips before the page could answer. Four is
+  // the fan-out the pool is sized for (`POOLED_DATABASE_POOL_MAX`).
+  for (let start = 0; start < rows.length; start += BOOKMARK_LOOKUP_BATCH) {
+    const batch = rows.slice(start, start + BOOKMARK_LOOKUP_BATCH);
+    const resolved = await Promise.all(
+      batch.map(async (row) => {
+        const target = normalizeEngagementTarget(row.targetKind, row.targetRef);
+        const publicTarget = await findPublicEngagementTarget(
+          target,
+          executor,
+          scope,
+        );
+        return {
+          key: stableEngagementKey("bookmark", row.bookmarkId),
+          target: publicTarget
+            ? { ...publicTarget }
+            : { ...target, label: null, href: null },
+          available: Boolean(publicTarget),
+          addedAt: row.addedAt,
+          updatedAt: row.updatedAt,
+        } satisfies EngagementBookmarkShelfItem;
+      }),
     );
-    if (!publicTarget) continue;
-
-    items.push({
-      key: stableEngagementKey("bookmark", row.bookmarkId),
-      target: publicTarget,
-      addedAt: row.addedAt,
-      updatedAt: row.updatedAt,
-    });
+    items.push(...resolved);
   }
 
   return items;

@@ -6,6 +6,8 @@ export interface PublicJournalEntryCopy {
   journals: string;
   /** The way back when the reader came from the feed (`OVE-493`). */
   feed: string;
+  /** The way back when the reader came from their bookmarks (`OVE-502`). */
+  saved: string;
   journal: string;
   /** Heads the block that says what the entry is about (`OVE-449` crit. 6). */
   aboutTitle: string;
@@ -39,6 +41,7 @@ const COPY = {
       "Датований публічний запис із журналу живого об'єкта в OverGarden.",
     journals: "Журнали",
     feed: "Стрічка",
+    saved: "Закладки",
     journal: "Журнал",
     aboutTitle: "Про що цей запис",
     objectJournal: "Журнал об'єкта",
@@ -69,6 +72,7 @@ const COPY = {
       "Датиран публичен запис от дневника на жив обект в OverGarden.",
     journals: "Дневници",
     feed: "Поток",
+    saved: "Отметки",
     journal: "Дневник",
     aboutTitle: "За какво е този запис",
     objectJournal: "Дневник на обекта",
@@ -99,6 +103,7 @@ const COPY = {
       "Датированная публичная запись из журнала живого объекта в OverGarden.",
     journals: "Журналы",
     feed: "Лента",
+    saved: "Закладки",
     journal: "Журнал",
     aboutTitle: "О чём эта запись",
     objectJournal: "Журнал объекта",

@@ -44,10 +44,12 @@ import {
   buildReportEngagementCommentQuery,
   buildUpsertEngagementBookmarkQuery,
   buildUpsertEngagementFollowQuery,
+  listEngagementBookmarks,
   listEngagementCommentModerationQueue,
   normalizeEngagementCommentTarget,
   normalizeEngagementTarget,
   readEngagementCommentModerationReport,
+  setEngagementBookmark,
 } from "./engagement-repository";
 
 const adminAccess = vi.hoisted(() => ({
@@ -113,11 +115,13 @@ function boundValue(
 /**
  * A database that names each statement by the builder that compiles to it and
  * answers from a script; a statement no builder makes is logged by its table.
+ * `bound` receives each statement's parameters, in the order of `log`.
  */
 function scriptedDb(
   statements: Record<string, string>,
   answers: Record<string, readonly unknown[]>,
   log: string[],
+  bound: Array<readonly unknown[]> = [],
 ) {
   class ScriptedConnection implements DatabaseConnection {
     async executeQuery<R>(compiled: CompiledQuery): Promise<QueryResult<R>> {
@@ -125,6 +129,7 @@ function scriptedDb(
         Object.entries(statements).find(([, sql]) => sql === compiled.sql)?.[0] ??
         `other:${/from "(\w+)"/.exec(compiled.sql)?.[1] ?? compiled.sql}`;
       log.push(name);
+      bound.push(compiled.parameters);
       return { rows: [...(answers[name] ?? [])] as R[] };
     }
     async *streamQuery<R>(): AsyncIterableIterator<QueryResult<R>> {
@@ -773,5 +778,257 @@ describe("engagement repository contracts", () => {
       ),
     ).resolves.toBeNull();
     expect(reportLog).toEqual([]);
+  });
+});
+
+describe("the bookmark shelf's read and write (OVE-502)", () => {
+  const authorUserId = "00000000-0000-4000-8000-000000000002";
+  const objectRef = "00000000-0000-4000-8000-0000000000f1";
+  const statements = {
+    bookmarks: buildListEngagementBookmarksQuery(testDb, scope).compile().sql,
+    entry: buildPublicJournalEntryTargetQuery(
+      testDb,
+      journalTarget.ref,
+    ).compile().sql,
+    variety: buildPublicVarietyTargetQuery(
+      testDb,
+      "pomidor-cheri-0000000101",
+    ).compile().sql,
+    topic: buildPublicTopicTargetQuery(testDb, "tomaty").compile().sql,
+    object: buildPublicLineageObjectTargetQuery(testDb, objectRef).compile()
+      .sql,
+    block: buildEngagementBlockStateQuery(testDb, scope, authorUserId).compile()
+      .sql,
+    upsert: buildUpsertEngagementBookmarkQuery(testDb, scope, {
+      target: journalTarget,
+      bookmarkState: "removed",
+    }).compile().sql,
+  };
+  const publicEntry = {
+    id: journalTarget.ref,
+    publicSlug: "late-summer-check",
+    entryNumber: 14,
+    title: "Late summer check",
+    ownerUserId: authorUserId,
+    addressHandle: "green_thumb",
+  };
+
+  function bookmarkRow(
+    bookmarkId: string,
+    targetKind: string,
+    targetRef: string,
+  ) {
+    return {
+      bookmarkId,
+      targetKind,
+      targetRef,
+      bookmarkState: "active",
+      addedAt: "2026-07-04T08:00:00.000Z",
+      updatedAt: "2026-07-04T08:00:00.000Z",
+    };
+  }
+
+  it("keeps a saved thing that is not public any more, without its name or address, in its place on the shelf", async () => {
+    const rows = [
+      bookmarkRow(
+        "00000000-0000-4000-8000-0000000000b1",
+        "journal_entry",
+        journalTarget.ref,
+      ),
+      bookmarkRow(
+        "00000000-0000-4000-8000-0000000000b2",
+        "variety",
+        "old-heirloom-0000000102",
+      ),
+      bookmarkRow("00000000-0000-4000-8000-0000000000b3", "topic", "tomaty"),
+      bookmarkRow(
+        "00000000-0000-4000-8000-0000000000b4",
+        "lineage_object",
+        objectRef,
+      ),
+      // The fifth crosses into the second batch of lookups.
+      bookmarkRow(
+        "00000000-0000-4000-8000-0000000000b5",
+        "variety",
+        "retired-pepper-0000000103",
+      ),
+    ];
+    const log: string[] = [];
+
+    const items = await listEngagementBookmarks(
+      scope,
+      scriptedDb(
+        statements,
+        {
+          bookmarks: rows,
+          entry: [publicEntry],
+          topic: [{ slug: "tomaty", label: "Томати" }],
+          // The variety pages and the passport answer nothing: gone.
+          variety: [],
+          object: [],
+          block: [],
+        },
+        log,
+      ),
+    );
+
+    expect(
+      items.map(({ target, available }) => ({ target, available })),
+    ).toEqual([
+      {
+        target: {
+          kind: "journal_entry",
+          ref: journalTarget.ref,
+          label: "Late summer check",
+          href: "/@green_thumb/post/14",
+        },
+        available: true,
+      },
+      {
+        target: {
+          kind: "variety",
+          ref: "old-heirloom-0000000102",
+          label: null,
+          href: null,
+        },
+        available: false,
+      },
+      {
+        target: {
+          kind: "topic",
+          ref: "tomaty",
+          label: "Томати",
+          href: "/topics/tomaty",
+        },
+        available: true,
+      },
+      {
+        target: {
+          kind: "lineage_object",
+          ref: objectRef,
+          label: null,
+          href: null,
+        },
+        available: false,
+      },
+      {
+        target: {
+          kind: "variety",
+          ref: "retired-pepper-0000000103",
+          label: null,
+          href: null,
+        },
+        available: false,
+      },
+    ]);
+    // Every row keeps an opaque key of its own, never the bookmark's id.
+    expect(new Set(items.map((item) => item.key)).size).toBe(rows.length);
+    for (const item of items) {
+      expect(item.key).toMatch(/^bookmark:[0-9a-f]{16}$/u);
+    }
+    for (const row of rows) {
+      expect(JSON.stringify(items)).not.toContain(row.bookmarkId);
+    }
+    // Four lookups at a time: the fifth starts only once the first four —
+    // the entry's block check included — have answered.
+    expect(log).toEqual([
+      "bookmarks",
+      "entry",
+      "variety",
+      "topic",
+      "object",
+      "block",
+      "variety",
+    ]);
+  });
+
+  it("marks a saved entry behind a block as unavailable, not as gone from the shelf", async () => {
+    const items = await listEngagementBookmarks(
+      scope,
+      scriptedDb(
+        statements,
+        {
+          bookmarks: [
+            bookmarkRow(
+              "00000000-0000-4000-8000-0000000000b1",
+              "journal_entry",
+              journalTarget.ref,
+            ),
+          ],
+          entry: [publicEntry],
+          block: [{ id: "00000000-0000-4000-8000-0000000000c1" }],
+        },
+        [],
+      ),
+    );
+
+    expect(items).toEqual([
+      expect.objectContaining({
+        target: { ...journalTarget, label: null, href: null },
+        available: false,
+      }),
+    ]);
+  });
+
+  it("takes one's own bookmark off a target that is not public any more, without asking whether it is", async () => {
+    const log: string[] = [];
+    const bound: Array<readonly unknown[]> = [];
+
+    const result = await setEngagementBookmark(
+      scope,
+      { target: journalTarget, bookmarkState: "removed" },
+      scriptedDb(
+        statements,
+        { entry: [], upsert: [{ bookmark_state: "removed" }] },
+        log,
+        bound,
+      ),
+    );
+
+    expect(result.active).toBe(false);
+    // An entry its author withdrew could never be taken off the shelf: the
+    // removal asked for the same public entry the shelf said was gone.
+    expect(log).toEqual(["upsert"]);
+    expect(bound[0]).toEqual(
+      expect.arrayContaining([
+        scope.userId,
+        "journal_entry",
+        journalTarget.ref,
+        "removed",
+      ]),
+    );
+  });
+
+  it("still asks before saving one, and saves nothing the public cannot see", async () => {
+    const refusedLog: string[] = [];
+    await expect(
+      setEngagementBookmark(
+        scope,
+        { target: journalTarget, bookmarkState: "active" },
+        scriptedDb(
+          statements,
+          { entry: [], upsert: [{ bookmark_state: "active" }] },
+          refusedLog,
+        ),
+      ),
+    ).rejects.toThrow("Engagement target is not public.");
+    expect(refusedLog).toEqual(["entry"]);
+
+    const savedLog: string[] = [];
+    const saved = await setEngagementBookmark(
+      scope,
+      { target: journalTarget, bookmarkState: "active" },
+      scriptedDb(
+        statements,
+        {
+          entry: [publicEntry],
+          block: [],
+          upsert: [{ bookmark_state: "active" }],
+        },
+        savedLog,
+      ),
+    );
+    expect(saved.active).toBe(true);
+    expect(savedLog).toEqual(["entry", "block", "upsert"]);
   });
 });

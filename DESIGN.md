@@ -1643,6 +1643,40 @@ receipts, so its number never went down. The preferences sat inside the list
 - **A failed read is a failure with a retry of the same view**, never an empty
   list. An unreadable session is not "signed out".
 
+### 5.23 Saved reading and wanted organisms are two shelves, each with one name
+
+Bookmarks held saved reading and the wishlist held organisms to grow, but the
+wishlist had three names: «Список бажань» in the menu and the sign-in,
+«Хочу спробувати» on its own page, and «Спробувати пізніше» on every row. An
+empty shelf drew five filter chips that could only ever show nothing. A
+removal came back to the first page with no filter, and said «Прибрано» about
+nothing in particular. A saved entry its author withdrew vanished from the
+shelf, and with it the only way to remove it. A wishlist item the catalogue
+retired vanished too, and removing it had needed an item the catalogue still
+offered (`OG-UX-036`, `OG-UX-009`, `OVE-502`). The rules:
+
+- **One name per shelf, everywhere**: «Закладки» for saved reading, «Список
+  бажань» for wanted species, varieties and breeds. The account menu, the
+  title, the sign-in prompt and every notice say the same words in all three
+  languages. A wishlist row says what kind of organism it is.
+- **An empty shelf has one way out and nothing to filter.** The chips appear
+  only when there is something to filter.
+- **A saved entry reads as a post**, drawn by the feed's own card. It opens
+  with `?from=` the shelf view, so the entry's way back names Bookmarks and
+  lands on the same filter and page. Saved plants and animals, varieties and
+  topics are reference rows.
+- **What is no longer public stays on the shelf and says why**: withdrawn by
+  its author, or retired from the catalogue. It can still be removed. Taking
+  one's own bookmark off never asks for a public target.
+- **A removal comes back to the view it was pressed in**, names what it
+  removed, and offers Undo while the item can be put back. A write the
+  database refused is said beside its row, which is still there. An ended
+  session goes to sign-in and back to the same view, and writes nothing.
+- **A failed read is a failure with a retry of the same view**, never "nothing
+  saved".
+- The personal pages have no tab strip of their own; the shell's navigation
+  and account menu reach all four.
+
 ---
 
 ## 6. Language and locale

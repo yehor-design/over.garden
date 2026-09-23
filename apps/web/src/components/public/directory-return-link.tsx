@@ -92,6 +92,41 @@ export function readFeedReturnTarget(
   }
 }
 
+/** The bookmark shelf's three spellings, and the view it reads (`OVE-502`). */
+const SAVED_PATHS: ReadonlySet<string> = new Set(
+  PUBLIC_LOCALES.map((locale) => localizedPath(locale, "/bookmarks")),
+);
+const SAVED_QUERY_KEYS = ["kind", "page"] as const;
+
+/**
+ * The bookmark shelf view a reader came from (`OVE-502`): a saved entry's
+ * card carries `?from=` like the feed's, so its way back returns to the
+ * shelf — its filter and its page — rather than to the journals.
+ */
+export function readSavedReturnTarget(
+  from: string | null,
+  origin: string,
+): string | null {
+  if (!from || from.length > 1_500 || !from.startsWith("/")) return null;
+
+  try {
+    const url = new URL(from, origin);
+    if (url.origin !== origin || url.hash) return null;
+    if (!SAVED_PATHS.has(url.pathname)) return null;
+
+    const query = new URLSearchParams();
+    for (const key of SAVED_QUERY_KEYS) {
+      const value = url.searchParams.get(key);
+      if (!value || value.length > MAX_VALUE_LENGTH) continue;
+      query.set(key, value);
+    }
+    const search = query.toString();
+    return search ? `${url.pathname}?${search}` : url.pathname;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * "Back to the journals", to the listing the reader came from.
  *
@@ -106,6 +141,7 @@ export function DirectoryReturnLink({
   href,
   label,
   feedLabel,
+  savedLabel,
 }: {
   /** The directory itself: what the served document links to. */
   href: string;
@@ -115,6 +151,8 @@ export function DirectoryReturnLink({
    * carry `?from=` the way the directory's do (`OVE-493`).
    */
   feedLabel?: string;
+  /** "Закладки": said instead when the reader came from their shelf. */
+  savedLabel?: string;
 }) {
   const [target, setTarget] = useState({ href, label });
 
@@ -124,16 +162,21 @@ export function DirectoryReturnLink({
     const feed = feedLabel
       ? readFeedReturnTarget(from, window.location.origin)
       : null;
+    const saved = savedLabel
+      ? readSavedReturnTarget(from, window.location.origin)
+      : null;
     const next = directory
       ? { href: directory, label }
       : feed && feedLabel
         ? { href: feed, label: feedLabel }
-        : null;
+        : saved && savedLabel
+          ? { href: saved, label: savedLabel }
+          : null;
     if (!next) return;
     // A transition: the page around this link may still be hydrating
     // (ADR-0032 D2).
     startTransition(() => setTarget(next));
-  }, [feedLabel, label]);
+  }, [feedLabel, label, savedLabel]);
 
   return (
     <Link

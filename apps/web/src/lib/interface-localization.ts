@@ -292,7 +292,7 @@ const INTERFACE_COPY = {
       followedFeed: "Следвани записи",
       notifications: "Известия",
       bookmarks: "Отметки",
-      wishlist: "Желани",
+      wishlist: "Списък с желания",
       lineageClaims: "Заявки за произход",
       profile: "Профил",
       publicProfile: "Публичен профил",

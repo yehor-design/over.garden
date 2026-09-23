@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { IconButton } from "@/components/ui/icon-button";
 import { ListRow } from "@/components/ui/list-row";
 import { Toast, ToastRegion } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 /**
  * The shelf: what bookmarks and the wishlist are both made of (`OVE-456`).
@@ -22,7 +23,11 @@ export function ShelfRow({
   href,
   meta,
   actions,
-}: {
+  ...props
+}: Omit<
+  React.ComponentProps<typeof ListRow>,
+  "title" | "description" | "media" | "href" | "meta" | "actions"
+> & {
   /** What kind of thing this is, above the name. */
   kindLabel: ReactNode;
   title: ReactNode;
@@ -32,6 +37,7 @@ export function ShelfRow({
 }) {
   return (
     <ListRow
+      {...props}
       data-shelf-row="true"
       title={title}
       href={href}
@@ -42,7 +48,10 @@ export function ShelfRow({
       }
       meta={meta}
       actions={actions}
-      className="flex-row-reverse items-center justify-end gap-3 sm:flex-row sm:justify-between"
+      className={cn(
+        "scroll-mt-24 flex-row-reverse items-center justify-end gap-3 sm:flex-row sm:justify-between",
+        props.className,
+      )}
     />
   );
 }

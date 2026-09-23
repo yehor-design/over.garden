@@ -1,65 +1,20 @@
-import { BellIcon as Bell } from "@/components/icons/Bell";
-import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
-import { HeartIcon as Heart } from "@/components/icons/Heart";
-import { FunnelIcon as ListFilter } from "@/components/icons/Funnel";
-import type { InterfaceIcon } from "@/components/icons";
 import type { ReactNode } from "react";
 
 import { PageHeader } from "@/components/ui/page-header";
-import { type TabLinkModel } from "@/components/ui/tabs";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import { type PublicLocale } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
 
 /**
- * The reader's own pages: one family, one header, one strip (`OVE-456`).
+ * The reader's own pages: the feed they follow, Activity, Bookmarks and the
+ * wishlist, each under one header (`OVE-456`).
  *
- * They were four tabs and three unrelated pages — the feed, notifications,
- * bookmarks and the wishlist each drawing a header of their own, and each
- * putting its filters in a bordered box below the strip that stopped where its
- * content did. A bar that spans half the page and separates nothing is a line a
- * reader has to work out, so the filters are chips now (DESIGN.md §5.1) and the
- * only rule on the screen is the one the tabs sit on.
- *
- * The strip is `TabLinks` rather than `Tabs`: these are four addresses, so
- * pressing one navigates, and the selected one is in the URL by being the URL —
- * shareable, reloadable and reachable with Back (DESIGN.md §5.7).
+ * They were four tabs over one strip. The shell's navigation and its account
+ * menu reach all four now, so the strip — and the helper that built it — is
+ * gone (`OVE-502`): a second row of the same destinations under the page title
+ * was a second way to say where the reader already was. Filters are chips
+ * (DESIGN.md §5.1), shown only where there is something to filter.
  */
 export type SocialTab = "feed" | "notifications" | "bookmarks" | "wishlist";
-
-const TAB_ICONS: Record<SocialTab, InterfaceIcon> = {
-  feed: ListFilter,
-  notifications: Bell,
-  bookmarks: Bookmark,
-  wishlist: Heart,
-};
-
-export const PERSONAL_SURFACE_TABS: readonly SocialTab[] = [
-  "feed",
-  "notifications",
-  "bookmarks",
-  "wishlist",
-];
-
-export function personalSurfaceTabs(
-  locale: PublicLocale,
-  active: SocialTab,
-): TabLinkModel[] {
-  const copy = getSocialSurfaceCopy(locale);
-  return PERSONAL_SURFACE_TABS.map((tab) => {
-    const Icon = TAB_ICONS[tab];
-    return {
-      key: tab,
-      href: localizedPath(locale, `/${tab}`),
-      current: tab === active,
-      label: (
-        <>
-          <Icon className="size-4 shrink-0" aria-hidden="true" />
-          {copy.tabs[tab]}
-        </>
-      ),
-    };
-  });
-}
 
 export function MySocialLayout({
   locale,
