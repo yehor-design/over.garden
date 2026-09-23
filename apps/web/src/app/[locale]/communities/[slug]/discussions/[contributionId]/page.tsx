@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
-import { PublicCommunityDiscussion } from "@/components/public/public-community";
+import {
+  PublicCommunityDiscussion,
+  PublicCommunityDiscussionUnavailable,
+} from "@/components/public/public-community";
 import { Callout } from "@/components/ui/callout";
 import { db } from "@/db";
 import {
@@ -27,6 +30,7 @@ import {
   buildPublicCommunityContributionCommentTargetQuery,
   getEngagementCommentThread,
 } from "@/server/engagement-repository";
+import { readPublicCommunityDirectory } from "@/server/public-cache";
 import { scopedToUser } from "@/server/request-scope";
 
 interface ContributionDiscussionRouteProps {
@@ -42,9 +46,45 @@ const COMMUNITY_CONTRIBUTION_ID_PATTERN =
  * A discussion is not a page a search engine should hold (ADR-0022 D4): the
  * entry it is about is the indexable thing, and this is the conversation
  * beside it. Unchanged by `OVE-454`, and deliberately so.
+ *
+ * It is still its own page (`OVE-500`, criterion 4): its title names the
+ * entry under discussion, and its canonical is its own address — a shared
+ * link says what it leads to, and never claims to be the entry.
  */
-export async function generateMetadata(): Promise<Metadata> {
-  return { robots: { index: false, follow: false } };
+export async function generateMetadata({
+  params,
+}: Pick<ContributionDiscussionRouteProps, "params">): Promise<Metadata> {
+  const robots = { index: false, follow: false };
+  const { locale, slug, contributionId } = await params;
+  if (
+    !isPublicLocale(locale) ||
+    !/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug) ||
+    !COMMUNITY_CONTRIBUTION_ID_PATTERN.test(contributionId)
+  ) {
+    return { robots };
+  }
+  const copy = getCommunityCopy(locale);
+  const canonical = communityDiscussionPath(locale, slug, contributionId);
+  try {
+    const contribution =
+      await buildPublicCommunityContributionCommentTargetQuery(
+        db,
+        contributionId,
+        null,
+      ).executeTakeFirst();
+    const title =
+      contribution && contribution.communitySlug === slug
+        ? copy.discussionMetaTitle(contribution.entryTitle)
+        : copy.discussionUnavailableTitle;
+    return {
+      title: `${title} | OverGarden`,
+      robots,
+      alternates: { canonical },
+    };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { title: copy.discussionTitle, robots, alternates: { canonical } };
+  }
 }
 
 export default async function ContributionDiscussionRoute({
@@ -71,7 +111,18 @@ export default async function ContributionDiscussionRoute({
     contributionId,
     viewerScope,
   ).executeTakeFirst();
-  if (!contribution || contribution.communitySlug !== slug) return notFound();
+  if (!contribution || contribution.communitySlug !== slug) {
+    // Removed from the community, withdrawn by its author, or hidden from
+    // this reader by a block: the page says so and leads back
+    // (`OVE-500`, criterion 6).
+    return (
+      <PublicCommunityDiscussionUnavailable
+        locale={locale}
+        communitySlug={slug}
+        communityName={await readCommunityName(locale, slug)}
+      />
+    );
+  }
 
   const copy = getCommunityCopy(locale);
   const communityName = getCommunityContentCopy(
@@ -134,7 +185,9 @@ export default async function ContributionDiscussionRoute({
 function describeDiscussedEntry(
   locale: PublicLocale,
   contribution: {
+    contributionId: string;
     entryTitle: string;
+    entryBody: string;
     entryPublicSlug: string | null;
     entryNumber: number | null;
     entryDate: Date | string;
@@ -153,8 +206,17 @@ function describeDiscussedEntry(
       : new Date(contribution.entryDate);
   const handle = contribution.authorHandle?.trim() || null;
 
+  const excerpt = contribution.entryBody.replace(/\s+/g, " ").trim();
+  const objectKind: "plant" | "animal" | null =
+    contribution.objectKind === "plant" || contribution.objectKind === "animal"
+      ? contribution.objectKind
+      : null;
   return {
+    id: contribution.contributionId,
     title: contribution.entryTitle,
+    excerpt:
+      excerpt.length <= 320 ? excerpt : `${excerpt.slice(0, 319).trimEnd()}…`,
+    objectKind,
     href: publicJournalEntryAddress({
       authorHandle: contribution.addressHandle,
       entryNumber: contribution.entryNumber,
@@ -172,6 +234,20 @@ function describeDiscussedEntry(
       : new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(date),
     objectLabel: contribution.objectDisplayName,
   };
+}
+
+/** The community's name for the way back, from the cached directory. */
+async function readCommunityName(locale: PublicLocale, slug: string) {
+  try {
+    const directory = await readPublicCommunityDirectory();
+    const community = directory.find((item) => item.slug === slug);
+    return community
+      ? getCommunityContentCopy(locale, community.contentKey).name
+      : null;
+  } catch (error) {
+    unstable_rethrow(error);
+    return null;
+  }
 }
 
 function first(value: string | string[] | undefined) {

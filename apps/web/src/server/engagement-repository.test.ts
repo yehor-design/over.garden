@@ -8,13 +8,16 @@ import {
   PostgresAdapter,
   PostgresIntrospector,
   PostgresQueryCompiler,
+  type CompiledQuery,
+  type DatabaseConnection,
   type DatabaseIntrospector,
   type Dialect,
   type DialectAdapter,
   type Driver,
   type QueryCompiler,
+  type QueryResult,
 } from "kysely";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
@@ -26,6 +29,7 @@ import {
   buildEngagementFollowStateQuery,
   buildEngagementReplyTargetQuery,
   buildDeleteEngagementLikeQuery,
+  buildEngagementCommentModerationQueueQuery,
   buildGetEngagementLikeQuery,
   buildInsertEngagementLikeQuery,
   buildInsertEngagementCommentQuery,
@@ -40,9 +44,23 @@ import {
   buildReportEngagementCommentQuery,
   buildUpsertEngagementBookmarkQuery,
   buildUpsertEngagementFollowQuery,
+  listEngagementCommentModerationQueue,
   normalizeEngagementCommentTarget,
   normalizeEngagementTarget,
+  readEngagementCommentModerationReport,
 } from "./engagement-repository";
+
+const adminAccess = vi.hoisted(() => ({
+  assertAdminCapabilityForScope: vi.fn(),
+}));
+
+// The owner's comment queue asks for `operator:mutate` before it reads a row.
+// These tests are about what it shows once that is granted — and that it
+// reads nothing when it is not — so the grant is scripted here.
+vi.mock("@/server/admin-access", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/server/admin-access")>()),
+  assertAdminCapabilityForScope: adminAccess.assertAdminCapabilityForScope,
+}));
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -73,6 +91,66 @@ const privateLeakPattern =
   /quarantine|media_assets|derivative_key|ip_address|user_agent|email|phone|invite|token|coarse_region|location_visibility|latitude|longitude|coordinates/i;
 const promotionCouplingPattern =
   /meilisearch|search_index|sitemap|ranking|rank|notification|analytics_events|public_surface/i;
+
+/**
+ * The value bound to the placeholder that follows `fragment`, so a test can
+ * say "visibility is bound to public" without counting `$n` by hand.
+ */
+function boundValue(
+  compiled: { sql: string; parameters: readonly unknown[] },
+  fragment: string,
+) {
+  const at = compiled.sql.indexOf(`${fragment}$`);
+  if (at === -1) return undefined;
+  const placeholder = /^\$(\d+)/.exec(
+    compiled.sql.slice(at + fragment.length),
+  );
+  return placeholder
+    ? compiled.parameters[Number(placeholder[1]) - 1]
+    : undefined;
+}
+
+/**
+ * A database that names each statement by the builder that compiles to it and
+ * answers from a script; a statement no builder makes is logged by its table.
+ */
+function scriptedDb(
+  statements: Record<string, string>,
+  answers: Record<string, readonly unknown[]>,
+  log: string[],
+) {
+  class ScriptedConnection implements DatabaseConnection {
+    async executeQuery<R>(compiled: CompiledQuery): Promise<QueryResult<R>> {
+      const name =
+        Object.entries(statements).find(([, sql]) => sql === compiled.sql)?.[0] ??
+        `other:${/from "(\w+)"/.exec(compiled.sql)?.[1] ?? compiled.sql}`;
+      log.push(name);
+      return { rows: [...(answers[name] ?? [])] as R[] };
+    }
+    async *streamQuery<R>(): AsyncIterableIterator<QueryResult<R>> {
+      throw new Error("streaming is not scripted");
+    }
+  }
+  class ScriptedDriver implements Driver {
+    async init() {}
+    async acquireConnection() {
+      return new ScriptedConnection();
+    }
+    async beginTransaction() {}
+    async commitTransaction() {}
+    async rollbackTransaction() {}
+    async releaseConnection() {}
+    async destroy() {}
+  }
+  return new Kysely<Database>({
+    dialect: {
+      createDriver: () => new ScriptedDriver(),
+      createQueryCompiler: () => new PostgresQueryCompiler(),
+      createAdapter: () => new PostgresAdapter(),
+      createIntrospector: (db) => new PostgresIntrospector(db),
+    },
+  });
+}
 
 function expectCurrentEligibleCommentIdentity(
   compiled: ReturnType<
@@ -121,6 +199,102 @@ describe("engagement repository contracts", () => {
     expect(compiled.sql).toContain('from "profile_blocks"');
     expect(compiled.sql).toContain('"discussion_state"');
     expect(compiled.parameters).toContain(target.ref);
+    // The discussion opens with the entry it is about (`OVE-500`): its text
+    // is read through the same inner join that admits only a public, active,
+    // published entry, so it is the text the entry's own page already shows.
+    expect(compiled.sql).toContain('"journal_entries"."body" as "entryBody"');
+    expect(compiled.sql).toContain('inner join "journal_entries"');
+    expect(boundValue(compiled, '"journal_entries"."visibility" = ')).toBe(
+      "public",
+    );
+    expect(boundValue(compiled, '"journal_entries"."lifecycle_state" = ')).toBe(
+      "active",
+    );
+    expect(compiled.sql).toContain('"journal_entries"."public_gone_at" is null');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."published_at" is not null',
+    );
+    expect(compiled.sql).not.toMatch(privateLeakPattern);
+  });
+
+  it("gives the owner's comment review the text only while the comment is shown, and never the reporter (OVE-500)", () => {
+    const reportId = "00000000-0000-4000-8000-000000000301";
+    const open = buildEngagementCommentModerationQueueQuery(testDb).compile();
+    const resolved = buildEngagementCommentModerationQueueQuery(testDb, {
+      view: "resolved",
+    }).compile();
+    const one = buildEngagementCommentModerationQueueQuery(testDb, {
+      reportId,
+    }).compile();
+
+    for (const compiled of [open, resolved, one]) {
+      // A removed comment is not the public's any more, and the queue does
+      // not keep its words: the text is a bounded prefix, and only while the
+      // comment is shown.
+      expect(compiled.sql).toContain(
+        `case when "engagement_comments"."comment_state" = 'active' then left("engagement_comments"."body", 400) end as "commentBody"`,
+      );
+      expect(compiled.sql.split('"engagement_comments"."body"')).toHaveLength(
+        2,
+      );
+      // The author as the public knows them: the current handle's active,
+      // unremoved profile, never the account behind it.
+      expect(compiled.sql).toContain(
+        'left join "user_handle_registry" as "author_handles"',
+      );
+      expect(compiled.sql).toContain(
+        '"user_public_profiles"."normalized_handle" = "author_handles"."normalized_handle"',
+      );
+      expect(
+        boundValue(compiled, '"user_public_profiles"."profile_lifecycle_state" = '),
+      ).toBe("active");
+      expect(compiled.sql).toContain(
+        '"user_public_profiles"."removed_at" is null',
+      );
+      expect(compiled.sql).not.toMatch(/"author_user_id" as/);
+      // A decision is about the comment, not about who reported it.
+      expect(compiled.sql).not.toContain("reporter_user_id");
+      expect(compiled.sql).not.toMatch(privateLeakPattern);
+    }
+
+    // The work: reports on comments still shown, oldest first.
+    expect(open.parameters).toEqual(
+      expect.arrayContaining(["submitted", "reviewed"]),
+    );
+    expect(open.parameters).not.toContain("dismissed");
+    expect(boundValue(open, '"engagement_comments"."comment_state" = ')).toBe(
+      "active",
+    );
+    expect(open.sql).toContain(
+      'order by "engagement_comment_reports"."created_at" asc, "engagement_comment_reports"."id" asc limit $',
+    );
+
+    // What was decided, newest decision first — a removed comment included,
+    // which is exactly when its text is gone.
+    expect(resolved.parameters).toEqual(
+      expect.arrayContaining(["dismissed", "actioned"]),
+    );
+    expect(resolved.parameters).not.toContain("submitted");
+    expect(resolved.sql).not.toContain('"engagement_comments"."comment_state" = $');
+    expect(resolved.sql).toContain(
+      'order by "engagement_comment_reports"."resolved_at" desc, "engagement_comment_reports"."id" desc limit $',
+    );
+    for (const compiled of [open, resolved]) {
+      expect(compiled.parameters.at(-1)).toBe(100);
+    }
+
+    // One report as it stands now, in any state, for an action's outcome.
+    expect(boundValue(one, '"engagement_comment_reports"."id" = ')).toBe(
+      reportId,
+    );
+    expect(one.sql).not.toContain('"report_state" in');
+    expect(one.sql).not.toContain("order by");
+    expect(one.parameters.at(-1)).toBe(1);
+    expect(() =>
+      buildEngagementCommentModerationQueueQuery(testDb, {
+        reportId: "not-a-report",
+      }),
+    ).toThrow();
   });
 
   it("inserts signed-in comments against a public target handle only", () => {
@@ -469,4 +643,135 @@ describe("engagement repository contracts", () => {
     ).toThrow("Engagement target is not available.");
   });
 
+  it("shows the owner each reported comment as it stands, and one broken row costs only that row (OVE-500)", async () => {
+    const discussionRef = "00000000-0000-4000-8000-000000000201";
+    const statements = {
+      "queue:open": buildEngagementCommentModerationQueueQuery(testDb, {
+        view: "open",
+      }).compile().sql,
+      "queue:resolved": buildEngagementCommentModerationQueueQuery(testDb, {
+        view: "resolved",
+      }).compile().sql,
+      discussion: buildPublicCommunityContributionCommentTargetQuery(
+        testDb,
+        discussionRef,
+        null,
+      ).compile().sql,
+      entry: buildPublicJournalEntryTargetQuery(testDb, journalTarget.ref)
+        .compile().sql,
+    };
+    const shown = {
+      reportId: "00000000-0000-4000-8000-000000000301",
+      commentId: "00000000-0000-4000-8000-000000000401",
+      reason: "privacy",
+      reportState: "submitted",
+      createdAt: new Date("2026-09-20T10:00:00.000Z"),
+      resolvedAt: null,
+      targetKind: "community_contribution",
+      targetRef: discussionRef,
+      commentState: "active",
+      commentBody: `Мій   номер\n\nтут ${"слово ".repeat(80)}`,
+      authorHandle: "demo_olena",
+      authorDisplayName: "Олена",
+    };
+    const removed = {
+      ...shown,
+      reportId: "00000000-0000-4000-8000-000000000302",
+      commentId: "00000000-0000-4000-8000-000000000402",
+      reportState: "actioned",
+      resolvedAt: new Date("2026-09-21T10:00:00.000Z"),
+      targetKind: "journal_entry",
+      targetRef: journalTarget.ref,
+      commentState: "removed",
+      // The statement keeps no words of a removed comment.
+      commentBody: null,
+    };
+    const answers = {
+      "queue:open": [
+        shown,
+        // A reason the page cannot word is one row it cannot describe; the
+        // rest of the queue still opens.
+        { ...shown, reportId: "00000000-0000-4000-8000-000000000303", reason: "retired" },
+      ],
+      "queue:resolved": [removed],
+      discussion: [
+        { entryTitle: "Томати після спеки", communitySlug: "observation-and-care" },
+      ],
+      // The entry the removed comment was on is no longer public.
+      entry: [],
+      "other:engagement_comment_reports": [{ open: "2", resolved: "7" }],
+    };
+    adminAccess.assertAdminCapabilityForScope.mockResolvedValue({
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: ["operator:mutate"],
+    });
+
+    const open = await listEngagementCommentModerationQueue(
+      scope,
+      {},
+      scriptedDb(statements, answers, []),
+    );
+    expect(open.view).toBe("open");
+    // Postgres counts arrive as strings; the view filters need numbers.
+    expect(open.counts).toEqual({ open: 2, resolved: 7 });
+    expect(open.items.map((item) => item.reportId)).toEqual([shown.reportId]);
+    const [item] = open.items;
+    // Whitespace collapsed and the length bounded, as a public excerpt is.
+    expect(item?.commentExcerpt?.startsWith("Мій номер тут слово")).toBe(true);
+    expect(item?.commentExcerpt?.length).toBeLessThanOrEqual(320);
+    expect(item?.commentExcerpt?.endsWith("…")).toBe(true);
+    // Where the comment is, while that page is public.
+    expect(item?.place).toEqual({
+      label: "Томати після спеки",
+      href: `/communities/observation-and-care/discussions/${discussionRef}`,
+    });
+    expect(item).toMatchObject({
+      targetKind: "community_contribution",
+      reason: "privacy",
+      reportState: "submitted",
+      authorHandle: "demo_olena",
+    });
+
+    const resolved = await listEngagementCommentModerationQueue(
+      scope,
+      { view: "resolved" },
+      scriptedDb(statements, answers, []),
+    );
+    expect(resolved.view).toBe("resolved");
+    expect(resolved.items).toEqual([
+      expect.objectContaining({
+        reportId: removed.reportId,
+        reportState: "actioned",
+        commentState: "removed",
+        commentExcerpt: null,
+        place: null,
+      }),
+    ]);
+
+    // Without the operator grant nothing is read — not a count, not a row.
+    adminAccess.assertAdminCapabilityForScope.mockRejectedValueOnce(
+      new Error("Admin access denied."),
+    );
+    const deniedLog: string[] = [];
+    await expect(
+      listEngagementCommentModerationQueue(
+        scope,
+        {},
+        scriptedDb(statements, answers, deniedLog),
+      ),
+    ).rejects.toThrow("Admin access denied.");
+    expect(deniedLog).toEqual([]);
+
+    // A report id that could not be one is answered without a statement.
+    const reportLog: string[] = [];
+    await expect(
+      readEngagementCommentModerationReport(
+        scope,
+        "not-a-report",
+        scriptedDb(statements, answers, reportLog),
+      ),
+    ).resolves.toBeNull();
+    expect(reportLog).toEqual([]);
+  });
 });

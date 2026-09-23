@@ -13,6 +13,9 @@ export const AUTH_INTENT_ACTIONS = [
   "create_entry",
   "save",
   "publish",
+  // Adding one of your entries to a community (`OVE-500`): the reader comes
+  // back to the community's own contribution step, not to a garden setup.
+  "contribute",
 ] as const;
 
 export type AuthIntentAction = (typeof AUTH_INTENT_ACTIONS)[number];
@@ -107,6 +110,7 @@ const ACTION_TARGET_KINDS: Record<
   create_entry: null,
   save: ["object", "journal"],
   publish: ["journal"],
+  contribute: ["collection"],
 };
 const REQUIRED_TARGET_ACTIONS = new Set<AuthIntentAction>([
   "comment",
@@ -114,6 +118,7 @@ const REQUIRED_TARGET_ACTIONS = new Set<AuthIntentAction>([
   "follow",
   "report",
   "block",
+  "contribute",
 ]);
 const ACTION_ANCHORS: Record<AuthIntentAction, string> = {
   comment: "comments",
@@ -126,6 +131,7 @@ const ACTION_ANCHORS: Record<AuthIntentAction, string> = {
   create_entry: "first-entry-composer",
   save: "first-entry-composer",
   publish: "entry-publish",
+  contribute: "community-contribute",
 };
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;

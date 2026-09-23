@@ -15,6 +15,7 @@ import type {
   EngagementTargetKind,
 } from "@/db/schema";
 import {
+  publicCommunityDiscussionPath,
   publicJournalEntryAddress,
   publicObjectPassportAddress,
   publicTopicPath,
@@ -122,6 +123,24 @@ export interface EngagementCommentModerationQueueItem {
   reason: EngagementCommentReportReason;
   reportState: EngagementCommentReportState;
   createdAt: Date | string;
+  resolvedAt: Date | string | null;
+  /** `active` while the comment is shown; anything else, it is gone. */
+  commentState: string;
+  /** The comment's public text, only while it is shown (`OVE-500`). */
+  commentExcerpt: string | null;
+  authorHandle: string | null;
+  authorDisplayName: string | null;
+  /** The public page the comment is on, while that page is public. */
+  place: { label: string; href: string } | null;
+}
+
+/** Which comment reports the owner is looking at (`OVE-500`, criterion 8). */
+export type EngagementModerationView = "open" | "resolved";
+
+export interface EngagementCommentModerationQueue {
+  view: EngagementModerationView;
+  items: EngagementCommentModerationQueueItem[];
+  counts: Record<EngagementModerationView, number>;
 }
 
 interface EngagementCommentRow {
@@ -514,17 +533,93 @@ export async function blockEngagementCommentAuthor(
   };
 }
 
+/**
+ * The comment reports the owner reviews, with what a decision needs
+ * (`OVE-500`, criterion 7): the reported comment's text while it is still
+ * shown, who wrote it, the page it is on, the reason and where the report
+ * stands. The reporter is never selected. `open` is the work, oldest first;
+ * `resolved` is what was decided, newest first.
+ */
 export async function listEngagementCommentModerationQueue(
   scope: RequestScope,
+  options: { view?: EngagementModerationView } = {},
   executor: Kysely<Database> = db,
-): Promise<EngagementCommentModerationQueueItem[]> {
+): Promise<EngagementCommentModerationQueue> {
   await assertAdminCapabilityForScope(scope, "operator:mutate", executor);
-  const rows = await executor
+  const view = options.view === "resolved" ? "resolved" : "open";
+  const [rows, counts] = await Promise.all([
+    buildEngagementCommentModerationQueueQuery(executor, { view }).execute(),
+    executor
+      .selectFrom("engagement_comment_reports")
+      .innerJoin(
+        "engagement_comments",
+        "engagement_comments.id",
+        "engagement_comment_reports.comment_id",
+      )
+      .select([
+        sql<string>`count(*) filter (where ${sql.ref("engagement_comment_reports.report_state")} in ('submitted', 'reviewed') and ${sql.ref("engagement_comments.comment_state")} = 'active')`.as(
+          "open",
+        ),
+        sql<string>`count(*) filter (where ${sql.ref("engagement_comment_reports.report_state")} in ('dismissed', 'actioned'))`.as(
+          "resolved",
+        ),
+      ])
+      .executeTakeFirst(),
+  ]);
+  return {
+    view,
+    items: await serializeCommentModerationRows(rows, executor),
+    counts: {
+      open: Number(counts?.open ?? 0),
+      resolved: Number(counts?.resolved ?? 0),
+    },
+  };
+}
+
+/** One comment report as it stands now, for an action's outcome. */
+export async function readEngagementCommentModerationReport(
+  scope: RequestScope,
+  reportId: string,
+  executor: Kysely<Database> = db,
+): Promise<EngagementCommentModerationQueueItem | null> {
+  await assertAdminCapabilityForScope(scope, "operator:mutate", executor);
+  if (!UUID_PATTERN.test(reportId.trim())) return null;
+  const rows = await buildEngagementCommentModerationQueueQuery(executor, {
+    reportId,
+  }).execute();
+  return (await serializeCommentModerationRows(rows, executor))[0] ?? null;
+}
+
+export function buildEngagementCommentModerationQueueQuery(
+  executor: QueryExecutor,
+  options: { view?: EngagementModerationView; reportId?: string } = {},
+) {
+  const query = executor
     .selectFrom("engagement_comment_reports")
     .innerJoin(
       "engagement_comments",
       "engagement_comments.id",
       "engagement_comment_reports.comment_id",
+    )
+    .leftJoin("user_handle_registry as author_handles", (join) =>
+      join
+        .onRef(
+          "author_handles.user_id",
+          "=",
+          "engagement_comments.author_user_id",
+        )
+        .on("author_handles.lifecycle_state", "=", "current"),
+    )
+    .leftJoin("user_public_profiles", (join) =>
+      join
+        .onRef("user_public_profiles.user_id", "=", "author_handles.user_id")
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "author_handles.normalized_handle",
+        )
+        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+        .on("user_public_profiles.removed_at", "is", null),
     )
     .select([
       "engagement_comment_reports.id as reportId",
@@ -532,9 +627,38 @@ export async function listEngagementCommentModerationQueue(
       "engagement_comment_reports.report_reason as reason",
       "engagement_comment_reports.report_state as reportState",
       "engagement_comment_reports.created_at as createdAt",
+      "engagement_comment_reports.resolved_at as resolvedAt",
       "engagement_comments.target_kind as targetKind",
       "engagement_comments.target_ref as targetRef",
-    ])
+      "engagement_comments.comment_state as commentState",
+      // The text only while the comment is shown: a removed comment is not
+      // the public's any more, and the queue does not keep it.
+      sql<string | null>`case when ${sql.ref("engagement_comments.comment_state")} = 'active' then left(${sql.ref("engagement_comments.body")}, 400) end`.as(
+        "commentBody",
+      ),
+      "user_public_profiles.handle as authorHandle",
+      "user_public_profiles.display_name as authorDisplayName",
+    ]);
+  if (options.reportId) {
+    return query
+      .where(
+        "engagement_comment_reports.id",
+        "=",
+        normalizeCommentId(options.reportId),
+      )
+      .limit(1);
+  }
+  if (options.view === "resolved") {
+    return query
+      .where("engagement_comment_reports.report_state", "in", [
+        "dismissed",
+        "actioned",
+      ])
+      .orderBy("engagement_comment_reports.resolved_at", "desc")
+      .orderBy("engagement_comment_reports.id", "desc")
+      .limit(100);
+  }
+  return query
     .where("engagement_comment_reports.report_state", "in", [
       "submitted",
       "reviewed",
@@ -542,19 +666,102 @@ export async function listEngagementCommentModerationQueue(
     .where("engagement_comments.comment_state", "=", "active")
     .orderBy("engagement_comment_reports.created_at", "asc")
     .orderBy("engagement_comment_reports.id", "asc")
-    .limit(100)
-    .execute();
+    .limit(100);
+}
 
-  return rows.map((row) => ({
-    reportId: row.reportId,
-    commentId: row.commentId,
-    targetKind: normalizeEngagementCommentTarget(row.targetKind, row.targetRef)
-      .kind,
-    targetRef: row.targetRef,
-    reason: normalizeCommentReportReason(row.reason),
-    reportState: normalizeEngagementCommentReportState(row.reportState),
-    createdAt: row.createdAt,
-  }));
+async function serializeCommentModerationRows(
+  rows: readonly {
+    reportId: string;
+    commentId: string;
+    reason: string;
+    reportState: string;
+    createdAt: Date | string;
+    resolvedAt: Date | string | null;
+    targetKind: string;
+    targetRef: string;
+    commentState: string;
+    commentBody: string | null;
+    authorHandle: string | null;
+    authorDisplayName: string | null;
+  }[],
+  executor: QueryExecutor,
+): Promise<EngagementCommentModerationQueueItem[]> {
+  const items = await Promise.all(
+    rows.map(async (row) => {
+      // One broken row is one row the page cannot describe, not a queue the
+      // owner cannot open (`OVE-500`, criterion 11).
+      let target: EngagementCommentTarget;
+      let reason: EngagementCommentReportReason;
+      let reportState: EngagementCommentReportState;
+      try {
+        target = normalizeEngagementCommentTarget(
+          row.targetKind,
+          row.targetRef,
+        );
+        reason = normalizeCommentReportReason(row.reason);
+        reportState = normalizeEngagementCommentReportState(row.reportState);
+      } catch {
+        return null;
+      }
+      const excerpt = row.commentBody?.replace(/\s+/g, " ").trim() ?? "";
+      return {
+        reportId: row.reportId,
+        commentId: row.commentId,
+        targetKind: target.kind,
+        targetRef: target.ref,
+        reason,
+        reportState,
+        createdAt: row.createdAt,
+        resolvedAt: row.resolvedAt,
+        commentState: row.commentState,
+        commentExcerpt: excerpt
+          ? excerpt.length <= 320
+            ? excerpt
+            : `${excerpt.slice(0, 319).trimEnd()}…`
+          : null,
+        authorHandle: row.authorHandle,
+        authorDisplayName: row.authorDisplayName,
+        place: await resolveCommentModerationPlace(target, executor),
+      };
+    }),
+  );
+  return items.filter(
+    (item): item is EngagementCommentModerationQueueItem => item !== null,
+  );
+}
+
+/** Where a reported comment appears, while that page is public. */
+async function resolveCommentModerationPlace(
+  target: EngagementCommentTarget,
+  executor: QueryExecutor,
+): Promise<{ label: string; href: string } | null> {
+  try {
+    if (target.kind === "community_contribution") {
+      const contribution =
+        await buildPublicCommunityContributionCommentTargetQuery(
+          executor,
+          target.ref,
+          null,
+        ).executeTakeFirst();
+      return contribution
+        ? {
+            label: contribution.entryTitle,
+            href: publicCommunityDiscussionPath(
+              contribution.communitySlug,
+              target.ref,
+            ),
+          }
+        : null;
+    }
+    const found = await findPublicEngagementTarget(
+      target as EngagementTarget,
+      executor,
+      null,
+    );
+    return found ? { label: found.label, href: found.href } : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function moderateEngagementCommentReport(
@@ -1646,6 +1853,9 @@ export function buildPublicCommunityContributionCommentTargetQuery(
       // what it admitted before.
       "communities.content_key as communityContentKey",
       "journal_entries.title as entryTitle",
+      // The public entry's opening, so the discussion shows what is being
+      // discussed as a readable post (`OVE-500`, criterion 4).
+      "journal_entries.body as entryBody",
       "journal_entries.public_slug as entryPublicSlug",
       "journal_entries.author_entry_number as entryNumber",
       "journal_entries.entry_date as entryDate",

@@ -46,6 +46,10 @@ export const WORKSPACE_RENDER_ROOTS = [
   // the public profile's editor and held to the same rule.
   "src/app/(default)/account/settings",
   "src/app/(default)/account/security",
+  // The owner's moderation (`OVE-500`): the communities, one community's
+  // reports and settings, and the comment reports.
+  "src/app/(default)/account/communities",
+  "src/app/(default)/account/moderation",
 ] as const;
 
 /** The one function that turns a rejection into a rendered value. */

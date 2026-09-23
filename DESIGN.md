@@ -1540,6 +1540,65 @@ archive called its records "безпечні" and "не схвалена про�
 The contract the database-backed notes and news reuse is
 `docs/redesign/2026-09-21/OVE-499-ARTICLE-CONTRACT.md`.
 
+### 5.21 A community is a place to read and to add to; moderating it is a task
+
+A community's only way to take part was "Написати перший запис", and it went
+to a garden setup with no community in it (OG-UX-035). The rail offered
+generic knowledge (OG-UX-040). Every refusal read "Дію не виконано", and a
+member was offered a report and a block of their own entry. The owner's side
+was one hard-coded card, a "fail-closed panel", reasons printed as enum
+values, and a ban with no question before it (`OVE-500`). The rules:
+
+- **Say what the community is and how to take part.**
+  - The header carries the topic, what members do there, and two actions:
+    join and "Додати запис".
+  - The card says the topic when it is not the name said twice, and whether
+    the community is open for new entries.
+- **Adding an entry is one step, the community's own** (`#community-contribute`):
+  - a guest signs in and comes back to the step, the next control focused;
+  - a signed-in reader who is not a member joins there, and comes back to the
+    same step;
+  - a member picks one of their published entries or writes one for this
+    community.
+- **Writing for a community is the one composer, with the community named.**
+  - It offers a plant or an animal only, the entries a community takes.
+  - After Publish it returns to the step with the new entry offered first.
+    Adding it is the member's own press: nothing is cross-posted silently,
+    and the entry keeps its one address.
+  - A writer with nothing to write about adds a plant or an animal first and
+    comes straight back, the community still named.
+- **A refusal names the rule that refused**: not a member, banned, closed,
+  not an entry a community takes, already there. "Unavailable" is left for
+  what is not a rule, and it offers a retry.
+- **Offer only what the server allows.** A reader's own entry has no report
+  and no block. A closed community has no step.
+- **The rail is this community's.** Its topic, the step, its rules, who
+  writes there, and other communities when there are some.
+- **A removed discussion is a page that says so**, with the community it
+  belonged to one press away. A discussion is titled after its entry, and its
+  canonical is its own address.
+- **Moderation is pages of the workspace, not a panel.**
+  - `/account/communities` lists every community the reader may moderate:
+    each one for the owner, the assigned ones for a moderator. Anyone else is
+    told they have no access.
+  - A community has two sections: its reports (open or resolved, a filter
+    with counts) and its one setting (accepting new entries). Comment reports
+    are the second queue.
+- **A report is read before it is decided.** It shows the entry's title and
+  opening, its author, what it is about, the reason in words, and where the
+  record stands now. It never shows who reported it.
+- **Each button says what it changes.** The two that take something from a
+  person, removal and a ban, ask first and name what they take. Cancel
+  changes nothing. While a press is on its way, a second press does nothing
+  (`SubmitButton`, `ConfirmSubmit`).
+- **The outcome is the record's, read back.** An action returns to the same
+  view and the same report:
+  - "Збережено" with the state now, in the report's card;
+  - above the list when the report has left the view;
+  - "Нічого не змінено" when somebody got there first;
+  - "Немає доступу", or a failure that changed nothing and is safe to retry.
+  One failed action is one card's notice, never a list that disappears.
+
 ---
 
 ## 6. Language and locale

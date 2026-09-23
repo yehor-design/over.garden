@@ -5,13 +5,20 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { OwnedDestination } from "@/lib/garden/owned-destinations";
-import { localCalendarDate } from "@/lib/entry-composer-copy";
+import {
+  getEntryComposerCopy,
+  localCalendarDate,
+} from "@/lib/entry-composer-copy";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn() }),
 }));
 
-import { EntryComposer } from "./entry-composer";
+import {
+  communityContributeHref,
+  EntryComposer,
+  type EntryComposerCommunity,
+} from "./entry-composer";
 
 const beehive: OwnedDestination = {
   kind: "object",
@@ -26,6 +33,14 @@ const balcony: OwnedDestination = {
   kind: "space",
   id: "18700003-0000-4000-8000-000000000010",
   displayName: "Балкон",
+};
+
+// Opened from a community's "Write for this community" (`OVE-500`).
+const community: EntryComposerCommunity = {
+  name: "Спостереження і догляд",
+  returnPath: "/bg/communities/observation-and-care",
+  accepting: true,
+  member: true,
 };
 
 const localeExpectations = [
@@ -183,6 +198,148 @@ describe("the one entry composer (OVE-486)", () => {
       />,
     );
     expect(html).not.toContain("Я розумію, що цей запис");
+  });
+
+  it.each(["uk", "bg", "ru"] as const)(
+    "names the community an entry is written for, and asks for a plant or an animal, in %s (OVE-500)",
+    (locale) => {
+      const copy = getEntryComposerCopy(locale);
+      const html = renderToStaticMarkup(
+        <EntryComposer
+          locale={locale}
+          initialDestination={null}
+          today="2026-07-16"
+          requiresFirstPublicationDisclosure={false}
+          community={community}
+        />,
+      );
+      const notice = html.indexOf('data-entry-composer-community="accepting"');
+      expect(notice).toBeGreaterThan(-1);
+      // Which community, and what happens after Publish, before where.
+      expect(notice).toBeLessThan(
+        html.indexOf('data-entry-composer-destination="true"'),
+      );
+      expect(html).toContain(copy.community.title(community.name));
+      expect(html).toContain(copy.community.body);
+      // A member is not told to join.
+      expect(html).not.toContain(copy.community.notMember);
+      // A community takes entries about one plant or animal: the picker
+      // offers objects, not the spaces that hold them.
+      expect(html).toContain('data-owned-destination-picker="object"');
+    },
+  );
+
+  it("tells a writer who is not a member yet that the community will ask them to join", () => {
+    const copy = getEntryComposerCopy("uk");
+    const html = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={null}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+        community={{ ...community, member: false }}
+      />,
+    );
+    expect(html).toContain('data-entry-composer-community="accepting"');
+    expect(html).toContain(copy.community.body);
+    expect(html).toContain(copy.community.notMember);
+  });
+
+  it("does not start a community entry in a space the address named, but keeps an object", () => {
+    const fromSpace = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={balcony}
+        initialSpaceObjects={[]}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+        community={community}
+      />,
+    );
+    // The space is set aside and the question is asked again, among objects.
+    expect(fromSpace).toContain('data-owned-destination-picker="object"');
+    expect(fromSpace).not.toContain("data-entry-composer-destination-name");
+    expect(fromSpace).not.toContain(balcony.displayName);
+    expect(fromSpace).not.toContain("data-entry-composer-space-empty");
+    expect(fromSpace).not.toContain("data-entry-composer-mentions");
+
+    const fromObject = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={beehive}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+        community={community}
+      />,
+    );
+    // An object is what a community takes: it is kept, and not asked again.
+    expect(fromObject).toContain("data-entry-composer-destination-name");
+    expect(fromObject).toContain(beehive.displayName);
+    expect(fromObject).not.toContain("data-owned-destination-picker");
+  });
+
+  it("says a closed community takes nothing now, and leaves the entry's destination alone", () => {
+    const copy = getEntryComposerCopy("uk");
+    const closed = { ...community, accepting: false };
+    const html = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={null}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+        community={closed}
+      />,
+    );
+    expect(html).toContain('data-entry-composer-community="closed"');
+    expect(html).toContain(copy.community.closed(community.name));
+    expect(html).not.toContain(copy.community.title(community.name));
+    expect(html).not.toContain(copy.community.body);
+    // The entry is published to the writer's own journal only, anywhere they
+    // choose: nothing is narrowed for a community that will not take it.
+    expect(html).toContain('data-owned-destination-picker="all"');
+
+    const inSpace = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={balcony}
+        initialSpaceObjects={[]}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+        community={closed}
+      />,
+    );
+    expect(inSpace).toContain(balcony.displayName);
+    expect(inSpace).toContain('data-entry-composer-space-empty="true"');
+  });
+
+  it("names no community and narrows nothing when it was not opened from one", () => {
+    const html = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={null}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+      />,
+    );
+    expect(html).not.toContain("data-entry-composer-community");
+    expect(html).toContain('data-owned-destination-picker="all"');
+  });
+
+  it("returns a community writer to the community's contribution step, the new entry first", () => {
+    const entryId = "18700003-0000-4000-8000-0000000000e1";
+    expect(communityContributeHref(community.returnPath, entryId)).toBe(
+      `/bg/communities/observation-and-care?contribute=${entryId}#community-contribute`,
+    );
+    // Whatever the address carried — a search, another anchor — the step and
+    // the entry are what the writer comes back to.
+    expect(
+      communityContributeHref(
+        "/communities/observation-and-care?q=tomato#community-journals",
+        entryId,
+      ),
+    ).toBe(
+      `/communities/observation-and-care?contribute=${entryId}#community-contribute`,
+    );
   });
 
   it("dates an entry by the reader's own calendar, not the UTC day", () => {

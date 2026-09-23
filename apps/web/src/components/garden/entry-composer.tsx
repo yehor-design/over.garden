@@ -103,8 +103,35 @@ export interface EntryComposerProps {
   initialSpaceObjects?: readonly SpaceObjectOption[];
   /** Where Close returns to: the page the composer was opened from. */
   closeHref?: string | null;
+  /**
+   * The community this entry is written for (`OVE-500`), when the composer
+   * was opened from one. It names the community, keeps the choice to a plant
+   * or an animal — the only entries a community takes — and after Publish
+   * returns to the community with the new entry offered first. It never adds
+   * the entry anywhere by itself: that is the member's own press there.
+   */
+  community?: EntryComposerCommunity | null;
   /** False only for deterministic visual fixtures, which must not write. */
   enableServerPersistence?: boolean;
+}
+
+export interface EntryComposerCommunity {
+  name: string;
+  /** The community's own address in the reader's language. */
+  returnPath: string;
+  /** Open for new entries right now. */
+  accepting: boolean;
+  /** An active member already; otherwise the community asks them to join. */
+  member: boolean;
+  /** Not accepting because a moderator restricted this writer, not the community. */
+  banned?: boolean;
+}
+
+/** Where a community writer lands after Publish: the step, the entry first. */
+export function communityContributeHref(returnPath: string, entryId: string) {
+  const [path] = returnPath.split(/[?#]/u);
+  const query = new URLSearchParams({ contribute: entryId });
+  return `${path}?${query.toString()}#community-contribute`;
 }
 
 /**
@@ -138,6 +165,7 @@ export function EntryComposer({
   requiresFirstPublicationDisclosure,
   initialSpaceObjects,
   closeHref = null,
+  community = null,
   enableServerPersistence = true,
 }: EntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
@@ -152,10 +180,17 @@ export function EntryComposer({
     null,
   );
   const closeRequestRef = useRef<((leave: () => void) => void) | null>(null);
+  // A community takes entries about one plant or animal, so a space named by
+  // the address is not a destination here; the picker offers objects only.
+  const forCommunity = community?.accepting === true;
+  const startingDestination =
+    forCommunity && initialDestination?.kind === "space"
+      ? null
+      : initialDestination;
   const [destination, setDestination] = useState<OwnedDestination | null>(
-    initialDestination,
+    startingDestination,
   );
-  const [choosing, setChoosing] = useState(initialDestination === null);
+  const [choosing, setChoosing] = useState(startingDestination === null);
   const [draft, setDraft] = useState<EntryDraftFields>({
     title: "",
     body: "",
@@ -341,6 +376,15 @@ export function EntryComposer({
       });
       setSubmitState("published");
       setMessage(atomicCopy.published);
+      if (forCommunity && community) {
+        // A document navigation: the community is a static public page whose
+        // step reads `contribute` at request time, and a client navigation
+        // could be answered from the prefetched shell (`public-query-twin.ts`).
+        window.location.assign(
+          communityContributeHref(community.returnPath, result.entryId),
+        );
+        return;
+      }
       router.push(result.returnTo);
       router.refresh();
     } catch (error) {
@@ -497,6 +541,33 @@ export function EntryComposer({
         copy={atomicCopy}
       />
 
+      {community ? (
+        <Callout
+          tone={community.accepting ? "info" : "warning"}
+          title={
+            community.accepting
+              ? copy.community.title(community.name)
+              : undefined
+          }
+          data-entry-composer-community={
+            community.accepting ? "accepting" : "closed"
+          }
+        >
+          {community.accepting ? (
+            <>
+              <p>{copy.community.body}</p>
+              {community.member ? null : <p>{copy.community.notMember}</p>}
+            </>
+          ) : (
+            <p>
+              {community.banned
+                ? copy.community.banned(community.name)
+                : copy.community.closed(community.name)}
+            </p>
+          )}
+        </Callout>
+      ) : null}
+
       <fieldset disabled={persistenceFrozen} className="contents">
         {/* Where, when and who can see it: visible before anything else. */}
         <div
@@ -535,7 +606,8 @@ export function EntryComposer({
                 locale={locale}
                 selection={destination}
                 onSelect={chooseDestination}
-                autoFocus={initialDestination === null || choosing}
+                kind={forCommunity ? "object" : "all"}
+                autoFocus={startingDestination === null || choosing}
               />
               {destination ? (
                 <div>

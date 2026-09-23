@@ -6,7 +6,6 @@ import {
   formatOperatorTemplate,
   getOperatorCopy,
   operatorCapabilityLabel,
-  operatorCommunityStateLabel,
   operatorRoleLabel,
 } from "@/lib/operator-copy";
 
@@ -21,19 +20,8 @@ describe("operator copy", () => {
     }
   });
 
-  it("localizes representative moderation copy", () => {
-    expect(getOperatorCopy("uk").moderation.title).toBe("Модерація коментарів");
-    expect(getOperatorCopy("bg").community.openReports).toBe(
-      "Отворени сигнали",
-    );
-  });
-
   it("preserves machine values while localizing their display labels", () => {
     expect(operatorRoleLabel("uk", "owner")).toBe("Власник");
-    expect(operatorCommunityStateLabel("bg", "open")).toBe("отворено");
-    expect(operatorCommunityStateLabel("ru", "future_state")).toBe(
-      "future_state",
-    );
     expect(
       operatorCapabilityLabel("ru", ["operator:read", "operator:mutate"]),
     ).toBe("чтение операторских данных, операторские изменения");

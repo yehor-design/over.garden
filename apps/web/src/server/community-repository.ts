@@ -35,7 +35,10 @@ import { blockProfile } from "@/server/profile-interaction-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import type { RequestScope } from "@/server/request-scope";
-import { assertAdminCapabilityForScope } from "@/server/admin-access";
+import {
+  AdminAccessDeniedError,
+  assertAdminCapabilityForScope,
+} from "@/server/admin-access";
 import {
   findPublicCommunitySearchCandidates,
   PUBLIC_COMMUNITY_SEARCH_CANDIDATE_LIMIT,
@@ -54,6 +57,39 @@ const MAX_COMMUNITY_SEARCH_LENGTH = 100;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
+
+/**
+ * Why the server refused a community mutation (`OVE-500`).
+ *
+ * Every refusal used to be a plain `Error`, and every action mapped every
+ * error to "unavailable" — so a reader who was not a member yet, a closed
+ * community and an entry that was already there all read "Дію не виконано",
+ * with no way to tell which step to take. The repository still decides; it
+ * now says which rule refused, and the action words it.
+ */
+export type CommunityMutationRefusal =
+  | "community_unavailable"
+  | "participation_closed"
+  | "membership_required"
+  | "membership_banned"
+  | "entry_not_eligible"
+  | "entry_already_added"
+  | "entry_removed"
+  | "moderation_denied"
+  | "target_unavailable";
+
+export class CommunityMutationError extends Error {
+  constructor(readonly refusal: CommunityMutationRefusal) {
+    super(`Community mutation refused: ${refusal}.`);
+    this.name = "CommunityMutationError";
+  }
+}
+
+export function communityMutationRefusal(
+  error: unknown,
+): CommunityMutationRefusal | null {
+  return error instanceof CommunityMutationError ? error.refusal : null;
+}
 
 let communityNavigationReadinessCache:
   | { value: boolean; expiresAt: number }
@@ -157,6 +193,12 @@ export interface PublicCommunityContribution {
     CommunityReportState,
     "submitted" | "reviewed"
   > | null;
+  /**
+   * The reader wrote it (`OVE-500`). Their own entry offers neither a report
+   * nor a block: the server refuses both, so the controls only led to
+   * "Дію не виконано".
+   */
+  viewerIsAuthor: boolean;
 }
 
 export interface PublicCommunityContributionPage {
@@ -169,6 +211,8 @@ export interface PublicCommunityDirectoryItem {
   slug: string;
   contentKey: string;
   topicSlug: string;
+  /** The topic's stored name; `localizeTopicLabel` gives the reader's. */
+  topicLabel: string;
   lifecycleState: string;
   participationState: string;
   navigationReady: boolean;
@@ -213,20 +257,46 @@ export interface CommunityContributionCandidate {
 export interface CommunityModerationQueueItem {
   reportId: string;
   reportReason: CommunityReportReason;
-  reportState: string;
+  reportState: CommunityReportState;
   reportedAt: Date | string;
+  resolvedAt: Date | string | null;
   contributionId: string;
-  contributionState: string;
-  discussionState: string;
+  contributionState: CommunityContributionState;
+  discussionState: CommunityDiscussionState;
   contributorUserId: string;
   membershipId: string;
+  membershipState: CommunityMembershipState;
+  /** Null when the entry is no longer public: its text is not ours to show. */
   journalTitle: string | null;
+  journalExcerpt: string | null;
   publicSlug: string | null;
   /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
   entryNumber: number | null;
+  objectDisplayName: string | null;
+  objectKind: PlantObjectKind | null;
   authorHandle: string | null;
+  authorDisplayName: string | null;
   /** The registry handle the entry's address hangs from (ADR-0029 D9). */
   addressHandle: string | null;
+}
+
+export interface CommunityModerationQueue {
+  community: Awaited<ReturnType<typeof requireExistingCommunity>>;
+  view: CommunityModerationView;
+  items: CommunityModerationQueueItem[];
+  counts: Record<CommunityModerationView, number>;
+}
+
+/** A community its moderator can open, with the work waiting in it. */
+export interface ModeratedCommunity {
+  id: string;
+  slug: string;
+  contentKey: string;
+  topicSlug: string;
+  topicLabel: string;
+  lifecycleState: string;
+  participationState: CommunityParticipationState;
+  openReportCount: number;
 }
 
 /** One directory read per request: metadata and the page share it (React.cache). */
@@ -251,6 +321,7 @@ async function loadPublicCommunities(
       "communities.participation_state as participationState",
       "communities.updated_at as updatedAt",
       "journal_topics.slug as topicSlug",
+      "journal_topics.label as topicLabel",
       communityCoverDerivativeKey(viewerScope).as("coverDerivativeKey"),
       communityCoverFocalColumn("focal_x", viewerScope).as("coverFocalX"),
       communityCoverFocalColumn("focal_y", viewerScope).as("coverFocalY"),
@@ -418,13 +489,13 @@ export async function getPublicCommunityPage(
             community.id,
           ).executeTakeFirst()
         : Promise.resolve(undefined),
+      // The moderation link is a courtesy on a public page: a failed read
+      // hides it, and never costs a member their own view of the community.
       viewerScope
-        ? buildCommunityModeratorAccessQuery(
-            executor,
-            viewerScope,
-            community.id,
-          ).executeTakeFirst()
-        : Promise.resolve(undefined),
+        ? canModerateCommunityId(executor, viewerScope, community.id).catch(
+            () => false,
+          )
+        : Promise.resolve(false),
     ]);
 
   const membershipState = normalizeProjectedMembershipState(
@@ -447,6 +518,7 @@ export async function getPublicCommunityPage(
     slug: community.slug,
     contentKey: community.contentKey,
     topicSlug: community.topicSlug,
+    topicLabel: community.topicLabel,
     lifecycleState: community.lifecycleState,
     participationState: community.participationState,
     navigationReady: communityIsNavigationReady(readiness),
@@ -494,6 +566,7 @@ export async function getPublicCommunityPage(
       locale,
       pageSize,
       options.mediaUrlForKey ?? getPublicDerivativeUrl,
+      viewerScope?.userId ?? null,
     ),
     search: {
       mode: resolvedSearch?.candidates.source ?? "browse",
@@ -505,7 +578,7 @@ export async function getPublicCommunityPage(
     },
     viewer: {
       membershipState,
-      isModerator: Boolean(moderator),
+      isModerator: moderator,
       eligibleJournals: serializeContributionCandidates(eligibleRows),
     },
   };
@@ -591,6 +664,45 @@ export async function resolveCommunityNavigationReadiness(
   });
 }
 
+/**
+ * What the composer needs to write for a community (`OVE-500`, criterion 2):
+ * which community, whether it takes entries now, and where this writer stands
+ * in it. Null when there is no such community. It decides nothing — the
+ * contribution step does, at the moment of the mutation.
+ */
+export async function readCommunityWritingContext(
+  scope: RequestScope,
+  slug: string,
+  executor: QueryExecutor = db,
+): Promise<{
+  slug: string;
+  contentKey: string;
+  accepting: boolean;
+  membershipState: CommunityMembershipState | null;
+} | null> {
+  if (!SLUG_PATTERN.test(slug.trim().toLowerCase())) return null;
+  const community = await buildCommunityLookupQuery(
+    executor,
+    slug,
+  ).executeTakeFirst();
+  if (!community) return null;
+  const membership = await buildCommunityMembershipStateQuery(
+    executor,
+    scope,
+    community.id,
+  ).executeTakeFirst();
+  return {
+    slug: community.slug,
+    contentKey: community.contentKey,
+    accepting:
+      community.lifecycleState === "active" &&
+      community.participationState === "open",
+    membershipState: normalizeProjectedMembershipState(
+      membership?.membership_state,
+    ),
+  };
+}
+
 export async function setCommunityMembership(
   scope: RequestScope,
   input: {
@@ -612,7 +724,7 @@ export async function setCommunityMembership(
       community.id,
     ).executeTakeFirst();
     if (existing?.membership_state === "banned") {
-      throw new Error("Community membership is not available.");
+      throw new CommunityMutationError("membership_banned");
     }
     const row = await buildUpsertCommunityMembershipQuery(trx, scope, {
       communityId: community.id,
@@ -640,8 +752,14 @@ export async function contributePublicJournalToCommunity(
       scope,
       community.id,
     ).executeTakeFirst();
+    if (membership?.membership_state === "banned") {
+      throw new CommunityMutationError("membership_banned");
+    }
     if (membership?.membership_state !== "active") {
-      throw new Error("An active community membership is required.");
+      throw new CommunityMutationError("membership_required");
+    }
+    if (!UUID_PATTERN.test(input.journalEntryId.trim())) {
+      throw new CommunityMutationError("entry_not_eligible");
     }
     const candidate = await buildEligibleCommunityContributionCandidatesQuery(
       trx,
@@ -650,7 +768,23 @@ export async function contributePublicJournalToCommunity(
       input.journalEntryId,
     ).executeTakeFirst();
     if (!candidate) {
-      throw new Error("Journal entry is not eligible for this community.");
+      // The eligibility read leaves out an entry that is already here, so a
+      // second press of Add — or a second tab — asks which of the two it is.
+      const present = await buildOwnedCommunityContributionQuery(
+        trx,
+        scope,
+        community.id,
+        input.journalEntryId,
+      ).executeTakeFirst();
+      // A moderator's removal stands: the entry is not offered again, and
+      // the reader is told why rather than "it is already here".
+      throw new CommunityMutationError(
+        !present
+          ? "entry_not_eligible"
+          : present.contributionState === "removed"
+            ? "entry_removed"
+            : "entry_already_added",
+      );
     }
     const contribution = await buildInsertCommunityContributionQuery(
       trx,
@@ -661,7 +795,7 @@ export async function contributePublicJournalToCommunity(
       },
     ).executeTakeFirst();
     if (!contribution) {
-      throw new Error("Journal entry is already part of this community.");
+      throw new CommunityMutationError("entry_already_added");
     }
     return { community, contributionId: contribution.id };
   });
@@ -684,7 +818,7 @@ export async function reportCommunityContribution(
       community.id,
       input.contributionId,
     ).executeTakeFirst();
-    if (!target) throw new Error("Community contribution is not available.");
+    if (!target) throw new CommunityMutationError("target_unavailable");
     const report = await buildReportCommunityContributionQuery(trx, scope, {
       contributionId: target.id,
       reason: input.reason,
@@ -706,11 +840,11 @@ export async function blockCommunityContributionAuthor(
     input.contributionId,
   ).executeTakeFirst();
   if (!target?.authorHandle) {
-    throw new Error("Community contribution author is not available.");
+    throw new CommunityMutationError("target_unavailable");
   }
   const result = await blockProfile(scope, target.authorHandle, database);
   if (result !== "blocked") {
-    throw new Error("Community contribution author is not available.");
+    throw new CommunityMutationError("target_unavailable");
   }
   return { communityId: target.communityId, authorHandle: target.authorHandle };
 }
@@ -718,25 +852,158 @@ export async function blockCommunityContributionAuthor(
 export async function listCommunityModerationQueue(
   scope: RequestScope,
   slug: string,
+  options: { view?: CommunityModerationView } = {},
   executor: QueryExecutor = db,
-): Promise<{
-  community: Awaited<ReturnType<typeof requireExistingCommunity>>;
-  items: CommunityModerationQueueItem[];
-}> {
+): Promise<CommunityModerationQueue> {
+  const view = options.view === "resolved" ? "resolved" : "open";
   const community = await requireExistingCommunity(executor, slug);
   await assertCommunityModerator(executor, scope, community.id);
-  const rows = await buildCommunityModerationQueueQuery(
-    executor,
-    community.id,
-  ).execute();
+  const [rows, counts] = await Promise.all([
+    buildCommunityModerationQueueQuery(executor, community.id, {
+      view,
+    }).execute(),
+    buildCommunityModerationCountsQuery(
+      executor,
+      community.id,
+    ).executeTakeFirst(),
+  ]);
   return {
     community,
-    items: rows.flatMap((row) => {
-      const reason = normalizeCommunityReportReasonOrNull(row.reportReason);
-      if (!reason) return [];
-      return [{ ...row, reportReason: reason }];
-    }),
+    view,
+    items: rows.flatMap((row) => serializeModerationQueueRow(row)),
+    counts: {
+      open: Number(counts?.open ?? 0),
+      resolved: Number(counts?.resolved ?? 0),
+    },
   };
+}
+
+/**
+ * One report as it stands now, in any state — the read an action's outcome is
+ * worded from (`OVE-500`, criterion 9). Null when the report is not this
+ * community's, or not there at all.
+ */
+export async function readCommunityModerationReport(
+  scope: RequestScope,
+  slug: string,
+  reportId: string,
+  executor: QueryExecutor = db,
+): Promise<CommunityModerationQueueItem | null> {
+  if (!UUID_PATTERN.test(reportId.trim())) return null;
+  const community = await requireExistingCommunity(executor, slug);
+  await assertCommunityModerator(executor, scope, community.id);
+  const row = await buildCommunityModerationQueueQuery(executor, community.id, {
+    reportId,
+  }).executeTakeFirst();
+  return row ? (serializeModerationQueueRow(row)[0] ?? null) : null;
+}
+
+/**
+ * The communities this reader may moderate (`OVE-500`, criterion 5): every
+ * one for the operator, the assigned ones for a community moderator, none for
+ * anybody else — which the page says as "no access", not as an empty list.
+ */
+export async function listModeratedCommunities(
+  scope: RequestScope,
+  executor: QueryExecutor = db,
+): Promise<ModeratedCommunity[] | null> {
+  const operator = await isOperator(executor, scope);
+  const rows = await executor
+    .selectFrom("communities")
+    .innerJoin(
+      "journal_topics",
+      "journal_topics.id",
+      "communities.journal_topic_id",
+    )
+    .select([
+      "communities.id",
+      "communities.slug",
+      "communities.content_key as contentKey",
+      "communities.lifecycle_state as lifecycleState",
+      "communities.participation_state as participationState",
+      "journal_topics.slug as topicSlug",
+      "journal_topics.label as topicLabel",
+      sql<string>`(
+        select count(*)
+        from community_contribution_reports
+        join community_contributions
+          on community_contributions.id = community_contribution_reports.contribution_id
+        where community_contributions.community_id = communities.id
+          and community_contribution_reports.report_state in ('submitted', 'reviewed')
+      )`.as("openReportCount"),
+    ])
+    .where("communities.lifecycle_state", "in", ["active", "archived"])
+    .$if(!operator, (query) =>
+      query.where(({ exists, selectFrom }) =>
+        exists(
+          selectFrom("community_moderators")
+            .select("community_moderators.id")
+            .whereRef(
+              "community_moderators.community_id",
+              "=",
+              "communities.id",
+            )
+            .where("community_moderators.user_id", "=", scope.userId)
+            .where("community_moderators.assignment_state", "=", "active")
+            .where("community_moderators.revoked_at", "is", null),
+        ),
+      ),
+    )
+    .orderBy("communities.created_at", "asc")
+    .limit(50)
+    .execute();
+  if (!operator && rows.length === 0) return null;
+  return rows.map((row) => ({
+    ...row,
+    participationState: normalizeParticipationState(row.participationState),
+    openReportCount: Number(row.openReportCount ?? 0),
+  }));
+}
+
+function serializeModerationQueueRow(row: {
+  reportId: string;
+  reportReason: string;
+  reportState: string;
+  reportedAt: Date | string;
+  resolvedAt: Date | string | null;
+  contributionId: string;
+  contributionState: string;
+  discussionState: string;
+  contributorUserId: string;
+  membershipId: string;
+  membershipState: string;
+  journalTitle: string | null;
+  journalExcerpt: string | null;
+  publicSlug: string | null;
+  entryNumber: number | null;
+  objectDisplayName: string | null;
+  objectKind: string | null;
+  authorHandle: string | null;
+  authorDisplayName: string | null;
+  addressHandle: string | null;
+}): CommunityModerationQueueItem[] {
+  const reason = normalizeCommunityReportReasonOrNull(row.reportReason);
+  const reportState = normalizeReportState(row.reportState);
+  const membershipState = normalizeProjectedMembershipState(
+    row.membershipState,
+  );
+  if (!reason || !reportState || !membershipState) return [];
+  return [
+    {
+      ...row,
+      reportReason: reason,
+      reportState,
+      contributionState: normalizeContributionState(row.contributionState),
+      discussionState: normalizeDiscussionState(row.discussionState),
+      membershipState,
+      journalExcerpt: row.journalExcerpt
+        ? publicExcerpt(row.journalExcerpt)
+        : null,
+      objectKind: row.objectKind
+        ? normalizeProjectedObjectKind(row.objectKind)
+        : null,
+    },
+  ];
 }
 
 export async function moderateCommunityContribution(
@@ -757,7 +1024,7 @@ export async function moderateCommunityContribution(
       community.id,
       input.contributionId,
     ).executeTakeFirst();
-    if (!current) throw new Error("Community contribution is not available.");
+    if (!current) throw new CommunityMutationError("target_unavailable");
     const next = normalizeContributionState(input.state);
     if (current.contribution_state === next) return { community, state: next };
     await buildModerateCommunityContributionQuery(trx, scope, {
@@ -798,7 +1065,7 @@ export async function moderateCommunityDiscussion(
       community.id,
       input.contributionId,
     ).executeTakeFirst();
-    if (!current) throw new Error("Community contribution is not available.");
+    if (!current) throw new CommunityMutationError("target_unavailable");
     const next = normalizeDiscussionState(input.state);
     if (current.discussion_state === next) return { community, state: next };
     await buildModerateCommunityDiscussionQuery(trx, {
@@ -839,7 +1106,7 @@ export async function moderateCommunityMembership(
       .where("id", "=", normalizeUuid(input.membershipId, "Membership"))
       .executeTakeFirst();
     if (!current || current.user_id === scope.userId) {
-      throw new Error("Community membership is not available.");
+      throw new CommunityMutationError("target_unavailable");
     }
     const next = normalizeModeratorMembershipState(input.state);
     if (current.membership_state === next) return { community, state: next };
@@ -890,7 +1157,7 @@ export async function resolveCommunityReport(
       .where("contributions.community_id", "=", community.id)
       .where("reports.report_state", "in", ["submitted", "reviewed"])
       .executeTakeFirst();
-    if (!current) throw new Error("Community report is not available.");
+    if (!current) throw new CommunityMutationError("target_unavailable");
     const next = normalizeResolvedReportState(input.state);
     await buildResolveCommunityReportQuery(trx, scope, {
       communityId: community.id,
@@ -1070,6 +1337,7 @@ export function serializePublicCommunityContributionPage(
   locale: PublicLocale,
   pageSize = COMMUNITY_PAGE_SIZE,
   mediaUrlForKey: (key: string) => string,
+  viewerUserId: string | null = null,
 ): PublicCommunityContributionPage {
   const normalizedPageSize = Math.min(
     Math.max(Math.floor(pageSize), 1),
@@ -1130,6 +1398,7 @@ export function serializePublicCommunityContributionPage(
         viewerReportState: normalizeProjectedOpenReportState(
           row.viewerReportState,
         ),
+        viewerIsAuthor: viewerUserId !== null && row.ownerUserId === viewerUserId,
       },
     ];
   });
@@ -1189,6 +1458,7 @@ export function buildCommunityLookupQuery(
       "communities.created_at as createdAt",
       "communities.updated_at as updatedAt",
       "journal_topics.slug as topicSlug",
+      "journal_topics.label as topicLabel",
       "journal_topics.trust_state as topicTrustState",
       communityCoverDerivativeKey(viewerScope).as("coverDerivativeKey"),
       communityCoverFocalColumn("focal_x", viewerScope).as("coverFocalX"),
@@ -2029,6 +2299,26 @@ export function buildInsertCommunityContributionQuery(
     .returning(["id", "contribution_state"]);
 }
 
+/** The reader's own entry, already in this community — in any state. */
+export function buildOwnedCommunityContributionQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  communityId: string,
+  journalEntryId: string,
+) {
+  return executor
+    .selectFrom("community_contributions")
+    .select(["id", "contribution_state as contributionState"])
+    .where("community_id", "=", normalizeUuid(communityId, "Community"))
+    .where(
+      "journal_entry_id",
+      "=",
+      normalizeUuid(journalEntryId, "Journal entry"),
+    )
+    .where("contributor_user_id", "=", scope.userId)
+    .limit(1);
+}
+
 export function buildReportCommunityContributionQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -2168,12 +2458,41 @@ export function buildCommunityModeratorAccessQuery(
     .limit(1);
 }
 
+/** Which reports a moderator is looking at (`OVE-500`, criterion 8). */
+export type CommunityModerationView = "open" | "resolved";
+
+const OPEN_REPORT_STATES = ["submitted", "reviewed"] as const;
+const RESOLVED_REPORT_STATES = ["dismissed", "actioned"] as const;
+/** How much of the reported entry's public text the review shows. */
+const MODERATION_EXCERPT_LENGTH = 400;
+
+/**
+ * The reports a moderator reviews, with what they need to decide
+ * (`OVE-500`, criterion 7): the entry's title and the start of its text, its
+ * author, what it is about, and where each record stands now.
+ *
+ * The entry is read only through a join that admits a **public** entry, so
+ * its text here is the text any reader of the community already has; a
+ * private or withdrawn entry leaves the row with no title and no text, and
+ * the review says so. The reporter is never selected: a moderator decides on
+ * the content, not on who pointed at it.
+ *
+ * `open` is the work, oldest first; `resolved` is what was decided, newest
+ * first. `reportId` reads one report back in any state, which is how an
+ * action's outcome is reported from the record rather than from the button.
+ */
 export function buildCommunityModerationQueueQuery(
   executor: QueryExecutor,
   communityId: string,
-  limit = 40,
+  options: {
+    view?: CommunityModerationView;
+    reportId?: string;
+    limit?: number;
+  } = {},
 ) {
-  return executor
+  const view = options.view ?? "open";
+  const limit = options.limit ?? 40;
+  let query = executor
     .selectFrom("community_contribution_reports")
     .innerJoin(
       "community_contributions",
@@ -2206,6 +2525,15 @@ export function buildCommunityModerationQueueQuery(
         .on("journal_entries.public_slug", "is not", null)
         .on("journal_entries.published_at", "is not", null),
     )
+    .leftJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
     .leftJoin("user_handle_registry as contributor_handles", (join) =>
       join
         .onRef(
@@ -2235,29 +2563,82 @@ export function buildCommunityModerationQueueQuery(
       "community_contribution_reports.report_reason as reportReason",
       "community_contribution_reports.report_state as reportState",
       "community_contribution_reports.created_at as reportedAt",
+      "community_contribution_reports.resolved_at as resolvedAt",
       "community_contributions.id as contributionId",
       "community_contributions.contribution_state as contributionState",
       "community_contributions.discussion_state as discussionState",
       "community_contributions.contributor_user_id as contributorUserId",
       "community_memberships.id as membershipId",
+      "community_memberships.membership_state as membershipState",
       "journal_entries.title as journalTitle",
+      sql<string | null>`left(${sql.ref("journal_entries.body")}, ${sql.lit(MODERATION_EXCERPT_LENGTH)})`.as(
+        "journalExcerpt",
+      ),
       "journal_entries.public_slug as publicSlug",
       "journal_entries.author_entry_number as entryNumber",
+      "plant_objects.display_name as objectDisplayName",
+      "plant_objects.object_kind as objectKind",
       "user_public_profiles.handle as authorHandle",
+      "user_public_profiles.display_name as authorDisplayName",
       "contributor_handles.normalized_handle as addressHandle",
     ])
     .where(
       "community_contributions.community_id",
       "=",
       normalizeUuid(communityId, "Community"),
+    );
+  if (options.reportId) {
+    return query
+      .where(
+        "community_contribution_reports.id",
+        "=",
+        normalizeUuid(options.reportId, "Report"),
+      )
+      .limit(1);
+  }
+  if (view === "resolved") {
+    query = query
+      .where("community_contribution_reports.report_state", "in", [
+        ...RESOLVED_REPORT_STATES,
+      ])
+      .orderBy("community_contribution_reports.resolved_at", "desc")
+      .orderBy("community_contribution_reports.id", "desc");
+  } else {
+    query = query
+      .where("community_contribution_reports.report_state", "in", [
+        ...OPEN_REPORT_STATES,
+      ])
+      .orderBy("community_contribution_reports.created_at", "asc")
+      .orderBy("community_contribution_reports.id", "asc");
+  }
+  return query.limit(Math.min(Math.max(limit, 1), 100));
+}
+
+/** How many reports each view holds, so a filter says what is behind it. */
+export function buildCommunityModerationCountsQuery(
+  executor: QueryExecutor,
+  communityId: string,
+) {
+  return executor
+    .selectFrom("community_contribution_reports")
+    .innerJoin(
+      "community_contributions",
+      "community_contributions.id",
+      "community_contribution_reports.contribution_id",
     )
-    .where("community_contribution_reports.report_state", "in", [
-      "submitted",
-      "reviewed",
+    .select([
+      sql<string>`count(*) filter (where ${sql.ref("community_contribution_reports.report_state")} in ('submitted', 'reviewed'))`.as(
+        "open",
+      ),
+      sql<string>`count(*) filter (where ${sql.ref("community_contribution_reports.report_state")} in ('dismissed', 'actioned'))`.as(
+        "resolved",
+      ),
     ])
-    .orderBy("community_contribution_reports.created_at", "asc")
-    .orderBy("community_contribution_reports.id", "asc")
-    .limit(Math.min(Math.max(limit, 1), 100));
+    .where(
+      "community_contributions.community_id",
+      "=",
+      normalizeUuid(communityId, "Community"),
+    );
 }
 
 export function buildModerateCommunityContributionQuery(
@@ -2525,7 +2906,7 @@ async function requireExistingCommunity(executor: QueryExecutor, slug: string) {
     executor,
     slug,
   ).executeTakeFirst();
-  if (!community) throw new Error("Community is not available.");
+  if (!community) throw new CommunityMutationError("community_unavailable");
   return community;
 }
 
@@ -2535,11 +2916,11 @@ async function requireMutableCommunity(
   options: { participationOpen?: boolean } = {},
 ) {
   const community = await requireExistingCommunity(executor, slug);
-  if (
-    community.lifecycleState !== "active" ||
-    (options.participationOpen && community.participationState !== "open")
-  ) {
-    throw new Error("Community is not available.");
+  if (community.lifecycleState !== "active") {
+    throw new CommunityMutationError("community_unavailable");
+  }
+  if (options.participationOpen && community.participationState !== "open") {
+    throw new CommunityMutationError("participation_closed");
   }
   return community;
 }
@@ -2549,24 +2930,50 @@ async function assertCommunityModerator(
   scope: RequestScope,
   communityId: string,
 ) {
+  if (await canModerateCommunityId(executor, scope, communityId)) return;
+  throw new CommunityMutationError("moderation_denied");
+}
+
+/**
+ * The one moderation rule (`OVE-500`, criterion 5): an active assignment to
+ * this community, or the operator's `operator:mutate`. The owner's pages, the
+ * public page's link into them and every mutation ask this same question, so
+ * a moderator is never shown a way in that the server then refuses.
+ */
+async function canModerateCommunityId(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  communityId: string,
+) {
   const moderator = await buildCommunityModeratorAccessQuery(
     executor,
     scope,
     communityId,
   ).executeTakeFirst();
-  if (moderator) return;
+  if (moderator) return true;
+  return isOperator(executor, scope);
+}
 
+/**
+ * The owner's `operator:mutate`, and only a real refusal is "no": a role read
+ * that failed is thrown on, so a moderation page says "unavailable, retry"
+ * and an action "failed" instead of telling the owner they have no access.
+ */
+async function isOperator(executor: QueryExecutor, scope: RequestScope) {
   try {
     await assertAdminCapabilityForScope(scope, "operator:mutate", executor);
-  } catch {
-    throw new Error("Community moderation is not available.");
+    return true;
+  } catch (error) {
+    if (error instanceof AdminAccessDeniedError) return false;
+    throw error;
   }
 }
 
 function normalizeCommunitySlug(value: string) {
   const normalized = value.trim().toLocaleLowerCase("en");
   if (!SLUG_PATTERN.test(normalized)) {
-    throw new Error("Community is not available.");
+    // A slug nobody can spell names no community.
+    throw new CommunityMutationError("community_unavailable");
   }
   return normalized;
 }
@@ -2686,6 +3093,15 @@ function normalizeProjectedOpenReportState(
   value: string | null | undefined,
 ): Extract<CommunityReportState, "submitted" | "reviewed"> | null {
   return value === "submitted" || value === "reviewed" ? value : null;
+}
+
+function normalizeReportState(value: string): CommunityReportState | null {
+  return value === "submitted" ||
+    value === "reviewed" ||
+    value === "dismissed" ||
+    value === "actioned"
+    ? value
+    : null;
 }
 
 function normalizeModerationReason(value: string): CommunityModerationReason {

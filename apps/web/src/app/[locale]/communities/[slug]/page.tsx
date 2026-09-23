@@ -3,7 +3,7 @@ import { notFound, unstable_rethrow } from "next/navigation";
 import { cache, Suspense } from "react";
 
 import {
-  CommunityFirstRunAction,
+  CommunityContributionStep,
   CommunityMembershipAction,
   CommunitySafetyActions,
   PublicCommunityUnavailable,
@@ -58,7 +58,6 @@ import {
 import {
   CommunityIntentFocus,
   CommunityViewerContribution,
-  CommunityViewerFirstRunAction,
   CommunityViewerMembership,
   CommunityViewerModerator,
   CommunityViewerSafety,
@@ -169,7 +168,7 @@ export async function renderStaticCommunity(
         "all",
         request.cursor,
       ),
-      readPublicCommunityDirectory(),
+      readOtherCommunities(),
     ]);
   } catch (error) {
     unstable_rethrow(error);
@@ -245,17 +244,22 @@ export async function renderStaticCommunity(
           </Suspense>
         ),
         contribute: (
-          <Suspense fallback={null}>
-            <CommunityViewerContribution locale={locale} slug={slug} />
-          </Suspense>
-        ),
-        firstRunAction: (
           <Suspense
             fallback={
-              <CommunityFirstRunAction locale={locale} canContribute={false} />
+              <CommunityContributionStep
+                locale={locale}
+                community={guestCommunity}
+                viewer="guest"
+                communityPath={communityBasePath(locale, slug)}
+              />
             }
           >
-            <CommunityViewerFirstRunAction locale={locale} slug={slug} />
+            <CommunityViewerContribution
+              locale={locale}
+              community={guestCommunity}
+              communityPath={communityBasePath(locale, slug)}
+              searchParams={searchParams}
+            />
           </Suspense>
         ),
         safety: (item) => (
@@ -315,7 +319,7 @@ export async function renderCommunityForRequest(
     // The rail's "other communities" (Digg's Discover panel). It is the same
     // cached directory read `/communities` makes, so a reader who came from
     // the list pays nothing for it.
-    readPublicCommunityDirectory(),
+    readOtherCommunities(),
   ]);
   if (!community) return notFound();
   const discovery = resolvePublicSurfaceDiscoveryForRequest(
@@ -331,6 +335,8 @@ export async function renderCommunityForRequest(
       request={request}
       otherCommunities={directory}
       actionStatus={firstValue(queryParams.communityAction) || null}
+      contributeStatus={firstValue(queryParams.contributeAction) || null}
+      contributeEntryId={normalizeEntryId(firstValue(queryParams.contribute))}
       state="ready"
       resumeAction={normalizeAuthIntentResumeAction(queryParams.authIntent)}
       resumeControl={normalizeAuthIntentResumeControl(queryParams.authControl)}
@@ -378,6 +384,30 @@ function buildCommunitySurface(
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
+
+function normalizeEntryId(value: string) {
+  const id = value.trim().toLowerCase();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(
+    id,
+  )
+    ? id
+    : null;
+}
+
+/**
+ * The rail's other communities, and only the rail's: a directory that cannot
+ * be read leaves the rail without them, not the community without its page
+ * (`OVE-500`, criterion 6 — a partial failure stays partial).
+ */
+async function readOtherCommunities() {
+  try {
+    return await readPublicCommunityDirectory();
+  } catch (error) {
+    unstable_rethrow(error);
+    if (error instanceof StaticRenderDeferred) throw error;
+    return [];
+  }
 }
 
 function normalizeCommunitySlug(value: string) {

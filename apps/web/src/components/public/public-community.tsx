@@ -1,5 +1,7 @@
 import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
+import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
 import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
 import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import { UsersIcon as UsersRound } from "@/components/icons/Users";
@@ -11,6 +13,7 @@ import {
   setCommunityMembershipAction,
 } from "@/app/[locale]/communities/[slug]/actions";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
+import { SignInIcon as SignIn } from "@/components/icons/SignIn";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import {
@@ -18,6 +21,7 @@ import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
+import { ActionOutcomeNotice } from "@/components/ui/action-outcome-notice";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -34,12 +38,12 @@ import NextLink from "next/link";
 import type { ReactNode } from "react";
 
 import { Link } from "@/components/ui/link";
-import { ListRow } from "@/components/ui/list-row";
 import { MediaFigure } from "@/components/ui/media-figure";
 import { PageHeader } from "@/components/ui/page-header";
 import { SearchInput } from "@/components/ui/search-input";
 import { Section } from "@/components/ui/section";
 import { Select } from "@/components/ui/select";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   buildAuthIntentAnchor,
   type AuthIntentAction,
@@ -50,6 +54,7 @@ import {
   type CommunityCopy,
 } from "@/lib/community-copy";
 import { resolveIllustration } from "@/lib/illustrations";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 import {
   publicCommunityDiscussionPath,
   publicCommunityPath,
@@ -122,10 +127,8 @@ export interface PublicCommunityViewerRegions {
   membership: ReactNode;
   /** A membership or report result, from the redirect that carried it. */
   status: ReactNode;
-  /** The contribution picker, for a member who may write here. */
+  /** The contribution step's content, for this reader (`OVE-500`). */
   contribute: ReactNode;
-  /** The first-run empty state's one action. */
-  firstRunAction: ReactNode;
   /** One contribution's report and block controls. */
   safety: (item: PublicCommunityContribution) => ReactNode;
   /** The owner's way into moderation. */
@@ -217,6 +220,11 @@ function CommunityCard({
   const content = getCommunityContentCopy(locale, community.contentKey);
   const facts = communityFacts(community, copy);
   const titleId = `community-${community.id}-title`;
+  const topic = localizeTopicLabel(
+    locale,
+    community.topicSlug,
+    community.topicLabel,
+  );
 
   return (
     <Card
@@ -260,13 +268,46 @@ function CommunityCard({
       <p className="line-clamp-3 text-body-sm text-text-muted">
         {content.description}
       </p>
+      {/* The topic the community gathers (vc.ru's attribution), when it is
+          not simply the community's own name said twice. */}
+      {topic !== content.name ? (
+        <p
+          data-community-topic={community.topicSlug}
+          className="text-caption text-text-muted"
+        >
+          {copy.topicLabel}: {topic}
+        </p>
+      ) : null}
       <CommunityFacts
         community={community}
         copy={copy}
         facts={facts}
         className="mt-1"
       />
+      {/* What a reader can do here, in words: the one action the card
+          promises is the one the community page offers. */}
+      {acceptsContributions(community) ? (
+        <p
+          data-community-open="true"
+          className="text-caption text-text-secondary"
+        >
+          {copy.cardOpen}
+        </p>
+      ) : null}
     </Card>
+  );
+}
+
+/** Active and open: a member may add an entry here now. */
+function acceptsContributions(
+  community: Pick<
+    PublicCommunityDirectoryItem,
+    "lifecycleState" | "participationState"
+  >,
+) {
+  return (
+    community.lifecycleState === "active" &&
+    community.participationState === "open"
   );
 }
 
@@ -339,6 +380,8 @@ export function PublicCommunityView({
   request,
   otherCommunities = [],
   actionStatus,
+  contributeStatus = null,
+  contributeEntryId = null,
   state = "ready",
   resumeAction = null,
   resumeControl = null,
@@ -354,6 +397,10 @@ export function PublicCommunityView({
   /** The rest of the directory, for the rail (Digg's "Discover Communities"). */
   otherCommunities?: readonly PublicCommunityDirectoryItem[];
   actionStatus?: string | null;
+  /** The contribution step's own outcome (`contributeAction`). */
+  contributeStatus?: string | null;
+  /** A just-published entry to offer first (`contribute`). */
+  contributeEntryId?: string | null;
   state?: PublicCommunityState;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
@@ -363,9 +410,11 @@ export function PublicCommunityView({
   const contentCopy = getCommunityContentCopy(locale, community.contentKey);
   const canonicalPath = communityBasePath(locale, community.slug);
   const returnPath = buildPublicCommunityHref(locale, community.slug, request);
-  const knowledgePath = localizedPath(
+  const topicPath = localizedPath(locale, publicTopicPath(community.topicSlug));
+  const topic = localizeTopicLabel(
     locale,
-    publicTopicPath(community.topicSlug),
+    community.topicSlug,
+    community.topicLabel,
   );
   const actionMessage = actionStatus ? copy.actionMessages[actionStatus] : null;
   const searchState = community.search ?? {
@@ -376,19 +425,15 @@ export function PublicCommunityView({
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
   const firstRun = state === "ready" && isFirstRunCommunity(community, request);
   const facts = communityFacts(community, copy);
+  const accepting = state === "ready" && acceptsContributions(community);
   const contextModules = buildCommunityContextModules(
     locale,
     copy,
     community,
     otherCommunities,
-    knowledgePath,
+    { path: topicPath, label: topic },
+    accepting,
   );
-  const canContribute =
-    state === "ready" &&
-    viewer === "member" &&
-    community.viewer.membershipState === "active" &&
-    community.lifecycleState === "active" &&
-    community.participationState === "open";
 
   return (
     <main
@@ -423,17 +468,33 @@ export function PublicCommunityView({
         title={contentCopy.name}
         description={contentCopy.description}
         actions={
-          state === "ready" && regions ? (
-            regions.membership
-          ) : state === "ready" ? (
-            <CommunityMembershipAction
-              locale={locale}
-              community={community}
-              viewer={viewer}
-              communityPath={returnPath}
-              resumeAction={resumeAction}
-              resumeControl={resumeControl}
-            />
+          state === "ready" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {regions ? (
+                regions.membership
+              ) : (
+                <CommunityMembershipAction
+                  locale={locale}
+                  community={community}
+                  viewer={viewer}
+                  communityPath={returnPath}
+                  resumeAction={resumeAction}
+                  resumeControl={resumeControl}
+                />
+              )}
+              {/* The community's one way to take part, for every reader: the
+                  step below says what it takes from where they are. */}
+              {accepting ? (
+                <a
+                  href="#community-contribute"
+                  data-community-add-entry="header"
+                  className={buttonVariants({ variant: "secondary" })}
+                >
+                  <NotePencil aria-hidden="true" />
+                  {copy.addEntry}
+                </a>
+              ) : null}
+            </div>
           ) : null
         }
       />
@@ -458,12 +519,35 @@ export function PublicCommunityView({
         />
       ) : null}
 
-      <CommunityFacts community={community} copy={copy} facts={facts} />
+      {/* Who this community is: what it gathers, the topic it files under,
+          and what it holds — and, while it is open, how a reader takes part
+          (`OVE-500`, criterion 1). */}
+      <div data-community-identity="true" className="grid gap-3">
+        {accepting ? (
+          <p className="max-w-prose text-body-sm text-text-secondary">
+            {copy.participationSummary}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <p
+            data-community-topic={community.topicSlug}
+            className="text-body-sm"
+          >
+            <span className="text-text-muted">{copy.topicLabel}:</span>{" "}
+            <Link href={topicPath}>{topic}</Link>
+          </p>
+          <CommunityFacts community={community} copy={copy} facts={facts} />
+        </div>
+      </div>
 
       {regions ? (
         regions.status
       ) : actionMessage ? (
-        <Callout tone="info" role="status">
+        <Callout
+          tone={communityOutcomeTone(actionStatus)}
+          role="status"
+          data-community-action={actionStatus ?? undefined}
+        >
           {actionMessage}
         </Callout>
       ) : null}
@@ -474,39 +558,16 @@ export function PublicCommunityView({
       ) : null}
 
       {firstRun ? (
-        <>
-          <EmptyState
-            illustration={resolveIllustration("empty-community")}
-            title={copy.firstRunTitle}
-            description={copy.firstRunDescription}
-            action={
-              regions ? (
-                regions.firstRunAction
-              ) : (
-                <CommunityFirstRunAction
-                  locale={locale}
-                  canContribute={canContribute}
-                />
-              )
-            }
-          />
-          {/* The action, where the action's anchor points. A member who can
-              write is offered the picker itself rather than an anchor to a
-              section that is not on the page. */}
-          {regions ? (
-            regions.contribute
-          ) : canContribute ? (
-            <CommunityContributionForm locale={locale} community={community} />
-          ) : null}
-        </>
+        <EmptyState
+          illustration={resolveIllustration("empty-community")}
+          title={copy.firstRunTitle}
+          description={copy.firstRunDescription}
+          action={
+            accepting ? <CommunityFirstRunAction locale={locale} /> : undefined
+          }
+        />
       ) : (
         <>
-          {regions ? (
-            regions.contribute
-          ) : canContribute ? (
-            <CommunityContributionForm locale={locale} community={community} />
-          ) : null}
-
           <CommunityFilters
             locale={locale}
             copy={copy}
@@ -623,6 +684,33 @@ export function PublicCommunityView({
         </>
       )}
 
+      {/* The one step that adds an entry (`OVE-500`, criterion 2), on every
+          open community and for every reader: a guest signs in and comes back
+          here, a reader who is not a member joins here, a member picks one of
+          their published entries or writes one for this community. Its
+          heading is static; what it offers is the reader's own. */}
+      {accepting ? (
+        <Section
+          id="community-contribute"
+          title={copy.contributeTitle}
+          description={copy.contributeDescription}
+          className="scroll-mt-20"
+        >
+          {regions ? (
+            regions.contribute
+          ) : (
+            <CommunityContributionStep
+              locale={locale}
+              community={community}
+              viewer={viewer}
+              communityPath={canonicalPath}
+              freshEntryId={contributeEntryId}
+              outcome={contributeStatus}
+            />
+          )}
+        </Section>
+      ) : null}
+
       {/* The rules are the page's, at every width. They were `xl:hidden`
           before, so a reader above `xl` met a community whose own page never
           said what it expected of them (`OVE-454`, criterion 5). */}
@@ -630,6 +718,7 @@ export function PublicCommunityView({
         id="community-rules"
         title={copy.rules}
         description={copy.rulesDescription}
+        className="scroll-mt-20"
       >
         <ol className="grid gap-2">
           {community.rules.map((rule) => (
@@ -645,23 +734,14 @@ export function PublicCommunityView({
             </li>
           ))}
         </ol>
-        <NextLink
-          href={knowledgePath}
-          className={buttonVariants({
-            variant: "secondary",
-            className: "w-fit",
-          })}
-        >
-          {copy.openKnowledge}
-        </NextLink>
       </Section>
 
-      {/* The owner's way into moderation from the community itself. One link,
-          not a second surface: `/account/communities` is `OVE-456`'s. */}
+      {/* The owner's way into this community's moderation, for whoever the
+          server would let moderate it. One link, not a second surface. */}
       {state === "ready" && regions ? (
         regions.moderator
       ) : state === "ready" && community.viewer.isModerator ? (
-        <CommunityModeratorLink locale={locale} />
+        <CommunityModeratorLink locale={locale} slug={community.slug} />
       ) : null}
 
       <div className="border-t border-border pt-6 xl:hidden">
@@ -671,40 +751,258 @@ export function PublicCommunityView({
   );
 }
 
-/** The first-run empty state's action: the picker below, or the workspace. */
-export function CommunityFirstRunAction({
-  locale,
-  canContribute,
-}: {
-  locale: PublicLocale;
-  canContribute: boolean;
-}) {
+/** Refusals interrupt; what went through is said politely. */
+export function communityOutcomeTone(
+  status: string | null | undefined,
+): "success" | "warning" {
+  return status === "joined" ||
+    status === "left" ||
+    status === "contributed" ||
+    status === "reported" ||
+    status === "blocked"
+    ? "success"
+    : "warning";
+}
+
+/** The first-run empty state's action: to the step that adds an entry. */
+export function CommunityFirstRunAction({ locale }: { locale: PublicLocale }) {
   const copy = getCommunityCopy(locale);
   return (
-    <NextLink
-      // `/garden` has no locale-prefixed twin — the prefixed tree is a subset
-      // of the unprefixed one, and `/bg/garden` is a `404` the proxy decides
-      // before rendering. A gardener's own workspace is one address.
-      // A reader with nothing to contribute yet writes it first, in the one
-      // composer (OVE-486); the garden home carries no editor (OVE-489).
-      href={canContribute ? "#community-contribute" : "/garden/new"}
+    <a
+      href="#community-contribute"
+      data-community-add-entry="first-run"
       className={buttonVariants()}
     >
+      <NotePencil aria-hidden="true" />
       {copy.firstRunAction}
-    </NextLink>
+    </a>
   );
 }
 
-/** The owner's way into moderation from the community itself. */
-export function CommunityModeratorLink({ locale }: { locale: PublicLocale }) {
+/** The moderator's way into this community's moderation. */
+export function CommunityModeratorLink({
+  locale,
+  slug,
+}: {
+  locale: PublicLocale;
+  slug: string;
+}) {
   const copy = getCommunityCopy(locale);
   return (
-    <Callout tone="info">
+    <p className="flex items-center gap-2 text-body-sm">
+      <ShieldCheck aria-hidden="true" className="size-4 text-text-muted" />
       {/* Unprefixed for the same reason: `/account/**` is signed-in and has no
           `[locale]` twin. */}
-      <Link href="/account/communities">{copy.moderatorQueue}</Link>
-    </Callout>
+      <Link
+        href={`/account/communities/${encodeURIComponent(slug)}`}
+        data-community-moderation-link="true"
+      >
+        {copy.moderatorQueue}
+      </Link>
+    </p>
   );
+}
+
+/**
+ * The step that adds an entry to the community, for one reader
+ * (`OVE-500`, criterion 2).
+ *
+ * The community keeps its existing contract: a contribution is one of the
+ * member's **published** entries about a plant or an animal, referenced — the
+ * entry keeps its one address and stays in its author's journal. Nothing here
+ * creates an entry, an object or a space; "write one" opens the one composer
+ * with this community named, and brings the reader back here with the new
+ * entry offered first. Every control is a real endpoint before hydration, and
+ * the server decides at the moment of the mutation.
+ */
+export function CommunityContributionStep({
+  locale,
+  community,
+  viewer,
+  communityPath,
+  freshEntryId = null,
+  outcome = null,
+}: {
+  locale: PublicLocale;
+  community: PublicCommunityPageModel;
+  viewer: "guest" | "member";
+  /** The community's own address in this locale, with no query. */
+  communityPath: string;
+  freshEntryId?: string | null;
+  outcome?: string | null;
+}) {
+  const copy = getCommunityCopy(locale);
+  const message = outcome ? copy.actionMessages[outcome] : null;
+  const notice =
+    outcome && message ? (
+      <ActionOutcomeNotice
+        outcome={outcome}
+        about={`${outcome}:${freshEntryId ?? ""}`}
+        tone={communityOutcomeTone(outcome)}
+        title={message}
+      />
+    ) : null;
+  const composerHref = buildCommunityComposerHref(
+    community.slug,
+    communityPath,
+  );
+
+  if (viewer === "guest") {
+    return (
+      <div data-community-contribute-step="guest" className="grid gap-3">
+        <p className="text-body-sm text-text-secondary">
+          {copy.contributeGuest}
+        </p>
+        <AuthIntentTrigger
+          action="contribute"
+          returnTo={communityPath}
+          target={{ kind: "collection", ref: community.slug }}
+          control={CONTRIBUTE_CONTROL}
+          label={copy.contributeSignIn}
+          icon={<SignIn aria-hidden="true" />}
+          className="w-fit"
+        />
+      </div>
+    );
+  }
+
+  const membership = community.viewer.membershipState;
+  if (membership === "banned") {
+    return (
+      <div data-community-contribute-step="banned" className="grid gap-3">
+        {notice}
+        <p
+          tabIndex={-1}
+          {...CONTRIBUTE_FOCUS}
+          className="text-body-sm text-text-secondary outline-none"
+        >
+          {copy.banned}
+        </p>
+      </div>
+    );
+  }
+
+  if (membership !== "active") {
+    return (
+      <div data-community-contribute-step="join" className="grid gap-3">
+        {notice}
+        <p className="text-body-sm text-text-secondary">
+          {copy.contributeJoinFirst}
+        </p>
+        <OwnerScopedProgressiveForm action={setCommunityMembershipAction}>
+          <CommunityActionFields locale={locale} slug={community.slug} />
+          <HiddenField name="membershipState" value="active" />
+          <HiddenField name="returnAnchor" value="community-contribute" />
+          {freshEntryId ? (
+            <HiddenField name="contribute" value={freshEntryId} />
+          ) : null}
+          <SubmitButton {...CONTRIBUTE_FOCUS} className="w-fit">
+            <UsersRound aria-hidden="true" />
+            {copy.follow}
+          </SubmitButton>
+        </OwnerScopedProgressiveForm>
+      </div>
+    );
+  }
+
+  const entries = community.viewer.eligibleJournals;
+  const fresh = freshEntryId
+    ? (entries.find((entry) => entry.id === freshEntryId) ?? null)
+    : null;
+
+  if (entries.length === 0) {
+    return (
+      <div data-community-contribute-step="write" className="grid gap-3">
+        {notice}
+        <p className="text-body-sm text-text-secondary">
+          {copy.noEligibleJournals}
+        </p>
+        <NextLink
+          href={composerHref}
+          {...CONTRIBUTE_FOCUS}
+          data-community-compose="true"
+          className={buttonVariants({ className: "w-fit" })}
+        >
+          <NotePencil aria-hidden="true" />
+          {copy.writeForCommunity}
+        </NextLink>
+      </div>
+    );
+  }
+
+  return (
+    <div data-community-contribute-step="choose" className="grid gap-3">
+      {notice ??
+        (fresh ? (
+          <ActionOutcomeNotice
+            outcome="fresh-entry"
+            about={fresh.id}
+            tone="success"
+            title={copy.freshEntry(fresh.title)}
+          />
+        ) : null)}
+      <OwnerScopedProgressiveForm
+        action={contributeJournalToCommunityAction}
+        className="grid gap-3 sm:flex sm:items-end"
+      >
+        <CommunityActionFields locale={locale} slug={community.slug} />
+        <Field
+          label={copy.chooseJournal}
+          required
+          className="min-w-0 sm:flex-1"
+        >
+          <Select
+            name="journalEntryId"
+            defaultValue={fresh?.id}
+            {...CONTRIBUTE_FOCUS}
+          >
+            {entries.map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.title} · {entry.objectDisplayName} ·{" "}
+                {formatCommunityDate(entry.entryDate, locale)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <SubmitButton className="w-fit">{copy.contribute}</SubmitButton>
+      </OwnerScopedProgressiveForm>
+      <NextLink
+        href={composerHref}
+        data-community-compose="true"
+        className={buttonVariants({
+          variant: "ghost",
+          size: "sm",
+          className: "w-fit",
+        })}
+      >
+        <NotePencil aria-hidden="true" />
+        {copy.writeForCommunity}
+      </NextLink>
+    </div>
+  );
+}
+
+/** The resumed sign-in's control, and the one the step focuses on return. */
+const CONTRIBUTE_CONTROL = "add-entry";
+const CONTRIBUTE_FOCUS = {
+  "data-auth-intent-control": "contribute",
+  "data-auth-intent-control-ref": CONTRIBUTE_CONTROL,
+} as const;
+
+/**
+ * The one composer, opened for this community. `/garden/new` has no locale
+ * twin; the community's own address rides along so Close and Publish come
+ * back to it in the reader's language.
+ */
+export function buildCommunityComposerHref(
+  slug: string,
+  communityPath: string,
+) {
+  const query = new URLSearchParams({
+    community: slug,
+    returnTo: communityPath,
+  });
+  return `/garden/new?${query.toString()}`;
 }
 
 /**
@@ -894,12 +1192,21 @@ function buildCommunityChips(
   return chips;
 }
 
+/**
+ * The rail, for this community (`OVE-500`, criterion 3; OG-UX-040): the
+ * topic it files under, the step that adds an entry while it is open, its
+ * rules and the people writing here — each a place on this page or the
+ * topic's — and then the other communities (Digg's "Discover Communities"),
+ * when there are some. No generic welcome, and no module whose only entry
+ * leads back to the list.
+ */
 function buildCommunityContextModules(
   locale: PublicLocale,
   copy: CommunityCopy,
   community: PublicCommunityPageModel,
   otherCommunities: readonly PublicCommunityDirectoryItem[],
-  knowledgePath: string,
+  topic: { path: string; label: string },
+  accepting: boolean,
 ): SiteShellContextRailModule[] {
   const others = otherCommunities
     .filter((item) => item.slug !== community.slug)
@@ -911,14 +1218,25 @@ function buildCommunityContextModules(
 
   return [
     {
-      key: "community-knowledge",
-      title: copy.relatedKnowledge,
-      items: [{ href: knowledgePath, label: copy.openKnowledge }],
-      emptyLabel: copy.openKnowledge,
+      key: "community-about",
+      title: copy.aboutCommunity,
+      items: [
+        { href: topic.path, label: topic.label, meta: copy.topicLabel },
+        ...(accepting
+          ? [{ href: "#community-contribute", label: copy.addEntry }]
+          : []),
+        { href: "#community-rules", label: copy.rules },
+        ...(community.contributors.length > 0
+          ? [
+              {
+                href: "#community-contributors",
+                label: copy.contributors,
+                meta: String(community.contributors.length),
+              },
+            ]
+          : []),
+      ],
     },
-    // Digg's "Discover Communities" panel — and only when there are some. A
-    // module headed "other communities" whose one entry is a link back to the
-    // list is a heading that promises something the rail does not have.
     ...(others.length > 0
       ? [
           {
@@ -1018,58 +1336,6 @@ export function CommunityMembershipAction({
         {active ? copy.leave : copy.follow}
       </button>
     </OwnerScopedProgressiveForm>
-  );
-}
-
-export function CommunityContributionForm({
-  locale,
-  community,
-}: {
-  locale: PublicLocale;
-  community: PublicCommunityPageModel;
-}) {
-  const copy = getCommunityCopy(locale);
-  return (
-    <Section
-      id="community-contribute"
-      title={copy.contributeTitle}
-      description={copy.contributeDescription}
-    >
-      {community.viewer.eligibleJournals.length > 0 ? (
-        <OwnerScopedProgressiveForm
-          action={contributeJournalToCommunityAction}
-          className="grid gap-3 sm:flex sm:items-end"
-        >
-          <CommunityActionFields locale={locale} slug={community.slug} />
-          <Field
-            label={copy.chooseJournal}
-            required
-            className="min-w-0 sm:flex-1"
-          >
-            <Select name="journalEntryId">
-              {community.viewer.eligibleJournals.map((entry) => (
-                <option key={entry.id} value={entry.id}>
-                  {entry.title} · {entry.objectDisplayName}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Button type="submit">{copy.contribute}</Button>
-        </OwnerScopedProgressiveForm>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-body-sm text-text-muted">
-            {copy.noEligibleJournals}
-          </p>
-          <NextLink
-            href="/garden/new"
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            {copy.createJournal}
-          </NextLink>
-        </div>
-      )}
-    </Section>
   );
 }
 
@@ -1202,6 +1468,18 @@ export function CommunitySafetyActions({
 }) {
   const copy = getCommunityCopy(locale);
   if (!item.author) return null;
+  // The reader's own entry: the server refuses a report or a block of
+  // yourself, so neither is offered (`OVE-500`, criterion 6).
+  if (viewer === "member" && item.viewerIsAuthor) {
+    return (
+      <span
+        data-community-own-entry="true"
+        className="text-caption text-text-muted"
+      >
+        {copy.ownEntry}
+      </span>
+    );
+  }
   const target = { kind: "collection" as const, ref: community.slug };
   const reportControl = `contribution-${item.id}`;
   const blockControl = `contribution-${item.id}`;
@@ -1302,13 +1580,15 @@ export function CommunitySafetyActions({
 }
 
 /**
- * The discussion page's own shape (`OVE-454`, criterion 3).
+ * The discussion page's own shape (`OVE-454`, criterion 3; `OVE-500`,
+ * criterion 4).
  *
  * The thread itself is `PublicEngagementPanel`, which the page passes in: this
  * component is what a reader arriving from a search result needs around it —
  * where they are, which entry is being discussed, and the way back. The entry
- * is a `ListRow` rather than a second card, because the page is about the
- * conversation and the entry is its subject line.
+ * is the same readable post the community lists (`EntryCard`), so the
+ * discussion reads as a conversation under a post — and the post's own link
+ * is the entry's one address, never a copy of it here.
  */
 export function PublicCommunityDiscussion({
   locale,
@@ -1321,18 +1601,22 @@ export function PublicCommunityDiscussion({
   communitySlug: string;
   communityName: string;
   entry: {
+    id: string;
     title: string;
     href: string;
+    excerpt: string;
     authorLabel: string | null;
     authorHref: string | null;
     dateTime: string | undefined;
     dateLabel: string;
     objectLabel: string;
+    objectKind: "plant" | "animal" | null;
   } | null;
   children: React.ReactNode;
 }) {
   const copy = getCommunityCopy(locale);
   const communityPath = communityBasePath(locale, communitySlug);
+  const KindIcon = entry?.objectKind === "animal" ? PawPrint : Sprout;
 
   return (
     <main
@@ -1342,29 +1626,19 @@ export function PublicCommunityDiscussion({
     >
       <PageHeader
         breadcrumb={
-          <nav aria-label={copy.breadcrumbHome}>
-            <ol className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
-              <li>
-                <Link href={localizedPath(locale, "/communities")}>
-                  {copy.breadcrumbHome}
-                </Link>
-              </li>
-              <li aria-hidden="true">·</li>
-              <li>
-                <Link href={communityPath}>{communityName}</Link>
-              </li>
-              <li aria-hidden="true">·</li>
-              <li aria-current="page" className="min-w-0 truncate">
-                {copy.discussionTitle}
-              </li>
-            </ol>
-          </nav>
+          <DiscussionBreadcrumb
+            locale={locale}
+            copy={copy}
+            communityPath={communityPath}
+            communityName={communityName}
+          />
         }
         title={copy.discussionTitle}
         description={entry?.title}
         actions={
           <NextLink
             href={communityPath}
+            data-community-discussion-back="true"
             className={buttonVariants({ variant: "secondary" })}
           >
             {copy.discussionBack}
@@ -1374,24 +1648,115 @@ export function PublicCommunityDiscussion({
 
       {entry ? (
         <Section id="discussion-entry" title={copy.discussionEntry}>
-          <ul>
-            <ListRow
-              title={entry.title}
-              href={entry.href}
-              description={entry.objectLabel}
-              meta={
-                <>
-                  {entry.authorLabel ? `${entry.authorLabel} · ` : null}
-                  <time dateTime={entry.dateTime}>{entry.dateLabel}</time>
-                </>
-              }
-            />
-          </ul>
+          <EntryCard
+            id={`discussion-${entry.id}`}
+            href={entry.href}
+            title={entry.title}
+            headingLevel={3}
+            dateTime={entry.dateTime ?? ""}
+            dateLabel={entry.dateLabel}
+            excerpt={entry.excerpt}
+            subject={{
+              label: entry.objectLabel,
+              kindLabel: entry.objectKind
+                ? copy.kindLabels[entry.objectKind]
+                : copy.objects,
+              icon: <KindIcon className="size-6" aria-hidden="true" />,
+            }}
+            author={
+              entry.authorLabel && entry.authorHref
+                ? { displayName: entry.authorLabel, href: entry.authorHref }
+                : null
+            }
+          />
         </Section>
       ) : null}
 
       {children}
     </main>
+  );
+}
+
+/**
+ * A discussion whose entry is no longer in the community — removed by a
+ * moderator, withdrawn by its author, or never here (`OVE-500`, criterion 6).
+ * It says so and leads back, instead of a bare "not found" that reads like a
+ * broken link.
+ */
+export function PublicCommunityDiscussionUnavailable({
+  locale,
+  communitySlug,
+  communityName,
+}: {
+  locale: PublicLocale;
+  communitySlug: string;
+  communityName: string | null;
+}) {
+  const copy = getCommunityCopy(locale);
+  const communityPath = communityBasePath(locale, communitySlug);
+  return (
+    <main
+      lang={locale}
+      data-public-community-discussion={communitySlug}
+      data-public-community-discussion-state="unavailable"
+      className="flex w-full min-w-0 flex-col gap-6 px-4 py-8 sm:px-6 md:py-12"
+    >
+      <PageHeader
+        breadcrumb={
+          communityName ? (
+            <DiscussionBreadcrumb
+              locale={locale}
+              copy={copy}
+              communityPath={communityPath}
+              communityName={communityName}
+            />
+          ) : undefined
+        }
+        title={copy.discussionUnavailableTitle}
+        description={copy.discussionUnavailableBody}
+      />
+      <NextLink
+        href={
+          communityName ? communityPath : localizedPath(locale, "/communities")
+        }
+        data-community-discussion-back="true"
+        className={buttonVariants({ className: "w-fit" })}
+      >
+        {communityName ? copy.discussionBack : copy.breadcrumbHome}
+      </NextLink>
+    </main>
+  );
+}
+
+function DiscussionBreadcrumb({
+  locale,
+  copy,
+  communityPath,
+  communityName,
+}: {
+  locale: PublicLocale;
+  copy: CommunityCopy;
+  communityPath: string;
+  communityName: string;
+}) {
+  return (
+    <nav aria-label={copy.breadcrumbHome}>
+      <ol className="flex flex-wrap items-center gap-2 text-caption text-text-muted">
+        <li>
+          <Link href={localizedPath(locale, "/communities")}>
+            {copy.breadcrumbHome}
+          </Link>
+        </li>
+        <li aria-hidden="true">·</li>
+        <li>
+          <Link href={communityPath}>{communityName}</Link>
+        </li>
+        <li aria-hidden="true">·</li>
+        <li aria-current="page" className="min-w-0 truncate">
+          {copy.discussionTitle}
+        </li>
+      </ol>
+    </nav>
   );
 }
 
