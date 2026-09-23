@@ -224,6 +224,7 @@ export function publicVarietyPage(
       rank: null,
       kingdom: null,
       canonicalName: JOURNEY.catalogCanonicalName,
+      vernacularName: null,
       scientificName: JOURNEY.catalogCanonicalName,
       publicSlug: JOURNEY.catalogPublicSlug,
       speciesSlug: null,

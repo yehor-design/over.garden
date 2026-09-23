@@ -1,21 +1,25 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { registerNumber } from "@/lib/catalog/source-names";
 import { getPublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy";
-import {
-  PublicCatalogRegisterHub,
-  registerNumber,
-} from "./public-catalog-register-hub";
+import { PublicCatalogRegisterHub } from "./public-catalog-register-hub";
 import type { CatalogRegisterHub } from "@/server/public-catalog-register-repository";
 
 const HUB: CatalogRegisterHub = {
   speciesId: "species-1",
   speciesName: "Solanum lycopersicum",
+  speciesDisplayName: "помідор їстівний",
+  speciesKingdom: "Plantae",
   speciesSlug: "solanum-lycopersicum",
   speciesPath: "/species/solanum-lycopersicum",
-  total: 3,
+  total: 4,
   registeredUa: 2,
   registeredEu: 1,
+  query: "",
+  matching: 4,
+  page: 1,
+  pageCount: 1,
   forms: [
     {
       id: "form-1",
@@ -44,6 +48,15 @@ const HUB: CatalogRegisterHub = {
       uaRegisterNumber: null,
       euCatalogueReference: null,
     },
+    {
+      id: "form-4",
+      name: "Бабусин",
+      path: "/species/solanum-lycopersicum/babusyn",
+      registeredUa: false,
+      registeredEu: false,
+      uaRegisterNumber: null,
+      euCatalogueReference: null,
+    },
   ],
 };
 
@@ -63,7 +76,10 @@ describe("a species' register hub", () => {
       />,
     );
 
-    expect(html).toContain("3 сортів Solanum lycopersicum у реєстрах");
+    // `OVE-497`: the heading names what the rows are — a plant's cultivars —
+    // in the reader's language, and no longer claims a register for all.
+    expect(html).toContain(">Сорти виду «помідор їстівний»</h1>");
+    expect(html).toContain("Усього: 4");
     expect(html).toContain("2 у Держреєстрі України");
     expect(html).toContain("1 у Спільному каталозі ЄС");
     // The register number, without the scheme prefix the ingest stored.
@@ -72,7 +88,8 @@ describe("a species' register hub", () => {
     // A registered form whose number the source never carried says so rather
     // than showing an empty cell.
     expect(html).toContain("Номер не вказано");
-    expect(html).not.toContain("<button");
+    // And a form in neither register says that, not "no number".
+    expect(html).toContain("Не в цих реєстрах");
   });
 
   it("links every form and the species it belongs to", () => {
@@ -121,5 +138,64 @@ describe("a species' register hub", () => {
     // And nothing here reaches for the pre-redesign palette any more.
     expect(html).not.toContain("text-muted-foreground");
     expect(html).not.toContain("text-foreground");
+  });
+
+  it("searches and pages in the address, so Back returns to the same view", () => {
+    // `OVE-497`: a species can have four thousand forms. A real GET form to
+    // the hub itself, the search kept in the field, and page links that keep
+    // the search.
+    const html = renderToStaticMarkup(
+      <PublicCatalogRegisterHub
+        locale="uk"
+        copy={getPublicCatalogRegisterCopy("uk")}
+        hub={{ ...HUB, query: "пунто", matching: 250, page: 2, pageCount: 3 }}
+      />,
+    );
+    const form = html.slice(
+      html.indexOf("<form"),
+      html.indexOf("</form>") + "</form>".length,
+    );
+    expect(form).toMatch(/method="get"/u);
+    expect(form).toContain('action="/species/solanum-lycopersicum/register"');
+    expect(form).toContain('role="search"');
+    expect(form).toMatch(/<input[^>]*name="q"[^>]*value="пунто"/u);
+    expect(html).toContain("За «пунто» знайдено: 250");
+    expect(html).toContain('href="/species/solanum-lycopersicum/register"');
+    expect(html).toContain(
+      'href="/species/solanum-lycopersicum/register?q=%D0%BF%D1%83%D0%BD%D1%82%D0%BE"',
+    );
+    expect(html).toContain(
+      'href="/species/solanum-lycopersicum/register?q=%D0%BF%D1%83%D0%BD%D1%82%D0%BE&amp;page=3"',
+    );
+    expect(html).toContain("Сторінка 2 з 3");
+  });
+
+  it("says a search found nothing, and offers every form back", () => {
+    const html = renderToStaticMarkup(
+      <PublicCatalogRegisterHub
+        locale="ru"
+        copy={getPublicCatalogRegisterCopy("ru")}
+        hub={{ ...HUB, query: "ыыы", matching: 0, forms: [] }}
+      />,
+    );
+    expect(html).toContain("По «ыыы» ничего не найдено.");
+    expect(html).toContain(">Показать все<");
+    expect(html).not.toContain("<table");
+    expect(html).not.toContain('data-slot="pagination"');
+  });
+
+  it("calls an animal's forms breeds", () => {
+    const html = renderToStaticMarkup(
+      <PublicCatalogRegisterHub
+        locale="bg"
+        copy={getPublicCatalogRegisterCopy("bg")}
+        hub={{
+          ...HUB,
+          speciesDisplayName: "медоносна пчела",
+          speciesKingdom: "Animalia",
+        }}
+      />,
+    );
+    expect(html).toContain(">Породи на вида „медоносна пчела“</h1>");
   });
 });

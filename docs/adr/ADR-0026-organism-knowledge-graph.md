@@ -184,6 +184,23 @@ owner marks it indexable; this adds one case to the ADR-0022 D3 list. Indexable
 cards sit in their own sitemap chunk. Card HTML is cached with tags; worker-side
 changes revalidate through the outbox.
 
+**Amended 2026-09-23 (`OVE-497`).**
+- **Order.** It gains one section. The editors' growing note, where a variety
+  has one, comes after the gardener experience and says it is the editors':
+  orientation, not a first-hand journal.
+- **Forms.** Relations name at most twelve forms of a species, the
+  written-about first, with the count and a link to the species' register
+  view (`/species/{species}/register`). That view holds every form, searches
+  a word of a name and pages by a hundred. The card no longer lists them all:
+  the tomato has 621 and maize over four thousand.
+- **Heading.** It is the organism's own name in the reader's language when
+  the catalogue holds one, with the accepted name beneath it and marked as
+  Latin. Otherwise it is the accepted name.
+- **Names and sources.** Each source, register, status and country is named
+  in words rather than by the ingest's keys.
+- **Indexability.** A reader sees nothing about it. The owner's disclosure
+  keeps the switch.
+
 ### D10. Owner surfaces
 
 Two links join the account menu: the curation queue and the sources page,

@@ -105,6 +105,7 @@ describe("public variety metadata", () => {
     page.catalog.speciesSlug = "solanum-lycopersicum";
     page.catalog.species = {
       canonicalName: "Solanum lycopersicum",
+      displayName: "Solanum lycopersicum",
       publicSlug: "solanum-lycopersicum",
     };
     page.catalog.canonicalPath = "/species/solanum-lycopersicum/pomidor-cheri";
@@ -202,6 +203,7 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
       rank: null,
       kingdom: null,
       canonicalName: "Pomidor Cheri",
+      vernacularName: null,
       scientificName: "Pomidor Cheri",
       publicSlug: "pomidor-cheri-0000000101",
       speciesSlug: null,

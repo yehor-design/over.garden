@@ -1411,6 +1411,43 @@ letter.
   catalogue rows). Reads without a name stay under the threshold and are
   unchanged.
 
+### 5.18 An organism page leads with who it is and what gardeners wrote
+
+The tomato's card was one long document: identity, statistics, experiences,
+621 forms as chips and the source records, and a reader looking for practical
+experience had to tell the journal layer from reference inventory (`OVE-497`,
+OG-UX-013/032/033). The card now reads in ADR-0026 D9's order, as amended:
+
+- **Who it is.** The crumbs: catalogue, then species and all forms for a form.
+  The kind in plain words: вид, сорт, порода, never "Публічний вид". The
+  heading in the reader's language, "Помідор їстівний", with the scientific
+  name beneath it as Latin. With no common name in the catalogue, the heading
+  is the accepted name, never a blank. Then the fact paragraph, and counts only
+  when there is something to count.
+- **What to do with it.** "Додати в мій сад" for a cultivar, a breed, a plant
+  or an animal: object setup, which offers the gardener's own objects of it
+  first (§5.17). Nothing for a pest, a disease or a fungus.
+- **What gardeners wrote, then the editors' note, labelled as the editors'.**
+  Then the relations: a dozen forms, the written-about first, with "Тут 12 з
+  621." and "Усі форми (621)" into the register view.
+- **Sources in words.**
+  - A source by its own name.
+  - A register by the name a reader would look up: "Держреєстр України".
+  - A number as a seed packet prints it: 08040055, not
+    RegisterVarietis:08040055.
+  - A status and a country in the reader's language: "зареєстровано
+    (Україна)".
+- **The register view holds every form of a species.**
+  - Cultivars or breeds, as the kingdom says.
+  - The registration where there is one, and "Не в цих реєстрах" where not.
+  - A `GET` search on a word of a name, and pages of a hundred. Both are in
+    the address, so Back from a cultivar returns to the same search and page.
+  - A search and a later page are `noindex, follow`. The first page of every
+    form is the canonical.
+- **Nothing about indexing is shown to a reader.** No reference photograph is
+  invented: the card shows gardeners' photographs in their entries, and an
+  illustration is never an identification photograph.
+
 ---
 
 ## 6. Language and locale

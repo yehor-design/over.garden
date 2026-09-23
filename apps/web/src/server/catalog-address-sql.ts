@@ -58,3 +58,25 @@ export function catalogSpeciesNameSql(
     limit 1
   )`;
 }
+
+/**
+ * An organism's own name in `locale`, when the catalogue holds one — the
+ * primary, then the heaviest, then the first alphabetically. Null otherwise,
+ * and the caller shows the accepted name instead: a blank is never a name.
+ * One correlated subquery rather than a join, because a join on a table with
+ * several names per organism multiplies the rows.
+ */
+export function catalogVernacularNameSql(
+  itemRef: string,
+  locale: string,
+): RawBuilder<string | null> {
+  return sql<string | null>`(
+    select own_name.display_name
+    from catalog_item_names as own_name
+    where own_name.catalog_item_id = ${sql.ref(`${itemRef}.id`)}
+      and own_name.locale = ${locale}
+    order by own_name.is_primary desc, own_name.weight desc,
+      own_name.display_name
+    limit 1
+  )`;
+}

@@ -118,7 +118,10 @@ test.describe("the catalogue's one door", () => {
     // What the page under it *renders* is `tests/catalog-addresses.spec.ts`'s
     // subject, which is why this asks for the status and the absence of a
     // `Location` rather than for the body.
-    const listing = await request.get(`${baseURL}/catalog`, {
+    // The register, not the door: the door (`OVE-496`) links only what
+    // gardeners here wrote about, which a database may hold none of when it
+    // is prerendered; every plant is in the register.
+    const listing = await request.get(`${baseURL}/catalog?kingdom=plantae`, {
       headers: { cookie: `${INTERFACE_LOCALE_COOKIE}=uk` },
     });
     const html = await listing.text();

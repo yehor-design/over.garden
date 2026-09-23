@@ -23,7 +23,12 @@ import { publicCatalogPermalinkPath } from "@/lib/catalog/addresses";
 import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
-import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
+import {
+  catalogSpeciesNameSql,
+  catalogSpeciesSlugSql,
+  catalogVernacularNameSql,
+} from "@/server/catalog-address-sql";
+import { catalogItemSourceName } from "@/lib/catalog/source-names";
 import {
   buildCatalogSlugHistoryLookupQuery,
   readPublicCatalogCanonicalAddress,
@@ -70,12 +75,23 @@ export interface PublicVarietyPage {
     /** ADR-0026 D11: with the pest role, this is what makes a card say pest or disease. */
     kingdom: string | null;
     canonicalName: string;
+    /**
+     * The organism's own name in the reader's language, when the catalogue
+     * holds one (`OVE-497`). A page leads with it; without it, with
+     * `canonicalName` — never a blank.
+     */
+    vernacularName: string | null;
     /** The accepted scientific name without authorship when a name row says so. */
     scientificName: string;
     publicSlug: string;
     /** The current slug of the species a form belongs to, for its address. */
     speciesSlug: string | null;
-    species: { canonicalName: string; publicSlug: string } | null;
+    species: {
+      canonicalName: string;
+      /** In the reader's language when the catalogue holds it. */
+      displayName: string;
+      publicSlug: string;
+    } | null;
     /** The hierarchical address (ADR-0026 D8) and the permalink `/id/{uuid}`. */
     canonicalPath: string;
     permalinkPath: string;
@@ -186,6 +202,7 @@ export async function getPublicVarietyPageByCatalogItemId(
   const item = await buildPublicVarietyItemQuery(
     executor,
     catalogItemId,
+    locale,
   ).executeTakeFirst();
   if (!item?.publicSlug) return null;
 
@@ -223,7 +240,12 @@ export async function getPublicVarietyPageByCatalogItemId(
     experience,
     mentions,
     locale,
-    fallbackSource: { slug: item.source, name: item.source },
+    // A name no assertion backs is shown under the organism's own source,
+    // by its name — the slug `ua_state_register` is not one (`OVE-497`).
+    fallbackSource: {
+      slug: item.source,
+      name: catalogItemSourceName(item.source, locale),
+    },
   });
   const mediaExtras = await readMediaVariantExtras(
     executor,
@@ -240,6 +262,7 @@ export async function getPublicVarietyPageByCatalogItemId(
       rank: item.rank,
       kingdom: item.kingdom ?? null,
       canonicalName: item.canonicalName,
+      vernacularName: item.vernacularName ?? null,
       scientificName: item.scientificName ?? item.canonicalName,
       publicSlug: item.publicSlug,
       speciesSlug: item.speciesSlug,
@@ -247,6 +270,8 @@ export async function getPublicVarietyPageByCatalogItemId(
         item.speciesSlug && item.speciesCanonicalName
           ? {
               canonicalName: item.speciesCanonicalName,
+              displayName:
+                item.speciesDisplayName ?? item.speciesCanonicalName,
               publicSlug: item.speciesSlug,
             }
           : null,
@@ -362,6 +387,7 @@ function mergeSourceCredits(
 export function buildPublicVarietyItemQuery(
   executor: QueryExecutor,
   catalogItemId: string,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ) {
   return executor
     .selectFrom("catalog_items")
@@ -377,6 +403,8 @@ export function buildPublicVarietyItemQuery(
       "catalog_items.locale as locale",
       "catalog_items.content_updated_at as contentUpdatedAt",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
+      catalogVernacularNameSql("catalog_items", locale).as("vernacularName"),
+      catalogSpeciesNameSql("catalog_items", locale).as("speciesDisplayName"),
       sql<string | null>`(
         select parent.canonical_name
         from catalog_item_relations as form_relation

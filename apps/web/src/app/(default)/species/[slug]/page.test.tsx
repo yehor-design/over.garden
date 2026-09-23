@@ -100,8 +100,16 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
       ITEM_ID,
       "uk",
     );
-    expect(html).toContain("Публічний вид");
-    expect(html).toContain("Записати цей вид");
+    // `OVE-497`: the heading is the name a gardener knows it by, the
+    // scientific name beneath it and marked as Latin, the eyebrow the kind
+    // in plain words — never "Публічний вид".
+    expect(html).toContain(">Помідор їстівний</h1>");
+    expect(html).toMatch(
+      /<p lang="la" data-organism-scientific-name="true"[^>]*>Solanum lycopersicum<\/p>/u,
+    );
+    expect(html).toContain(">вид</p>");
+    expect(html).not.toContain("Публічний");
+    expect(html).toContain("Додати в мій сад");
     // The catalogue has one door since `OVE-451`, and the card links to it.
     expect(html).toContain('href="/catalog"');
     expect(html).not.toContain("списку бажань");
@@ -339,8 +347,9 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
       catalogKind: "breed",
       slug: "carpathian-bee",
     });
-    expect(html).toContain("Публічна порода або лінія");
-    expect(html).toContain("Записати цю породу або лінію");
+    expect(html).toContain(">порода або лінія</p>");
+    expect(html).toContain(">Карпатська бджола</h1>");
+    expect(html).toContain("Додати в мій сад");
     expect(html).not.toContain("списъка с желания");
     expect(metadata).toMatchObject({
       alternates: { canonical: "https://over.garden/breed/carpathian-bee" },
@@ -442,6 +451,7 @@ function page(kind: "species" | "breed" | "plant_variety", slug: string) {
     kind === "plant_variety"
       ? {
           canonicalName: "Solanum lycopersicum",
+          displayName: "помідор їстівний",
           publicSlug: "solanum-lycopersicum",
         }
       : null;
@@ -458,7 +468,9 @@ function page(kind: "species" | "breed" | "plant_variety", slug: string) {
       nodeKind:
         kind === "species" ? "taxon" : kind === "breed" ? "breed" : "cultivar",
       rank: kind === "species" ? "species" : null,
+      kingdom: kind === "breed" ? "Animalia" : "Plantae",
       canonicalName,
+      vernacularName: kind === "species" ? "помідор їстівний" : null,
       scientificName: canonicalName,
       publicSlug: slug,
       speciesSlug: species?.publicSlug ?? null,

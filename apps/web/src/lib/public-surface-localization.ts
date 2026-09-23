@@ -175,7 +175,6 @@ interface PublicSurfaceCopy {
     title: string;
     metadataSuffix: string;
     collectionPageSuffix: string;
-    logThisVariety: string;
     saveToWishlist: string;
     savedToWishlist: string;
     growingNote: string;
@@ -207,6 +206,8 @@ interface PublicSurfaceCopy {
     notFound: string;
     notFoundDescription: string;
     browseObjects: string;
+    /** Names the card's crumbs: the catalogue, the species, its forms (`OVE-497`). */
+    crumbsLabel: string;
     /** Fact paragraph templates (ADR-0026 D9): structured fields only. */
     fact: {
       identity: string;
@@ -243,6 +244,12 @@ interface PublicSurfaceCopy {
       identifiers: string;
       /** The contents rail's own name, above `xl` (`OVE-452`). */
       onThisPage: string;
+      /** The way to every form, from the dozen the card names (`OVE-497`). */
+      allForms: string;
+      /** "{shown} of {total}", when the card names fewer than there are. */
+      formsShown: string;
+      /** Says an editorial note is the editors', not a gardener's journal. */
+      editorial: string;
     };
     /** The four words a presence badge may say, and nothing else (D11). */
     presence: Record<"present" | "absent" | "transient" | "unknown", string>;
@@ -436,7 +443,6 @@ const COPY = {
       title: "Публічний сорт",
       metadataSuffix: "сорт",
       collectionPageSuffix: "публічні записи саду",
-      logThisVariety: "Записати цей сорт",
       saveToWishlist: "Зберегти до списку бажань",
       savedToWishlist: "Збережено до вашого списку бажань.",
       growingNote: "Нотатка про вирощування",
@@ -471,6 +477,7 @@ const COPY = {
       notFoundDescription:
         "За цією адресою немає виду, сорту чи породи. Адреси змінюються лише з постійним перенаправленням, тому посилання, ймовірно, було введено з помилкою.",
       browseObjects: "Переглянути живі об'єкти",
+      crumbsLabel: "Шлях у каталозі",
       fact: {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} виду {species}.",
@@ -508,6 +515,9 @@ const COPY = {
         identifier: "Ідентифікатор",
         identifiers: "Ідентифікатори у джерелах",
         onThisPage: "На цій сторінці",
+        allForms: "Усі форми",
+        formsShown: "Тут {shown} з {total}.",
+        editorial: "Від редакції OverGarden",
       },
       hostClass: {
         major_host: "основний живитель",
@@ -705,7 +715,6 @@ const COPY = {
       title: "Публичен сорт",
       metadataSuffix: "сорт",
       collectionPageSuffix: "публични записи в градината",
-      logThisVariety: "Запишете този сорт",
       saveToWishlist: "Запазете в списъка с желания",
       savedToWishlist: "Запазено в списъка ви с желания.",
       growingNote: "Бележка за отглеждане",
@@ -740,6 +749,7 @@ const COPY = {
       notFoundDescription:
         "На този адрес няма вид, сорт или порода. Адресите се променят само с постоянно пренасочване, така че връзката вероятно е въведена грешно.",
       browseObjects: "Разгледайте живите обекти",
+      crumbsLabel: "Път в каталога",
       fact: {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} от вида {species}.",
@@ -777,6 +787,9 @@ const COPY = {
         identifier: "Идентификатор",
         identifiers: "Идентификатори в източниците",
         onThisPage: "На тази страница",
+        allForms: "Всички форми",
+        formsShown: "Тук са {shown} от {total}.",
+        editorial: "От редакцията на OverGarden",
       },
       hostClass: {
         major_host: "основен гостоприемник",
@@ -973,7 +986,6 @@ const COPY = {
       title: "Публичный сорт",
       metadataSuffix: "сорт",
       collectionPageSuffix: "Публичные записи сада",
-      logThisVariety: "Записать этот сорт",
       saveToWishlist: "Сохранить в список желаний",
       savedToWishlist: "Сохранено в ваш список желаний.",
       growingNote: "Заметка о выращивании",
@@ -1008,6 +1020,7 @@ const COPY = {
       notFoundDescription:
         "По этому адресу нет вида, сорта или породы. Адреса меняются только с постоянным перенаправлением, поэтому ссылка, вероятно, введена с ошибкой.",
       browseObjects: "Посмотреть живые объекты",
+      crumbsLabel: "Путь в каталоге",
       fact: {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} вида {species}.",
@@ -1045,6 +1058,9 @@ const COPY = {
         identifier: "Идентификатор",
         identifiers: "Идентификаторы в источниках",
         onThisPage: "На этой странице",
+        allForms: "Все формы",
+        formsShown: "Здесь {shown} из {total}.",
+        editorial: "От редакции OverGarden",
       },
       hostClass: {
         major_host: "основной хозяин",

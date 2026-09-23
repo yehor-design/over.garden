@@ -107,7 +107,8 @@ async function readCases(): Promise<ReadCase[]> {
   return [
     {
       name: "catalog register hub",
-      run: (db) => catalogRegister.getCatalogRegisterHub(ABSENT_SLUG, db),
+      run: (db) =>
+        catalogRegister.getCatalogRegisterHub(ABSENT_SLUG, {}, db),
     },
     {
       name: "catalog register hub species",

@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 
 import { PublicCatalogRegisterHub } from "@/components/public/public-catalog-register-hub";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
-import { getPublicCatalogRegisterCopy } from "@/lib/public-catalog-register-copy";
+import {
+  getPublicCatalogRegisterCopy,
+  registerFormsKind,
+} from "@/lib/public-catalog-register-copy";
 import {
   isPublicLocale,
   localizedPath,
@@ -21,6 +24,27 @@ import type { CatalogRegisterHub } from "@/server/public-catalog-register-reposi
 
 interface RegisterHubRouteProps {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+/** A search and a page, as the address carries them (`OVE-497`). */
+export interface RegisterHubView {
+  query: string;
+  page: number;
+}
+
+export function normalizeRegisterHubView(
+  searchParams: Record<string, string | string[] | undefined> = {},
+): RegisterHubView {
+  const first = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+  const query = (first(searchParams.q) ?? "").trim().slice(0, 120);
+  const rawPage = first(searchParams.page) ?? "";
+  const page = /^\d+$/u.test(rawPage) ? Number(rawPage) : 1;
+  return {
+    query,
+    page: Number.isSafeInteger(page) && page >= 1 ? page : 1,
+  };
 }
 
 export function generateStaticParams() {
@@ -52,7 +76,7 @@ export async function generateMetadata({
       ).decision.robots,
     };
   }
-  const hub = await loadHub(slug);
+  const hub = await loadHub(slug, localeParam, { query: "", page: 1 });
   if (!hub) {
     return {
       title: "OverGarden",
@@ -67,12 +91,14 @@ export async function generateMetadata({
 export async function renderPublicRegisterHubPage(
   locale: PublicLocale,
   slug: string,
+  view: RegisterHubView = { query: "", page: 1 },
 ) {
-  const hub = await loadHub(slug);
-  // A species nobody has registered a cultivar of has no hub, and a page
-  // saying zero is an empty listing. The proxy answers the 404 for the shape;
-  // this answers it for the absence (ADR-0022 D3).
+  const hub = await loadHub(slug, locale, view);
+  // A species with no forms has no hub, and a page saying zero is an empty
+  // listing. The proxy answers the 404 for the shape; this answers it for the
+  // absence (ADR-0022 D3), and for a page past the last one (ADR-0029 D3).
   if (!hub) notFound();
+  if (view.page > hub.pageCount) notFound();
 
   const surface = buildRegisterHubSurface(locale, hub);
   return (
@@ -87,10 +113,15 @@ export async function renderPublicRegisterHubPage(
 
 export default async function PublicRegisterHubRoute({
   params,
+  searchParams,
 }: RegisterHubRouteProps) {
   const { locale: localeParam, slug } = await params;
   if (!isPublicLocale(localeParam)) notFound();
-  return renderPublicRegisterHubPage(localeParam, slug);
+  return renderPublicRegisterHubPage(
+    localeParam,
+    slug,
+    normalizeRegisterHubView((await searchParams) ?? {}),
+  );
 }
 
 /**
@@ -99,9 +130,15 @@ export default async function PublicRegisterHubRoute({
  * `DATABASE_URL` at all. A failure is an absent hub, which is a 404 rather
  * than a broken build.
  */
-async function loadHub(slug: string): Promise<CatalogRegisterHub | null> {
+async function loadHub(
+  slug: string,
+  locale: PublicLocale,
+  view: RegisterHubView,
+): Promise<CatalogRegisterHub | null> {
   await connection();
-  const [result] = await Promise.allSettled([readCatalogRegisterHub(slug)]);
+  const [result] = await Promise.allSettled([
+    readCatalogRegisterHub(slug, { ...view, locale }),
+  ]);
   return result.status === "fulfilled" ? result.value : null;
 }
 
@@ -110,6 +147,7 @@ function buildRegisterHubSurface(
   hub: CatalogRegisterHub,
 ) {
   const copy = getPublicCatalogRegisterCopy(locale);
+  const kind = registerFormsKind(hub.speciesKingdom);
   const canonicalPath = localizedPath(
     locale,
     publicCatalogRegisterHubPath(hub.speciesSlug),
@@ -118,7 +156,7 @@ function buildRegisterHubSurface(
     consumerId: "localized_species_register_hub",
     candidateState: "candidate",
     visibleText: [
-      copy.heading(hub.speciesName, hub.total),
+      copy.heading(hub.speciesDisplayName, kind),
       copy.sourceNote,
       ...hub.forms.map((form) => form.name),
     ],
@@ -131,12 +169,12 @@ function buildRegisterHubSurface(
   return buildPublicSurfaceMetadata({
     discovery,
     locale,
-    title: copy.metadataTitle(hub.speciesName, hub.total),
-    description: copy.description(hub.speciesName, hub.total),
+    title: copy.metadataTitle(hub.speciesDisplayName, kind, hub.total),
+    description: copy.description(hub.speciesDisplayName, kind, hub.total),
     visibleFacts: {
       type: "CollectionPage",
-      name: copy.heading(hub.speciesName, hub.total),
-      description: copy.description(hub.speciesName, hub.total),
+      name: copy.heading(hub.speciesDisplayName, kind),
+      description: copy.description(hub.speciesDisplayName, kind, hub.total),
       // `hasPart` is built from the rows the page shows and nothing else: a
       // graph that claims more than the page does is the defect this whole
       // slice exists to remove.
