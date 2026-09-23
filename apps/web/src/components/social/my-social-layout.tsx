@@ -69,6 +69,7 @@ export function MySocialLayout({
   count,
   countLabel,
   controls,
+  actions,
   notice,
   children,
 }: {
@@ -79,6 +80,8 @@ export function MySocialLayout({
   count?: number;
   countLabel?: string;
   controls?: ReactNode;
+  /** Links beside the count — the Activity page's settings (`OVE-501`). */
+  actions?: ReactNode;
   /** The outcome of the last action, as a toast. Rendered above everything. */
   notice?: ReactNode;
   children: ReactNode;
@@ -97,10 +100,18 @@ export function MySocialLayout({
         description={description}
         className="border-b-0 pb-0"
         actions={
-          typeof count === "number" ? (
-            <p className="text-body-sm whitespace-nowrap text-text-muted tabular-nums">
-              {countLabel ?? copy.common.itemCount(count)}
-            </p>
+          typeof count === "number" || actions ? (
+            <div className="flex flex-wrap items-center gap-3">
+              {typeof count === "number" ? (
+                <p
+                  data-my-social-count={count}
+                  className="text-body-sm whitespace-nowrap text-text-muted tabular-nums"
+                >
+                  {countLabel ?? copy.common.itemCount(count)}
+                </p>
+              ) : null}
+              {actions}
+            </div>
           ) : undefined
         }
       />

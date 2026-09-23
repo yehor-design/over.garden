@@ -18,6 +18,7 @@ function ListRow({
   description,
   meta,
   actions,
+  linkProps,
   ...props
 }: Omit<React.ComponentProps<"li">, "title"> & {
   media?: React.ReactNode;
@@ -26,6 +27,15 @@ function ListRow({
   description?: React.ReactNode;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
+  /**
+   * More for the title link — `aria-describedby`, so a reader who reaches the
+   * link by keyboard hears the row's when and where as well as its name.
+   */
+  linkProps?: Omit<
+    React.ComponentProps<"a">,
+    "href" | "className" | "children"
+  > &
+    Record<`data-${string}`, string | undefined>;
 }) {
   return (
     <li
@@ -43,6 +53,7 @@ function ListRow({
         <p className="text-h4 text-text-heading">
           {href ? (
             <a
+              {...linkProps}
               href={href}
               className="rounded-sm outline-none before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >

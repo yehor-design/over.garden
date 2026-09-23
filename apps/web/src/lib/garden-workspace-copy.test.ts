@@ -49,12 +49,12 @@ describe("garden workspace copy", () => {
   it("preserves user and catalog values while localizing surrounding copy", () => {
     const objectName = "Monstera deliciosa — Балкон № 3";
     const sentence = formatGardenWorkspaceTemplate(
-      getGardenWorkspaceCopy("bg").workspace.nextAction.finishFirstNoteTitle,
+      getGardenWorkspaceCopy("bg").saveProgress.firstEntry.body,
       { objectName },
     );
 
     expect(sentence).toContain(objectName);
-    expect(sentence).toContain("първата бележка");
+    expect(sentence).toContain("първата си датирана бележка");
   });
 
   it("names the three picker outcomes in every locale without a trust word or a caveat", () => {

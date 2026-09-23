@@ -10,6 +10,7 @@ import {
   type Driver,
   type QueryCompiler,
 } from "kysely";
+import { postgresRejection } from "@test/postgres-rejection";
 import { describe, expect, it, vi } from "vitest";
 import { failedSection } from "@/server/workspace-failure";
 
@@ -20,6 +21,7 @@ import {
   buildGardenWorkspaceRecentEntriesQuery,
   buildGardenWorkspaceSpaceSummariesQuery,
   loadGardenWorkspace,
+  loadGardenWorkspaceContext,
   WORKSPACE_SECTION_DEADLINE_MS,
   WORKSPACE_INVENTORY_PAGE_SIZE,
   WORKSPACE_INVENTORY_PREVIEW_SIZE,
@@ -27,6 +29,20 @@ import {
   WORKSPACE_SPACE_PREVIEW_SIZE,
   type GardenWorkspaceSources,
 } from "./garden-workspace-repository";
+
+const inbox = vi.hoisted(() => ({
+  countUnreadNotifications: vi.fn(),
+  buildNotificationClaimRequestEventsQuery: vi.fn(),
+}));
+
+// The inbox's two reads (`OVE-501`). Nothing else this suite loads uses them.
+vi.mock("@/server/social-return-repository", () => ({
+  countUnreadNotifications: inbox.countUnreadNotifications,
+}));
+vi.mock("@/server/social-readback-repository", () => ({
+  buildNotificationClaimRequestEventsQuery:
+    inbox.buildNotificationClaimRequestEventsQuery,
+}));
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -303,6 +319,51 @@ describe("garden workspace read model", () => {
     expect(workspace.allFailed).toBe(true);
     expect(JSON.stringify(workspace)).not.toContain("private database detail");
     expect(JSON.stringify(workspace)).not.toContain(OTHER_OWNER_ID);
+  });
+});
+
+describe("the garden rail's inbox (OVE-501)", () => {
+  // `recent` is faulted in each case, so nothing here reaches a database.
+  it("counts what Activity counts as unread, and the claims as requests", async () => {
+    inbox.countUnreadNotifications.mockResolvedValue(3);
+    inbox.buildNotificationClaimRequestEventsQuery.mockReturnValue({
+      execute: async () => [
+        { sourceId: "request-1" },
+        { sourceId: "request-2" },
+      ],
+    });
+
+    const context = await loadGardenWorkspaceContext(scope, {
+      faultSections: ["recent"],
+    });
+
+    expect(context.inbox).toEqual({
+      status: "ready",
+      value: { notificationCount: 3, claimCount: 2 },
+    });
+    // The same events and receipts as the page it links to.
+    expect(inbox.countUnreadNotifications).toHaveBeenCalledWith(scope);
+    expect(inbox.buildNotificationClaimRequestEventsQuery).toHaveBeenCalledWith(
+      expect.anything(),
+      scope,
+    );
+  });
+
+  it("settles a count that could not be read as the inbox's own failure", async () => {
+    inbox.countUnreadNotifications.mockRejectedValue(
+      postgresRejection("57014"),
+    );
+    inbox.buildNotificationClaimRequestEventsQuery.mockReturnValue({
+      execute: async () => [],
+    });
+
+    const context = await loadGardenWorkspaceContext(scope, {
+      faultSections: ["recent"],
+    });
+
+    expect(context.inbox).toEqual(
+      failedSection("query_timeout", { code: "57014" }),
+    );
   });
 });
 

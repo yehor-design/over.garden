@@ -1,0 +1,29 @@
+{
+  "issue": "OVE-501",
+  "proof": "notification-activity-failure",
+  "baseUrl": "http://localhost:3179",
+  "pages": [
+    {
+      "path": "/notifications?filter=reminders",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/notifications?filter=reminders",
+      "frameTitle": "Події",
+      "skeletonLeft": false,
+      "contentAfterRetry": true
+    },
+    {
+      "path": "/notifications/settings",
+      "hardLoadStatus": 200,
+      "failure": "query_timeout",
+      "retryHref": "/notifications/settings",
+      "frameTitle": "Налаштування подій",
+      "skeletonLeft": false,
+      "contentAfterRetry": true
+    }
+  ],
+  "gardenRailDuringFailure": "Події—",
+  "gardenRailAfter": "Події1",
+  "elapsedMs": 8663,
+  "passed": true
+}

@@ -137,19 +137,19 @@ describe("garden workspace section observability", () => {
 
   it("renders the degraded copy identically in every locale", () => {
     for (const locale of ["uk", "bg", "ru"] as const) {
-      const copy = getGardenWorkspaceCopy(locale);
-      expect(copy.workspace.nextAction.unavailableTitle.length).toBeGreaterThan(
-        0,
-      );
-      expect(copy.workspace.nextAction.retryInventory.length).toBeGreaterThan(
-        0,
-      );
+      const copy = getGardenWorkspaceCopy(locale).workspace.sectionError;
+      expect(copy.title.length).toBeGreaterThan(0);
+      expect(copy.retry.length).toBeGreaterThan(0);
       // The class travels as an attribute, so no locale string may carry a
       // machine-readable failure code.
       for (const failureClass of GARDEN_WORKSPACE_FAILURE_CLASSES) {
-        expect(copy.workspace.nextAction.unavailableDescription).not.toContain(
-          failureClass,
-        );
+        for (const sentence of [
+          copy.title,
+          copy.description,
+          ...Object.values(copy.reasons),
+        ]) {
+          expect(sentence).not.toContain(failureClass);
+        }
       }
     }
   });
@@ -166,13 +166,19 @@ describe("garden workspace section observability", () => {
   });
 
   it("derives every section budget from its own round-trip cost", () => {
-    for (const section of ["spaces", "recent", "inbox"] as const) {
+    for (const section of ["spaces", "recent"] as const) {
       // One query each, so their budget is unchanged by this contract.
       expect(GARDEN_WORKSPACE_SECTION_QUERY_COUNT[section]).toBe(1);
       expect(gardenWorkspaceSectionDeadlineMs(section)).toBe(
         WORKSPACE_SECTION_DEADLINE_MS,
       );
     }
+    // The inbox reads the Activity page's own events — ten reads, two waves
+    // through a pool of five — then their receipts (`OVE-501`).
+    expect(GARDEN_WORKSPACE_SECTION_QUERY_COUNT.inbox).toBe(3);
+    expect(gardenWorkspaceSectionDeadlineMs("inbox")).toBe(
+      WORKSPACE_SECTION_DEADLINE_MS * 3,
+    );
     expect(gardenWorkspaceSectionDeadlineMs("inventory")).toBe(
       WORKSPACE_SECTION_DEADLINE_MS *
         GARDEN_WORKSPACE_SECTION_QUERY_COUNT.inventory,

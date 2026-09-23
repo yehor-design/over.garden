@@ -1,18 +1,36 @@
 import { BellIcon as Bell } from "@/components/icons/Bell";
+import { ChatCircleIcon as ChatCircle } from "@/components/icons/ChatCircle";
 import { ChecksIcon as CheckCheck } from "@/components/icons/Checks";
 import { CaretDownIcon as ChevronDown } from "@/components/icons/CaretDown";
 import { EyeSlashIcon as EyeOff } from "@/components/icons/EyeSlash";
 import { EnvelopeOpenIcon as MailOpen } from "@/components/icons/EnvelopeOpen";
+import { GitBranchIcon as GitBranch } from "@/components/icons/GitBranch";
+import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
+import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
+import { PlantIcon as Plant } from "@/components/icons/Plant";
+import { QuestionIcon as Question } from "@/components/icons/Question";
 import { SlidersIcon as Settings2 } from "@/components/icons/Sliders";
+import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
+import type { InterfaceIcon } from "@/components/icons";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import {
+  WorkspaceSectionError,
+  workspaceSchemaMissingHint,
+} from "@/components/garden/workspace-state";
 import { MySocialLayout } from "@/components/social/my-social-layout";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
 import { ToggleChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
+import { HiddenField } from "@/components/ui/hidden-field";
+import { IconButton } from "@/components/ui/icon-button";
+import { ListRow } from "@/components/ui/list-row";
+import { formatLastEntry } from "@/lib/garden/garden-collection";
 import { resolveIllustration } from "@/lib/illustrations";
 import {
   buildLanguageAlternates,
@@ -20,22 +38,24 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { scopedToUser } from "@/server/request-scope";
 import {
-  getNotificationPreferences,
+  fillSocialTemplate,
+  getSocialSurfaceCopy,
+  type SocialSurfaceCopy,
+} from "@/lib/social-surface-copy";
+import {
   groupNotificationEvents,
   listNotificationCenterPage,
+  normalizeNotificationFilter,
   type GroupedNotificationEvent,
-  type NotificationEvent,
+  type NotificationEventKind,
   type NotificationFilter,
-  type NotificationPreferences,
 } from "@/server/social-return-repository";
-import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { IconButton } from "@/components/ui/icon-button";
-import { HiddenField } from "@/components/ui/hidden-field";
-import { Checkbox } from "@/components/ui/checkbox";
+import { resolveWorkspaceViewer } from "@/server/workspace-access";
+import {
+  settleSection,
+  workspaceSectionDeadlineMs,
+} from "@/server/workspace-failure";
 
 interface LocalizedNotificationsRouteProps {
   params: Promise<{ locale: string }>;
@@ -61,6 +81,31 @@ export async function generateMetadata({
   };
 }
 
+interface NotificationView {
+  filter: NotificationFilter;
+  unreadOnly: boolean;
+  grouped: boolean;
+  cursor: string | null;
+}
+
+type ReceiptOutcome = "read" | "unread" | "dismissed" | "failed";
+
+/**
+ * Activity (`OVE-501`): what other gardeners did, and the optional reminders
+ * to write about the reader's own plants and animals.
+ *
+ * Every row says what happened, what it is about — the entry, or the plant or
+ * animal with the space it lives in — and when; a reminder says when that
+ * plant was last written about, and its Write opens the composer for exactly
+ * that plant. Rows that would read the same are told apart by what differs
+ * between them. The read state of a row and the count in the header are both
+ * read back from the receipts, and a receipt that could not be written is
+ * said beside its row. The preferences live on their own page.
+ *
+ * Both reads are settled (ADR-0023): a session that cannot be checked is not
+ * "signed out", and a list that cannot be read is a failure with a retry of
+ * the same view, never an empty list.
+ */
 export default async function LocalizedNotificationsRoute({
   params,
   searchParams,
@@ -71,69 +116,107 @@ export default async function LocalizedNotificationsRoute({
       Promise.resolve({} as Record<string, string | string[] | undefined>),
   ]);
   if (!isPublicLocale(localeParam)) notFound();
-  const copy = getSocialSurfaceCopy(localeParam);
-  const session = await getCurrentSession();
-  const userId = session?.user?.id;
+  const locale = localeParam;
+  const copy = getSocialSurfaceCopy(locale);
+  const view: NotificationView = {
+    filter: normalizeNotificationFilter(firstParam(query.filter)),
+    unreadOnly: firstParam(query.unread) === "1",
+    grouped: firstParam(query.view) !== "individual",
+    cursor: firstParam(query.cursor) ?? null,
+  };
+  const viewHref = notificationHref(locale, view);
+  const layout = {
+    locale,
+    active: "notifications" as const,
+    title: copy.notifications.title,
+    description: copy.notifications.description,
+  };
 
-  if (!userId) {
+  const viewer = await resolveWorkspaceViewer();
+  if (viewer.status === "unavailable") {
     return (
-      <MySocialLayout
-        locale={localeParam}
-        active="notifications"
-        title={copy.notifications.title}
-        description={copy.notifications.description}
-      >
+      <MySocialLayout {...layout}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={viewer.failure}
+          title={copy.notifications.loadErrorTitle}
+          retryHref={viewHref}
+          technicalHint={workspaceSchemaMissingHint(locale, viewer.failure)}
+        />
+      </MySocialLayout>
+    );
+  }
+  if (viewer.status === "sign-in-required") {
+    // Signing in comes back to this view, filters and all.
+    return (
+      <MySocialLayout {...layout}>
         <SignInPrompt
-          locale={localeParam}
-          next={localizedPath(localeParam, "/notifications")}
+          locale={locale}
+          next={viewHref}
           description={copy.notifications.signIn}
         />
       </MySocialLayout>
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const filter = parseFilter(firstParam(query.filter));
-  const unreadOnly = firstParam(query.unread) === "1";
-  const grouped = firstParam(query.view) !== "individual";
-  const [page, preferences] = await Promise.all([
-    listNotificationCenterPage(scope, localeParam, {
-      filter,
-      unreadOnly,
-      cursor: firstParam(query.cursor),
-    }),
-    getNotificationPreferences(scope),
-  ]);
-  const events: Array<NotificationEvent | GroupedNotificationEvent> = grouped
-    ? groupNotificationEvents(page.items)
-    : page.items;
-  const returnTo = notificationHref(localeParam, {
-    filter,
-    unreadOnly,
-    grouped,
-    cursor: firstParam(query.cursor),
-  });
-  const filtered = filter !== "all" || unreadOnly;
+  const settingsLink = <NotificationSettingsLink locale={locale} />;
+  const filters = <NotificationFilters locale={locale} view={view} />;
+  const settled = await settleSection(
+    () =>
+      listNotificationCenterPage(viewer.scope, locale, {
+        filter: view.filter,
+        unreadOnly: view.unreadOnly,
+        cursor: view.cursor,
+      }),
+    {
+      // The preferences with the eight sources — nine reads, two waves
+      // through a pool of five — then the receipts with the objects'
+      // identities.
+      deadlineMs: workspaceSectionDeadlineMs(3),
+      surface: "notifications",
+      section: "events",
+    },
+  );
+  if (settled.status === "error") {
+    return (
+      <MySocialLayout {...layout} actions={settingsLink} controls={filters}>
+        <WorkspaceSectionError
+          locale={locale}
+          failure={settled}
+          title={copy.notifications.loadErrorTitle}
+          retryHref={viewHref}
+          technicalHint={workspaceSchemaMissingHint(locale, settled)}
+        />
+      </MySocialLayout>
+    );
+  }
+
+  const page = settled.value;
+  const rows = groupNotificationEvents(page.items, view.grouped);
+  const outcome = readReceiptOutcome(query);
+  const outcomeRow = outcome?.eventKey
+    ? rows.find((row) => row.eventKeys.includes(outcome.eventKey!))
+    : undefined;
+  const today = new Date().toISOString().slice(0, 10);
+  const identities = disambiguateRows(rows, locale, copy);
+  const filtered = view.filter !== "all" || view.unreadOnly;
 
   return (
     <MySocialLayout
-      locale={localeParam}
-      active="notifications"
-      title={copy.notifications.title}
-      description={copy.notifications.description}
+      {...layout}
       count={page.unreadCount}
       countLabel={copy.common.unreadCount(page.unreadCount)}
-      controls={
-        <NotificationFilters
-          locale={localeParam}
-          filter={filter}
-          unreadOnly={unreadOnly}
-          grouped={grouped}
-        />
-      }
+      actions={settingsLink}
+      controls={filters}
     >
-      <NotificationSettings locale={localeParam} preferences={preferences} />
-      {events.length === 0 ? (
+      {/* An outcome whose row is not on the page — dismissed, or on another
+          page of the list — is said above the list. */}
+      {outcome && !outcomeRow ? (
+        <div id="notification-outcome" className="scroll-mt-24">
+          <ReceiptOutcomeNotice copy={copy} outcome={outcome.result} />
+        </div>
+      ) : null}
+      {rows.length === 0 ? (
         filtered ? (
           // Something exists and the filters excluded it: no illustration, the
           // filters the reader set, and a way to clear them (DESIGN.md §5.4).
@@ -143,7 +226,7 @@ export default async function LocalizedNotificationsRoute({
             description={copy.common.noResultsDescription}
             action={
               <Link
-                href={localizedPath(localeParam, "/notifications")}
+                href={localizedPath(locale, "/notifications")}
                 className={buttonVariants({ variant: "secondary" })}
               >
                 {copy.common.clearFilters}
@@ -157,7 +240,7 @@ export default async function LocalizedNotificationsRoute({
             description={copy.notifications.empty}
             action={
               <Link
-                href={localizedPath(localeParam, "/journals")}
+                href={localizedPath(locale, "/journals")}
                 className={buttonVariants()}
               >
                 {copy.notifications.emptyAction}
@@ -166,25 +249,28 @@ export default async function LocalizedNotificationsRoute({
           />
         )
       ) : (
-        <ul className="grid">
-          {events.map((event) => (
+        <ul
+          id="notification-list"
+          aria-label={copy.notifications.listLabel}
+          data-notification-list="true"
+          className="grid"
+        >
+          {rows.map((row) => (
             <NotificationRow
-              key={event.key}
-              event={event}
-              locale={localeParam}
-              returnTo={returnTo}
+              key={row.key}
+              row={row}
+              identity={identities.get(row.key) ?? []}
+              locale={locale}
+              today={today}
+              returnTo={viewHref}
+              outcome={outcomeRow === row ? outcome!.result : null}
             />
           ))}
         </ul>
       )}
       {page.nextCursor ? (
         <Link
-          href={notificationHref(localeParam, {
-            filter,
-            unreadOnly,
-            grouped,
-            cursor: page.nextCursor,
-          })}
+          href={notificationHref(locale, { ...view, cursor: page.nextCursor })}
           className={buttonVariants({
             variant: "secondary",
             className: "w-full",
@@ -198,6 +284,20 @@ export default async function LocalizedNotificationsRoute({
   );
 }
 
+function NotificationSettingsLink({ locale }: { locale: PublicLocale }) {
+  const copy = getSocialSurfaceCopy(locale);
+  return (
+    <Link
+      href={localizedPath(locale, "/notifications/settings")}
+      data-notification-settings-link="true"
+      className={buttonVariants({ variant: "secondary", size: "sm" })}
+    >
+      <Settings2 aria-hidden="true" />
+      {copy.notifications.settings}
+    </Link>
+  );
+}
+
 /**
  * The filters, as chips over a `GET` form (DESIGN.md §5.1).
  *
@@ -208,23 +308,20 @@ export default async function LocalizedNotificationsRoute({
  */
 function NotificationFilters({
   locale,
-  filter,
-  unreadOnly,
-  grouped,
+  view,
 }: {
   locale: PublicLocale;
-  filter: NotificationFilter;
-  unreadOnly: boolean;
-  grouped: boolean;
+  view: NotificationView;
 }) {
   const copy = getSocialSurfaceCopy(locale);
   const action = localizedPath(locale, "/notifications");
+  const { filter, unreadOnly, grouped } = view;
   const filters: Array<[Exclude<NotificationFilter, "all">, string]> = [
     ["comments", copy.notifications.comments],
     ["follows", copy.notifications.follows],
     ["mentions", copy.notifications.mentions],
     ["claims", copy.notifications.claims],
-    ["system", copy.notifications.system],
+    ["reminders", copy.notifications.reminders],
   ];
 
   return (
@@ -290,131 +387,228 @@ function NotificationFilters({
   );
 }
 
-function NotificationSettings({
-  locale,
-  preferences,
-}: {
-  locale: PublicLocale;
-  preferences: NotificationPreferences;
-}) {
-  const copy = getSocialSurfaceCopy(locale);
-  const options: Array<[keyof NotificationPreferences, string]> = [
-    ["comments", copy.notifications.comments],
-    ["replies", copy.notifications.replies],
-    ["follows", copy.notifications.follows],
-    ["mentions", copy.notifications.mentions],
-    ["claims", copy.notifications.claims],
-    ["system", copy.notifications.system],
-  ];
-  return (
-    <details
-      data-notification-settings="true"
-      className="rounded-lg border border-border px-4 py-3"
-    >
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-body-sm font-medium text-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">
-        <Settings2 className="size-4" aria-hidden="true" />
-        {copy.notifications.settings}
-      </summary>
-      <form
-        method="post"
-        action="/api/notifications/preferences"
-        className="mt-4 grid gap-3 sm:grid-cols-2"
-      >
-        <HiddenField name="locale" value={locale} />
-        {options.map(([key, label]) => (
-          <Checkbox
-            key={key}
-            name={key}
-            defaultChecked={preferences[key]}
-            label={label}
-            className="items-center"
-          />
-        ))}
-        <Button type="submit" className="w-fit sm:col-span-2">
-          {copy.notifications.saveSettings}
-        </Button>
-      </form>
-    </details>
-  );
-}
+const KIND_ICONS: Record<NotificationEventKind, InterfaceIcon> = {
+  comment: ChatCircle,
+  reply: ChatCircle,
+  profile_follow: UserPlus,
+  object_follow: UserPlus,
+  lineage_follow: GitBranch,
+  mention: GitBranch,
+  claim: GitBranch,
+  question: Question,
+  system: Plant,
+};
 
 /**
- * One notification: what happened, to what, when, and a link to the thing.
+ * One row: what happened (the title), what it is about (the line beneath),
+ * and who or what it came from and when (the meta line). The title link is
+ * described by the other two lines, so a reader who reaches it by keyboard
+ * hears all three.
  *
  * Unread is a **word** as well as a mark. The row used to say it with a blue
  * dot and 70 % opacity, and colour is never the only signal (DESIGN.md §8).
  */
 function NotificationRow({
-  event,
+  row,
+  identity,
   locale,
+  today,
   returnTo,
+  outcome,
 }: {
-  event: NotificationEvent | GroupedNotificationEvent;
+  row: GroupedNotificationEvent;
+  identity: string[];
   locale: PublicLocale;
+  today: string;
   returnTo: string;
+  outcome: ReceiptOutcome | null;
 }) {
   const copy = getSocialSurfaceCopy(locale);
-  const eventKeys = "eventKeys" in event ? event.eventKeys : [event.key];
-  const count = "count" in event ? event.count : 1;
+  const reminder = row.category === "reminder";
+  const anchor = `notification-${row.eventKeys[0]}`;
   const summary =
-    copy.notifications.summaries[event.summaryKey] ?? event.summaryKey;
-  const subject = [event.actorMention, event.targetLabel]
-    .filter(Boolean)
-    .join(" · ");
+    copy.notifications.summaries[row.summaryKey] ?? row.summaryKey;
+  const title = row.count > 1 ? `${summary} (${row.count})` : summary;
+  const name = [title, ...identity].join(" · ");
+  const Icon =
+    reminder && row.object?.objectKind === "animal"
+      ? PawPrint
+      : KIND_ICONS[row.kind];
+  const stateLabel =
+    row.count > 1 && row.unreadCount > 0
+      ? fillSocialTemplate(copy.notifications.unreadOfGroup, {
+          count: row.unreadCount,
+        })
+      : row.read
+        ? copy.notifications.readBadge
+        : copy.notifications.unreadBadge;
 
   return (
-    <li
-      data-notification-read={event.read ? "true" : "false"}
-      className="relative flex flex-col gap-3 border-b border-border py-4 last:border-b-0 sm:flex-row sm:items-start sm:justify-between"
+    <ListRow
+      id={anchor}
+      data-notification-row={row.category}
+      data-notification-read={row.read ? "true" : "false"}
+      data-notification-unread-count={row.unreadCount}
+      className="scroll-mt-24"
+      media={
+        <span className="flex size-10 items-center justify-center rounded-lg bg-surface-sunken text-text-muted">
+          <Icon aria-hidden="true" className="size-5" />
+        </span>
+      }
+      title={title}
+      href={row.href}
+      linkProps={{
+        "aria-describedby": [
+          identity.length > 0 ? `${anchor}-about` : null,
+          `${anchor}-meta`,
+        ]
+          .filter(Boolean)
+          .join(" "),
+        "data-notification-link": row.kind,
+      }}
+      description={
+        identity.length > 0 ? (
+          <span id={`${anchor}-about`} data-notification-about="true">
+            {identity.join(" · ")}
+          </span>
+        ) : undefined
+      }
+      meta={
+        <span
+          id={`${anchor}-meta`}
+          className="inline-flex flex-wrap items-center gap-x-2 gap-y-1"
+        >
+          <Badge tone={row.read ? "neutral" : "action"}>{stateLabel}</Badge>
+          <span data-notification-origin={row.category}>
+            {reminder
+              ? copy.notifications.reminderOrigin
+              : actorsLine(copy, row.actors)}
+          </span>
+          <span aria-hidden="true">·</span>
+          {reminder ? (
+            <LastEntry copy={copy} row={row} today={today} locale={locale} />
+          ) : (
+            <time dateTime={new Date(row.createdAt).toISOString()}>
+              {formatDate(row.createdAt, locale)}
+            </time>
+          )}
+        </span>
+      }
+      actions={
+        <>
+          {reminder && row.object ? (
+            <Link
+              href={reminderWriteHref(row.object.id, returnTo, anchor)}
+              prefetch={false}
+              aria-label={fillSocialTemplate(copy.notifications.writeLabel, {
+                name: identity
+                  .slice(0, 1)
+                  .concat(identity.slice(2))
+                  .join(" · "),
+              })}
+              data-notification-write={row.object.id}
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              <NotePencil aria-hidden="true" />
+              {copy.notifications.write}
+            </Link>
+          ) : null}
+          <ReceiptForm
+            eventKeys={row.eventKeys}
+            state={row.read ? "unread" : "read"}
+            returnTo={returnTo}
+            label={fillSocialTemplate(copy.notifications.rowAction, {
+              action: row.read
+                ? copy.notifications.markUnread
+                : copy.notifications.markRead,
+              name,
+            })}
+            icon={row.read ? <MailOpen /> : <CheckCheck />}
+          />
+          <ReceiptForm
+            eventKeys={row.eventKeys}
+            state="dismissed"
+            returnTo={returnTo}
+            label={fillSocialTemplate(copy.notifications.rowAction, {
+              action: copy.notifications.dismiss,
+              name,
+            })}
+            icon={<EyeOff />}
+          />
+          {outcome ? (
+            <div className="basis-full">
+              <ReceiptOutcomeNotice copy={copy} outcome={outcome} />
+            </div>
+          ) : null}
+        </>
+      }
+    />
+  );
+}
+
+/** The last entry, as the garden list says it: a date, never a diagnosis. */
+function LastEntry({
+  copy,
+  row,
+  today,
+  locale,
+}: {
+  copy: SocialSurfaceCopy;
+  row: GroupedNotificationEvent;
+  today: string;
+  locale: PublicLocale;
+}) {
+  const date = row.object?.lastEntryDate;
+  if (!date) {
+    return (
+      <span data-notification-last-entry="never">
+        {copy.notifications.never}
+      </span>
+    );
+  }
+  const [before, after] = copy.notifications.lastEntry.split("{when}");
+  return (
+    <span data-notification-last-entry={date}>
+      {before}
+      <time dateTime={date}>{formatLastEntry(date, today, locale)}</time>
+      {after}
+    </span>
+  );
+}
+
+function actorsLine(
+  copy: SocialSurfaceCopy,
+  actors: GroupedNotificationEvent["actors"],
+) {
+  if (actors.length === 0) return copy.notifications.fromSomeone;
+  const shown = actors.slice(0, 2).join(", ");
+  const names =
+    actors.length > 2
+      ? fillSocialTemplate(copy.notifications.andOthers, {
+          actors: shown,
+          count: actors.length - 2,
+        })
+      : shown;
+  return fillSocialTemplate(copy.notifications.from, { actors: names });
+}
+
+function ReceiptOutcomeNotice({
+  copy,
+  outcome,
+}: {
+  copy: SocialSurfaceCopy;
+  outcome: ReceiptOutcome;
+}) {
+  const failed = outcome === "failed";
+  return (
+    <Callout
+      tone={failed ? "danger" : "success"}
+      live={failed ? "assertive" : "polite"}
+      data-notification-outcome={outcome}
+      className="py-2"
     >
-      <div className="grid min-w-0 flex-1 gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={event.read ? "neutral" : "action"}>
-            {event.read
-              ? copy.notifications.readBadge
-              : copy.notifications.unreadBadge}
-          </Badge>
-          <time
-            dateTime={new Date(event.createdAt).toISOString()}
-            className="text-caption text-text-muted"
-          >
-            {formatDate(event.createdAt, locale)}
-          </time>
-        </div>
-        <p className="text-h4 text-text-heading">
-          <Link
-            href={event.href}
-            className="rounded-sm outline-none before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-          >
-            {summary}
-            {count > 1 ? ` (${count})` : ""}
-          </Link>
-        </p>
-        {subject ? (
-          <p className="text-body-sm text-text-muted">{subject}</p>
-        ) : null}
-      </div>
-      <div className="relative z-sticky flex shrink-0 flex-wrap gap-2">
-        <ReceiptForm
-          eventKeys={eventKeys}
-          state={event.read ? "unread" : "read"}
-          returnTo={returnTo}
-          label={
-            event.read
-              ? copy.notifications.markUnread
-              : copy.notifications.markRead
-          }
-          icon={event.read ? <MailOpen /> : <CheckCheck />}
-        />
-        <ReceiptForm
-          eventKeys={eventKeys}
-          state="dismissed"
-          returnTo={returnTo}
-          label={copy.notifications.dismiss}
-          icon={<EyeOff />}
-        />
-      </div>
-    </li>
+      <p>{copy.notifications.outcome[outcome]}</p>
+    </Callout>
   );
 }
 
@@ -432,7 +626,11 @@ function ReceiptForm({
   icon: React.ReactNode;
 }) {
   return (
-    <form method="post" action="/api/notifications/receipts">
+    <form
+      method="post"
+      action="/api/notifications/receipts"
+      data-notification-receipt={state}
+    >
       {eventKeys.map((eventKey) => (
         <HiddenField key={eventKey} name="eventKey" value={eventKey} />
       ))}
@@ -445,15 +643,126 @@ function ReceiptForm({
   );
 }
 
-function notificationHref(
+/**
+ * What each row is about, told apart from every other row on the page.
+ *
+ * A reminder names the plant or animal, its kind, its space and its organism;
+ * a comment names the entry and — when it is the reader's own — the plant and
+ * space it is about; the other social rows name the reader's plant or animal
+ * and its space. Two rows that still read the same (`OVE-501`, criterion 1:
+ * two tomatoes in two gardens called "Город") gain what differs between them:
+ * the variety, then the day each was added, then the minute.
+ */
+function disambiguateRows(
+  rows: GroupedNotificationEvent[],
   locale: PublicLocale,
-  input: {
-    filter: NotificationFilter;
-    unreadOnly: boolean;
-    grouped: boolean;
-    cursor?: string | null;
-  },
-) {
+  copy: SocialSurfaceCopy,
+): Map<string, string[]> {
+  // Each level says a little more; a row climbs only while another row on
+  // the page still reads exactly as it does.
+  const levels: Array<(row: GroupedNotificationEvent) => string[]> = [
+    (row) => describeRow(row, copy),
+    (row) => [...describeRow(row, copy), ...optional(row.object?.variety)],
+    (row) => [
+      ...describeRow(row, copy),
+      ...optional(row.object?.variety),
+      ...optional(
+        row.object &&
+          fillSocialTemplate(copy.notifications.addedOn, {
+            date: formatDay(row.object.addedOn, locale),
+          }),
+      ),
+    ],
+    (row) => [
+      ...describeRow(row, copy),
+      ...optional(row.object?.variety),
+      ...optional(
+        row.object &&
+          fillSocialTemplate(copy.notifications.addedAt, {
+            date: formatDay(row.object.addedOn, locale),
+            time: formatMinute(row.object.addedAt, locale),
+          }),
+      ),
+    ],
+  ];
+  const level = new Map(rows.map((row) => [row.key, 0]));
+  const identity = (row: GroupedNotificationEvent) =>
+    levels[level.get(row.key)!]!(row);
+  for (let pass = 1; pass < levels.length; pass += 1) {
+    const signature = (row: GroupedNotificationEvent) =>
+      [row.summaryKey, row.actorMention ?? "", ...identity(row)].join("\u0000");
+    const seen = new Map<string, number>();
+    for (const row of rows) {
+      seen.set(signature(row), (seen.get(signature(row)) ?? 0) + 1);
+    }
+    const repeated = rows.filter((row) => (seen.get(signature(row)) ?? 0) > 1);
+    if (repeated.length === 0) break;
+    for (const row of repeated) level.set(row.key, pass);
+  }
+  return new Map(rows.map((row) => [row.key, identity(row)]));
+}
+
+function optional(value: string | null | undefined | false): string[] {
+  return value ? [value] : [];
+}
+
+function describeRow(
+  row: GroupedNotificationEvent,
+  copy: SocialSurfaceCopy,
+): string[] {
+  const object = row.object;
+  if (row.category === "reminder") {
+    if (!object) return row.targetLabel ? [row.targetLabel] : [];
+    return [
+      object.name,
+      copy.notifications.kinds[object.objectKind],
+      object.spaceName,
+      object.species,
+    ].filter((part): part is string => Boolean(part));
+  }
+  if (row.kind === "comment" || row.kind === "reply") {
+    return [
+      row.targetLabel ? `«${row.targetLabel}»` : null,
+      object?.name ?? null,
+      object?.spaceName ?? null,
+    ].filter((part): part is string => Boolean(part));
+  }
+  if (object) return [object.name, object.spaceName];
+  return row.targetLabel ? [row.targetLabel] : [];
+}
+
+/**
+ * The composer for exactly this plant or animal, in one activation, and back
+ * to this row of this view when it closes (`OVE-501`, criterion 2).
+ */
+function reminderWriteHref(objectId: string, returnTo: string, anchor: string) {
+  const params = new URLSearchParams({
+    object: objectId,
+    returnTo: `${returnTo}#${anchor}`,
+  });
+  return `/garden/new?${params.toString()}`;
+}
+
+function readReceiptOutcome(
+  query: Record<string, string | string[] | undefined>,
+): { result: ReceiptOutcome; eventKey: string | null } | null {
+  const result = firstParam(query.receipt);
+  if (
+    result !== "read" &&
+    result !== "unread" &&
+    result !== "dismissed" &&
+    result !== "failed"
+  ) {
+    return null;
+  }
+  const eventKey = firstParam(query.event);
+  return {
+    result,
+    eventKey: eventKey && /^[a-f0-9]{32}$/u.test(eventKey) ? eventKey : null,
+  };
+}
+
+function notificationHref(locale: PublicLocale, input: NotificationView) {
   const params = new URLSearchParams();
   if (input.filter !== "all") params.set("filter", input.filter);
   if (input.unreadOnly) params.set("unread", "1");
@@ -461,16 +770,6 @@ function notificationHref(
   if (input.cursor) params.set("cursor", input.cursor);
   const path = localizedPath(locale, "/notifications");
   return params.size ? `${path}?${params}` : path;
-}
-
-function parseFilter(value: string | undefined): NotificationFilter {
-  return value === "comments" ||
-    value === "follows" ||
-    value === "mentions" ||
-    value === "claims" ||
-    value === "system"
-    ? value
-    : "all";
 }
 
 function firstParam(value: string | string[] | undefined) {
@@ -483,5 +782,23 @@ function formatDate(value: Date | string, locale: PublicLocale) {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "UTC",
+  });
+}
+
+function formatMinute(value: string, locale: PublicLocale) {
+  return new Date(value).toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+}
+
+function formatDay(value: string, locale: PublicLocale) {
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString(locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
   });
 }

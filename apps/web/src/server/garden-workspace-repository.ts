@@ -15,7 +15,8 @@ import {
   type PlantObjectSummary,
 } from "@/server/journal-repository";
 import type { RequestScope } from "@/server/request-scope";
-import { listNotificationCenter } from "@/server/social-readback-repository";
+import { buildNotificationClaimRequestEventsQuery } from "@/server/social-readback-repository";
+import { countUnreadNotifications } from "@/server/social-return-repository";
 import {
   classifyWorkspaceFailure,
   settleSection,
@@ -73,7 +74,10 @@ export const GARDEN_WORKSPACE_SECTION_QUERY_COUNT = {
   inventory: 4,
   spaces: 1,
   recent: 1,
-  inbox: 1,
+  // Activity's eight sources, its preferences and the claim requests are ten
+  // reads at once, which a pool of five (`POOLED_DATABASE_POOL_MAX`) serves in
+  // two waves; then the receipts (`OVE-501`).
+  inbox: 3,
 } as const satisfies Record<GardenWorkspaceSectionKey, number>;
 
 /**
@@ -243,13 +247,14 @@ const defaultSources: GardenWorkspaceSources = {
     }));
   },
   async inbox(scope) {
-    const notifications = await listNotificationCenter(scope);
-    return {
-      notificationCount: notifications.length,
-      claimCount: notifications.filter(
-        (event) => event.kind === "lineage_claim_request",
-      ).length,
-    };
+    // The Activity page's own unread count, from its events and its receipts
+    // (`OVE-501`): this rail counted lineage events with no receipts at all,
+    // so its number never matched the page it links to and never went down.
+    const [notificationCount, claimRequests] = await Promise.all([
+      countUnreadNotifications(scope),
+      buildNotificationClaimRequestEventsQuery(db, scope).execute(),
+    ]);
+    return { notificationCount, claimCount: claimRequests.length };
   },
 };
 

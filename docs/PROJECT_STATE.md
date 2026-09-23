@@ -193,6 +193,31 @@ and to add to, and moderating it is a task (DESIGN.md §5.21).
 
 See `docs/redesign/2026-09-21/OVE-500-PROOF.md`.
 
+**Activity and reminders (OVE-501):** each row says what happened, what it is
+about and what to do next (DESIGN.md §5.22).
+- Reminders name the plant or animal, its kind, its space and its organism,
+  and when it was last written about. Same-named rows are told apart by
+  variety, then by the day and the minute each was added. A reminder never
+  guesses at the plant's health. Its Write opens the composer for exactly
+  that plant, and Close returns to the row.
+- Comments name the entry. Other social rows name the reader's plant and its
+  space. The chip that said «Системні» says «Нагадування»; no backend makes
+  a notice from OverGarden itself.
+- The count is the unread events from the receipts. The garden's rail shows
+  the same number; it used to count lineage events with no receipts. A row's
+  receipts are one bounded write. A refused write is said beside its row and
+  changes nothing, and the routes answer with a relative `Location` so a
+  reader never lands on another origin.
+- The preferences have their own page, `/notifications/settings`. Both pages
+  settle their reads: a failure is a retry of the same view, never an empty
+  list or "signed out".
+- The composer says so when the plant a link named is gone, and a guest's
+  sign-in from it keeps the plant and the way back. The return-path guard
+  refuses an encoded `/`, and the composer used to encode every one.
+- Unused "needs attention" copy is deleted from `garden-workspace-copy.ts`.
+
+See `docs/redesign/2026-09-21/OVE-501-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

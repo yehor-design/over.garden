@@ -111,6 +111,12 @@ export interface EntryComposerProps {
    * the entry anywhere by itself: that is the member's own press there.
    */
   community?: EntryComposerCommunity | null;
+  /**
+   * Why a destination the link named is not chosen (`OVE-501`): it is not in
+   * the reader's garden any more, or it could not be read. Shown until the
+   * reader picks somewhere to write.
+   */
+  destinationNotice?: "object" | "space" | "unavailable" | null;
   /** False only for deterministic visual fixtures, which must not write. */
   enableServerPersistence?: boolean;
 }
@@ -166,6 +172,7 @@ export function EntryComposer({
   initialSpaceObjects,
   closeHref = null,
   community = null,
+  destinationNotice = null,
   enableServerPersistence = true,
 }: EntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
@@ -565,6 +572,15 @@ export function EntryComposer({
                 : copy.community.closed(community.name)}
             </p>
           )}
+        </Callout>
+      ) : null}
+
+      {destinationNotice && !destination ? (
+        <Callout
+          tone="warning"
+          data-entry-composer-destination-notice={destinationNotice}
+        >
+          <p>{copy.destinationNotice[destinationNotice]}</p>
         </Callout>
       ) : null}
 

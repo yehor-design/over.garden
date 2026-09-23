@@ -133,22 +133,24 @@ const COMMUNITY_ACTIONS = new Set([
  * The panel's own interactions no longer appear here: since OVE-377 like,
  * bookmark, follow, comment and comment moderation are Server Actions that
  * render their outcome beside the control, so they neither navigate nor put a
- * status in the address. What is left are the three surfaces that still answer
- * with a redirect — lineage questions, notification receipts, and notification
- * preferences. A value not in this set is dropped rather than reflected.
+ * status in the address. What is left is the one surface that still answers
+ * with a redirect — lineage questions. Notification receipts and preferences
+ * say their outcome beside the row or the form since `OVE-501`, and an outcome
+ * is not a view worth carrying into another language. A value not in this set
+ * is dropped rather than reflected.
  */
 const ENGAGEMENT_STATUSES = new Set([
   "lineage-question-rate-limited",
   "interaction-unavailable",
-  "preferences-saved",
-  "notification-updated",
 ]);
+/** `system` is the reminders' old name; a link that still carries it keeps it. */
 const NOTIFICATION_FILTERS = new Set([
   "all",
   "comments",
   "follows",
   "mentions",
   "claims",
+  "reminders",
   "system",
 ]);
 
@@ -226,8 +228,17 @@ export const INTERFACE_ROUTE_POLICIES = [
     id: "public-notifications",
     mode: "localized-link",
     exactPaths: ["/notifications"],
-    safeQueryKeys: ["filter", "unread", "view", "engagement"],
+    safeQueryKeys: ["filter", "unread", "view"],
     preserveClientFragment: true,
+  },
+  {
+    // What Activity shows (`OVE-501`): its own page under `/notifications`,
+    // so the Activity destination stays selected while it is open.
+    id: "public-notification-settings",
+    mode: "localized-link",
+    exactPaths: ["/notifications/settings"],
+    safeQueryKeys: NO_QUERY_KEYS,
+    preserveClientFragment: false,
   },
   {
     id: "public-communities-directory",
