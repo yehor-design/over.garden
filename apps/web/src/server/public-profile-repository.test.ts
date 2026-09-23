@@ -22,9 +22,8 @@ import {
   buildPublicProfileByNormalizedHandleQuery,
   buildPublicProfileEntrySummaryQuery,
   buildPublicProfileFollowerCountQuery,
+  buildPublicProfileEntryPageQuery,
   buildPublicProfileFollowingCountQuery,
-  buildPublicProfileJournalEvidenceQuery,
-  buildPublicProfileJournalMediaEvidenceQuery,
   buildPublicProfileLineageSummaryQuery,
   buildPublicProfileLinksQuery,
   buildPublicProfileLifecycleQuery,
@@ -218,10 +217,10 @@ describe("public profile handle contracts", () => {
   });
 
   it("loads object-first evidence through active public journal anchors only", () => {
-    const compiled = buildPublicProfileObjectEvidenceQuery(
-      testDb,
-      userId,
-    ).compile();
+    const compiled = buildPublicProfileObjectEvidenceQuery(testDb, userId, {
+      page: 3,
+      pageSize: 12,
+    }).compile();
 
     expect(compiled.sql).toContain('from "plant_objects"');
     expect(compiled.sql).toContain('inner join "journal_entries"');
@@ -238,18 +237,26 @@ describe("public profile handle contracts", () => {
     );
     expect(compiled.sql).toContain('count(distinct "journal_entries"."id")');
     expect(compiled.sql).toContain('max("journal_entries"."entry_date")');
+    // One page at a time, every page reachable (OVE-494).
+    expect(compiled.sql).toMatch(/limit \$\d+ offset \$\d+$/u);
+    expect(compiled.parameters.slice(-2)).toEqual([12, 24]);
     expect(compiled.sql).not.toMatch(/email|provider|private|draft|precise/i);
   });
 
-  it("loads bounded journal evidence with public object or space context", () => {
-    const compiled = buildPublicProfileJournalEvidenceQuery(
-      testDb,
-      userId,
-    ).compile();
+  it("pages through everything the gardener published, object or space (OVE-494)", () => {
+    const compiled = buildPublicProfileEntryPageQuery(testDb, userId, {
+      page: 2,
+      pageSize: 10,
+    }).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
     expect(compiled.sql).toContain('left join "plant_objects"');
     expect(compiled.sql).toContain('inner join "spaces"');
+    // The object is joined by id and owner, not by the entry's space: an
+    // object that moved keeps its entries.
+    expect(compiled.sql).not.toContain(
+      '"plant_objects"."space_id" = "journal_entries"."space_id"',
+    );
     expect(compiled.sql).toContain('"journal_entries"."visibility" =');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
     expect(compiled.sql).toContain(
@@ -258,10 +265,12 @@ describe("public profile handle contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."published_at" is not null',
     );
+    expect(compiled.sql).toContain('"journal_entries"."source_language"');
     expect(compiled.sql).toContain(
       'order by "journal_entries"."published_at" desc',
     );
-    expect(compiled.sql).toContain("limit");
+    expect(compiled.sql).toMatch(/limit \$\d+ offset \$\d+$/u);
+    expect(compiled.parameters.slice(-2)).toEqual([10, 10]);
     expect(compiled.sql).not.toMatch(/email|provider|quarantine|exact/i);
   });
 
@@ -269,14 +278,17 @@ describe("public profile handle contracts", () => {
     const objectMedia = buildPublicProfileObjectMediaEvidenceQuery(
       testDb,
       userId,
-    ).compile();
-    const journalMedia = buildPublicProfileJournalMediaEvidenceQuery(
-      testDb,
-      userId,
       ["00000000-0000-4000-8000-000000000101"],
     ).compile();
 
-    for (const compiled of [objectMedia, journalMedia]) {
+    // One cover per object on the page, ranked per object — not the newest
+    // photographs of the whole profile, where one busy object could leave the
+    // others without one (OVE-494).
+    expect(objectMedia.sql).toContain('partition by "plant_objects"."id"');
+    expect(objectMedia.sql).toContain('"ranked_cover"."media_rank" = $');
+    expect(objectMedia.sql).toContain('"plant_objects"."id" in ($');
+
+    for (const compiled of [objectMedia]) {
       expect(compiled.sql).toContain('inner join "journal_entries"');
       expect(compiled.sql).toContain('from "media_assets"');
       expect(compiled.sql).toContain(
@@ -427,7 +439,6 @@ describe("public profile handle contracts", () => {
         publicPlantCount: "1",
         publicAnimalCount: "1",
               },
-      lineageSummary: { confirmedLineageEdgeCount: "2" },
       followerSummary: { count: "4" },
       followingSummary: { count: "3" },
       objects: [
@@ -457,13 +468,14 @@ describe("public profile handle contracts", () => {
           intrinsicHeight: 600,
         },
       ],
-      journals: [
+      entries: [
         {
           entryId: "00000000-0000-4000-8000-000000000301",
           publicSlug: "lemon-new-growth",
           entryNumber: 6,
           title: "New growth after moving the pot",
           body: "The newest leaves stayed firm through the warm afternoon.",
+          sourceLanguage: "uk",
           entryDate: "2026-07-10",
           publishedAt: "2026-07-10T12:00:00.000Z",
           entryScope: "object",
@@ -471,44 +483,88 @@ describe("public profile handle contracts", () => {
           objectPublicSlug: "balcony-lemon",
           objectDisplayName: "Balcony lemon",
           objectKind: "plant",
+          objectLocationVisibility: "region",
+          objectCoarseRegionCode: "UA-32",
+          spaceDisplayName: "Balcony",
+        },
+        {
+          entryId: "00000000-0000-4000-8000-000000000302",
+          publicSlug: "balcony-shade-cloth",
+          entryNumber: 7,
+          title: "Shade cloth over the whole balcony",
+          body: "Everything on the east side got an afternoon of shade.",
+          sourceLanguage: "uk",
+          entryDate: "2026-07-11",
+          publishedAt: "2026-07-11T12:00:00.000Z",
+          entryScope: "space",
+          objectId: null,
+          objectPublicSlug: null,
+          objectDisplayName: null,
+          objectKind: null,
+          objectLocationVisibility: null,
+          objectCoarseRegionCode: null,
           spaceDisplayName: "Balcony",
         },
       ],
-      journalMedia: [
+      entryMedia: [
         {
+          id: "00000000-0000-4000-8000-0000000000aa",
           entryId: "00000000-0000-4000-8000-000000000301",
-          mediaAssetId: "00000000-0000-4000-8000-0000000000aa",
           derivativeKey: "objects/lemon.png",
-          altText: "Lemon leaves",
           focalX: 0.5,
           focalY: 0.5,
           intrinsicWidth: 800,
           intrinsicHeight: 600,
+          caption: "Lemon leaves",
         },
       ],
+      entryTopics: [],
+      request: { entriesPage: 1, objectsPage: 1 },
     });
 
     expect(page.summary).toMatchObject({
       publicEntryCount: 12,
       publicObjectCount: 3,
       objectKinds: { plant: 1, animal: 1 },
-      confirmedLineageEdgeCount: 2,
       relationships: { followers: 4, following: 3 },
     });
-    expect(page.objects[0]).toMatchObject({
+    // Twelve entries are two pages of ten; three objects are one page.
+    expect(page.entries).toMatchObject({ page: 1, pageCount: 2 });
+    expect(page.objects).toMatchObject({ page: 1, pageCount: 1 });
+    expect(page.objects.items[0]).toMatchObject({
       displayName: "Balcony lemon",
       publicEntryCount: 4,
       publicPath: "/@green_thumb/objects/balcony-lemon",
       coverImageUrl: "https://media.over.garden/objects/lemon.png",
     });
-    expect(page.journals[0]).toMatchObject({
+    // The feed's card shape: the author is the profile, the object is the
+    // passport under the same author (ADR-0029 D9).
+    expect(page.entries.items[0]).toMatchObject({
       title: "New growth after moving the pot",
       publicPath: "/@green_thumb/post/6",
-      context: {
-        kind: "object",
-        // The passport under the same author (ADR-0029 D9).
+      sourceLanguage: "uk",
+      object: {
+        displayName: "Balcony lemon",
         publicPath: "/@green_thumb/objects/balcony-lemon",
+        safeRegionCode: "UA-32",
       },
+      space: null,
+      author: {
+        handle: "green_thumb",
+        displayName: "Green Thumb",
+        profilePath: "/bg/@green_thumb",
+      },
+      media: [
+        {
+          publicUrl: "https://media.over.garden/objects/lemon.png",
+          caption: "Lemon leaves",
+        },
+      ],
+    });
+    // An entry about the whole space names the space, with no address.
+    expect(page.entries.items[1]).toMatchObject({
+      object: null,
+      space: { displayName: "Balcony" },
     });
     expect(JSON.stringify(page)).not.toContain(userId);
     expect(JSON.stringify(page)).not.toMatch(

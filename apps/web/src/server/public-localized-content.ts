@@ -32,6 +32,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import type { PublicHomeFeedCopy } from "@/components/public/public-home-feed";
+import { entryCardFeedLabels } from "@/lib/entry-card-dates";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import { publicTopicPath } from "@/lib/garden/public-paths";
 
@@ -91,9 +92,7 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       allTopics: "Усі теми",
       removeFilter: "Прибрати фільтр",
       topicFilterLabel: "Перевірені теми",
-      discuss: "Обговорення",
-      publishedBy: "Автор",
-      safeRegion: "Регіон",
+      ...entryCardFeedLabels("uk"),
       loadMore: "Наступна сторінка",
       firstPage: "До початку стрічки",
       paginationLabel: "Сторінки стрічки",
@@ -116,10 +115,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       knowledgeTitle: "Корисне поруч",
       guideLabel: "Як почати живий журнал",
       answerLabel: "Чому жовтіє листя томатів",
-      kindLabels: {
-        plant: "Рослина",
-        animal: "Тварина",
-      },
     },
   },
   bg: {
@@ -140,9 +135,7 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       allTopics: "Всички теми",
       removeFilter: "Премахни филтъра",
       topicFilterLabel: "Проверени теми",
-      discuss: "Обсъждане",
-      publishedBy: "Автор",
-      safeRegion: "Регион",
+      ...entryCardFeedLabels("bg"),
       loadMore: "Следваща страница",
       firstPage: "Към началото на потока",
       paginationLabel: "Страници на потока",
@@ -166,10 +159,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       knowledgeTitle: "Полезно наблизо",
       guideLabel: "Как да започнете жив дневник",
       answerLabel: "Защо листата на доматите пожълтяват",
-      kindLabels: {
-        plant: "Растение",
-        animal: "Животно",
-      },
     },
   },
   ru: {
@@ -190,9 +179,7 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       allTopics: "Все темы",
       removeFilter: "Убрать фильтр",
       topicFilterLabel: "Проверенные темы",
-      discuss: "Обсуждение",
-      publishedBy: "Автор",
-      safeRegion: "Регион",
+      ...entryCardFeedLabels("ru"),
       loadMore: "Следующая страница",
       firstPage: "К началу ленты",
       paginationLabel: "Страницы ленты",
@@ -216,10 +203,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       knowledgeTitle: "Полезное рядом",
       guideLabel: "Как начать живой журнал",
       answerLabel: "Почему желтеют листья томатов",
-      kindLabels: {
-        plant: "Растение",
-        animal: "Животное",
-      },
     },
   },
 };

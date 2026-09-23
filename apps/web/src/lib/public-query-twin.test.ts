@@ -107,6 +107,10 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
       expect(publicQueryTwinPath(`${prefix}/@gardener`, "?tab=entries")).toBe(
         "/q/@gardener",
       );
+      // The page of the open tab's list is the profile's own too (OVE-494).
+      expect(publicQueryTwinPath(`${prefix}/@gardener`, "?page=2")).toBe(
+        "/q/@gardener",
+      );
       expect(
         publicQueryTwinPath(`${prefix}/@gardener`, "?profileAction=followed"),
       ).toBeNull();

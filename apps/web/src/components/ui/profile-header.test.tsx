@@ -8,7 +8,6 @@ describe("ProfileHeader", () => {
   it("names the gardener once, at the level the page asked for", () => {
     render(
       <ProfileHeader
-        eyebrow="Профіль садівника"
         displayName="Олена · міський сад"
         handle="@olena"
         bio="Вирощую їстівний балкон."
@@ -24,13 +23,19 @@ describe("ProfileHeader", () => {
     expect(screen.getByRole("button", { name: "Стежити" })).not.toBeNull();
   });
 
+  it("puts nothing above the name (OVE-494)", () => {
+    const { container } = render(
+      <ProfileHeader displayName="Олена" handle="@olena" />,
+    );
+
+    const header = container.querySelector('[data-slot="profile-header"]');
+    // The first text in the header is the gardener's name: no overline.
+    expect(header?.textContent?.startsWith("Олена")).toBe(true);
+  });
+
   it("drops a level where it is embedded rather than outranking the page", () => {
     render(
-      <ProfileHeader
-        displayName="Олена"
-        handle="@olena"
-        headingLevel="h3"
-      />,
+      <ProfileHeader displayName="Олена" handle="@olena" headingLevel="h3" />,
     );
 
     expect(
@@ -39,28 +44,33 @@ describe("ProfileHeader", () => {
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
   });
 
-  it("prints the counts that are true and omits the ones that are not", () => {
-    render(
+  it("keeps a long bio whole, in the gardener's own line breaks", () => {
+    const bio = `${"Балкон на сході, ".repeat(30)}\nДругий рядок.`;
+    const { container } = render(
+      <ProfileHeader displayName="Олена" handle="@olena" bio={bio} />,
+    );
+
+    const paragraph = container.querySelector("[data-profile-bio]");
+    expect(paragraph?.textContent).toBe(bio);
+    expect(paragraph?.className).toContain("whitespace-pre-line");
+    expect(paragraph?.className).toContain("break-words");
+  });
+
+  it("prints the counts it is given as words, and nothing when there are none", () => {
+    const { container, rerender } = render(
       <ProfileHeader
         displayName="Олена"
         handle="@olena"
-        counts={[
-          { label: "Записи", value: 18 },
-          // Zero is not news, and hidden is not zero: a visitor who cannot
-          // see a gardener's relationships should read nothing rather than
-          // a blank or a misleading 0.
-          { label: "Об’єкти", value: 0 },
-          { label: "Стежать", value: null },
-          { label: "Чернетки", value: 3, privateNote: "лише ви" },
-        ]}
+        counts={["12 підписників", "3 підписки"]}
       />,
     );
 
-    expect(screen.getByText("18")).not.toBeNull();
-    expect(screen.getByText("Записи")).not.toBeNull();
-    expect(screen.queryByText("Об’єкти")).toBeNull();
-    expect(screen.queryByText("Стежать")).toBeNull();
-    expect(screen.getByText("(лише ви)")).not.toBeNull();
+    const counts = container.querySelector("[data-profile-counts]");
+    expect(counts?.querySelectorAll("li")).toHaveLength(2);
+    expect(counts?.textContent).toContain("12 підписників");
+
+    rerender(<ProfileHeader displayName="Олена" handle="@olena" counts={[]} />);
+    expect(container.querySelector("[data-profile-counts]")).toBeNull();
   });
 
   it("falls back to initials when a gardener has no picture", () => {

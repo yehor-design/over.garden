@@ -64,9 +64,10 @@ export const PUBLIC_QUERY_TWIN_PATTERNS: ReadonlyArray<{
   readonly keys: readonly string[];
 }> = [
   {
+    // The open tab, and the page of its list (`OVE-494`).
     route: "[profileHandle]",
     matches: (basePath) => matchPublicProfilePath(basePath) !== null,
-    keys: ["tab"],
+    keys: ["tab", "page"],
   },
   {
     // The community's own facets and its paging position; a membership

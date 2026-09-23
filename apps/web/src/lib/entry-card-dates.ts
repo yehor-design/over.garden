@@ -21,14 +21,75 @@ const LOCALE_TAG: Record<PublicLocale, string> = {
   ru: "ru-RU",
 };
 
-const COPY: Record<PublicLocale, { published: string; readMore: string }> = {
-  uk: { published: "Опубліковано {date}", readMore: "Читати далі" },
-  bg: { published: "Публикувано {date}", readMore: "Прочети още" },
-  ru: { published: "Опубликовано {date}", readMore: "Читать далее" },
+/**
+ * The words a card says about itself, wherever it is drawn (`OVE-494`).
+ *
+ * The feed, the followed feed, the journals directory and a gardener's profile
+ * all draw the same card, so its labels live here, in a module a client
+ * component can import too — the owner's profile preview renders the profile
+ * inside one — rather than in each surface's own copy, where the same card
+ * could say "Автор" in one place and something else in the next.
+ */
+export interface EntryCardCopy {
+  published: string;
+  readMore: string;
+  /** The byline's prefix, read before the author's name. */
+  author: string;
+  /** The way into an entry's own discussion. */
+  discuss: string;
+  /** Before an object's coarse region, when its owner shows one. */
+  region: string;
+  kinds: Record<"plant" | "animal", string>;
+  /** What an entry is about when it is about a whole space, not one object. */
+  space: string;
+}
+
+const COPY: Record<PublicLocale, EntryCardCopy> = {
+  uk: {
+    published: "Опубліковано {date}",
+    readMore: "Читати далі",
+    author: "Автор",
+    discuss: "Обговорення",
+    region: "Регіон",
+    kinds: { plant: "Рослина", animal: "Тварина" },
+    space: "Простір",
+  },
+  bg: {
+    published: "Публикувано {date}",
+    readMore: "Прочети още",
+    author: "Автор",
+    discuss: "Обсъждане",
+    region: "Регион",
+    kinds: { plant: "Растение", animal: "Животно" },
+    space: "Пространство",
+  },
+  ru: {
+    published: "Опубликовано {date}",
+    readMore: "Читать далее",
+    author: "Автор",
+    discuss: "Обсуждение",
+    region: "Регион",
+    kinds: { plant: "Растение", animal: "Животное" },
+    space: "Пространство",
+  },
 };
 
 export function getEntryCardCopy(locale: PublicLocale) {
   return COPY[locale];
+}
+
+/**
+ * The card's labels under the names the feed's copy has always used, so the
+ * feed's copy can take them from here instead of repeating them.
+ */
+export function entryCardFeedLabels(locale: PublicLocale) {
+  const copy = COPY[locale];
+  return {
+    discuss: copy.discuss,
+    publishedBy: copy.author,
+    safeRegion: copy.region,
+    kindLabels: copy.kinds,
+  };
 }
 
 export interface EntryCardDates {

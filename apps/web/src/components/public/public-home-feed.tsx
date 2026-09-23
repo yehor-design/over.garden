@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
-import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
-import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
-import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
+import {
+  buildPublicFeedHref,
+  PublicFeedEntryCard,
+} from "@/components/public/public-feed-entry-card";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -12,25 +12,17 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EntryCard } from "@/components/ui/entry-card";
 import { ErrorState } from "@/components/ui/error-state";
 import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
-import { entryCardDates, getEntryCardCopy } from "@/lib/entry-card-dates";
-import { entryCardMedia } from "@/lib/entry-card-media";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { isKindTopicSlug } from "@/lib/system-topic-labels";
-import {
-  contentLanguageAttribute,
-  localizedPath,
-  type PublicLocale,
-} from "@/lib/public-localization";
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type {
-  PublicFeedEntry,
   PublicFeedKind,
   PublicFeedPage,
   PublicFeedRequest,
@@ -79,12 +71,6 @@ export interface PublicHomeFeedCopy {
 }
 
 export type PublicHomeFeedState = "ready" | "empty" | "loading" | "error";
-
-/** The kind's own icon, reused in the filter row and in a card's cover box. */
-const KIND_ICONS: Record<Exclude<PublicFeedKind, "all">, React.ReactNode> = {
-  plant: <Sprout aria-hidden="true" className="size-4" />,
-  animal: <PawPrint aria-hidden="true" className="size-4" />,
-};
 
 /**
  * The first screen a stranger sees.
@@ -367,93 +353,6 @@ function FeedFilterBar({
 }
 
 /** One public entry as the feed draws it; `/feed` draws a guest's the same way. */
-export function PublicFeedEntryCard({
-  locale,
-  copy,
-  entry,
-  priority,
-  returnTo,
-}: {
-  locale: PublicLocale;
-  copy: PublicHomeFeedCopy;
-  entry: PublicFeedEntry;
-  priority: boolean;
-  /**
-   * The feed view this card sits in, carried as `?from=` so the entry page's
-   * way back returns to it (`OVE-493`); the entry's canonical address is
-   * unchanged. Absent where there is no feed to go back to.
-   */
-  returnTo?: string;
-}) {
-  const dates = entryCardDates(locale, entry.entryDate, entry.publishedAt);
-  const href = returnTo
-    ? `${entry.publicPath}?${new URLSearchParams({ from: returnTo })}`
-    : entry.publicPath;
-
-  return (
-    <EntryCard
-      id={entry.id}
-      href={href}
-      title={entry.title}
-      contentLanguage={
-        contentLanguageAttribute(entry.sourceLanguage, locale).lang
-      }
-      subject={{
-        label: entry.object.displayName,
-        href: entry.object.publicPath,
-        kindLabel: copy.kindLabels[entry.object.kind],
-        icon: KIND_ICONS[entry.object.kind],
-        meta: entry.object.safeRegionCode ? (
-          <>
-            <MapPin aria-hidden="true" className="size-4" />
-            {copy.safeRegion} {entry.object.safeRegionCode}
-          </>
-        ) : null,
-      }}
-      dateTime={dates.dateTime}
-      dateLabel={dates.dateLabel}
-      published={dates.published}
-      excerpt={entry.excerpt}
-      readMoreLabel={
-        entry.excerptTruncated ? getEntryCardCopy(locale).readMore : undefined
-      }
-      media={entryCardMedia(entry.media)}
-      author={
-        entry.author
-          ? {
-              displayName: entry.author.displayName,
-              href: entry.author.profilePath,
-              avatarUrl: entry.author.avatarUrl,
-            }
-          : null
-      }
-      authorPrefix={copy.publishedBy}
-      topics={entry.topics.map((topic) => ({
-        label: topic.label,
-        href: buildPublicFeedHref(locale, {
-          cursor: null,
-          kind: "all",
-          topic: topic.slug,
-        }),
-      }))}
-      /* The card's engagement slot. A feed read carries no viewer like state
-         and this task does not change it, so what the card offers is the one
-         engagement affordance that needs no read and no bundle: the way into
-         the entry's own discussion, where the real controls live. */
-      engagement={
-        <Link
-          href={`${href}#comments`}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-        >
-          <MessageCircle aria-hidden="true" />
-          {copy.discuss}
-        </Link>
-      }
-      priority={priority}
-    />
-  );
-}
-
 function PublicFeedLoading({ label }: { label: string }) {
   return (
     <div
@@ -589,22 +488,4 @@ export function buildPublicHomeFeedContextModules(
       ],
     },
   ];
-}
-
-export function buildPublicFeedHref(
-  locale: PublicLocale,
-  input: {
-    cursor: string | null;
-    kind: PublicFeedKind;
-    topic: string | null;
-  },
-) {
-  const params = new URLSearchParams();
-  if (input.cursor) params.set("cursor", input.cursor);
-  if (input.kind !== "all") params.set("kind", input.kind);
-  if (input.topic) params.set("topic", input.topic);
-
-  const path = localizedPath(locale, "/");
-  const query = params.toString();
-  return query ? `${path}?${query}` : path;
 }

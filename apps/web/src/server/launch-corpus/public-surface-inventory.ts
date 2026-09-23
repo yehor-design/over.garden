@@ -12,7 +12,7 @@ export interface PublicLaunchJournalCaller {
  * query without applying the shared policy makes the inventory test fail.
  */
 export const PUBLIC_LAUNCH_JOURNAL_CALLERS = [
-  ["feed", "public-feed-repository.ts", 2],
+  ["feed", "public-feed-repository.ts", 4],
   ["directory-query", "public-journal-directory-query.ts", 2],
   ["directory-repository", "public-journal-directory-repository.ts", 1],
   ["knowledge-evidence", "public-knowledge-evidence-repository.ts", 1],
@@ -20,7 +20,10 @@ export const PUBLIC_LAUNCH_JOURNAL_CALLERS = [
   ["object-catalog", "public-object-catalog-repository.ts", 1],
   ["object-passport", "public-object-passport-repository.ts", 4],
   ["journal-readback", "journal-repository.ts", 10],
-  ["profile", "public-profile-repository.ts", 8],
+  // Seven since OVE-494: the profile's entry photographs and topics are read
+  // through the feed's shared media and topic reads, which apply the policy
+  // themselves (counted under "feed").
+  ["profile", "public-profile-repository.ts", 7],
   ["lineage", "public-lineage-repository.ts", 3],
   ["variety", "public-variety-repository.ts", 3],
   ["organism-card", "public-organism-card-query.ts", 1],

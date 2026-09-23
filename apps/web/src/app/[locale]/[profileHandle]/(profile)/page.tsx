@@ -6,7 +6,7 @@ import {
   ProfileActions,
   PublicProfileView,
 } from "@/components/public/public-profile";
-import { normalizePublicProfileTab } from "@/lib/public-profile-tabs";
+import type { PublicProfileTabId } from "@/lib/public-profile-tabs";
 import {
   publicProfileBasePath,
   publicProfilePath,
@@ -102,21 +102,36 @@ export default async function LocalizedPublicProfileRoute({
   return renderStaticPublicPage({
     fallback: <RootLoadingSkeleton />,
     render: (phase) =>
-      renderPublicProfile(localeParam, handle, searchParams, "objects", phase),
+      renderPublicProfile(localeParam, handle, searchParams, {
+        tab: "entries",
+        page: 1,
+        phase,
+      }),
   });
 }
 
+/**
+ * The profile, for the static document and for its `/q` twin. `page` is the
+ * open tab's page; the other tab's panel is its first page (`OVE-494`).
+ */
 export async function renderPublicProfile(
   localeParam: PublicLocale,
   routeHandle: string,
   searchParams: LocalizedPublicProfileRouteProps["searchParams"],
-  activeTab: ReturnType<typeof normalizePublicProfileTab> = "objects",
-  phase: PublicRenderPhase = "request",
+  view: {
+    tab: PublicProfileTabId;
+    page: number;
+    phase?: PublicRenderPhase;
+  } = { tab: "entries", page: 1 },
 ) {
+  const activeTab = view.tab;
+  const phase = view.phase ?? "request";
   await deferStaticRenderWithoutDatabase(phase);
   const profile = await readPublicProfileEvidencePage(
     routeHandle,
     localeParam,
+    activeTab === "entries" ? view.page : 1,
+    activeTab === "objects" ? view.page : 1,
   ).catch((error: unknown) => {
     unstable_rethrow(error);
     if (error instanceof StaticRenderDeferred) throw error;
@@ -226,19 +241,19 @@ function buildProfileDiscoverySource(
       page.mention,
       page.bio ?? "",
       description,
-      ...page.objects.flatMap((object) => [
+      ...page.objects.items.flatMap((object) => [
         object.displayName,
         object.identityLabel ?? "",
       ]),
-      ...page.journals.flatMap((journal) => [
-        journal.title,
-        journal.bodyPreview,
-        journal.context.label,
+      ...page.entries.items.flatMap((entry) => [
+        entry.title,
+        entry.excerpt,
+        entry.object?.displayName ?? entry.space?.displayName ?? "",
       ]),
     ],
     distinctPublicEntityIds: [
-      ...page.objects.map((object) => object.objectId),
-      ...page.journals.map((journal) => journal.entryId),
+      ...page.objects.items.map((object) => object.objectId),
+      ...page.entries.items.map((entry) => entry.id),
     ],
     canonicalPath: publicProfilePath(locale, page.handle),
     equivalentLocales: [...PUBLIC_LOCALES],

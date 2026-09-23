@@ -61,6 +61,21 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
     expect(paginatedListingRobotsTag("/feed", page("2"))).toBeNull();
     expect(paginatedListingRobotsTag("/topics/plants", page("2"))).toBeNull();
   });
+
+  it("keeps a profile's later pages out of the index too (OVE-494)", () => {
+    const page = (value?: string) =>
+      new URLSearchParams(value ? { page: value } : {});
+    expect(paginatedListingRobotsTag("/@olena", page("2"))).toBe(
+      "noindex, follow",
+    );
+    expect(paginatedListingRobotsTag("/bg/@olena", page("3"))).toBe(
+      "noindex, follow",
+    );
+    expect(paginatedListingRobotsTag("/@olena", page())).toBeNull();
+    expect(paginatedListingRobotsTag("/@olena", page("1"))).toBeNull();
+    // An entry or a passport under the handle is not the profile's list.
+    expect(paginatedListingRobotsTag("/@olena/post/3", page("2"))).toBeNull();
+  });
 });
 
 describe("a filtered view of the catalogue's one door (OVE-451)", () => {

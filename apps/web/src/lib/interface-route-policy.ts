@@ -285,11 +285,12 @@ export const INTERFACE_ROUTE_POLICIES = [
     id: "public-profile",
     mode: "localized-link",
     prefixes: ["/@", "/%40"],
-    // `tab` is the profile's own view, and it is on this list because it has
-    // to be: the author-scoped rewrite rebuilds the search string from the
-    // allow-list, so a parameter that is not declared here never reaches the
-    // page at all — the address changes and the view does not (`OVE-450`).
-    safeQueryKeys: ["profileAction", "authIntent", "tab"],
+    // `tab` is the profile's own view and `page` the page of that tab's list,
+    // and they are on this list because they have to be: the author-scoped
+    // rewrite rebuilds the search string from the allow-list, so a parameter
+    // that is not declared here never reaches the page at all — the address
+    // changes and the view does not (`OVE-450`, `OVE-494`).
+    safeQueryKeys: ["profileAction", "authIntent", "tab", "page"],
     preserveClientFragment: true,
   },
   {

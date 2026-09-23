@@ -50,6 +50,7 @@ const mocks = vi.hoisted(() => ({
   getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
   }),
+  isPublicProfilePageBeyondTheEnd: vi.fn().mockResolvedValue(false),
   getPublicCommunityLifecycleLookup: vi.fn().mockResolvedValue({
     status: "found",
   }),
@@ -91,6 +92,7 @@ vi.mock("@/server/journal-repository", () => ({
 
 vi.mock("@/server/public-profile-repository", () => ({
   getPublicProfileLifecycleLookup: mocks.getPublicProfileLifecycleLookup,
+  isPublicProfilePageBeyondTheEnd: mocks.isPublicProfilePageBeyondTheEnd,
 }));
 
 vi.mock("@/server/community-repository", () => ({
@@ -826,18 +828,95 @@ describe("app route cache guardrail", () => {
   it.each(["/@active_garden", "/bg/@active_garden", "/ru/@active_garden"])(
     "rewrites selected profile tabs after lifecycle classification: %s",
     async (address) => {
-      const response = await responseFor(`${address}?tab=entries`, {
+      const response = await responseFor(`${address}?tab=objects`, {
         accept: "text/html",
       });
       expect(response.status).toBe(200);
       const rewrite = response.headers.get("x-middleware-rewrite");
-      expect(rewrite).toContain("/q/@active_garden?tab=entries");
+      expect(rewrite).toContain("/q/@active_garden?tab=objects");
       expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
         "active_garden",
         null,
       );
     },
   );
+
+  it.each([
+    ["/@active_garden?tab=about", "/uk/@active_garden"],
+    ["/@active_garden?page=abc", "/uk/@active_garden"],
+    ["/bg/@active_garden?tab=communities&utm_source=mail", null],
+    ["/ru/@active_garden?tab=about", null],
+  ])(
+    "serves the static profile when nothing the page reads survives the policy: %s",
+    async (address, rewrite) => {
+      const response = await responseFor(address, {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      });
+      expect(response.status).toBe(200);
+      // Not the `/q` twin: the document that reads without a script. An
+      // unprefixed address is rewritten into its locale's tree; a prefixed
+      // one already names it and passes through untouched.
+      const rewritten = response.headers.get("x-middleware-rewrite");
+      if (rewrite === null) {
+        expect(rewritten).toBeNull();
+      } else {
+        const target = new URL(rewritten!);
+        expect(target.pathname).toBe(rewrite);
+        expect(target.search).toBe("");
+      }
+    },
+  );
+
+  it("pages a profile's lists through its twin, out of the index, and 404s past the end (OVE-494)", async () => {
+    const document = { accept: "text/html", "sec-fetch-dest": "document" };
+    mocks.isPublicProfilePageBeyondTheEnd.mockClear();
+
+    const first = await responseFor("/@active_garden", document);
+    expect(first.status).toBe(200);
+    expect(first.headers.get("X-Robots-Tag")).toBeNull();
+    expect(mocks.isPublicProfilePageBeyondTheEnd).not.toHaveBeenCalled();
+
+    const second = await responseFor("/@active_garden?page=2", document);
+    expect(second.status).toBe(200);
+    expect(second.headers.get("x-middleware-rewrite")).toContain(
+      "/q/@active_garden?page=2",
+    );
+    // Page two is not indexed, so it cannot duplicate page one; `follow`
+    // keeps every entry it lists reachable.
+    expect(second.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+    expect(mocks.isPublicProfilePageBeyondTheEnd).toHaveBeenLastCalledWith(
+      "active_garden",
+      "entries",
+      2,
+    );
+
+    const objects = await responseFor(
+      "/bg/@active_garden?tab=objects&page=3",
+      document,
+    );
+    expect(objects.headers.get("x-middleware-rewrite")).toContain(
+      "/q/@active_garden?tab=objects&page=3",
+    );
+    expect(mocks.isPublicProfilePageBeyondTheEnd).toHaveBeenLastCalledWith(
+      "active_garden",
+      "objects",
+      3,
+    );
+
+    mocks.isPublicProfilePageBeyondTheEnd.mockResolvedValueOnce(true);
+    const beyond = await responseFor("/@active_garden?page=40", document);
+    expect(beyond.status).toBe(404);
+    expect(beyond.headers.get("x-middleware-rewrite")).toBeNull();
+
+    // A bound that cannot be read lets the page through; the page itself
+    // says the list has nothing there.
+    mocks.isPublicProfilePageBeyondTheEnd.mockRejectedValueOnce(
+      new Error("database away"),
+    );
+    const unread = await responseFor("/@active_garden?page=2", document);
+    expect(unread.status).toBe(200);
+  });
 
   it.each([
     "/@blocked_garden",

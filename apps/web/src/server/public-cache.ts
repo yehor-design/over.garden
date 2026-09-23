@@ -198,14 +198,24 @@ export async function readPublicJournalDirectoryFacets() {
   return listPublicJournalDirectoryFacets();
 }
 
+/**
+ * A profile with one page of each of its lists (`OVE-494`). The pages are
+ * plain numbers so each view is its own cache entry; the static document is
+ * `1, 1`.
+ */
 export async function readPublicProfileEvidencePage(
   handle: string,
   locale: PublicLocale,
+  entriesPage = 1,
+  objectsPage = 1,
 ) {
   "use cache";
   cacheLife("hours");
   cacheTag(PUBLIC_CACHE_TAGS.profiles, publicCacheTag.profile(handle));
-  return getPublicProfileEvidencePageByHandle(handle, locale);
+  return getPublicProfileEvidencePageByHandle(handle, locale, {
+    entriesPage,
+    objectsPage,
+  });
 }
 
 export async function readPublicTopicPage(slug: string, locale: PublicLocale) {

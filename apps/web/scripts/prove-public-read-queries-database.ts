@@ -419,6 +419,7 @@ async function readCases(): Promise<ReadCase[]> {
         profile.getPublicProfileEvidencePageByHandle(
           `@${ABSENT_HANDLE}`,
           "uk",
+          profile.FIRST_PUBLIC_PROFILE_PAGES,
           db,
         ),
     },

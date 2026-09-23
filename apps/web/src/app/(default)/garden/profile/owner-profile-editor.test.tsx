@@ -62,13 +62,10 @@ const WORKSPACE: OwnerProfileWorkspace = {
       publicEntryCount: 0,
       publicObjectCount: 0,
       objectKinds: { plant: 0, animal: 0 },
-      confirmedLineageEdgeCount: 0,
       relationships: { followers: 0, following: 0 },
     },
-    objects: [],
-    journals: [],
-    hasMoreObjects: false,
-    hasMoreJournals: false,
+    entries: { items: [], page: 1, pageCount: 1 },
+    objects: { items: [], page: 1, pageCount: 1 },
   },
   avatarOptions: [
     {
@@ -106,7 +103,7 @@ describe("OwnerProfileEditor", () => {
     expect(html).toContain('name="locationVisibility"');
     expect(html).toContain('name="coarseRegionCode"');
     expect(html).toContain('name="relationshipVisibility"');
-    expect(html).toContain('data-public-profile="v2"');
+    expect(html).toContain('data-public-profile="v3"');
     expect(html).toContain('data-public-preview-audience="visitor"');
     expect(html).not.toContain("<h1");
     expect(html).toMatch(/<h3[^>]*>Олена<\/h3>/);
@@ -114,7 +111,8 @@ describe("OwnerProfileEditor", () => {
     expect(html).toContain('data-auth-intent-control="report"');
     expect(html).toContain('data-auth-intent-control="block"');
     expect(html).not.toContain("Редагувати профіль");
-    expect(html).toContain("Додайте живий об’єкт");
+    // The owner's first steps, in the preview (OVE-494).
+    expect(html).toContain("Тут з’являться ваші опубліковані записи.");
     expect(html).not.toMatch(
       /email|provider|session|quarantine|derivative_key|owner_user_id|latitude|longitude/i,
     );

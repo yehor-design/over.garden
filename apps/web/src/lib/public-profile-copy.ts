@@ -1,51 +1,68 @@
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
+type PluralForms = { one: string; few: string; many: string; other: string };
+
+/**
+ * A public profile's words (`OVE-494`).
+ *
+ * The vocabulary is the product's: an *entry* is one observation, an
+ * *object* is a living subject, and an object's *journal* is its history — so
+ * the tabs say "Записи" and "Об’єкти", and an object's card says it is a
+ * journal of so many entries. Nothing here names how the page is built: no
+ * lineage counts, no claim queues, no "hidden counters" notice.
+ */
 const PUBLIC_PROFILE_COPY = {
   uk: {
     profileLabel: "Профіль садівника",
     metadataSuffix: "публічний профіль",
-    objectsTitle: "Живі об’єкти",
-    objectsDescription:
-      "Рослини, тварини та бджолині сім’ї з відкритою історією догляду.",
-    journalsTitle: "Журнал догляду",
-    journalsDescription: "Опубліковані спостереження, зміни та результати.",
-    aboutTitle: "Про садівника",
-    aboutEmpty: "Автор поки не додав опис.",
+    sectionsLabel: "Розділи профілю",
+    entriesTab: "Записи",
+    objectsTab: "Об’єкти",
+    region: "Регіон",
+    languages: "Мови",
+    followers: {
+      one: "підписник",
+      few: "підписники",
+      many: "підписників",
+      other: "підписника",
+    },
+    following: {
+      one: "підписка",
+      few: "підписки",
+      many: "підписок",
+      other: "підписки",
+    },
     follow: "Стежити",
     unfollow: "Не стежити",
-    followingState: "Ви стежите",
     report: "Поскаржитися",
     block: "Заблокувати",
     moreActions: "Інші дії",
     manageProfile: "Редагувати профіль",
-    addFirstObject: "Додати перший об’єкт",
+    newEntry: "Новий запис",
+    addObject: "Додати об’єкт",
     publicObjects: "Об’єкти",
     publicEntries: "Записи",
-    followers: "Стежать",
-    following: "Стежить",
-    lineage: "Підтверджені походження",
     plants: "Рослини",
     animals: "Тварини",
+    plant: "Рослина",
+    animal: "Тварина",
+    noEntries: "Опублікованих записів ще немає.",
+    noOwnerEntries:
+      "Тут з’являться ваші опубліковані записи. Почніть із першого.",
     noObjects: "Публічних об’єктів ще немає.",
     noOwnerObjects:
-      "Додайте живий об’єкт і опублікуйте перший запис, щоб він з’явився тут.",
-    noJournals: "Опублікованих записів ще немає.",
-    noOwnerJournals:
-      "Опублікуйте запис про об’єкт або простір, щоб почати журнал.",
-    showMore: (count: number, hasMore: boolean) =>
-      `Показати ще ${count}${hasMore ? "+" : ""}`,
-    entryCount: (count: number) => `${count} зап.`,
-    latestUpdate: "Оновлено",
-    identityConfirmed: "Визначено",
-    identityProvisional: "Уточнюється",
-    identityUnknown: "Без визначення",
-    region: "Регіон",
-    languages: "Мови",
-    activity: "Активність",
-    navigation: "Перейти далі",
-    followedFeed: "Стрічка підписок",
-    lineageClaims: "Запити походження",
-    relationshipsHidden: "Лічильники підписок приховані.",
+      "Об’єкт з’явиться тут, щойно ви опублікуєте про нього запис.",
+    pageMissing: "На цій сторінці нічого немає.",
+    firstPage: "До першої сторінки",
+    entriesPages: "Сторінки записів",
+    objectsPages: "Сторінки об’єктів",
+    newerEntries: "Новіші",
+    olderEntries: "Старіші",
+    previousObjects: "Попередні",
+    nextObjects: "Наступні",
+    pageStatus: "Сторінка {page} з {count}",
+    journal: "Журнал",
+    latestEntry: "Останній запис {date}",
     reportTitle: "Причина скарги",
     reportSubmit: "Надіслати скаргу",
     reportReasons: {
@@ -55,7 +72,6 @@ const PUBLIC_PROFILE_COPY = {
       impersonation: "Видає себе за іншу особу",
       other: "Інше",
     },
-    privateProfile: "Приватний профіль",
     actionMessages: {
       followed: "Тепер ви стежите за цим профілем.",
       unfollowed: "Ви більше не стежите за цим профілем.",
@@ -66,48 +82,53 @@ const PUBLIC_PROFILE_COPY = {
   bg: {
     profileLabel: "Профил на градинар",
     metadataSuffix: "публичен профил",
-    objectsTitle: "Живи обекти",
-    objectsDescription:
-      "Растения, животни и пчелни семейства с публична история на грижите.",
-    journalsTitle: "Дневник за грижи",
-    journalsDescription: "Публикувани наблюдения, промени и резултати.",
-    aboutTitle: "За градинаря",
-    aboutEmpty: "Авторът все още не е добавил описание.",
+    sectionsLabel: "Раздели на профила",
+    entriesTab: "Записи",
+    objectsTab: "Обекти",
+    region: "Регион",
+    languages: "Езици",
+    followers: {
+      one: "последовател",
+      few: "последователи",
+      many: "последователи",
+      other: "последователи",
+    },
+    following: {
+      one: "последван",
+      few: "последвани",
+      many: "последвани",
+      other: "последвани",
+    },
     follow: "Следвай",
     unfollow: "Спри следването",
-    followingState: "Следвате",
     report: "Докладвай",
     block: "Блокирай",
     moreActions: "Други действия",
     manageProfile: "Редактирай профила",
-    addFirstObject: "Добави първи обект",
+    newEntry: "Нов запис",
+    addObject: "Добави обект",
     publicObjects: "Обекти",
     publicEntries: "Записи",
-    followers: "Последователи",
-    following: "Следва",
-    lineage: "Потвърден произход",
     plants: "Растения",
     animals: "Животни",
+    plant: "Растение",
+    animal: "Животно",
+    noEntries: "Все още няма публикувани записи.",
+    noOwnerEntries:
+      "Тук ще се появят публикуваните ви записи. Започнете с първия.",
     noObjects: "Все още няма публични обекти.",
-    noOwnerObjects:
-      "Добавете жив обект и публикувайте първия запис, за да се появи тук.",
-    noJournals: "Все още няма публикувани записи.",
-    noOwnerJournals:
-      "Публикувайте запис за обект или пространство, за да започнете дневника.",
-    showMore: (count: number, hasMore: boolean) =>
-      `Покажи още ${count}${hasMore ? "+" : ""}`,
-    entryCount: (count: number) => `${count} зап.`,
-    latestUpdate: "Обновено",
-    identityConfirmed: "Определено",
-    identityProvisional: "Уточнява се",
-    identityUnknown: "Без определяне",
-    region: "Регион",
-    languages: "Езици",
-    activity: "Активност",
-    navigation: "Продължете към",
-    followedFeed: "Поток от следвани",
-    lineageClaims: "Заявки за произход",
-    relationshipsHidden: "Броячите за следване са скрити.",
+    noOwnerObjects: "Обектът ще се появи тук, щом публикувате запис за него.",
+    pageMissing: "На тази страница няма нищо.",
+    firstPage: "Към първата страница",
+    entriesPages: "Страници със записи",
+    objectsPages: "Страници с обекти",
+    newerEntries: "По-нови",
+    olderEntries: "По-стари",
+    previousObjects: "Предишни",
+    nextObjects: "Следващи",
+    pageStatus: "Страница {page} от {count}",
+    journal: "Дневник",
+    latestEntry: "Последен запис {date}",
     reportTitle: "Причина за доклада",
     reportSubmit: "Изпрати доклад",
     reportReasons: {
@@ -117,7 +138,6 @@ const PUBLIC_PROFILE_COPY = {
       impersonation: "Представяне за друго лице",
       other: "Друго",
     },
-    privateProfile: "Частен профил",
     actionMessages: {
       followed: "Вече следвате този профил.",
       unfollowed: "Вече не следвате този профил.",
@@ -129,48 +149,54 @@ const PUBLIC_PROFILE_COPY = {
   ru: {
     profileLabel: "Профиль садовода",
     metadataSuffix: "публичный профиль",
-    objectsTitle: "Живые объекты",
-    objectsDescription:
-      "Растения, животные и пчелиные семьи с открытой историей ухода.",
-    journalsTitle: "Журнал ухода",
-    journalsDescription: "Опубликованные наблюдения, изменения и результаты.",
-    aboutTitle: "О садоводе",
-    aboutEmpty: "Автор пока не добавил описание.",
+    sectionsLabel: "Разделы профиля",
+    entriesTab: "Записи",
+    objectsTab: "Объекты",
+    region: "Регион",
+    languages: "Языки",
+    followers: {
+      one: "подписчик",
+      few: "подписчика",
+      many: "подписчиков",
+      other: "подписчика",
+    },
+    following: {
+      one: "подписка",
+      few: "подписки",
+      many: "подписок",
+      other: "подписки",
+    },
     follow: "Следить",
     unfollow: "Не следить",
-    followingState: "Вы следите",
     report: "Пожаловаться",
     block: "Заблокировать",
     moreActions: "Другие действия",
     manageProfile: "Редактировать профиль",
-    addFirstObject: "Добавить первый объект",
+    newEntry: "Новая запись",
+    addObject: "Добавить объект",
     publicObjects: "Объекты",
     publicEntries: "Записи",
-    followers: "Следят",
-    following: "Следит",
-    lineage: "Подтверждённое происхождение",
     plants: "Растения",
     animals: "Животные",
+    plant: "Растение",
+    animal: "Животное",
+    noEntries: "Опубликованных записей пока нет.",
+    noOwnerEntries:
+      "Здесь появятся ваши опубликованные записи. Начните с первой.",
     noObjects: "Публичных объектов пока нет.",
     noOwnerObjects:
-      "Добавьте живой объект и опубликуйте первую запись, чтобы он появился здесь.",
-    noJournals: "Опубликованных записей пока нет.",
-    noOwnerJournals:
-      "Опубликуйте запись об объекте или пространстве, чтобы начать журнал.",
-    showMore: (count: number, hasMore: boolean) =>
-      `Показать ещё ${count}${hasMore ? "+" : ""}`,
-    entryCount: (count: number) => `${count} зап.`,
-    latestUpdate: "Обновлено",
-    identityConfirmed: "Определено",
-    identityProvisional: "Уточняется",
-    identityUnknown: "Без определения",
-    region: "Регион",
-    languages: "Языки",
-    activity: "Активность",
-    navigation: "Перейти дальше",
-    followedFeed: "Лента подписок",
-    lineageClaims: "Запросы происхождения",
-    relationshipsHidden: "Счётчики подписок скрыты.",
+      "Объект появится здесь, как только вы опубликуете о нём запись.",
+    pageMissing: "На этой странице ничего нет.",
+    firstPage: "К первой странице",
+    entriesPages: "Страницы записей",
+    objectsPages: "Страницы объектов",
+    newerEntries: "Более новые",
+    olderEntries: "Более ранние",
+    previousObjects: "Предыдущие",
+    nextObjects: "Следующие",
+    pageStatus: "Страница {page} из {count}",
+    journal: "Журнал",
+    latestEntry: "Последняя запись {date}",
     reportTitle: "Причина жалобы",
     reportSubmit: "Отправить жалобу",
     reportReasons: {
@@ -180,7 +206,6 @@ const PUBLIC_PROFILE_COPY = {
       impersonation: "Выдаёт себя за другого человека",
       other: "Другое",
     },
-    privateProfile: "Приватный профиль",
     actionMessages: {
       followed: "Теперь вы следите за этим профилем.",
       unfollowed: "Вы больше не следите за этим профилем.",
@@ -189,10 +214,24 @@ const PUBLIC_PROFILE_COPY = {
         "Действие не выполнено. Обновите страницу и попробуйте снова.",
     },
   },
-} satisfies Record<InterfaceLocale, object>;
+} satisfies Record<
+  InterfaceLocale,
+  { followers: PluralForms; following: PluralForms } & Record<string, unknown>
+>;
 
 export function getPublicProfileCopy(locale: InterfaceLocale) {
   return PUBLIC_PROFILE_COPY[locale];
+}
+
+/** "12 підписників", in the reader's language and its plural rules. */
+export function formatPublicProfileCount(
+  locale: InterfaceLocale,
+  kind: "followers" | "following",
+  count: number,
+) {
+  const forms = PUBLIC_PROFILE_COPY[locale][kind];
+  const category = new Intl.PluralRules(locale).select(count);
+  return `${count} ${forms[category as keyof PluralForms] ?? forms.other}`;
 }
 
 export const PUBLIC_PROFILE_LANGUAGE_LABELS: Record<

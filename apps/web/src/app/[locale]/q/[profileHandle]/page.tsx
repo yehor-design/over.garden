@@ -6,7 +6,10 @@ import {
 } from "@/app/[locale]/[profileHandle]/(profile)/page";
 import { isPublicLocale } from "@/lib/public-localization";
 import { matchPublicProfilePath } from "@/lib/public-profile-lifecycle";
-import { normalizePublicProfileTab } from "@/lib/public-profile-tabs";
+import {
+  normalizePublicProfilePage,
+  normalizePublicProfileTab,
+} from "@/lib/public-profile-tabs";
 
 export { generateMetadata };
 
@@ -18,10 +21,8 @@ export default async function ProfileTabRoute({
   const handle = matchPublicProfilePath(`/${profileHandle}`);
   if (!isPublicLocale(locale) || !handle) notFound();
   const query = (await searchParams) ?? {};
-  return renderPublicProfile(
-    locale,
-    handle,
-    searchParams,
-    normalizePublicProfileTab(query.tab),
-  );
+  return renderPublicProfile(locale, handle, searchParams, {
+    tab: normalizePublicProfileTab(query.tab),
+    page: normalizePublicProfilePage(query.page),
+  });
 }

@@ -20,8 +20,8 @@ import {
   buildPublicObjectPassportTimelineQuery,
 } from "@/server/public-object-passport-repository";
 import {
+  buildPublicProfileEntryPageQuery,
   buildPublicProfileEntrySummaryQuery,
-  buildPublicProfileJournalEvidenceQuery,
 } from "@/server/public-profile-repository";
 
 loadEnv({ path: ".env.local" });
@@ -122,9 +122,10 @@ async function main() {
       baseline.plantObjectId,
       40,
     ).execute();
-    const profileEntries = await buildPublicProfileJournalEvidenceQuery(
+    const profileEntries = await buildPublicProfileEntryPageQuery(
       trx,
       baseline.ownerUserId,
+      { page: 1, pageSize: 100 },
     ).execute();
     const timelineIds = new Set(timeline.map((row) => row.entryId));
     const profileIds = new Set(profileEntries.map((row) => row.entryId));

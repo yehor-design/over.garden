@@ -20,11 +20,13 @@ import {
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
+  isCoarseRegionCode,
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  normalizePublicContentLanguage,
   type PublicLocale,
 } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
@@ -36,15 +38,30 @@ import {
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
+import {
+  buildPublicFeedExcerpt,
+  buildPublicFeedMediaQuery,
+  buildPublicFeedTopicsForEntriesQuery,
+  isPublicFeedExcerptTruncated,
+  serializePublicFeedMedia,
+  type PublicFeedCardEntry,
+  type PublicFeedMediaRow,
+  type PublicFeedTopicRow,
+} from "@/server/public-feed-repository";
+import { localizeTopicLabel } from "@/lib/system-topic-labels";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 const MAX_PROFILE_LINKS = 5;
-export const PUBLIC_PROFILE_OBJECT_PREVIEW_SIZE = 6;
-export const PUBLIC_PROFILE_OBJECT_LIMIT = 12;
-export const PUBLIC_PROFILE_JOURNAL_PREVIEW_SIZE = 8;
-export const PUBLIC_PROFILE_JOURNAL_LIMIT = 16;
-const PUBLIC_PROFILE_MEDIA_LIMIT = 96;
+/**
+ * A profile's two lists, a page at a time (`OVE-494`). Every entry and every
+ * object is reachable from the profile by paging, where the profile used to
+ * stop at sixteen entries and twelve objects with no way past them.
+ */
+export const PUBLIC_PROFILE_ENTRY_PAGE_SIZE = 10;
+export const PUBLIC_PROFILE_OBJECT_PAGE_SIZE = 12;
+/** The same ceiling the interface route policy puts on `?page=`. */
+export const PUBLIC_PROFILE_MAX_PAGE = 1_000;
 
 const PUBLIC_PROFILE_LANGUAGES = new Set<PublicProfileLanguage>([
   "uk",
@@ -117,28 +134,32 @@ export interface PublicProfileObjectEvidence {
   coverVariantLongEdges: number[];
 }
 
-export interface PublicProfileJournalEvidence {
-  entryId: string;
-  title: string;
-  bodyPreview: string;
-  entryDate: Date | string;
-  publishedAt: Date | string;
-  publicPath: string;
-  context: {
-    kind: "object" | "space";
-    label: string;
-    publicPath: string | null;
-    objectKind: PlantObjectKind | null;
-  };
-  coverImageUrl: string | null;
-  coverImageAlt: string;
-  coverFocalX: number | null;
-  coverFocalY: number | null;
-  coverIntrinsicWidth: number | null;
-  coverIntrinsicHeight: number | null;
-  coverPlaceholderDataUri: string | null;
-  coverVariantLongEdges: number[];
+/**
+ * One of the gardener's entries, in the shape the feed's card draws
+ * (`OVE-494`): a profile shows the same card as the feed, not a card of its
+ * own.
+ */
+export type PublicProfileEntry = PublicFeedCardEntry;
+
+/** One page of one of a profile's lists. */
+export interface PublicProfileListPage<Item> {
+  items: Item[];
+  /** 1-based, as asked for. A page past the end has no items. */
+  page: number;
+  /** At least 1, so an empty list still has the page it is on. */
+  pageCount: number;
 }
+
+/** Which page of each list a view shows. */
+export interface PublicProfileListRequest {
+  entriesPage: number;
+  objectsPage: number;
+}
+
+export const FIRST_PUBLIC_PROFILE_PAGES: PublicProfileListRequest = {
+  entriesPage: 1,
+  objectsPage: 1,
+};
 
 export interface PublicProfileEvidencePage {
   handle: string;
@@ -156,16 +177,13 @@ export interface PublicProfileEvidencePage {
       plant: number;
       animal: number;
     };
-    confirmedLineageEdgeCount: number;
     relationships: {
       followers: number;
       following: number;
     } | null;
   };
-  objects: PublicProfileObjectEvidence[];
-  journals: PublicProfileJournalEvidence[];
-  hasMoreObjects: boolean;
-  hasMoreJournals: boolean;
+  entries: PublicProfileListPage<PublicProfileEntry>;
+  objects: PublicProfileListPage<PublicProfileObjectEvidence>;
   qualityClass?: PublicProjectionQualityClass;
 }
 
@@ -230,13 +248,14 @@ interface PublicProfileObjectRow {
   publicEntryCount: string | number | bigint;
 }
 
-interface PublicProfileJournalRow {
+interface PublicProfileEntryRow {
   entryId: string;
   publicSlug: string | null;
   /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
   entryNumber: number | null;
   title: string;
   body: string;
+  sourceLanguage: string | null;
   entryDate: Date | string;
   publishedAt: Date | string | null;
   entryScope: string;
@@ -244,22 +263,13 @@ interface PublicProfileJournalRow {
   objectPublicSlug: string | null;
   objectDisplayName: string | null;
   objectKind: string | null;
+  objectLocationVisibility: string | null;
+  objectCoarseRegionCode: string | null;
   spaceDisplayName: string;
 }
 
 interface PublicProfileObjectMediaRow {
   objectId: string;
-  entryId: string;
-  mediaAssetId: string;
-  derivativeKey: string | null;
-  altText: string | null;
-  focalX: number | null;
-  focalY: number | null;
-  intrinsicWidth: number | null;
-  intrinsicHeight: number | null;
-}
-
-interface PublicProfileJournalMediaRow {
   entryId: string;
   mediaAssetId: string;
   derivativeKey: string | null;
@@ -425,6 +435,7 @@ export async function getPublicProfilePageByHandle(
 export async function getPublicProfileEvidencePageByHandle(
   rawHandle: string,
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+  request: PublicProfileListRequest = FIRST_PUBLIC_PROFILE_PAGES,
   executor: QueryExecutor = db,
 ): Promise<PublicProfileEvidencePage | null> {
   const parsed = parsePublicHandleSyntax(rawHandle);
@@ -437,7 +448,7 @@ export async function getPublicProfileEvidencePageByHandle(
 
   if (!profile) return null;
 
-  return loadPublicProfileEvidencePage(profile, locale, executor);
+  return loadPublicProfileEvidencePage(profile, locale, request, executor);
 }
 
 export async function getPublicProfileEvidencePreviewByUserId(
@@ -451,7 +462,12 @@ export async function getPublicProfileEvidencePreviewByUserId(
   ).executeTakeFirst();
   if (!profile) return null;
 
-  return loadPublicProfileEvidencePage(profile, locale, executor);
+  return loadPublicProfileEvidencePage(
+    profile,
+    locale,
+    FIRST_PUBLIC_PROFILE_PAGES,
+    executor,
+  );
 }
 
 export async function getPublicProfileLifecycleLookup(
@@ -491,23 +507,20 @@ export function classifyPublicProfileLifecycle(
 async function loadPublicProfileEvidencePage(
   profile: PublicProfileInternalRow,
   locale: PublicLocale,
+  request: PublicProfileListRequest,
   executor: QueryExecutor,
 ) {
+  const entriesPage = normalizeProfileListPage(request.entriesPage);
+  const objectsPage = normalizeProfileListPage(request.objectsPage);
   const [
     entrySummary,
-    lineageSummary,
     followerSummary,
     followingSummary,
+    entries,
     objects,
-    journals,
-    objectMedia,
     avatar,
   ] = await Promise.all([
     buildPublicProfileEntrySummaryQuery(
-      executor,
-      profile.userId,
-    ).executeTakeFirst(),
-    buildPublicProfileLineageSummaryQuery(
       executor,
       profile.userId,
     ).executeTakeFirst(),
@@ -519,12 +532,14 @@ async function loadPublicProfileEvidencePage(
       executor,
       profile.userId,
     ).executeTakeFirst(),
-    buildPublicProfileObjectEvidenceQuery(executor, profile.userId).execute(),
-    buildPublicProfileJournalEvidenceQuery(executor, profile.userId).execute(),
-    buildPublicProfileObjectMediaEvidenceQuery(
-      executor,
-      profile.userId,
-    ).execute(),
+    buildPublicProfileEntryPageQuery(executor, profile.userId, {
+      page: entriesPage,
+      pageSize: PUBLIC_PROFILE_ENTRY_PAGE_SIZE,
+    }).execute(),
+    buildPublicProfileObjectEvidenceQuery(executor, profile.userId, {
+      page: objectsPage,
+      pageSize: PUBLIC_PROFILE_OBJECT_PAGE_SIZE,
+    }).execute(),
     profile.avatarMediaAssetId
       ? buildPublicProfileAvatarEvidenceQuery(
           executor,
@@ -533,39 +548,91 @@ async function loadPublicProfileEvidencePage(
         ).executeTakeFirst()
       : Promise.resolve(null),
   ]);
-  const journalIds = journals.flatMap((entry) =>
-    entry.publicSlug ? [entry.entryId] : [],
-  );
-  const journalMedia =
-    journalIds.length > 0
-      ? await buildPublicProfileJournalMediaEvidenceQuery(
+  const entryIds = entries.map((entry) => entry.entryId);
+  const objectIds = objects.map((object) => object.objectId);
+  // The profile's entries are its owner's, object or space; the ids arrive
+  // already filtered by the profile's own read.
+  const scope = { includeSpaceEntries: true };
+  const [entryMedia, entryTopics, objectMedia] = await Promise.all([
+    entryIds.length > 0
+      ? buildPublicFeedMediaQuery(executor, entryIds, scope).execute()
+      : Promise.resolve([]),
+    entryIds.length > 0
+      ? buildPublicFeedTopicsForEntriesQuery(
+          executor,
+          entryIds,
+          scope,
+        ).execute()
+      : Promise.resolve([]),
+    objectIds.length > 0
+      ? buildPublicProfileObjectMediaEvidenceQuery(
           executor,
           profile.userId,
-          journalIds,
+          objectIds,
         ).execute()
-      : [];
+      : Promise.resolve([]),
+  ]);
   const mediaExtras = await readMediaVariantExtras(executor, [
     ...objectMedia.map((row) => row.mediaAssetId),
-    ...journalMedia.map((row) => row.mediaAssetId),
+    ...entryMedia.map((row) => row.id),
   ]);
 
   return serializePublicProfileEvidencePage({
     mediaExtras,
     locale,
+    request: { entriesPage, objectsPage },
     profile: {
       ...profile,
       avatarDerivativeKey: avatar?.derivativeKey ?? null,
       avatarAltText: avatar?.altText ?? null,
     },
     entrySummary,
-    lineageSummary,
     followerSummary,
     followingSummary,
     objects,
     objectMedia,
-    journals,
-    journalMedia,
+    entries,
+    entryMedia,
+    entryTopics,
   });
+}
+
+/**
+ * Whether a profile view asks for a page past the end of its list — so the
+ * proxy can answer 404 before anything streams, the way `/journals` does. A
+ * page past the end is otherwise a `200` with an empty list: infinite
+ * crawlable space behind one parameter.
+ */
+export async function isPublicProfilePageBeyondTheEnd(
+  rawHandle: string,
+  list: "entries" | "objects",
+  page: number,
+  executor: QueryExecutor = db,
+): Promise<boolean> {
+  if (page <= 1) return false;
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return false;
+  const profile = await buildPublicProfileByNormalizedHandleQuery(
+    executor,
+    parsed.normalizedHandle,
+  ).executeTakeFirst();
+  if (!profile) return false;
+  const summary = await buildPublicProfileEntrySummaryQuery(
+    executor,
+    profile.userId,
+  ).executeTakeFirst();
+  const total = numericCount(
+    list === "entries" ? summary?.publicEntryCount : summary?.publicObjectCount,
+  );
+  return (
+    page >
+    profileListPageCount(
+      total,
+      list === "entries"
+        ? PUBLIC_PROFILE_ENTRY_PAGE_SIZE
+        : PUBLIC_PROFILE_OBJECT_PAGE_SIZE,
+    )
+  );
 }
 
 export async function resolvePublicHandleMentionTarget(
@@ -658,6 +725,7 @@ export function serializePublicProfilePage(input: {
 
 export function serializePublicProfileEvidencePage(input: {
   locale: PublicLocale;
+  request?: PublicProfileListRequest;
   profile: {
     userId: string;
     handle: string;
@@ -671,21 +739,30 @@ export function serializePublicProfileEvidencePage(input: {
     avatarAltText: string | null;
   };
   entrySummary?: PublicProfileEntrySummaryRow | null;
-  lineageSummary?: PublicProfileLineageSummaryRow | null;
   followerSummary?: PublicProfileCountRow | null;
   followingSummary?: PublicProfileCountRow | null;
   objects: PublicProfileObjectRow[];
   objectMedia: PublicProfileObjectMediaRow[];
-  journals: PublicProfileJournalRow[];
-  journalMedia: PublicProfileJournalMediaRow[];
+  entries: PublicProfileEntryRow[];
+  entryMedia?: PublicFeedMediaRow[];
+  entryTopics?: PublicFeedTopicRow[];
   /** OVE-371 placeholder/variant columns, keyed by media asset id. */
   mediaExtras?: ReadonlyMap<string, MediaVariantExtras>;
 }): PublicProfileEvidencePage {
+  const request = input.request ?? FIRST_PUBLIC_PROFILE_PAGES;
   const displayName = input.profile.displayName ?? `@${input.profile.handle}`;
+  const avatarUrl = publicMediaUrl(input.profile.avatarDerivativeKey);
   const objectMedia = firstObjectMediaByObject(input.objectMedia);
-  const journalMedia = firstJournalMediaByEntry(input.journalMedia);
+  const mediaByEntry = Object.groupBy(
+    input.entryMedia ?? [],
+    (row) => row.entryId,
+  );
+  const topicsByEntry = Object.groupBy(
+    input.entryTopics ?? [],
+    (row) => row.entryId,
+  );
   const objects = input.objects
-    .slice(0, PUBLIC_PROFILE_OBJECT_LIMIT)
+    .slice(0, PUBLIC_PROFILE_OBJECT_PAGE_SIZE)
     .flatMap((row) => {
       const objectKind = normalizePlantObjectKind(row.objectKind);
       if (!objectKind) return [];
@@ -727,23 +804,46 @@ export function serializePublicProfileEvidencePage(input: {
         },
       ];
     });
-  const journals = input.journals
-    .slice(0, PUBLIC_PROFILE_JOURNAL_LIMIT)
-    .flatMap((row) => {
+  const author = {
+    handle: input.profile.handle,
+    displayName,
+    avatarUrl,
+    profilePath: publicProfilePath(input.locale, input.profile.handle),
+  };
+  const entries = input.entries
+    .slice(0, PUBLIC_PROFILE_ENTRY_PAGE_SIZE)
+    .flatMap((row): PublicProfileEntry[] => {
       if (!row.publicSlug || !row.publishedAt) return [];
       const objectKind = normalizePlantObjectKind(row.objectKind);
-      const isObject =
+      const object =
         row.entryScope === "object" &&
         row.objectId &&
         row.objectDisplayName &&
-        objectKind;
-      const cover = journalMedia.get(row.entryId);
+        objectKind
+          ? {
+              id: row.objectId,
+              displayName: row.objectDisplayName,
+              kind: objectKind,
+              publicPath: publicObjectPassportAddress({
+                authorHandle: input.profile.handle,
+                publicSlug: row.objectPublicSlug,
+                plantObjectId: row.objectId,
+              }),
+              safeRegionCode:
+                row.objectLocationVisibility === "region" &&
+                isCoarseRegionCode(row.objectCoarseRegionCode)
+                  ? row.objectCoarseRegionCode
+                  : null,
+            }
+          : null;
 
       return [
         {
-          entryId: row.entryId,
+          id: row.entryId,
           title: row.title,
-          bodyPreview: boundedBodyPreview(row.body),
+          excerpt: buildPublicFeedExcerpt(row.body),
+          excerptTruncated: isPublicFeedExcerptTruncated(row.body),
+          sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
           entryDate: row.entryDate,
           publishedAt: row.publishedAt,
           publicPath: publicJournalEntryAddress({
@@ -751,43 +851,16 @@ export function serializePublicProfileEvidencePage(input: {
             entryNumber: row.entryNumber,
             publicSlug: row.publicSlug,
           }),
-          context: isObject
-            ? {
-                kind: "object" as const,
-                label: row.objectDisplayName as string,
-                publicPath: publicObjectPassportAddress({
-                  authorHandle: input.profile.handle,
-                  publicSlug: row.objectPublicSlug,
-                  plantObjectId: row.objectId as string,
-                }),
-                objectKind: objectKind as PlantObjectKind,
-              }
-            : {
-                kind: "space" as const,
-                label: row.spaceDisplayName,
-                publicPath: null,
-                objectKind: null,
-              },
-          coverImageUrl: publicMediaUrl(cover?.derivativeKey),
-          coverImageAlt:
-            cover?.altText?.trim() ||
-            (isObject ? (row.objectDisplayName as string) : row.title),
-          coverFocalX: cover?.derivativeKey
-            ? Number(cover.focalX ?? 0.5)
-            : null,
-          coverFocalY: cover?.derivativeKey
-            ? Number(cover.focalY ?? 0.5)
-            : null,
-          coverIntrinsicWidth: cover?.intrinsicWidth ?? null,
-          coverIntrinsicHeight: cover?.intrinsicHeight ?? null,
-          coverPlaceholderDataUri: cover?.derivativeKey
-            ? (input.mediaExtras?.get(cover.mediaAssetId)?.placeholderDataUri ??
-              null)
-            : null,
-          coverVariantLongEdges: cover?.derivativeKey
-            ? (input.mediaExtras?.get(cover.mediaAssetId)?.variantLongEdges ??
-              [])
-            : [],
+          object,
+          space: object ? null : { displayName: row.spaceDisplayName },
+          author,
+          media: serializePublicFeedMedia(mediaByEntry[row.entryId] ?? [], {
+            mediaExtras: input.mediaExtras,
+          }),
+          topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
+            slug: topic.slug,
+            label: localizeTopicLabel(input.locale, topic.slug, topic.label),
+          })),
         },
       ];
     });
@@ -798,7 +871,7 @@ export function serializePublicProfileEvidencePage(input: {
     handle: input.profile.handle,
     mention: `@${input.profile.handle}`,
     displayName,
-    avatarUrl: publicMediaUrl(input.profile.avatarDerivativeKey),
+    avatarUrl,
     avatarAlt: publicSafeText(input.profile.avatarAltText) || displayName,
     // OVE-234: legacy bios written before the firewall are withheld from the
     // public serializer instead of being rendered or indexed.
@@ -815,9 +888,6 @@ export function serializePublicProfileEvidencePage(input: {
         plant: numericCount(input.entrySummary?.publicPlantCount),
         animal: numericCount(input.entrySummary?.publicAnimalCount),
       },
-      confirmedLineageEdgeCount: numericCount(
-        input.lineageSummary?.confirmedLineageEdgeCount,
-      ),
       relationships:
         input.profile.relationshipVisibility === "counts"
           ? {
@@ -826,10 +896,22 @@ export function serializePublicProfileEvidencePage(input: {
             }
           : null,
     },
-    objects,
-    journals,
-    hasMoreObjects: publicObjectCount > objects.length,
-    hasMoreJournals: publicEntryCount > journals.length,
+    entries: {
+      items: entries,
+      page: request.entriesPage,
+      pageCount: profileListPageCount(
+        publicEntryCount,
+        PUBLIC_PROFILE_ENTRY_PAGE_SIZE,
+      ),
+    },
+    objects: {
+      items: objects,
+      page: request.objectsPage,
+      pageCount: profileListPageCount(
+        publicObjectCount,
+        PUBLIC_PROFILE_OBJECT_PAGE_SIZE,
+      ),
+    },
     qualityClass:
       input.profile.locationVisibility === "region" &&
       !normalizeCoarseRegionCode(input.profile.coarseRegionCode)
@@ -1069,6 +1151,10 @@ export function buildPublicProfileLineageSummaryQuery(
 export function buildPublicProfileObjectEvidenceQuery(
   executor: QueryExecutor,
   userId: string,
+  input: { page: number; pageSize: number } = {
+    page: 1,
+    pageSize: PUBLIC_PROFILE_OBJECT_PAGE_SIZE,
+  },
 ) {
   return executor
     .selectFrom("plant_objects")
@@ -1124,12 +1210,22 @@ export function buildPublicProfileObjectEvidenceQuery(
     .orderBy(sql`max(${sql.ref("journal_entries.entry_date")})`, "desc")
     .orderBy("plant_objects.created_at", "desc")
     .orderBy("plant_objects.id", "asc")
-    .limit(PUBLIC_PROFILE_OBJECT_LIMIT + 1);
+    .offset((normalizeProfileListPage(input.page) - 1) * input.pageSize)
+    .limit(input.pageSize);
 }
 
-export function buildPublicProfileJournalEvidenceQuery(
+/**
+ * One page of everything the gardener published, newest publication first —
+ * entries about one object and entries about a whole space alike.
+ *
+ * The object is joined by id and owner only. The old read also required the
+ * object to sit in the entry's space, so an entry whose object had since moved
+ * to another space was listed as an entry about the old space.
+ */
+export function buildPublicProfileEntryPageQuery(
   executor: QueryExecutor,
   userId: string,
+  input: { page: number; pageSize: number },
 ) {
   return executor
     .selectFrom("journal_entries")
@@ -1145,8 +1241,7 @@ export function buildPublicProfileJournalEvidenceQuery(
           "plant_objects.owner_user_id",
           "=",
           "journal_entries.owner_user_id",
-        )
-        .onRef("plant_objects.space_id", "=", "journal_entries.space_id"),
+        ),
     )
     .select([
       "journal_entries.id as entryId",
@@ -1154,6 +1249,7 @@ export function buildPublicProfileJournalEvidenceQuery(
       "journal_entries.author_entry_number as entryNumber",
       "journal_entries.title",
       "journal_entries.body",
+      "journal_entries.source_language as sourceLanguage",
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.entry_scope as entryScope",
@@ -1161,6 +1257,8 @@ export function buildPublicProfileJournalEvidenceQuery(
       "plant_objects.public_slug as objectPublicSlug",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
+      "plant_objects.location_visibility as objectLocationVisibility",
+      "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "spaces.display_name as spaceDisplayName",
     ])
     .where("journal_entries.owner_user_id", "=", userId)
@@ -1174,14 +1272,24 @@ export function buildPublicProfileJournalEvidenceQuery(
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")
-    .limit(PUBLIC_PROFILE_JOURNAL_LIMIT + 1);
+    .offset((normalizeProfileListPage(input.page) - 1) * input.pageSize)
+    .limit(input.pageSize);
 }
 
+/**
+ * One cover for each object on the page: the photograph of its newest public
+ * entry, that entry's own cover before its inline photographs.
+ *
+ * Ranked per object. The old read took the newest 96 photographs of the whole
+ * profile and picked from those, so one object with a busy week could leave
+ * every other object on the page without a cover.
+ */
 export function buildPublicProfileObjectMediaEvidenceQuery(
   executor: QueryExecutor,
   userId: string,
+  objectIds: readonly string[],
 ) {
-  return executor
+  const ranked = executor
     .selectFrom("media_assets")
     .innerJoin("journal_entries", (join) =>
       join
@@ -1209,17 +1317,31 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
         ),
     )
     .select([
-      "plant_objects.id as objectId",
-      "journal_entries.id as entryId",
-      "media_assets.id as mediaAssetId",
-      "media_assets.derivative_key as derivativeKey",
-      "media_assets.alt_text as altText",
-      "media_assets.focal_x as focalX",
-      "media_assets.focal_y as focalY",
-      "media_assets.intrinsic_width as intrinsicWidth",
-      "media_assets.intrinsic_height as intrinsicHeight",
+      "plant_objects.id as object_id",
+      "journal_entries.id as entry_id",
+      "media_assets.id as media_asset_id",
+      "media_assets.derivative_key as derivative_key",
+      "media_assets.alt_text as alt_text",
+      "media_assets.focal_x as focal_x",
+      "media_assets.focal_y as focal_y",
+      "media_assets.intrinsic_width as intrinsic_width",
+      "media_assets.intrinsic_height as intrinsic_height",
+      sql<number>`row_number() over (
+        partition by ${sql.ref("plant_objects.id")}
+        order by
+          ${sql.ref("journal_entries.published_at")} desc,
+          ${sql.ref("journal_entries.entry_date")} desc,
+          case
+            when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
+              then 0
+            else 1
+          end asc,
+          ${sql.ref("media_assets.document_position")} asc nulls last,
+          ${sql.ref("media_assets.id")} asc
+      )`.as("media_rank"),
     ])
     .where("media_assets.owner_user_id", "=", userId)
+    .where("plant_objects.id", "in", [...objectIds])
     .where(publicMediaEligibilityPredicate())
     .where((eb) =>
       eb.or([
@@ -1231,78 +1353,22 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
         eb("media_assets.usage_role", "=", "inline"),
       ]),
     )
-    .orderBy("journal_entries.published_at", "desc")
-    .orderBy("journal_entries.entry_date", "desc")
-    .orderBy(
-      sql`case
-        when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
-          then 0
-        else 1
-      end`,
-      "asc",
-    )
-    .orderBy("media_assets.document_position", "asc")
-    .orderBy("media_assets.id", "asc")
-    .limit(PUBLIC_PROFILE_MEDIA_LIMIT);
-}
+    .as("ranked_cover");
 
-export function buildPublicProfileJournalMediaEvidenceQuery(
-  executor: QueryExecutor,
-  userId: string,
-  entryIds: readonly string[],
-) {
   return executor
-    .selectFrom("media_assets")
-    .innerJoin("journal_entries", (join) =>
-      join
-        .onRef("journal_entries.id", "=", "media_assets.journal_entry_id")
-        .onRef(
-          "journal_entries.owner_user_id",
-          "=",
-          "media_assets.owner_user_id",
-        )
-        .on("journal_entries.visibility", "=", "public")
-        .on("journal_entries.lifecycle_state", "=", "active")
-        .on("journal_entries.public_gone_at", "is", null)
-        .on("journal_entries.public_slug", "is not", null)
-        .on("journal_entries.published_at", "is not", null)
-        .on(publicLaunchSurfacePredicates()),
-    )
+    .selectFrom(ranked)
     .select([
-      "journal_entries.id as entryId",
-      "media_assets.id as mediaAssetId",
-      "media_assets.derivative_key as derivativeKey",
-      "media_assets.alt_text as altText",
-      "media_assets.focal_x as focalX",
-      "media_assets.focal_y as focalY",
-      "media_assets.intrinsic_width as intrinsicWidth",
-      "media_assets.intrinsic_height as intrinsicHeight",
+      "ranked_cover.object_id as objectId",
+      "ranked_cover.entry_id as entryId",
+      "ranked_cover.media_asset_id as mediaAssetId",
+      "ranked_cover.derivative_key as derivativeKey",
+      "ranked_cover.alt_text as altText",
+      "ranked_cover.focal_x as focalX",
+      "ranked_cover.focal_y as focalY",
+      "ranked_cover.intrinsic_width as intrinsicWidth",
+      "ranked_cover.intrinsic_height as intrinsicHeight",
     ])
-    .where("media_assets.owner_user_id", "=", userId)
-    .where(publicMediaEligibilityPredicate())
-    .where("journal_entries.id", "in", [...entryIds])
-    .where((eb) =>
-      eb.or([
-        eb(
-          "media_assets.id",
-          "=",
-          eb.ref("journal_entries.cover_media_asset_id"),
-        ),
-        eb("media_assets.usage_role", "=", "inline"),
-      ]),
-    )
-    .orderBy("journal_entries.published_at", "desc")
-    .orderBy(
-      sql`case
-        when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
-          then 0
-        else 1
-      end`,
-      "asc",
-    )
-    .orderBy("media_assets.document_position", "asc")
-    .orderBy("media_assets.id", "asc")
-    .limit(PUBLIC_PROFILE_MEDIA_LIMIT);
+    .where("ranked_cover.media_rank", "=", 1);
 }
 
 export function buildPublicProfileFollowerCountQuery(
@@ -1413,13 +1479,15 @@ function firstObjectMediaByObject(rows: PublicProfileObjectMediaRow[]) {
   return result;
 }
 
-function firstJournalMediaByEntry(rows: PublicProfileJournalMediaRow[]) {
-  const result = new Map<string, PublicProfileJournalMediaRow>();
-  for (const row of rows) {
-    if (!row.derivativeKey || result.has(row.entryId)) continue;
-    result.set(row.entryId, row);
-  }
-  return result;
+/** A page number a list can be read at: 1 up to the policy's ceiling. */
+function normalizeProfileListPage(page: number) {
+  return Number.isSafeInteger(page) && page >= 1
+    ? Math.min(page, PUBLIC_PROFILE_MAX_PAGE)
+    : 1;
+}
+
+function profileListPageCount(total: number, pageSize: number) {
+  return Math.max(1, Math.ceil(total / pageSize));
 }
 
 function publicMediaUrl(key: string | null | undefined) {
@@ -1457,13 +1525,6 @@ function normalizeProfileLanguages(values: readonly string[]) {
   return [...new Set(values)].filter((value): value is PublicProfileLanguage =>
     PUBLIC_PROFILE_LANGUAGES.has(value as PublicProfileLanguage),
   );
-}
-
-function boundedBodyPreview(body: string, limit = 220) {
-  const normalized = body.replace(/\s+/g, " ").trim();
-  return normalized.length <= limit
-    ? normalized
-    : `${normalized.slice(0, limit - 1).trimEnd()}...`;
 }
 
 function isPublicHandleUpdateStatus(

@@ -4,51 +4,53 @@ import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
 import { FlagIcon as Flag } from "@/components/icons/Flag";
 import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
 import { DotsThreeIcon as MoreHorizontal } from "@/components/icons/DotsThree";
+import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
 import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
-import { GearIcon as Settings } from "@/components/icons/Gear";
+import { PlusIcon as Plus } from "@/components/icons/Plus";
 import { ShieldSlashIcon as ShieldBan } from "@/components/icons/ShieldSlash";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
+import { TranslateIcon as Translate } from "@/components/icons/Translate";
 import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
 import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { PublicFeedEntryCard } from "@/components/public/public-feed-entry-card";
 import { PublicProfileTabs } from "@/components/public/public-profile-tabs";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
-import {
-  SiteShellContextRailRegistration,
-  type SiteShellContextRailModule,
-} from "@/components/site-shell/site-shell-context-rail";
 import { buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EntryCard } from "@/components/ui/entry-card";
 import { Link as TextLink } from "@/components/ui/link";
 import { MediaFigure } from "@/components/ui/media-figure";
+import { Pagination } from "@/components/ui/pagination";
 import { ProfileHeader } from "@/components/ui/profile-header";
 import { Section } from "@/components/ui/section";
 import type { TabModel } from "@/components/ui/tabs";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { AuthIntentAction } from "@/lib/auth/auth-intent-contract";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { entryCardDates, entryCardFeedLabels } from "@/lib/entry-card-dates";
+import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import { resolveIllustration } from "@/lib/illustrations";
+import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import {
-  publicProfileTabHref,
+  publicProfileListHref,
   type PublicProfileTabId,
 } from "@/lib/public-profile-tabs";
-import { localizedPath } from "@/lib/public-localization";
 import {
+  formatPublicProfileCount,
   getPublicProfileCopy,
   PUBLIC_PROFILE_LANGUAGE_LABELS,
 } from "@/lib/public-profile-copy";
+import { formatPublicCount } from "@/lib/public-surface-localization";
 import { cn } from "@/lib/utils";
 import type { ProfileViewerState } from "@/server/profile-interaction-repository";
 import type {
   PublicProfileEvidencePage,
-  PublicProfileJournalEvidence,
+  PublicProfileListPage,
   PublicProfileObjectEvidence,
 } from "@/server/public-profile-repository";
 import {
@@ -62,12 +64,28 @@ import { HiddenField } from "@/components/ui/hidden-field";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 
-const OBJECT_PREVIEW_SIZE = 6;
-const JOURNAL_PREVIEW_SIZE = 8;
+/**
+ * A city is more precise than a profile should say where its gardener lives,
+ * so for these codes only the country is shown.
+ */
 const COUNTRY_ONLY_PROFILE_REGION_CODES = new Set(["UA-30", "UA-40", "BG-22"]);
 
 type PublicProfileViewer = ProfileViewerState | { kind: "guest" };
 
+/**
+ * A gardener's public profile (`OVE-494`).
+ *
+ * Who they are — name, handle, picture, bio, where and in which languages,
+ * how many follow them — and what they published, in two views: **Entries**,
+ * every observation as the feed's own card, and **Objects**, the living
+ * subjects whose journals those entries make up. Each list pages through
+ * everything; nothing past a first screenful is out of reach.
+ *
+ * The page is the same document for every reader. The one thing that knows
+ * who is reading is the action slot — follow for a visitor, edit for the
+ * gardener — and it resolves on the server beside the static facts, never
+ * inside them.
+ */
 export function PublicProfileView({
   profile,
   locale,
@@ -75,7 +93,7 @@ export function PublicProfileView({
   actionStatus,
   preview = false,
   headingLevel = "h1",
-  activeTab = "objects",
+  activeTab = "entries",
   resumeAction = null,
   resumeControl = null,
   actionSlot,
@@ -95,11 +113,10 @@ export function PublicProfileView({
 }) {
   const copy = getPublicProfileCopy(locale);
   const basePath = publicProfilePath(locale, profile.handle);
-  const visibleObjects = profile.objects.slice(0, OBJECT_PREVIEW_SIZE);
-  const moreObjects = profile.objects.slice(OBJECT_PREVIEW_SIZE);
-  const visibleJournals = profile.journals.slice(0, JOURNAL_PREVIEW_SIZE);
-  const moreJournals = profile.journals.slice(JOURNAL_PREVIEW_SIZE);
-  const regionLabel = publicProfileRegionLabel(profile.coarseRegionCode);
+  const regionLabel = publicProfileRegionLabel(
+    locale,
+    profile.coarseRegionCode,
+  );
   const actionMessage = profileActionMessage(actionStatus, locale);
   const ownerEmptyState = viewer.kind === "owner" || preview;
   // Heading levels never skip (DESIGN.md §8). On the profile's own page the
@@ -108,60 +125,166 @@ export function PublicProfileView({
   // level rather than the section outranking the name it belongs to.
   const sectionLevel = headingLevel === "h1" ? 2 : 3;
   const cardHeadingLevel = 3;
+  // Only the open panel's first photograph is asked for at once: a panel the
+  // reader cannot see has nothing on the first screen.
+  const standalone = headingLevel === "h1";
+  const entryPhotograph =
+    standalone && activeTab === "entries"
+      ? firstPhotographIndex(
+          profile.entries.items,
+          (entry) => entry.media.length > 0,
+        )
+      : -1;
+  const objectPhotograph =
+    standalone && activeTab === "objects"
+      ? firstPhotographIndex(
+          profile.objects.items,
+          (object) => object.coverImageUrl !== null,
+        )
+      : -1;
+  const relationships = profile.summary.relationships;
+  const counts = relationships
+    ? [
+        relationships.followers > 0
+          ? formatPublicProfileCount(
+              locale,
+              "followers",
+              relationships.followers,
+            )
+          : null,
+        relationships.following > 0
+          ? formatPublicProfileCount(
+              locale,
+              "following",
+              relationships.following,
+            )
+          : null,
+      ].filter((count): count is string => count !== null)
+    : [];
 
   const tabs: TabModel[] = [
     {
-      id: "objects",
-      label: copy.objectsTitle,
+      id: "entries",
+      label: (
+        <ProfileTabLabel
+          label={copy.entriesTab}
+          count={profile.summary.publicEntryCount}
+        />
+      ),
       content: (
         <Section
-          id="profile-objects"
-          title={copy.objectsTitle}
-          description={copy.objectsDescription}
+          id="profile-entries"
+          title={copy.entriesTab}
           level={sectionLevel}
           // The tab above already says the word, so the heading is the
           // region's name for a screen reader and nothing to the eye.
           headingClassName="sr-only"
         >
-          {visibleObjects.length > 0 ? (
+          {profile.entries.items.length > 0 ? (
             <>
-              <ul className="grid list-none gap-4 sm:grid-cols-2">
-                {visibleObjects.map((object, index) => (
+              <ol className="grid list-none gap-4" data-profile-entries="true">
+                {profile.entries.items.map((entry, index) => (
+                  <li key={entry.id} className="min-w-0">
+                    <PublicFeedEntryCard
+                      locale={locale}
+                      copy={entryCardFeedLabels(locale)}
+                      entry={entry}
+                      headingLevel={cardHeadingLevel}
+                      priority={index === entryPhotograph}
+                    />
+                  </li>
+                ))}
+              </ol>
+              {preview ? null : (
+                <ProfileListPagination
+                  label={copy.entriesPages}
+                  list={profile.entries}
+                  previousLabel={copy.newerEntries}
+                  nextLabel={copy.olderEntries}
+                  status={copy.pageStatus}
+                  hrefFor={(page) =>
+                    publicProfileListHref(basePath, "entries", page)
+                  }
+                />
+              )}
+            </>
+          ) : profile.entries.page > 1 ? (
+            <ProfilePageMissing
+              message={copy.pageMissing}
+              firstPageLabel={copy.firstPage}
+              href={publicProfileListHref(basePath, "entries", 1)}
+            />
+          ) : (
+            <EmptyState
+              illustration={
+                ownerEmptyState ? resolveIllustration("empty-journal") : null
+              }
+              variant={ownerEmptyState ? "first-run" : "no-results"}
+              title={ownerEmptyState ? copy.noOwnerEntries : copy.noEntries}
+              action={
+                ownerEmptyState ? (
+                  <Link href="/garden/new" className={buttonVariants({})}>
+                    <NotePencil aria-hidden="true" />
+                    {copy.newEntry}
+                  </Link>
+                ) : null
+              }
+            />
+          )}
+        </Section>
+      ),
+    },
+    {
+      id: "objects",
+      label: (
+        <ProfileTabLabel
+          label={copy.objectsTab}
+          count={profile.summary.publicObjectCount}
+        />
+      ),
+      content: (
+        <Section
+          id="profile-objects"
+          title={copy.objectsTab}
+          level={sectionLevel}
+          headingClassName="sr-only"
+        >
+          {profile.objects.items.length > 0 ? (
+            <>
+              <ul
+                className="grid list-none gap-4 sm:grid-cols-2"
+                data-profile-objects="true"
+              >
+                {profile.objects.items.map((object, index) => (
                   <li key={object.objectId} className="min-w-0">
                     <ProfileObjectCard
                       object={object}
                       locale={locale}
                       headingLevel={cardHeadingLevel}
-                      priority={index === 0 && headingLevel === "h1"}
+                      priority={index === objectPhotograph}
                     />
                   </li>
                 ))}
               </ul>
-              {moreObjects.length > 0 ? (
-                <details className="grid gap-3">
-                  <summary
-                    className={cn(
-                      "min-h-11 w-fit cursor-pointer list-none content-center",
-                      "text-link text-body-sm font-semibold hover:underline",
-                    )}
-                  >
-                    {copy.showMore(moreObjects.length, profile.hasMoreObjects)}
-                  </summary>
-                  <ul className="grid list-none gap-4 sm:grid-cols-2">
-                    {moreObjects.map((object) => (
-                      <li key={object.objectId} className="min-w-0">
-                        <ProfileObjectCard
-                          object={object}
-                          locale={locale}
-                          headingLevel={cardHeadingLevel}
-                          priority={false}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
+              {preview ? null : (
+                <ProfileListPagination
+                  label={copy.objectsPages}
+                  list={profile.objects}
+                  previousLabel={copy.previousObjects}
+                  nextLabel={copy.nextObjects}
+                  status={copy.pageStatus}
+                  hrefFor={(page) =>
+                    publicProfileListHref(basePath, "objects", page)
+                  }
+                />
+              )}
             </>
+          ) : profile.objects.page > 1 ? (
+            <ProfilePageMissing
+              message={copy.pageMissing}
+              firstPageLabel={copy.firstPage}
+              href={publicProfileListHref(basePath, "objects", 1)}
+            />
           ) : (
             <EmptyState
               illustration={
@@ -173,12 +296,12 @@ export function PublicProfileView({
                 ownerEmptyState ? (
                   <Link
                     // The workspace has one address in every language;
-                    // `/bg/garden` is a 404 (`LOCALE_ROUTE_SEGMENTS`).
-                    href="/garden"
-                    className={buttonVariants({})}
+                    // `/bg/garden/...` is a 404 (`LOCALE_ROUTE_SEGMENTS`).
+                    href="/garden/objects/new"
+                    className={buttonVariants({ variant: "secondary" })}
                   >
-                    <Sprout aria-hidden="true" />
-                    {copy.addFirstObject}
+                    <Plus aria-hidden="true" />
+                    {copy.addObject}
                   </Link>
                 ) : null
               }
@@ -187,170 +310,54 @@ export function PublicProfileView({
         </Section>
       ),
     },
-    {
-      id: "entries",
-      label: copy.journalsTitle,
-      content: (
-        <Section
-          id="profile-journals"
-          title={copy.journalsTitle}
-          description={copy.journalsDescription}
-          level={sectionLevel}
-          headingClassName="sr-only"
-        >
-          {visibleJournals.length > 0 ? (
-            <>
-              <ul className="grid list-none gap-4">
-                {visibleJournals.map((journal, index) => (
-                  <li key={journal.entryId} className="min-w-0">
-                    <ProfileJournalCard
-                      journal={journal}
-                      locale={locale}
-                      headingLevel={cardHeadingLevel}
-                      priority={index === 0 && headingLevel === "h1"}
-                    />
-                  </li>
-                ))}
-              </ul>
-              {moreJournals.length > 0 ? (
-                <details className="grid gap-3">
-                  <summary
-                    className={cn(
-                      "min-h-11 w-fit cursor-pointer list-none content-center",
-                      "text-link text-body-sm font-semibold hover:underline",
-                    )}
-                  >
-                    {copy.showMore(
-                      moreJournals.length,
-                      profile.hasMoreJournals,
-                    )}
-                  </summary>
-                  <ul className="grid list-none gap-4">
-                    {moreJournals.map((journal) => (
-                      <li key={journal.entryId} className="min-w-0">
-                        <ProfileJournalCard
-                          journal={journal}
-                          locale={locale}
-                          headingLevel={cardHeadingLevel}
-                          priority={false}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
-            </>
-          ) : (
-            <EmptyState
-              illustration={
-                ownerEmptyState ? resolveIllustration("empty-journal") : null
-              }
-              variant={ownerEmptyState ? "first-run" : "no-results"}
-              title={ownerEmptyState ? copy.noOwnerJournals : copy.noJournals}
-            />
-          )}
-        </Section>
-      ),
-    },
-    {
-      id: "about",
-      label: copy.aboutTitle,
-      content: (
-        <Section
-          id="profile-about"
-          title={copy.aboutTitle}
-          level={sectionLevel}
-          headingClassName="sr-only"
-        >
-          <p className="max-w-prose text-body-sm break-words whitespace-pre-wrap text-text">
-            {profile.bio ?? copy.aboutEmpty}
-          </p>
-          <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-            {regionLabel ? (
-              <AboutFact label={copy.region}>{regionLabel}</AboutFact>
-            ) : null}
-            {profile.languages.length > 0 ? (
-              <AboutFact label={copy.languages}>
-                {profile.languages
-                  .map(
-                    (language) =>
-                      PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language],
-                  )
-                  .join(" · ")}
-              </AboutFact>
-            ) : null}
-            {profile.summary.confirmedLineageEdgeCount > 0 ? (
-              <AboutFact label={copy.lineage}>
-                {profile.summary.confirmedLineageEdgeCount}
-              </AboutFact>
-            ) : null}
-          </dl>
-          {profile.summary.relationships === null ? (
-            <p className="text-body-sm text-text-muted">
-              {copy.relationshipsHidden}
-            </p>
-          ) : null}
-        </Section>
-      ),
-    },
   ];
 
   return (
     <article
-      data-public-profile="v2"
+      data-public-profile="v3"
       data-profile-tab={activeTab}
       className="grid gap-6"
     >
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
-      <SiteShellContextRailRegistration
-        modules={buildPublicProfileContextModules(profile, locale)}
-      />
 
       <ProfileHeader
-        eyebrow={copy.profileLabel}
         avatarUrl={profile.avatarUrl}
         displayName={profile.displayName}
         handle={profile.mention}
         bio={profile.bio}
         headingLevel={headingLevel}
         meta={
-          <>
-            {regionLabel ? (
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="size-4" aria-hidden="true" />
-                {regionLabel}
-              </span>
-            ) : null}
-            {profile.languages.length > 0 ? (
-              <span>
-                {profile.languages
-                  .map(
-                    (language) =>
-                      PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language],
-                  )
-                  .join(" · ")}
-              </span>
-            ) : null}
-          </>
+          regionLabel || profile.languages.length > 0 ? (
+            <>
+              {regionLabel ? (
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  data-profile-region="true"
+                >
+                  <MapPin className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">{copy.region}: </span>
+                  {regionLabel}
+                </span>
+              ) : null}
+              {profile.languages.length > 0 ? (
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  data-profile-languages="true"
+                >
+                  <Translate className="size-4 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">{copy.languages}: </span>
+                  {profile.languages
+                    .map(
+                      (language) =>
+                        PUBLIC_PROFILE_LANGUAGE_LABELS[locale][language],
+                    )
+                    .join(" · ")}
+                </span>
+              ) : null}
+            </>
+          ) : null
         }
-        counts={[
-          {
-            label: copy.publicObjects,
-            value: profile.summary.publicObjectCount,
-          },
-          {
-            label: copy.publicEntries,
-            value: profile.summary.publicEntryCount,
-          },
-          {
-            label: copy.followers,
-            value: profile.summary.relationships?.followers ?? null,
-          },
-          {
-            label: copy.following,
-            value: profile.summary.relationships?.following ?? null,
-          },
-        ]}
+        counts={counts}
         action={
           actionSlot ?? (
             <ProfileActions
@@ -375,36 +382,101 @@ export function PublicProfileView({
           link opens where its sender was. Every panel is in the HTML however
           the tab stands, which is what keeps the entries indexable. */}
       <PublicProfileTabs
-        label={copy.profileLabel}
+        label={copy.sectionsLabel}
         tabs={tabs}
         selectedId={activeTab}
+        pageByTab={{
+          entries: profile.entries.page,
+          objects: profile.objects.page,
+        }}
       />
     </article>
   );
 }
 
-function AboutFact({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+/** A tab's name and how many things are behind it, as one accessible name. */
+function ProfileTabLabel({ label, count }: { label: string; count: number }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-caption text-text-muted">{label}</dt>
-      <dd className="text-body-sm break-words text-text">{children}</dd>
-    </div>
+    <>
+      <span>{label}</span>
+      {count > 0 ? (
+        <span className="text-caption text-text-muted tabular-nums">
+          {count}
+        </span>
+      ) : null}
+    </>
   );
 }
 
-function publicProfileRegionLabel(code: string | null) {
-  const label = getCoarseRegionLabel(code);
+/**
+ * The way through a list longer than a page.
+ *
+ * A list that fits on one page gets no navigation at all: two disabled edges
+ * and a status line between them would be three controls saying nothing.
+ */
+function ProfileListPagination<Item>({
+  label,
+  list,
+  previousLabel,
+  nextLabel,
+  status,
+  hrefFor,
+}: {
+  label: string;
+  list: PublicProfileListPage<Item>;
+  previousLabel: string;
+  nextLabel: string;
+  status: string;
+  hrefFor: (page: number) => string;
+}) {
+  if (list.pageCount <= 1) return null;
+  const page = Math.min(list.page, list.pageCount);
+  return (
+    <Pagination
+      label={label}
+      previousLabel={previousLabel}
+      previousHref={page > 1 ? hrefFor(page - 1) : null}
+      nextLabel={nextLabel}
+      nextHref={page < list.pageCount ? hrefFor(page + 1) : null}
+      status={status
+        .replace("{page}", String(page))
+        .replace("{count}", String(list.pageCount))}
+    />
+  );
+}
+
+/**
+ * A page past the end of a list. The proxy answers such an address with a
+ * 404 before anything renders; this is what a reader sees if that lookup
+ * could not be made — an honest sentence and the way back, never an empty
+ * list dressed as a real one.
+ */
+function ProfilePageMissing({
+  message,
+  firstPageLabel,
+  href,
+}: {
+  message: string;
+  firstPageLabel: string;
+  href: string;
+}) {
+  return (
+    <p className="text-body-sm text-text-muted">
+      {message} <TextLink href={href}>{firstPageLabel}</TextLink>
+    </p>
+  );
+}
+
+function publicProfileRegionLabel(
+  locale: InterfaceLocale,
+  code: string | null,
+) {
+  const label = getLocalizedCoarseRegionLabel(locale, code);
   if (!label || !code || !COUNTRY_ONLY_PROFILE_REGION_CODES.has(code)) {
     return label;
   }
 
-  return label.split(" - ")[0] ?? null;
+  return label.split(" — ")[0] ?? null;
 }
 
 export function ProfileActions({
@@ -430,12 +502,18 @@ export function ProfileActions({
   );
 
   if (viewer.kind === "owner") {
+    // The gardener's own way to change what this page says. The editor is a
+    // private settings page; nothing of it is embedded here.
     return (
       <Link
         href="/garden/profile#public-profile-editor"
-        className={buttonVariants({ size: "sm", className: "w-fit" })}
+        className={buttonVariants({
+          variant: "secondary",
+          size: "sm",
+          className: "w-fit",
+        })}
       >
-        <Settings aria-hidden="true" />
+        <NotePencil aria-hidden="true" />
         {copy.manageProfile}
       </Link>
     );
@@ -593,13 +671,14 @@ export function ProfileActions({
 }
 
 /**
- * One living object in the gardener's grid.
+ * One living object, as the journal its entries make up.
  *
- * It is a `Card`, not an `EntryCard`: an object is not an authored post, it is
- * the thing the posts are about, and it carries a name, what it was identified
- * as, how many entries exist and when the last one landed. The picture sits in
- * a `MediaFigure` at the 4:3 card ratio, so the box is reserved whether or not
- * a cover exists (DESIGN.md §2.10).
+ * It is a `Card`, not an `EntryCard`: an object is not one observation, it is
+ * the history of many, and the card says so — "Журнал: 5 записів" and when
+ * the last one was written — so a reader can tell a journal from an entry
+ * before opening either (OG-UX-010). A photograph is shown when the journal
+ * has one; without one the card is words and a small mark of the kind, not a
+ * grey box standing in for a picture.
  */
 function ProfileObjectCard({
   object,
@@ -615,11 +694,8 @@ function ProfileObjectCard({
   const copy = getPublicProfileCopy(locale);
   const Heading = headingLevel === 2 ? "h2" : "h3";
   const titleId = `profile-object-${object.objectId}-title`;
-  const identityState = {
-    confirmed: copy.identityConfirmed,
-    provisional: copy.identityProvisional,
-    unknown: copy.identityUnknown,
-  }[object.identityState];
+  const kindLabel = object.objectKind === "animal" ? copy.animal : copy.plant;
+  const latest = entryCardDates(locale, object.latestEntryDate, null);
 
   return (
     <Card
@@ -651,108 +727,54 @@ function ProfileObjectCard({
           intrinsicHeight={object.coverIntrinsicHeight}
           priority={priority}
         />
-      ) : (
-        <div
-          aria-hidden="true"
-          className="-mx-4 -mt-4 flex aspect-card items-center justify-center bg-surface-sunken text-text-disabled"
-        >
-          <ObjectKindIcon kind={object.objectKind} />
-        </div>
-      )}
+      ) : null}
 
-      <div className="grid min-w-0 gap-1">
-        <Heading id={titleId} className="text-h3 break-words text-text-heading">
-          <TextLink
-            href={object.publicPath}
-            variant="quiet"
-            className="text-text-heading"
+      <div className="flex min-w-0 items-start gap-3">
+        {object.coverImageUrl ? null : (
+          <span
+            aria-hidden="true"
+            className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-text-muted"
           >
-            {object.displayName}
-          </TextLink>
-        </Heading>
-        <p className="text-caption break-words text-text-muted">
-          {object.identityLabel ?? identityState}
-        </p>
+            <ObjectKindIcon kind={object.objectKind} />
+          </span>
+        )}
+        <div className="grid min-w-0 gap-1">
+          <Heading
+            id={titleId}
+            className="text-h3 break-words text-text-heading"
+          >
+            <TextLink
+              href={object.publicPath}
+              variant="quiet"
+              className="text-text-heading"
+            >
+              {object.displayName}
+            </TextLink>
+          </Heading>
+          <p className="text-caption break-words text-text-muted">
+            {object.identityLabel ?? kindLabel}
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-caption text-text-muted">
-        <span>{copy.entryCount(object.publicEntryCount)}</span>
-        <time
-          dateTime={dateTimeValue(object.latestEntryDate)}
-          className="tabular-nums"
-        >
-          {formatDate(object.latestEntryDate, locale)}
-        </time>
-      </div>
+      <p
+        data-profile-object-journal="true"
+        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text-muted"
+      >
+        <BookOpen className="size-4 shrink-0" aria-hidden="true" />
+        <span>
+          {copy.journal}:{" "}
+          {formatPublicCount(locale, "entry", object.publicEntryCount)}
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>
+          {copy.latestEntry.split("{date}")[0]}
+          <time dateTime={latest.dateTime} className="tabular-nums">
+            {latest.dateLabel}
+          </time>
+        </span>
+      </p>
     </Card>
-  );
-}
-
-/**
- * One of the gardener's entries, as the system's `EntryCard`.
- *
- * The profile passes no `author` — every card on this page has the same one,
- * and repeating the gardener's name under each entry on their own profile is
- * noise a screen reader has to walk through.
- */
-function ProfileJournalCard({
-  journal,
-  locale,
-  headingLevel,
-  priority,
-}: {
-  journal: PublicProfileJournalEvidence;
-  locale: InterfaceLocale;
-  headingLevel: 2 | 3;
-  priority: boolean;
-}) {
-  const copy = getPublicProfileCopy(locale);
-  const kindLabel =
-    journal.context.objectKind === "animal" ? copy.animals : copy.plants;
-
-  return (
-    <EntryCard
-      id={journal.entryId}
-      href={journal.publicPath}
-      title={journal.title}
-      headingLevel={headingLevel}
-      dateTime={dateTimeValue(journal.entryDate)}
-      dateLabel={formatDate(journal.entryDate, locale)}
-      excerpt={journal.bodyPreview}
-      subject={{
-        label: journal.context.label,
-        href: journal.context.publicPath ?? undefined,
-        kindLabel:
-          journal.context.kind === "object" ? kindLabel : copy.objectsTitle,
-        icon:
-          journal.context.kind === "object" ? (
-            <ObjectKindIcon kind={journal.context.objectKind ?? "plant"} />
-          ) : (
-            <BookOpen className="size-6" aria-hidden="true" />
-          ),
-      }}
-      cover={
-        journal.coverImageUrl
-          ? {
-              src: journal.coverImageUrl,
-              srcSet: buildPublicMediaSourceSet({
-                publicUrl: journal.coverImageUrl,
-                intrinsicWidth: journal.coverIntrinsicWidth,
-                intrinsicHeight: journal.coverIntrinsicHeight,
-                variantLongEdges: journal.coverVariantLongEdges,
-              }).srcSet,
-              alt: journal.coverImageAlt,
-              placeholderDataUri: journal.coverPlaceholderDataUri,
-              focalX: journal.coverFocalX,
-              focalY: journal.coverFocalY,
-              intrinsicWidth: journal.coverIntrinsicWidth,
-              intrinsicHeight: journal.coverIntrinsicHeight,
-              sizes: "(max-width: 767px) 100vw, 704px",
-            }
-          : null
-      }
-      priority={priority}
-    />
   );
 }
 
@@ -762,93 +784,8 @@ function ObjectKindIcon({
   kind: PublicProfileObjectEvidence["objectKind"];
 }) {
   if (kind === "animal")
-    return <PawPrint className="size-6" aria-hidden="true" />;
-  return <Sprout className="size-6" aria-hidden="true" />;
-}
-
-export function buildPublicProfileContextModules(
-  profile: PublicProfileEvidencePage,
-  locale: InterfaceLocale,
-): SiteShellContextRailModule[] {
-  const copy = getPublicProfileCopy(locale);
-  const basePath = publicProfilePath(locale, profile.handle);
-  // A rail item points at a panel, and a panel that is not the open one is
-  // `hidden` — so every one of these carries the `?tab=` that opens it. A bare
-  // `#profile-journals` would scroll a reader to nothing.
-  const objectsHref = publicProfileTabHref(
-    basePath,
-    "objects",
-    "#profile-objects",
-  );
-  const journalsHref = publicProfileTabHref(
-    basePath,
-    "entries",
-    "#profile-journals",
-  );
-  const aboutHref = publicProfileTabHref(basePath, "about", "#profile-about");
-  const relationshipItems = profile.summary.relationships
-    ? [
-        {
-          href: aboutHref,
-          label: copy.followers,
-          meta: String(profile.summary.relationships.followers),
-        },
-        {
-          href: aboutHref,
-          label: copy.following,
-          meta: String(profile.summary.relationships.following),
-        },
-      ]
-    : [];
-  const domainItems = [
-    { label: copy.plants, value: profile.summary.objectKinds.plant },
-    { label: copy.animals, value: profile.summary.objectKinds.animal },
-  ]
-    .filter((item) => item.value > 0)
-    .map((item) => ({
-      href: objectsHref,
-      label: item.label,
-      meta: String(item.value),
-    }));
-
-  return [
-    {
-      key: "profile-objects",
-      title: copy.objectsTitle,
-      items: domainItems,
-      emptyLabel: copy.noObjects,
-    },
-    {
-      key: "profile-activity",
-      title: copy.activity,
-      items: [
-        {
-          href: journalsHref,
-          label: copy.publicEntries,
-          meta: String(profile.summary.publicEntryCount),
-        },
-        {
-          href: aboutHref,
-          label: copy.lineage,
-          meta: String(profile.summary.confirmedLineageEdgeCount),
-        },
-        ...relationshipItems,
-      ],
-    },
-    {
-      key: "profile-navigation",
-      title: copy.navigation,
-      items: [
-        { href: objectsHref, label: copy.objectsTitle },
-        { href: journalsHref, label: copy.journalsTitle },
-        {
-          href: localizedPath(locale, "/feed"),
-          label: copy.followedFeed,
-        },
-        { href: "/garden/lineage/claims", label: copy.lineageClaims },
-      ],
-    },
-  ];
+    return <PawPrint className="size-5" aria-hidden="true" />;
+  return <Sprout className="size-5" aria-hidden="true" />;
 }
 
 export function profileActionMessage(
@@ -858,17 +795,4 @@ export function profileActionMessage(
   const messages = getPublicProfileCopy(locale).actionMessages;
   if (!status || !(status in messages)) return null;
   return messages[status as keyof typeof messages];
-}
-
-function dateTimeValue(value: Date | string) {
-  return value instanceof Date ? value.toISOString() : value;
-}
-
-function formatDate(value: Date | string, locale: InterfaceLocale) {
-  const date = value instanceof Date ? value : new Date(value);
-  return new Intl.DateTimeFormat(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
 }
