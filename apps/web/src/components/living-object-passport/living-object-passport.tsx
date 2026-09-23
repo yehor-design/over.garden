@@ -79,9 +79,12 @@ export function LivingObjectPassportContextRail({
 export function LivingObjectPassportOverview({
   passport,
   locale,
+  headingLevel = 1,
 }: {
   passport: LivingObjectPassportPresentation;
   locale: InterfaceLocale;
+  /** `2` inside a workspace shell, whose own heading is the page's `h1`. */
+  headingLevel?: 1 | 2;
 }) {
   const copy = getLivingObjectPassportCopy(locale);
   const domain = getLivingObjectPassportDomain(locale, passport.objectKind);
@@ -100,6 +103,7 @@ export function LivingObjectPassportOverview({
         <div className="grid min-w-0 gap-4 md:col-span-2">
           <PageHeader
             className="border-b-0 pb-0"
+            level={headingLevel}
             breadcrumb={
               <PassportBreadcrumbs
                 passport={passport}
@@ -166,34 +170,38 @@ export function LivingObjectPassportOverview({
             ) : null}
           </div>
 
-          <div className="flex min-w-0 items-center gap-3 border-t border-border pt-4">
-            <Avatar
-              src={passport.caretaker.avatarUrl}
-              name={passport.caretaker.displayName}
-              size="lg"
-            />
-            <div className="min-w-0">
-              <p className="text-caption text-text-muted">{copy.caretaker}</p>
-              {passport.caretaker.profilePath ? (
-                <Link
-                  href={passport.caretaker.profilePath}
-                  variant="quiet"
-                  className="block truncate text-body-sm font-semibold text-text-heading"
-                >
-                  {passport.caretaker.displayName}
-                </Link>
-              ) : (
-                <p className="truncate text-body-sm font-semibold text-text-heading">
-                  {passport.caretaker.displayName}
-                </p>
-              )}
-              {passport.caretaker.mention ? (
-                <p className="truncate text-caption text-text-muted">
-                  {passport.caretaker.mention}
-                </p>
-              ) : null}
+          {/* On the owner's own page the caretaker is always "you": the
+              line says nothing there, so only a reader sees it (`OVE-491`). */}
+          {passport.audience === "public" ? (
+            <div className="flex min-w-0 items-center gap-3 border-t border-border pt-4">
+              <Avatar
+                src={passport.caretaker.avatarUrl}
+                name={passport.caretaker.displayName}
+                size="lg"
+              />
+              <div className="min-w-0">
+                <p className="text-caption text-text-muted">{copy.caretaker}</p>
+                {passport.caretaker.profilePath ? (
+                  <Link
+                    href={passport.caretaker.profilePath}
+                    variant="quiet"
+                    className="block truncate text-body-sm font-semibold text-text-heading"
+                  >
+                    {passport.caretaker.displayName}
+                  </Link>
+                ) : (
+                  <p className="truncate text-body-sm font-semibold text-text-heading">
+                    {passport.caretaker.displayName}
+                  </p>
+                )}
+                {passport.caretaker.mention ? (
+                  <p className="truncate text-caption text-text-muted">
+                    {passport.caretaker.mention}
+                  </p>
+                ) : null}
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
 
@@ -291,7 +299,8 @@ export function buildLivingObjectPassportContextModules(
           label: passport.identity.value,
           meta: passport.status.label,
         },
-    passport.caretaker.profilePath
+    // As in the overview: on the owner's own page the caretaker is "you".
+    passport.audience === "public" && passport.caretaker.profilePath
       ? {
           href: passport.caretaker.profilePath,
           label: passport.caretaker.displayName,
@@ -325,7 +334,7 @@ export function buildLivingObjectPassportContextModules(
       title: passport.provenance.label,
       items: [
         {
-          href: "#passport-provenance",
+          href: passport.provenance.href ?? "#passport-provenance",
           label: passport.provenance.label,
           meta: String(passport.provenance.count),
         },

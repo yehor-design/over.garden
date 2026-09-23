@@ -12,6 +12,7 @@ import {
 import {
   createLineageInvitation,
   createProvenanceEdge,
+  ProvenanceRelationError,
 } from "@/server/lineage-repository";
 import {
   ownerUserIdFromFormData,
@@ -45,8 +46,7 @@ export async function resolvePlantObjectCatalogAction(
     catalogLabel: String(formData.get("catalogLabel") ?? ""),
   });
 
-  revalidatePath("/garden");
-  revalidatePath(`/garden/objects/${result.plantObject.id}`);
+  revalidateObject(result.plantObject.id);
   revalidatePublicEntries(result);
 }
 
@@ -67,8 +67,7 @@ export async function updatePlantObjectLocationAction(
     coarseRegionCode: String(formData.get("coarseRegionCode") ?? ""),
   });
 
-  revalidatePath("/garden");
-  revalidatePath(`/garden/objects/${result.plantObject.id}`);
+  revalidateObject(result.plantObject.id);
   revalidatePublicEntries(result);
 }
 
@@ -83,20 +82,28 @@ export async function createProvenanceEdgeAction(
     return { mutationScope: admission.code };
   }
   const scope = admission.scope;
-  const result = await createProvenanceEdge(scope, {
-    subjectPlantObjectId: String(formData.get("objectId") ?? ""),
-    sourceKind: String(formData.get("sourceKind") ?? ""),
-    sourcePlantObjectId: String(formData.get("sourcePlantObjectId") ?? ""),
-    sourceReferenceKind: String(formData.get("sourceReferenceKind") ?? ""),
-    sourceReferenceLabel: String(formData.get("sourceReferenceLabel") ?? ""),
-    clientMutationId: String(formData.get("clientMutationId") ?? ""),
-  });
-
-  revalidatePath("/garden");
-  revalidatePath(`/garden/objects/${result.subjectObject.id}`);
-  if (result.sourceObject) {
-    revalidatePath(`/garden/objects/${result.sourceObject.id}`);
+  let result: Awaited<ReturnType<typeof createProvenanceEdge>>;
+  try {
+    result = await createProvenanceEdge(scope, {
+      subjectPlantObjectId: String(formData.get("objectId") ?? ""),
+      sourceKind: String(formData.get("sourceKind") ?? ""),
+      sourcePlantObjectId: String(formData.get("sourcePlantObjectId") ?? ""),
+      sourceReferenceKind: String(formData.get("sourceReferenceKind") ?? ""),
+      sourceReferenceLabel: String(formData.get("sourceReferenceLabel") ?? ""),
+      clientMutationId: String(formData.get("clientMutationId") ?? ""),
+    });
+  } catch (error) {
+    // A relation the domain does not allow is an answer, not a crash: the
+    // form says why and keeps what was chosen (`OVE-491`).
+    if (error instanceof ProvenanceRelationError) {
+      return { status: "refused" as const, reason: error.reason };
+    }
+    throw error;
   }
+
+  revalidateObject(result.subjectObject.id);
+  if (result.sourceObject) revalidateObject(result.sourceObject.id);
+  return { status: "recorded" as const };
 }
 
 export async function createLineageInvitationAction(
@@ -116,8 +123,7 @@ export async function createLineageInvitationAction(
     clientMutationId: String(formData.get("clientMutationId") ?? ""),
   });
 
-  revalidatePath("/garden");
-  revalidatePath(`/garden/objects/${result.subjectObject.id}`);
+  revalidateObject(result.subjectObject.id);
 }
 
 /**
@@ -198,6 +204,15 @@ function toIsoTimestamp(value: Date | string): string {
  * location or catalog change reached the public entry pages only when their
  * hour-long cache expired on its own.
  */
+/**
+ * The garden and the object's pages — its history, its settings and its
+ * provenance (`OVE-491`) — which all read the same object.
+ */
+function revalidateObject(objectId: string) {
+  revalidatePath("/garden");
+  revalidatePath(`/garden/objects/${objectId}`, "layout");
+}
+
 function revalidatePublicEntries(result: {
   plantObject: { id: string };
   publicEntryPaths: string[];

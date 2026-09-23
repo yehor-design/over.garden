@@ -1060,6 +1060,14 @@ tomato unwritten for a fortnight was flagged as a problem.
   their own child route, and deletion is offered only when nothing hangs from
   the space: a button that would cascade into a gardener's plants and entries
   is not a button this product shows.
+- **An object is its history** (`OVE-491`). The object's page is for
+  reading and writing its story: one heading, who it is and where it lives,
+  Write, the timeline. What a gardener changes rarely — where its place shows,
+  its catalogue match, where it came from — has pages of its own, one link away
+  and never above the story. A relation is chosen, never preselected; the
+  confirmation names both sides; and the server, not the list, is what refuses
+  a plant descended from an animal. The gardener's specimen and the organism it
+  belongs to are two links with two names, never one "open".
 
 ---
 

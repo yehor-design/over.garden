@@ -17,6 +17,7 @@ function PageHeader({
   description,
   actions,
   id = "page-title",
+  level = 1,
   ...props
 }: Omit<React.ComponentProps<"header">, "title"> & {
   breadcrumb?: React.ReactNode;
@@ -26,7 +27,13 @@ function PageHeader({
   description?: React.ReactNode;
   actions?: React.ReactNode;
   id?: string;
+  /**
+   * `2` when the page's one `h1` is already its shell's — a record inside a
+   * workspace page (`OVE-491`: never two top-level headings on one page).
+   */
+  level?: 1 | 2;
 }) {
+  const Heading = level === 1 ? "h1" : "h2";
   return (
     <header
       data-slot="page-header"
@@ -47,9 +54,9 @@ function PageHeader({
               page sideways, and the type scale (DESIGN.md §2.6) is fixed — a
               second, smaller `h1` tier for long titles would be a second
               scale. */}
-          <h1 id={id} className="text-h1 break-words text-text-heading">
+          <Heading id={id} className="text-h1 break-words text-text-heading">
             {title}
-          </h1>
+          </Heading>
           {description ? (
             <p className="max-w-prose text-body-sm text-text-muted">
               {description}

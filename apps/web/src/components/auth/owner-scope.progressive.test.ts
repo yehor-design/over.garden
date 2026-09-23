@@ -46,7 +46,8 @@ const PROGRESSIVE_SURFACES = [
   // profile with its editor.
   "app/(default)/garden/lineage/claims/page.tsx",
   "app/(default)/garden/lineage/invitations/claim/page.tsx",
-  "app/(default)/garden/objects/[objectId]/page.tsx",
+  // Since `OVE-491` the passport's provenance forms live on its own page.
+  "app/(default)/garden/objects/[objectId]/provenance-section.tsx",
   "app/(default)/garden/objects/[objectId]/catalog-resolve-control.tsx",
   "app/(default)/garden/objects/[objectId]/location-privacy-control.tsx",
   "app/(default)/garden/profile/page.tsx",

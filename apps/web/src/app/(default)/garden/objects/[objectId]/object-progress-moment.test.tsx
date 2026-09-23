@@ -48,6 +48,9 @@ describe("ObjectProgressMoment", () => {
       expect(html).not.toMatch(/[рг]\.\./u);
       expect(html).not.toContain("derivative_key");
       expect(html).not.toContain("quarantine");
+      // A summary, not a second timeline: the story itself is below it.
+      expect(html).not.toContain("<ol");
+      expect(html).not.toContain("Planted the seedling");
     },
   );
 });

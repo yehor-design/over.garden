@@ -70,6 +70,17 @@ of its objects it mentions (the server's 1–12 rule); an ended session keeps th
 text and offers sign-in in a new tab. The first-entry composer remains the
 atomic first-run path. See `docs/redesign/2026-09-21/OVE-486-PROOF.md`.
 
+**An owned object's three pages (OVE-491):** `/garden/objects/[objectId]` is
+the object's history — one `h1`, the name under it with its space and kind, the
+breadcrumb (My garden › space › object), the public passport and the organism's
+catalogue card as two named links, then Write and the timeline. Location
+privacy, catalogue matching and the data source moved to `/settings`; the
+provenance records and forms to `/provenance`. A source must be one of the
+gardener's objects of the same kind: the list offers only those, opens on
+"Choose…", names both objects on its button, and the server refuses any other
+kind with a reason (no row is written). Old `#passport-…` fragment links land on
+the new page. See `docs/redesign/2026-09-21/OVE-491-PROOF.md`.
+
 **A space's own page (OVE-490):** `/garden/spaces/[spaceId]` names the
 space and offers Write (the one composer with the space named), Add a plant or
 animal here (object setup with the space preselected) and Settings; below are

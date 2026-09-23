@@ -74,6 +74,23 @@ describe("lineage provenance repository query contracts", () => {
     expect(compiled.parameters).toEqual([scope.userId, subjectPlantObjectId]);
   });
 
+  // OVE-491 (OG-UX-045): a tomato is not offered a bee colony as its source.
+  it("lists source candidates of the subject's own kind when the kind is given", () => {
+    const compiled = buildLineageSourceObjectOptionsQuery(
+      testDb,
+      scope,
+      subjectPlantObjectId,
+      "plant",
+    ).compile();
+
+    expect(compiled.sql).toContain('"plant_objects"."object_kind" = $3');
+    expect(compiled.parameters).toEqual([
+      scope.userId,
+      subjectPlantObjectId,
+      "plant",
+    ]);
+  });
+
   it("inserts proposed provenance edges idempotently by owner and client mutation", () => {
     const compiled = buildInsertProvenanceEdgeQuery(testDb, {
       owner_user_id: scope.userId,

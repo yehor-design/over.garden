@@ -102,6 +102,58 @@ describe("owner object passport presentation", () => {
     expect(presentation.provenance.count).toBe(1);
   });
 
+  // OVE-491: the header already carries the identity, the latest date and
+  // the journal state; the facts say only what it does not.
+  it("keeps the owner's facts to what the header does not already say", () => {
+    const presentation = buildOwnerObjectPassportPresentation(
+      ownerPage({ objectKind: "plant", entries: [] }),
+      emptyProvenance(),
+      "uk",
+    );
+
+    expect(presentation.facts.map((fact) => fact.key)).toEqual([
+      "context",
+      "first-observation",
+      "chronology",
+    ]);
+    expect(presentation.facts[0]).toMatchObject({
+      href: "/garden/spaces/space-1",
+    });
+  });
+
+  it("names the specimen's public page and the organism's card apart, with no garden button", () => {
+    const page = ownerPage({ objectKind: "plant", entries: [] });
+    const withoutPublicPage = buildOwnerObjectPassportPresentation(
+      page,
+      emptyProvenance(),
+      "uk",
+      "yehor",
+    );
+    expect(withoutPublicPage.secondaryActions).toEqual([]);
+
+    const withPublicPage = buildOwnerObjectPassportPresentation(
+      page,
+      emptyProvenance(),
+      "bg",
+      "yehor",
+      "/@yehor/objects/tomato",
+    );
+    expect(withPublicPage.secondaryActions).toEqual([
+      {
+        href: "/@yehor/objects/tomato",
+        label: "Публичният паспорт на този обект",
+      },
+    ]);
+    expect(withPublicPage.breadcrumbs.map((crumb) => crumb.label)).toEqual([
+      "Моята градина",
+      "Домашнє господарство",
+      page.plantObject.display_name,
+    ]);
+    expect(withPublicPage.provenance.href).toBe(
+      `/garden/objects/${page.plantObject.id}/provenance`,
+    );
+  });
+
   it.each([
     ["uk", "Регіон: Україна — місто Київ"],
     ["bg", "Регион: Украйна — град Киев"],

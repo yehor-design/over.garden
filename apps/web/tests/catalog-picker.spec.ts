@@ -282,7 +282,7 @@ test.describe("OVE-387 catalog picker", () => {
       await page.unroute("**/api/public/catalog/typeahead**");
 
       // The object page: an own-name object re-resolved to the species.
-      await page.goto(`/garden/objects/${third.id}`);
+      await page.goto(`/garden/objects/${third.id}/settings`);
       const resolveSection = page.locator("#passport-catalog");
       await expect(resolveSection).toBeVisible({ timeout: 10_000 });
       await resolveSection
