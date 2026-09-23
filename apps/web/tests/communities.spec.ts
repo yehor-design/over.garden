@@ -368,6 +368,11 @@ test.describe("the community family", () => {
     context,
     page,
   }) => {
+    // Sixteen scans — two viewers, two widths, four pages — each after a
+    // 1.2 s wait for the stream: about thirty seconds on a laptop, which is
+    // the whole default budget, and over it on a CI runner, where the test
+    // timed out twice running while nothing on these pages had changed.
+    test.setTimeout(90_000);
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
     const slug = fixture!.communitySlug;
