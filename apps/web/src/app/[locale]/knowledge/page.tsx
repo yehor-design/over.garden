@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, unstable_rethrow } from "next/navigation";
 
 import {
   PublicKnowledgeHub,
@@ -10,10 +10,7 @@ import {
   filterPublicKnowledgeItems,
   normalizePublicKnowledgeRequest,
 } from "@/lib/public-knowledge-content";
-import {
-  formatPublicKnowledgeEvidenceCount,
-  getPublicKnowledgeCopy,
-} from "@/lib/public-knowledge-copy";
+import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import {
   isPublicLocale,
   localizedPath,
@@ -25,18 +22,15 @@ import {
   getContentAvailableLocales,
   listLocalizedGuides,
 } from "@/server/public-localized-content";
-import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import {
   authoredContentEntityIds,
+  knowledgeSearchText,
   resolveAuthoredPublicSurfaceDiscovery,
 } from "@/server/public-seo-content";
 import { AUTHORED_PUBLIC_SURFACE_LASTMOD } from "@/server/public-surface-indexing-policy";
 import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import {
-  readPublicKnowledgeEvidence,
-  readPublicKnowledgeTopics,
-} from "@/server/public-cache";
+import { readPublicKnowledgeTopics } from "@/server/public-cache";
 import {
   deferStaticRenderAfterFailure,
   deferStaticRenderWithoutDatabase,
@@ -82,68 +76,61 @@ export async function renderPublicKnowledgePage(
   const surface = buildKnowledgeSurface(locale);
   const guides = listLocalizedGuides(locale);
   const answers = listLocalizedAnswerPages(locale);
-  const evidenceRequests = [...guides, ...answers].map((content) =>
-    readPublicKnowledgeEvidence(content.knowledge.evidence, locale),
+  // The one thing the hub reads is which topics exist and what they hold.
+  // An answer's row says what it rests on, which is in the code; how many
+  // gardeners wrote about the same plant is the answer page's to say.
+  const topicsResult = await readPublicKnowledgeTopics().then(
+    (topics) => ({ status: "fulfilled" as const, topics }),
+    (error: unknown) => {
+      unstable_rethrow(error);
+      return { status: "rejected" as const, topics: [] };
+    },
   );
-  const [topicsResult, evidenceResults] = await Promise.all([
-    Promise.allSettled([readPublicKnowledgeTopics()]).then(
-      (results) => results[0],
-    ),
-    Promise.allSettled(evidenceRequests),
-  ]);
-  const failed =
-    topicsResult?.status === "rejected" ||
-    evidenceResults.some((result) => result.status === "rejected");
-  // A hub with no topics and no evidence counts renders successfully and would
-  // be cached as the shell for everyone (ADR-0032 D4).
+  const failed = topicsResult.status === "rejected";
+  // A hub with no topics renders successfully and would be cached as the
+  // shell for everyone (ADR-0032 D4).
   if (failed) deferStaticRenderAfterFailure(phase);
 
-  const authoredItems: PublicKnowledgeHubItem[] = [
-    ...guides.map((guide, index) => ({
-      kind: "guide" as const,
-      path: guide.path,
-      title: guide.title,
-      description: guide.description,
-      objectKinds: guide.knowledge.objectKinds,
-      evidenceCount: fulfilledEvidenceCount(evidenceResults[index]),
-      updatedDate: guide.editorial.updatedDate,
-      indexable: true,
-    })),
-    ...answers.map((answer, index) => ({
-      kind: "answer" as const,
-      path: answer.path,
-      title: answer.title,
-      description: answer.description,
-      objectKinds: answer.knowledge.objectKinds,
-      evidenceCount: fulfilledEvidenceCount(
-        evidenceResults[guides.length + index],
-      ),
-      updatedDate: answer.editorial.updatedDate,
-      indexable: true,
-    })),
-  ];
-  const topicItems: PublicKnowledgeHubItem[] =
-    topicsResult?.status === "fulfilled"
-      ? topicsResult.value.map((topic) => ({
-          kind: "topic" as const,
-          path: publicTopicPath(topic.slug),
-          // A system topic is named in the page's language (the cached list
-          // is language-neutral); a gardener's tag is the gardener's word.
-          title: localizeTopicLabel(locale, topic.slug, topic.label),
-          description: topicDescription(locale, topic.entryCount),
-          objectKinds: topic.objectKinds,
-          evidenceCount: topic.entryCount,
-          updatedDate: topic.latestPublishedAt,
-          indexable: topic.indexState.isIndexable,
-        }))
-      : [];
-  const contextItems = [...topicItems, ...authoredItems];
-  const items = filterPublicKnowledgeItems(contextItems, request);
-  const state: PublicKnowledgeHubState = failed
-    ? "error"
-    : items.length === 0
-      ? "empty"
-      : "ready";
+  const authoredItems: PublicKnowledgeHubItem[] = [...answers, ...guides].map(
+    (content) => ({
+      kind: content.kind === "guide" ? ("guide" as const) : ("answer" as const),
+      path: content.path,
+      title: content.title,
+      description: content.description,
+      objectKinds: content.knowledge.objectKinds,
+      subject: content.knowledge.subject,
+      sourceCount: content.editorial.sources.length,
+      updatedDate: content.editorial.updatedDate,
+      searchText: knowledgeSearchText(content),
+    }),
+  );
+  const topicItems: PublicKnowledgeHubItem[] = topicsResult.topics
+    // A topic nobody has written under yet is an empty page; the hub lists
+    // what a reader can read.
+    .filter((topic) => topic.entryCount > 0)
+    .map((topic) => ({
+      kind: "topic" as const,
+      path: publicTopicPath(topic.slug),
+      // A system topic is named in the page's language (the cached list is
+      // language-neutral); a gardener's tag is the gardener's word.
+      title: localizeTopicLabel(locale, topic.slug, topic.label),
+      description: "",
+      objectKinds: topic.objectKinds,
+      entryCount: topic.entryCount,
+      latestPublishedAt: topic.latestPublishedAt,
+    }));
+  const items = filterPublicKnowledgeItems(
+    [...authoredItems, ...topicItems],
+    request,
+  );
+  // Without topics the hub still has its answers and guides; only a view of
+  // topics alone has nothing left to show.
+  const state: PublicKnowledgeHubState =
+    failed && request.type === "topic"
+      ? "error"
+      : items.length === 0
+        ? "empty"
+        : "ready";
 
   return (
     <PublicKnowledgeHub
@@ -151,8 +138,8 @@ export async function renderPublicKnowledgePage(
       copy={getPublicKnowledgeCopy(locale)}
       request={request}
       items={items}
-      contextItems={items}
       state={state}
+      topicsUnavailable={failed}
       jsonLd={surface.jsonLd}
     />
   );
@@ -209,32 +196,8 @@ export function renderStaticPublicKnowledgePage(locale: PublicLocale) {
         copy={getPublicKnowledgeCopy(locale)}
         request={normalizePublicKnowledgeRequest({})}
         items={[]}
-        contextItems={[]}
         state="loading"
       />
     ),
   });
-}
-
-function fulfilledEvidenceCount(
-  result:
-    | PromiseSettledResult<
-        Awaited<ReturnType<typeof listPublicKnowledgeEvidence>>
-      >
-    | undefined,
-) {
-  return result?.status === "fulfilled" ? result.value.totalCount : 0;
-}
-
-function topicDescription(locale: PublicLocale, entryCount: number) {
-  const count = formatPublicKnowledgeEvidenceCount(
-    entryCount,
-    locale,
-    getPublicKnowledgeCopy(locale),
-  );
-  return {
-    uk: `${count} у перевіреній темі.`,
-    bg: `${count} в проверена тема.`,
-    ru: `${count} в проверенной теме.`,
-  }[locale];
 }

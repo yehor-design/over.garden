@@ -6,7 +6,7 @@ import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import NextLink from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { Link } from "@/components/ui/link";
+import { Link, linkVariants } from "@/components/ui/link";
 import { ListRow } from "@/components/ui/list-row";
 import { PageHeader } from "@/components/ui/page-header";
 import { Section } from "@/components/ui/section";
@@ -18,6 +18,14 @@ import {
   PublicHomeFeed,
   type PublicHomeFeedState,
 } from "@/components/public/public-home-feed";
+import {
+  formatKnowledgeDate,
+  KnowledgeAboutSection,
+  KnowledgeCitedText,
+  KnowledgeProductHelp,
+  KnowledgeRelatedSection,
+  type KnowledgeRelatedItem,
+} from "@/components/public/public-knowledge-article";
 import {
   PublicKnowledgeEvidenceList,
   type PublicKnowledgeEvidenceState,
@@ -215,6 +223,16 @@ export function LocalizedBlogPostPage({
   );
 }
 
+/**
+ * A guide or an answer, read in the order a reader needs it (`OVE-498`,
+ * OG-UX-033): the text first; then what gardeners wrote beside it; for an
+ * answer, the help with OverGarden kept apart from the advice; then what the
+ * text rests on and what it is not; then one list of what to read next.
+ *
+ * The byline carries the author and the date, and points down to the rest —
+ * provenance a reader can reach in one step, without a wall of it above the
+ * answer.
+ */
 export function LocalizedGuidePage({
   locale,
   guide,
@@ -222,6 +240,7 @@ export function LocalizedGuidePage({
   knowledgeCopy = getPublicKnowledgeCopy(locale),
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
+  related = [],
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -231,32 +250,37 @@ export function LocalizedGuidePage({
   knowledgeCopy?: PublicKnowledgeCopy;
   evidence?: PublicKnowledgeEvidence;
   evidenceState?: PublicKnowledgeEvidenceState;
+  related?: readonly KnowledgeRelatedItem[];
   jsonLd?: Record<string, unknown> | null;
 }) {
+  const subject = guide.knowledge.subject;
+  const trailing = knowledgeTrailingHeadings(
+    "guide",
+    knowledgeCopy,
+    guide.evidenceTitle,
+    related.length > 0,
+  );
+
   return (
     <PublicArticle
       locale={locale}
-      dataset={{ "data-trust-state": "editorial" }}
+      dataset={{
+        "data-trust-state": "editorial",
+        "data-knowledge-subject": subject,
+      }}
       backHref={localizedPath(locale, "/knowledge")}
       backLabel={knowledgeCopy.backToKnowledge}
-      eyebrow={`${knowledgeCopy.editorialLabel} · ${chrome.guideEyebrow}`}
+      eyebrow={`${knowledgeCopy.subjects[subject]} · ${knowledgeCopy.formats.guide}`}
       title={guide.title}
       description={guide.description}
-      meta={[
-        { label: knowledgeCopy.bylineLabel, value: guide.editorial.author },
-        { label: knowledgeCopy.sourceLabel, value: guide.editorial.source },
-        {
-          label: knowledgeCopy.updatedLabel,
-          value: formatDate(guide.editorial.updatedDate, locale),
-        },
-      ]}
+      meta={knowledgeByline(locale, knowledgeCopy, guide.editorial, "guide")}
       cover={
         guide.media
           ? { src: guide.media.publicUrl, alt: guide.media.alt }
           : null
       }
       outcome={guide.outcome}
-      contentsLabel={chrome.guideEyebrow}
+      contentsLabel={chrome.contentsTitle}
       // A guide's steps are its sections, numbered: the rail lists them, a
       // reader can share one, and a screen reader hears "heading two" rather
       // than "list item" for something that is the body of the page.
@@ -266,6 +290,7 @@ export function LocalizedGuidePage({
         body: step.body,
         ordinal: index + 1,
       }))}
+      contentsAfter={trailing}
       jsonLd={jsonLd}
     >
       <PublicKnowledgeEvidenceList
@@ -273,6 +298,21 @@ export function LocalizedGuidePage({
         copy={knowledgeCopy}
         evidence={evidence}
         state={evidenceState}
+        title={guide.evidenceTitle}
+        headingId={KNOWLEDGE_HEADING_IDS.guide.evidence}
+        retryHref={localizedPath(locale, guide.path)}
+      />
+      <KnowledgeAboutSection
+        id={KNOWLEDGE_HEADING_IDS.guide.about}
+        locale={locale}
+        copy={knowledgeCopy}
+        subject={subject}
+        editorial={guide.editorial}
+      />
+      <KnowledgeRelatedSection
+        id={KNOWLEDGE_HEADING_IDS.guide.related}
+        title={knowledgeCopy.relatedTitle}
+        items={related}
       />
     </PublicArticle>
   );
@@ -285,6 +325,8 @@ export function LocalizedAnswerPage({
   knowledgeCopy = getPublicKnowledgeCopy(locale),
   evidence = emptyKnowledgeEvidence(locale),
   evidenceState = "empty",
+  productHelpGuideTitle,
+  related = [],
   jsonLd,
 }: {
   locale: PublicLocale;
@@ -294,42 +336,71 @@ export function LocalizedAnswerPage({
   knowledgeCopy?: PublicKnowledgeCopy;
   evidence?: PublicKnowledgeEvidence;
   evidenceState?: PublicKnowledgeEvidenceState;
+  /** The guide the product help ends at, by its title in this language. */
+  productHelpGuideTitle: string;
+  related?: readonly KnowledgeRelatedItem[];
   jsonLd?: Record<string, unknown> | null;
 }) {
+  const subject = page.knowledge.subject;
+  const ids = KNOWLEDGE_HEADING_IDS.answer;
+  const trailing = knowledgeTrailingHeadings(
+    "answer",
+    knowledgeCopy,
+    page.evidenceTitle,
+    related.length > 0,
+    page.productHelp.title,
+  );
+
   return (
     <PublicArticle
       locale={locale}
-      dataset={{ "data-trust-state": "editorial" }}
+      dataset={{
+        "data-trust-state": "editorial",
+        "data-knowledge-subject": subject,
+      }}
       backHref={localizedPath(locale, "/knowledge")}
       backLabel={knowledgeCopy.backToKnowledge}
-      eyebrow={`${knowledgeCopy.editorialLabel} · ${chrome.answerEyebrow}`}
+      eyebrow={`${knowledgeCopy.subjects[subject]} · ${knowledgeCopy.formats.answer}`}
       title={page.question}
       description={page.description}
-      meta={[
-        { label: knowledgeCopy.bylineLabel, value: page.editorial.author },
-        { label: knowledgeCopy.sourceLabel, value: page.editorial.source },
-        {
-          label: knowledgeCopy.updatedLabel,
-          value: formatDate(page.editorial.updatedDate, locale),
-        },
-      ]}
-      contentsLabel={chrome.faqTitle}
-      // The concise answer first, because that is what the page is for, then
-      // the proof behind it, then the questions it raises. Three real
-      // headings rather than three bordered boxes.
+      meta={knowledgeByline(locale, knowledgeCopy, page.editorial, "answer")}
+      contentsLabel={chrome.contentsTitle}
+      // The answer first, because that is what the page is for; then how to
+      // tell the causes apart, what to note, and the questions it raises.
+      // Every claim carries the number of the source it rests on.
       sections={[
         {
           id: "answer-concise",
           heading: chrome.conciseAnswerTitle,
-          body: page.conciseAnswer,
+          body: (
+            <p>
+              <KnowledgeCitedText
+                text={page.conciseAnswer}
+                copy={knowledgeCopy}
+              />
+            </p>
+          ),
         },
         {
-          id: "answer-proof",
-          heading: chrome.proofDetailsTitle,
+          id: "answer-causes",
+          heading: chrome.causesTitle,
           body: (
             <ul className="grid list-disc gap-2 pl-5">
-              {page.proofDetails.map((detail) => (
-                <li key={detail}>{detail}</li>
+              {page.causes.map((cause) => (
+                <li key={cause}>
+                  <KnowledgeCitedText text={cause} copy={knowledgeCopy} />
+                </li>
+              ))}
+            </ul>
+          ),
+        },
+        {
+          id: "answer-observations",
+          heading: chrome.observationsTitle,
+          body: (
+            <ul className="grid list-disc gap-2 pl-5">
+              {page.observations.map((observation) => (
+                <li key={observation}>{observation}</li>
               ))}
             </ul>
           ),
@@ -342,8 +413,11 @@ export function LocalizedAnswerPage({
               {page.faqs.map((faq) => (
                 <div key={faq.question} className="grid gap-1">
                   <dt className="text-h3 text-text-heading">{faq.question}</dt>
-                  <dd className="text-body-sm text-text-secondary">
-                    {faq.answer}
+                  <dd className="text-body text-text-secondary">
+                    <KnowledgeCitedText
+                      text={faq.answer}
+                      copy={knowledgeCopy}
+                    />
                   </dd>
                 </div>
               ))}
@@ -351,6 +425,7 @@ export function LocalizedAnswerPage({
           ),
         },
       ]}
+      contentsAfter={trailing}
       jsonLd={jsonLd}
     >
       <PublicKnowledgeEvidenceList
@@ -358,9 +433,106 @@ export function LocalizedAnswerPage({
         copy={knowledgeCopy}
         evidence={evidence}
         state={evidenceState}
+        title={page.evidenceTitle}
+        note={knowledgeCopy.evidenceNote}
+        headingId={ids.evidence}
+        retryHref={localizedPath(locale, page.path)}
+      />
+      <KnowledgeProductHelp
+        id={ids.productHelp}
+        locale={locale}
+        copy={knowledgeCopy}
+        help={page.productHelp}
+        guideTitle={productHelpGuideTitle}
+      />
+      <KnowledgeAboutSection
+        id={ids.about}
+        locale={locale}
+        copy={knowledgeCopy}
+        subject={subject}
+        editorial={page.editorial}
+      />
+      <KnowledgeRelatedSection
+        id={ids.related}
+        title={knowledgeCopy.relatedTitle}
+        items={related}
       />
     </PublicArticle>
   );
+}
+
+/** The ids of the headings a guide or an answer renders after its body. */
+const KNOWLEDGE_HEADING_IDS = {
+  guide: {
+    evidence: "guide-evidence",
+    about: "guide-about",
+    related: "guide-related",
+  },
+  answer: {
+    evidence: "answer-evidence",
+    productHelp: "answer-product-help",
+    about: "answer-about",
+    related: "answer-related",
+  },
+} as const;
+
+function knowledgeTrailingHeadings(
+  kind: "guide" | "answer",
+  copy: PublicKnowledgeCopy,
+  evidenceTitle: string,
+  hasRelated: boolean,
+  productHelpTitle?: string,
+) {
+  const ids = KNOWLEDGE_HEADING_IDS[kind];
+  return [
+    { id: ids.evidence, heading: evidenceTitle },
+    ...(kind === "answer" && productHelpTitle
+      ? [
+          {
+            id: KNOWLEDGE_HEADING_IDS.answer.productHelp,
+            heading: productHelpTitle,
+          },
+        ]
+      : []),
+    { id: ids.about, heading: copy.aboutTitle },
+    ...(hasRelated ? [{ id: ids.related, heading: copy.relatedTitle }] : []),
+  ];
+}
+
+/**
+ * Author and date, and the way down to the rest of the provenance: "4
+ * джерела й обмеження" for an answer that cites four, "Основа й обмеження"
+ * for help that cites none.
+ */
+function knowledgeByline(
+  locale: PublicLocale,
+  copy: PublicKnowledgeCopy,
+  editorial: GuideContent["editorial"],
+  kind: "guide" | "answer",
+) {
+  return [
+    { label: copy.bylineLabel, value: editorial.author },
+    {
+      label: copy.updatedLabel,
+      value: (
+        <time dateTime={editorial.updatedDate}>
+          {formatKnowledgeDate(editorial.updatedDate, locale)}
+        </time>
+      ),
+    },
+    {
+      label: copy.aboutTitle,
+      value: (
+        <a
+          href={`#${KNOWLEDGE_HEADING_IDS[kind].about}`}
+          data-knowledge-about-link="true"
+          className={linkVariants({ variant: "inline" })}
+        >
+          {copy.aboutLink(editorial.sources.length)}
+        </a>
+      ),
+    },
+  ];
 }
 
 function PublicSurfaceJsonLd({

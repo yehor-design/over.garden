@@ -12,9 +12,16 @@ import {
 import {
   getLocalizedAnswerPage,
   getContentAvailableLocales,
+  getLocalizedGuide,
   getLocalizedRouteChrome,
 } from "@/server/public-localized-content";
-import { readPublicKnowledgeEvidence } from "@/server/public-cache";
+import {
+  readPublicKnowledgeEvidence,
+  readPublicKnowledgeTopics,
+} from "@/server/public-cache";
+import { resolveKnowledgeRelatedItems } from "@/server/public-knowledge-related";
+import { stripKnowledgeCitations } from "@/lib/knowledge-citations";
+import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
 import {
   deferStaticRenderAfterFailure,
@@ -25,14 +32,13 @@ import {
 import {
   answerVisibleText,
   authoredContentEntityIds,
-  catalogEvidencePublicPath,
+  knowledgeRelatedPaths,
   listAnswerPages,
   resolveAuthoredPublicSurfaceDiscovery,
   type AnswerPageContent,
 } from "@/server/public-seo-content";
 import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { publicTopicPath } from "@/lib/garden/public-paths";
 
 interface LocalizedAnswerRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -94,9 +100,10 @@ export default async function AnswerRoute({
 
 /**
  * An authored page is a static document (ADR-0032 D8): its words are in the
- * code, and the one thing it reads — how much gardener evidence stands behind
- * it — is a cached read prerendered with the page. A failed read defers to the
- * request rather than caching a page whose evidence says nothing.
+ * code, and the two things it reads — the gardeners' entries beside it, and
+ * which of its related topics exist — are cached reads prerendered with the
+ * page. A failed read defers to the request rather than caching a page whose
+ * evidence says nothing.
  */
 export async function renderAnswerPage(
   localeParam: PublicLocale,
@@ -111,20 +118,30 @@ export async function renderAnswerPage(
 
   const surface = buildAnswerSurface(localeParam, page);
 
-  const evidenceResult = await readPublicKnowledgeEvidence(
-    page.knowledge.evidence,
-    localeParam,
-  ).then(
-    (evidence) => ({
-      evidence,
-      state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
-    }),
-    (error: unknown) => {
+  const [evidenceResult, topics] = await Promise.all([
+    readPublicKnowledgeEvidence(page.knowledge.evidence, localeParam).then(
+      (evidence) => ({
+        evidence,
+        state:
+          evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
+      }),
+      (error: unknown) => {
+        unstable_rethrow(error);
+        deferStaticRenderAfterFailure(phase);
+        return {
+          evidence: emptyEvidence(localeParam),
+          state: "error" as const,
+        };
+      },
+    ),
+    readPublicKnowledgeTopics().catch((error: unknown) => {
       unstable_rethrow(error);
+      // A related list without its topics is a partial page; the request
+      // renders it, and the prerender does not keep it.
       deferStaticRenderAfterFailure(phase);
-      return { evidence: emptyEvidence(localeParam), state: "error" as const };
-    },
-  );
+      return [];
+    }),
+  ]);
 
   return (
     <LocalizedAnswerPage
@@ -134,6 +151,15 @@ export async function renderAnswerPage(
       availableLocales={getLanguageSwitcherLocales()}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
+      productHelpGuideTitle={
+        getLocalizedGuide(localeParam, page.productHelp.guideSlug)?.title ??
+        page.productHelp.title
+      }
+      related={resolveKnowledgeRelatedItems(
+        localeParam,
+        page.knowledge.related,
+        topics,
+      )}
       jsonLd={surface.jsonLd}
     />
   );
@@ -145,12 +171,10 @@ function buildAnswerSurface(locale: PublicLocale, page: AnswerPageContent) {
     canonicalPath: localizedPath(locale, page.path),
     equivalentLocales: getContentAvailableLocales(page.path),
     visibleText: answerVisibleText(page),
-    distinctPublicEntityIds: authoredContentEntityIds(page.path, [
-      ...page.relatedVarieties.map((link) => link.href),
-      ...page.relatedTopics.map((link) => link.href),
-      ...page.knowledge.evidence.topicSlugs.map(publicTopicPath),
-      ...page.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
-    ]),
+    distinctPublicEntityIds: authoredContentEntityIds(
+      page.path,
+      knowledgeRelatedPaths(page),
+    ),
     meaningfulContentAt: `${page.editorial.updatedDate}T00:00:00.000Z`,
     candidateState: "candidate",
   });
@@ -164,8 +188,15 @@ function buildAnswerSurface(locale: PublicLocale, page: AnswerPageContent) {
       name: page.title,
       description: page.description,
       dateModified: `${page.editorial.updatedDate}T00:00:00.000Z`,
-      trustQualifier: `${page.editorial.author}; ${page.editorial.source}`,
-      questions: page.faqs,
+      trustQualifier:
+        getPublicKnowledgeCopy(locale).subjects[page.knowledge.subject],
+      // The gardening questions the page answers, as a reader reads them:
+      // the citation marks are links on the page and noise in a graph. The
+      // product help is not a question the page is about.
+      questions: page.faqs.map((faq) => ({
+        question: faq.question,
+        answer: stripKnowledgeCitations(faq.answer),
+      })),
     },
   });
 }

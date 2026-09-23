@@ -122,6 +122,29 @@ gardeners wrote (DESIGN.md §5.18; ADR-0026 D9 amended).
 
 See `docs/redesign/2026-09-21/OVE-497-PROOF.md`.
 
+**Knowledge (OVE-498):** answers, guides and topics say what each piece is
+about and what it rests on (DESIGN.md §5.19).
+- Every piece is gardening advice or help with OverGarden, said first
+  ("Садівництво · Відповідь", "Довідка OverGarden · Посібник").
+- The tomato answer rests on four sources, read on 2026-09-23: two University
+  of Maryland Extension pages, one from UW–Madison Extension and the RHS. Each
+  claim is cited `[n]`, and claims nothing read supports were removed.
+  "Про цей текст" gives the basis, the sources with access dates, what the
+  text is not, the specialist review (none) and the date. The ledger is
+  `docs/redesign/2026-09-21/OVE-498-PROVENANCE.md`.
+- Product help left the gardening FAQ for its own section; the `FAQPage` is
+  the two gardening questions.
+- The gardeners' entries beside each piece come from rules that match real
+  rows: tomato-species entries for the answer, the `plants` topic for the
+  guide. The old rules named three topics that never existed.
+- Topics count only entries a listing can show, those whose author has an
+  address (ADR-0029 D9). No production count changed.
+- Readers see no indexing badges and no duplicate rails. The hub searches
+  the pieces' own words, a topic searches its entries through the journals,
+  and each page has one related section.
+
+See `docs/redesign/2026-09-21/OVE-498-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.

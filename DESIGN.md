@@ -1448,6 +1448,58 @@ OG-UX-013/032/033). The card now reads in ADR-0026 D9's order, as amended:
   invented: the card shows gardeners' photographs in their entries, and an
   illustration is never an identification photograph.
 
+### 5.19 Knowledge says what it is about and what it rests on
+
+The tomato answer gave "the OverGarden approach" as its basis, counted zero
+gardeners' entries in every environment, and mixed two questions about the
+product into its gardening FAQ. The hub and every topic said which topics had
+"enough experience for indexing" (`OVE-498`, OG-UX-032/033). The rules:
+
+- **The subject before the format.** Every guide and answer is gardening
+  advice or help with OverGarden (`PublicKnowledgeSubject`), and its eyebrow,
+  hub row and `about` say which first: "Садівництво · Відповідь", "Довідка
+  OverGarden · Посібник".
+- **Advice cites, and says what it is not.** A gardening claim ends with its
+  sources' numbers, `[1][2]` (`lib/knowledge-citations.ts`), each a link to
+  the source in "Про цей текст". That section lists:
+  - the author and what the text rests on;
+  - the sources, each with its own date and the date it was read;
+  - what the text is not ("Це не діагноз");
+  - whether a specialist reviewed it;
+  - the date it was updated.
+
+  Help with the product cites no outside source and says so. A claim nothing
+  read supports is removed, not softened. The ledger is
+  `docs/redesign/2026-09-21/OVE-498-PROVENANCE.md`.
+- **Provenance is one step away, never a wall above the answer.** The byline
+  is the author, the date and "4 джерела й обмеження" pointing down. The
+  answer comes first.
+- **Product help stays out of advice.** Help with doing it in OverGarden is
+  its own labelled section after the advice, ending at the guide. It is never
+  a FAQ entry, so it is never in the `FAQPage`.
+- **Gardeners' entries are said for what they are.** They are headed by what
+  they are about ("Що садівники записали про томати"), each entry a heading.
+  Beside a text, the count carries "вони не підтверджують і не спростовують
+  текст вище". None is an empty state, never a nought.
+- **Counts are of what can be shown.** A topic counts only entries a listing
+  can render, those whose author has an address. The hub lists no topic
+  that holds none. A reader sees counts and the last entry's date, never
+  whether a crawler admits the page.
+- **One related section, labelled.** "Читайте також" lists answers, guides
+  and topics that hold entries. A topic lists the answers and guides that
+  draw on it. No rail repeats the results or the entries.
+- **Every heading is in the contents.** An article's contents, the rail
+  above `xl` and the article's foot below it, list every `h2` on the page, the
+  trailing sections too (`PublicArticle`'s `contentsAfter`).
+- **Search reads the words.** The hub matches a piece's own text, not only its
+  title. A topic searches its own entries through the journals' search
+  (`/journals?topic=…&q=…`), a real `GET` form.
+- **Partial failure stays partial.**
+  - Topics that cannot be read leave the answers and guides on the hub, with
+    a notice.
+  - Entries that cannot be read leave the text, with a retry of the same
+    page, never a detour to the hub.
+
 ---
 
 ## 6. Language and locale

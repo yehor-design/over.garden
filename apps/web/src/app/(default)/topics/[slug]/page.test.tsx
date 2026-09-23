@@ -61,9 +61,28 @@ describe("/topics/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Проверенная тема");
+    expect(html).toContain("Тема");
     expect(html).toContain("Регулярні спостереження");
-    expect(html).toContain("5 публичных записей");
+    // Real counts and recency, never crawler admission (OG-UX-032).
+    expect(html).toContain("5 записей садоводов");
+    expect(html).toContain("последняя запись");
+    expect(html).not.toMatch(/индекс|Проверенная/u);
+    // The topic searches its own entries, through the journals' search.
+    const search = /<form[^>]*data-topic-search="true"[^>]*>/u.exec(html)?.[0];
+    expect(search).toContain('role="search"');
+    expect(search).toContain('action="/ru/journals"');
+    expect(search).toContain('method="get"');
+    expect(html).toContain(
+      '<input type="hidden" name="topic" value="care-checks"/>',
+    );
+    // Its entries once, not again in a rail (criterion 4).
+    expect(html).not.toContain('data-site-shell-context="route-owned"');
+    expect(html).toContain('id="topic-evidence"');
+    expect(html).toMatch(
+      /data-knowledge-evidence-all="true"[^>]*>Все записи \(5\)/u,
+    );
+    // No authored piece draws on this topic, so there is no related section.
+    expect(html).not.toContain('data-knowledge-related="true"');
     expect(html).not.toContain("/garden");
     const metadata = await generateMetadata({
       params: Promise.resolve({ locale: "ru", slug: "care-checks" }),
@@ -88,6 +107,30 @@ describe("/topics/[slug]", () => {
       },
       robots: { index: true, follow: true },
     });
+  });
+
+  it("lists the answers and guides that draw on the topic, once", async () => {
+    mocks.getPublicTopicAggregationPage.mockResolvedValue({
+      ...topicPage(),
+      topic: { slug: "plants", label: "Рослини" },
+    });
+    const { default: TopicRoute } =
+      await import("@/app/[locale]/topics/[slug]/page");
+    const html = renderToStaticMarkup(
+      await TopicRoute({
+        params: Promise.resolve({ locale: "uk", slug: "plants" }),
+      }),
+    );
+
+    const related = html.slice(html.indexOf('data-knowledge-related="true"'));
+    expect(related).toContain("Відповіді й посібники на цю тему");
+    expect(related).toContain('href="/answers/why-are-tomato-leaves-yellow"');
+    expect(related).toContain("Садівництво · Відповідь");
+    expect(related).toContain('href="/guides/start-a-living-plant-record"');
+    expect(related).toContain("Довідка OverGarden · Посібник");
+    expect(
+      html.match(/href="\/answers\/why-are-tomato-leaves-yellow"/gu)?.length,
+    ).toBe(1);
   });
 
   it("allows only the canonical Ukrainian topic route to inherit the quality gate", async () => {

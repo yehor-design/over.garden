@@ -102,3 +102,32 @@ describe("public knowledge URL and filtering contract", () => {
     ).toHaveLength(3);
   });
 });
+
+describe("the hub's search reads the words of a piece", () => {
+  it("matches a word from the body when the title does not have it", () => {
+    const items: PublicKnowledgeListItem[] = [
+      {
+        kind: "answer",
+        path: "/answers/why-are-tomato-leaves-yellow",
+        title: "Чому жовтіє листя томатів?",
+        description: "Часті причини жовтого листя.",
+        objectKinds: ["plant"],
+        searchText: "Брак азоту спершу жовтить старші листки.",
+      },
+      {
+        kind: "topic",
+        path: "/topics/plants",
+        title: "Рослини",
+        description: "",
+        objectKinds: ["plant"],
+      },
+    ];
+    expect(
+      filterPublicKnowledgeItems(items, {
+        query: "АЗОТ",
+        type: "all",
+        kind: "all",
+      }).map((item) => item.path),
+    ).toEqual(["/answers/why-are-tomato-leaves-yellow"]);
+  });
+});

@@ -1,19 +1,23 @@
 import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
+import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import { TagIcon as Tags } from "@/components/icons/Tag";
 import type { ReactNode } from "react";
 
 import {
+  KnowledgeRelatedSection,
+  type KnowledgeRelatedItem,
+} from "@/components/public/public-knowledge-article";
+import {
   PublicKnowledgeEvidenceList,
   type PublicKnowledgeEvidenceState,
 } from "@/components/public/public-knowledge-evidence";
-import {
-  SiteShellContextRailModules,
-  SiteShellContextRailRegistration,
-  type SiteShellContextRailModule,
-} from "@/components/site-shell/site-shell-context-rail";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { HiddenField } from "@/components/ui/hidden-field";
 import { Link } from "@/components/ui/link";
 import { PageHeader } from "@/components/ui/page-header";
+import { SearchInput } from "@/components/ui/search-input";
+import { publicTopicPath } from "@/lib/garden/public-paths";
 import {
   formatPublicKnowledgeEvidenceCount,
   type PublicKnowledgeCopy,
@@ -23,12 +27,23 @@ import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence
 import type { PublicTopicAggregationPage } from "@/server/public-topic-repository";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 
+/**
+ * A curated topic: the gardeners' entries filed under it (`OVE-498`).
+ *
+ * It says how many there are and when the last one was written — facts about
+ * the topic — and never whether a search engine may index it (OG-UX-032). It
+ * searches its own entries, through the journals' own search narrowed to the
+ * topic, so there is one search behind it and not a second one to keep true.
+ * Below the entries, the answers and guides that draw on the topic are its one
+ * related section; nothing on the page repeats the entries in a rail.
+ */
 export function PublicKnowledgeTopicPage({
   locale,
   copy,
   topic,
   evidence,
   evidenceState,
+  related,
   actions,
   jsonLd,
 }: {
@@ -37,11 +52,23 @@ export function PublicKnowledgeTopicPage({
   topic: PublicTopicAggregationPage;
   evidence: PublicKnowledgeEvidence;
   evidenceState: PublicKnowledgeEvidenceState;
+  related: readonly KnowledgeRelatedItem[];
   actions?: ReactNode;
   jsonLd?: Record<string, unknown> | null;
 }) {
-  const contextModules = topicContextModules(copy, topic, evidence);
   const serializedJsonLd = serializePublicSurfaceJsonLd(jsonLd ?? null);
+  const searchId = "topic-search";
+  // A count of nothing is not a fact (DESIGN.md §5.10): an empty topic says
+  // so once, in its entries' own section.
+  const facts =
+    topic.entryCount > 0
+      ? [
+          formatPublicKnowledgeEvidenceCount(topic.entryCount, locale, copy),
+          topic.latestPublishedAt
+            ? copy.topicLatest(formatDate(topic.latestPublishedAt, locale))
+            : null,
+        ].filter((fact): fact is string => Boolean(fact))
+      : [];
 
   return (
     <main
@@ -56,12 +83,11 @@ export function PublicKnowledgeTopicPage({
           dangerouslySetInnerHTML={{ __html: serializedJsonLd }}
         />
       ) : null}
-      <SiteShellContextRailRegistration modules={contextModules} />
 
       <PageHeader
         breadcrumb={
           <Link
-            href={knowledgeHubPath(locale)}
+            href={localizedPath(locale, "/knowledge")}
             variant="muted"
             className="inline-flex min-h-11 w-fit items-center gap-1.5 text-body-sm font-medium"
           >
@@ -76,68 +102,66 @@ export function PublicKnowledgeTopicPage({
           </span>
         }
         title={topic.topic.label}
-        description={formatPublicKnowledgeEvidenceCount(
-          topic.entryCount,
-          locale,
-          copy,
-        )}
+        description={facts.length > 0 ? facts.join(" · ") : undefined}
         actions={actions}
       />
 
-      {/* Whether a topic is indexable is a fact about it, and the page says
-          it in a word rather than leaving a reader to infer it (DESIGN.md
-          §8: colour is never the only signal, and nor is an absence). */}
-      <p>
-        <Badge tone={topic.indexState.isIndexable ? "success" : "neutral"}>
-          {topic.indexState.isIndexable
-            ? copy.topicIndexable
-            : copy.topicNoindex}
-        </Badge>
-      </p>
+      {/* A real GET form into the journals, narrowed to this topic: it works
+          before the bundle, and the search is in the address, so Back returns
+          here. A document navigation, because the journals' query view is a
+          twin (`public-query-twin.ts`). */}
+      {topic.entryCount > 0 ? (
+        <form
+          method="get"
+          action={localizedPath(locale, "/journals")}
+          role="search"
+          aria-label={copy.topicSearchLabel(topic.topic.label)}
+          data-topic-search="true"
+          className="flex flex-wrap items-end gap-2 sm:flex-nowrap"
+        >
+          <HiddenField name="topic" value={topic.topic.slug} />
+          <Field
+            label={copy.topicSearchLabel(topic.topic.label)}
+            id={searchId}
+            className="min-w-0 flex-1 basis-full sm:basis-auto"
+          >
+            <SearchInput
+              name="q"
+              maxLength={120}
+              placeholder={copy.topicSearchPlaceholder}
+            />
+          </Field>
+          <Button type="submit" className="shrink-0">
+            <Search aria-hidden="true" />
+            {copy.topicSearchSubmit}
+          </Button>
+        </form>
+      ) : null}
 
       <PublicKnowledgeEvidenceList
         locale={locale}
         copy={copy}
         evidence={evidence}
         state={evidenceState}
+        title={copy.topicEvidenceTitle}
+        headingId="topic-evidence"
+        retryHref={localizedPath(locale, publicTopicPath(topic.topic.slug))}
+        showCount={false}
+        explainMatches={false}
       />
 
-      <div className="border-t border-border pt-6 xl:hidden">
-        <SiteShellContextRailModules modules={contextModules} />
-      </div>
+      <KnowledgeRelatedSection
+        id="topic-related"
+        title={copy.topicRelatedTitle}
+        items={related}
+      />
     </main>
   );
 }
 
-function knowledgeHubPath(locale: PublicLocale) {
-  const path = localizedPath(locale, "/knowledge");
-  return path;
-}
-
-function topicContextModules(
-  copy: PublicKnowledgeCopy,
-  topic: PublicTopicAggregationPage,
-  evidence: PublicKnowledgeEvidence,
-): SiteShellContextRailModule[] {
-  return [
-    {
-      key: "topic-journals",
-      title: copy.journalEvidenceLabel,
-      items: topic.entries.slice(0, 6).map((entry) => ({
-        href: entry.publicPath,
-        label: entry.title,
-      })),
-      emptyLabel: copy.emptyEvidenceTitle,
-    },
-    {
-      key: "topic-objects",
-      title: copy.kindLabel,
-      items: evidence.items.slice(0, 6).map((item) => ({
-        href: item.card.object.publicPath,
-        label: item.card.object.displayName,
-        meta: item.card.object.identityLabel ?? undefined,
-      })),
-      emptyLabel: copy.emptyEvidenceTitle,
-    },
-  ];
+function formatDate(value: Date | string, locale: PublicLocale) {
+  return new Intl.DateTimeFormat(
+    { uk: "uk-UA", bg: "bg-BG", ru: "ru-RU" }[locale],
+    { day: "numeric", month: "short", year: "numeric" },
+  ).format(new Date(value));
 }

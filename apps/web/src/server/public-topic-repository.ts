@@ -431,6 +431,15 @@ function buildPublicTopicMembershipBaseQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    // Only an entry a listing can show is counted: one whose author holds no
+    // handle has no public address (ADR-0029 D9), so the journals leave it
+    // out — and a topic that counted it said "156 entries" over a list of
+    // none (`OVE-498`, OG-UX-032).
+    .where(
+      publicAuthorHandleSql("journal_entries.owner_user_id"),
+      "is not",
+      null,
+    )
     .where(publicLaunchSurfacePredicates());
 
   if (slug) query = query.where("journal_topics.slug", "=", slug);

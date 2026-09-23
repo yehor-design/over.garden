@@ -8,6 +8,8 @@ import {
 import type { MetadataRoute } from "next";
 
 import type { PlantObjectKind } from "@/db/schema";
+import { publicTopicPath } from "@/lib/garden/public-paths";
+import { stripKnowledgeCitations } from "@/lib/knowledge-citations";
 import {
   localizedPath,
   PUBLIC_LOCALES,
@@ -69,15 +71,66 @@ export interface PublicKnowledgeEvidenceRule {
   catalogSlugs: readonly string[];
 }
 
+/**
+ * What a piece of knowledge is about (`OVE-498`, OG-UX-033).
+ *
+ * Gardening advice and help with OverGarden are two different promises, and a
+ * reader has to be able to tell them apart before reading either: the first
+ * owes its sources, the second only has to be true of the product.
+ */
+export type PublicKnowledgeSubject = "gardening" | "product";
+
+/**
+ * Another piece a reader may want next: an answer or a guide by its slug, or
+ * a curated topic, which is shown only while the topic exists and holds
+ * entries.
+ */
+export type PublicKnowledgeRelated =
+  | { kind: "answer" | "guide"; slug: string }
+  | { kind: "topic"; slug: string };
+
 export interface PublicKnowledgeFacet {
   task: string;
+  subject: PublicKnowledgeSubject;
   objectKinds: readonly PlantObjectKind[];
+  /** Which gardeners' entries sit beside the text. */
   evidence: PublicKnowledgeEvidenceRule;
+  /** The page's one related-content section, in order. */
+  related: readonly PublicKnowledgeRelated[];
 }
+
+/**
+ * A work the text rests on, cited as `[n]` in the text by its position.
+ *
+ * Everything here is what the editors read, on the day they read it; a date
+ * the source itself shows is kept with the word it shows it under.
+ */
+export interface PublicKnowledgeSource {
+  title: string;
+  publisher: string;
+  url: string;
+  /** The language the source is written in, for `lang`. */
+  language: string;
+  sourceDate?: { date: string; kind: "published" | "updated" };
+  accessedDate: string;
+}
+
+/**
+ * Whether a specialist read the text. Nobody has yet, and the page says so;
+ * the reviewed shape is here so that saying otherwise needs a name and a date.
+ */
+export type PublicKnowledgeReview =
+  | { state: "not_reviewed" }
+  | { state: "reviewed"; reviewer: string; reviewedDate: string };
 
 export interface PublicKnowledgeEditorialMeta {
   author: string;
-  source: string;
+  /** What the text rests on, in one plain sentence. */
+  basis: string;
+  sources: readonly PublicKnowledgeSource[];
+  /** What the text is not, and where it stops applying. */
+  qualifications: readonly string[];
+  review: PublicKnowledgeReview;
   updatedDate: string;
   authoredLocale: PublicLocale;
   synthetic: boolean;
@@ -96,7 +149,8 @@ export interface GuideContent {
   description: string;
   outcome: string;
   steps: GuideStep[];
-  relatedLinks: PublicContentLink[];
+  /** The heading over the gardeners' entries beside it, saying what about. */
+  evidenceTitle: string;
   editorial: PublicKnowledgeEditorialMeta;
   knowledge: PublicKnowledgeFacet;
   media?: PublicKnowledgeMedia;
@@ -107,6 +161,17 @@ export interface AnswerFaq {
   answer: string;
 }
 
+/**
+ * How to do what the answer suggests in OverGarden: help with the product,
+ * kept out of the gardening text and out of its FAQ, and pointing at the
+ * guide that says the rest.
+ */
+export interface AnswerProductHelp {
+  title: string;
+  paragraphs: readonly string[];
+  guideSlug: string;
+}
+
 export interface AnswerPageContent {
   kind: "aeo_answer";
   slug: string;
@@ -114,11 +179,17 @@ export interface AnswerPageContent {
   question: string;
   title: string;
   description: string;
+  /** Self-contained, and cited: the part an answer engine lifts. */
   conciseAnswer: string;
-  proofDetails: string[];
-  relatedVarieties: PublicContentLink[];
-  relatedTopics: PublicContentLink[];
+  /** A pattern a reader can see, and what it usually means; each cited. */
+  causes: string[];
+  /** What to note so the cause can be told, which asserts nothing. */
+  observations: string[];
+  /** Gardening questions only; they are the page's `FAQPage`. */
   faqs: AnswerFaq[];
+  productHelp: AnswerProductHelp;
+  /** The heading over the gardeners' entries beside it, saying what about. */
+  evidenceTitle: string;
   editorial: PublicKnowledgeEditorialMeta;
   knowledge: PublicKnowledgeFacet;
   media?: PublicKnowledgeMedia;
@@ -253,37 +324,71 @@ const GUIDES: GuideContent[] = [
       },
       {
         title: "Return to the same object",
-        body: "The second note is where the record starts becoming proof. It shows whether the plant recovered, worsened, flowered, fruited, or simply survived the season.",
+        body: "The second note turns the notes into a history. It shows whether the plant recovered, worsened, flowered, fruited, or simply survived the season.",
       },
     ],
-    relatedLinks: [
-      {
-        label: "Open the workspace",
-        href: "/garden",
-        description: "Sign in and publish your first public observation.",
-      },
-      {
-        label: "Why proof beats generic advice",
-        href: "/blog/ai-garden-advice-vs-real-garden-proof",
-        description:
-          "The positioning behind OverGarden's public discovery surface.",
-      },
-    ],
+    evidenceTitle: "Other gardeners' records of plants",
     editorial: {
       author: "OverGarden editorial",
-      source: "OverGarden product and privacy guidance",
-      updatedDate: "2026-07-03",
+      basis:
+        "How OverGarden works on the date below: publishing, photographs and what is kept.",
+      sources: [],
+      qualifications: ["This is help with OverGarden, not gardening advice."],
+      review: { state: "not_reviewed" },
+      updatedDate: "2026-09-23",
       authoredLocale: "uk",
       synthetic: false,
     },
     knowledge: {
       task: "start-and-continue-a-living-record",
+      subject: "product",
       objectKinds: ["plant"],
+      // Other gardeners' plant records, as examples of what one looks like.
       evidence: {
-        topicSlugs: ["care-checks"],
+        topicSlugs: ["plants"],
         catalogSlugs: [],
       },
+      related: [{ kind: "answer", slug: "why-are-tomato-leaves-yellow" }],
     },
+  },
+];
+
+/**
+ * The works the tomato answer rests on, read on 2026-09-23. Which sentence
+ * rests on which is `docs/redesign/2026-09-21/OVE-498-PROVENANCE.md`.
+ */
+const TOMATO_LEAF_SOURCES: readonly PublicKnowledgeSource[] = [
+  {
+    title: "Key to Common Problems of Tomatoes",
+    publisher: "University of Maryland Extension",
+    url: "https://extension.umd.edu/resource/key-common-problems-tomatoes",
+    language: "en",
+    sourceDate: { date: "2025-06-18", kind: "updated" },
+    accessedDate: "2026-09-23",
+  },
+  {
+    title: "Troubleshooting Tomato Problems",
+    publisher: "University of Wisconsin–Madison Division of Extension",
+    url: "https://hort.extension.wisc.edu/troubleshooting-tomato-problems/",
+    language: "en",
+    sourceDate: { date: "2025-07-28", kind: "published" },
+    accessedDate: "2026-09-23",
+  },
+  {
+    title: "Tomatoes: leaf problems",
+    publisher: "Royal Horticultural Society",
+    url: "https://www.rhs.org.uk/problems/tomatoes-leaf-problems",
+    language: "en",
+    accessedDate: "2026-09-23",
+  },
+  {
+    title:
+      "Vegetable Seedlings or Transplant Leaves Yellowing, Turning White, or are Spotted or Scorched",
+    publisher: "University of Maryland Extension",
+    url: "https://extension.umd.edu/resource/vegetable-seedlings-or-transplant-leaves-yellowing-turning-white-or-are-spotted-or-scorched",
+    language: "en",
+    sourceDate: { date: "2023-02-20", kind: "updated" },
+    accessedDate: "2026-09-23",
   },
 ];
 
@@ -295,74 +400,70 @@ const ANSWER_PAGES: AnswerPageContent[] = [
     question: "Why are tomato leaves turning yellow?",
     title: "Why are tomato leaves turning yellow?",
     description:
-      "A concise diagnostic answer and a proof-first record plan for yellowing tomato leaves.",
+      "The common causes of yellow tomato leaves, from university extension services and the RHS, and what to note to find yours.",
     conciseAnswer:
-      "Tomato leaves often turn yellow from water stress, poor drainage, old lower leaves, nutrient imbalance, or root stress. The fastest useful move is to record where the yellowing starts, whether the soil is staying wet or dry, and what changes over the next few days.",
-    proofDetails: [
-      "Note whether the yellowing starts on lower leaves, new growth, or the whole plant.",
-      "Record watering, container drainage, and whether the plant recently moved outside or into stronger sun.",
-      "Add one dated photo for comparison, then return to the same plant after the next watering cycle.",
-      "Keep the public version region-level or hidden; never publish precise coordinates.",
+      "Several things turn tomato leaves yellow: fungal leaf spots on the lower leaves, a shortage of nitrogen or magnesium, a wilt disease, spider mites and, in young plants, cold, compacted, waterlogged or dry soil[1][2][3][4]. The pattern tells them apart: where the yellowing started, whether there are spots or specks, and whether the plant wilts.",
+    causes: [
+      "Dark spots on the lower leaves first, then the leaves turn yellow or brown: often a fungal leaf spot, early blight or septoria leaf spot, which spreads in wet weather[1][2].",
+      "The older, lower leaves yellow first, then the younger ones: a shortage of nitrogen. It is especially common in containers, because of frequent watering and poor soil[1][2].",
+      "Yellow between the veins of the older leaves: most often a shortage of magnesium[1][3]. If only the older leaves show it, the RHS considers it no cause for concern[3].",
+      "The lower leaves yellow and the stems wilt, often on one side of the plant: possibly Fusarium or Verticillium wilt, diseases carried in the soil[1].",
+      "Tiny yellow specks, with the undersides of the leaves looking dirty: spider mites, common in hot, dry weather[1].",
+      "Young plants and fresh transplants also yellow from their conditions: cold, compacted or waterlogged soil, drought and swings of temperature[4].",
     ],
-    relatedVarieties: [
-      {
-        label: "Tomatoes",
-        href: "/garden",
-        description:
-          "Start a dated record for the tomato plant you are actually growing.",
-      },
-      {
-        label: "Balcony vegetables",
-        href: "/markets/ukraine",
-        description:
-          "See how OverGarden frames first records for gardeners in Ukraine.",
-      },
-    ],
-    relatedTopics: [
-      {
-        label: "First plant record",
-        href: "/guides/start-a-living-plant-record",
-        description:
-          "The minimum record structure needed before a diagnosis becomes comparable.",
-      },
-      {
-        label: "Proof instead of one-off advice",
-        href: "/blog/ai-garden-advice-vs-real-garden-proof",
-        description:
-          "Why OverGarden treats dated follow-up as the useful public layer.",
-      },
+    observations: [
+      "Where the yellowing started: the lower leaves, the new growth or the whole plant.",
+      "What the leaves look like: evenly yellow, yellow between the veins, spots with rings, or fine specks.",
+      "How you watered, whether water drains from the container, and whether the plant was recently transplanted or moved outside or into stronger sun.",
+      "One dated photo, then the same plant again after the next watering.",
     ],
     faqs: [
       {
-        question: "Should I publish a problem photo immediately?",
-        answer:
-          "No. First review the browser-created final WebP and the text that will be public. Publish creates both together only when you confirm; canceling leaves no durable journal record.",
-      },
-      {
         question: "What detail matters most for yellowing leaves?",
         answer:
-          "The pattern over time matters most: where yellowing started, what changed before it appeared, and whether the plant improved after the next action.",
+          "The pattern over time: where the yellowing started, what changed before it appeared, and whether the plant improved after the next thing you did.",
       },
       {
-        question: "Can OverGarden diagnose the plant by itself?",
+        question: "When are yellow leaves no cause for concern?",
         answer:
-          "The MVP does not promise automatic diagnosis. It creates a clean record so the gardener can compare the same plant across days and later contribute useful public proof.",
+          "When only the older leaves are yellow between the veins and the plant is otherwise vigorous, the RHS considers it no cause for concern[3]. Spots, specks, wilting, or yellowing that climbs to the young leaves are worth a closer look[1].",
       },
     ],
+    productHelp: {
+      title: "Recording this in OverGarden",
+      paragraphs: [
+        "OverGarden does not diagnose plants. It keeps your dated entries about the same plant, so the next one can be compared with the first.",
+        "A photo is optional. Your browser prepares it before upload and OverGarden does not keep the original; check the frame for addresses, faces or anything else you do not want public. An entry is public as soon as you publish it, and until then its text exists only in that tab.",
+      ],
+      guideSlug: "start-a-living-plant-record",
+    },
+    evidenceTitle: "What gardeners wrote about tomatoes",
     editorial: {
       author: "OverGarden editorial",
-      source: "OverGarden proof-first plant record guidance",
-      updatedDate: "2026-07-03",
+      basis:
+        "A summary of the tomato guides of two university extension services and the Royal Horticultural Society, listed below. What to note is the editors' own list.",
+      sources: TOMATO_LEAF_SOURCES,
+      qualifications: [
+        "It is not a diagnosis: yellow leaves have several causes, and a description or a photograph can only narrow them down.",
+        "The sources describe gardens in the United States and the United Kingdom; which diseases are common, and when, differs from region to region.",
+      ],
+      review: { state: "not_reviewed" },
+      updatedDate: "2026-09-23",
       authoredLocale: "uk",
       synthetic: false,
     },
     knowledge: {
       task: "observe-yellowing-before-changing-care",
+      subject: "gardening",
       objectKinds: ["plant"],
+      // What gardeners here wrote about tomatoes. The topics this pointed at
+      // before (`watering-and-moisture`, `stress-and-recovery`) never
+      // existed, so the page counted nothing and said so.
       evidence: {
-        topicSlugs: ["watering-and-moisture", "stress-and-recovery"],
-        catalogSlugs: [],
+        topicSlugs: [],
+        catalogSlugs: ["solanum-lycopersicum"],
       },
+      related: [{ kind: "topic", slug: "plants" }],
     },
   },
 ];
@@ -529,15 +630,23 @@ export function blogPostVisibleText(post: BlogPostContent) {
   ];
 }
 
+/** What the editors put their name to, as a reader sees it. */
+function editorialVisibleText(editorial: PublicKnowledgeEditorialMeta) {
+  return [
+    editorial.author,
+    editorial.basis,
+    ...editorial.qualifications,
+    ...editorial.sources.flatMap((source) => [source.title, source.publisher]),
+  ];
+}
+
 export function guideVisibleText(guide: GuideContent) {
   return [
     guide.title,
     guide.description,
     guide.outcome,
-    guide.editorial.author,
-    guide.editorial.source,
     ...guide.steps.flatMap((step) => [step.title, step.body]),
-    ...guide.relatedLinks.flatMap((link) => [link.label, link.description]),
+    ...editorialVisibleText(guide.editorial),
   ];
 }
 
@@ -546,15 +655,49 @@ export function answerVisibleText(page: AnswerPageContent) {
     page.question,
     page.title,
     page.description,
-    page.conciseAnswer,
-    page.editorial.author,
-    page.editorial.source,
-    ...page.proofDetails,
-    ...page.faqs.flatMap((faq) => [faq.question, faq.answer]),
-    ...[...page.relatedVarieties, ...page.relatedTopics].flatMap((link) => [
-      link.label,
-      link.description,
+    stripKnowledgeCitations(page.conciseAnswer),
+    ...page.causes.map(stripKnowledgeCitations),
+    ...page.observations,
+    ...page.faqs.flatMap((faq) => [
+      faq.question,
+      stripKnowledgeCitations(faq.answer),
     ]),
+    page.productHelp.title,
+    ...page.productHelp.paragraphs,
+    ...editorialVisibleText(page.editorial),
+  ];
+}
+
+/**
+ * Everything on the page a reader can search the hub for: the words of the
+ * piece itself, not its title alone (`OVE-498`, criterion 1).
+ */
+export function knowledgeSearchText(content: GuideContent | AnswerPageContent) {
+  return (
+    content.kind === "guide"
+      ? guideVisibleText(content)
+      : answerVisibleText(content)
+  ).join(" ");
+}
+
+/**
+ * The addresses a piece names: what its related section and its evidence
+ * point at. Discovery counts them as the page's distinct public entities.
+ */
+export function knowledgeRelatedPaths(
+  content: GuideContent | AnswerPageContent,
+) {
+  return [
+    ...content.knowledge.related.map((related) =>
+      related.kind === "topic"
+        ? publicTopicPath(related.slug)
+        : `/${related.kind === "answer" ? "answers" : "guides"}/${related.slug}`,
+    ),
+    ...(content.kind === "aeo_answer"
+      ? [`/guides/${content.productHelp.guideSlug}`]
+      : []),
+    ...content.knowledge.evidence.topicSlugs.map(publicTopicPath),
+    ...content.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
   ];
 }
 

@@ -3,14 +3,9 @@ import { QuestionIcon as HelpCircle } from "@/components/icons/Question";
 import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import { TagIcon as Tags } from "@/components/icons/Tag";
 
-import {
-  SiteShellContextRailModules,
-  SiteShellContextRailRegistration,
-  type SiteShellContextRailModule,
-} from "@/components/site-shell/site-shell-context-rail";
 import { CatalogFrontDoor } from "@/components/public/catalog-front-door";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
@@ -30,46 +25,65 @@ import {
 } from "@/lib/public-knowledge-copy";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import type { PlantObjectKind } from "@/db/schema";
+import type { PublicKnowledgeSubject } from "@/server/public-seo-content";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { Field } from "@/components/ui/field";
 import { SearchInput } from "@/components/ui/search-input";
 
 export type PublicKnowledgeHubState = "ready" | "empty" | "loading" | "error";
 
-export interface PublicKnowledgeHubItem {
-  kind: "guide" | "answer" | "topic";
-  path: string;
-  title: string;
-  description: string;
-  objectKinds: readonly PlantObjectKind[];
-  evidenceCount: number;
-  updatedDate: Date | string | null;
-  indexable: boolean;
-}
+/**
+ * One row of the hub (`OVE-498`): an answer or a guide says what it is about
+ * and, for advice, how many sources it cites; a topic says how many
+ * gardeners' entries it holds and how recent the last one is. Nothing says
+ * whether a search engine may index it (OG-UX-032).
+ */
+export type PublicKnowledgeHubItem =
+  | {
+      kind: "guide" | "answer";
+      path: string;
+      title: string;
+      description: string;
+      objectKinds: readonly PlantObjectKind[];
+      subject: PublicKnowledgeSubject;
+      sourceCount: number;
+      updatedDate: string;
+      /** Everything a reader can find it by: its own words. */
+      searchText: string;
+    }
+  | {
+      kind: "topic";
+      path: string;
+      title: string;
+      description: string;
+      objectKinds: readonly PlantObjectKind[];
+      entryCount: number;
+      latestPublishedAt: Date | string | null;
+    };
 
 export function PublicKnowledgeHub({
   locale,
   copy,
   request,
   items,
-  contextItems,
   state,
+  topicsUnavailable = false,
   jsonLd,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
   request: PublicKnowledgeRequest;
   items: readonly PublicKnowledgeHubItem[];
-  contextItems: readonly PublicKnowledgeHubItem[];
   state: PublicKnowledgeHubState;
+  /**
+   * The topics could not be read, and the answers and guides — which are in
+   * the code — still can: the hub shows what it has and says what it lacks,
+   * rather than an error in place of everything.
+   */
+  topicsUnavailable?: boolean;
   jsonLd?: Record<string, unknown> | null;
 }) {
   const chrome = getFilterBarChromeCopy(locale);
-  const contextModules = buildPublicKnowledgeContextModules(
-    locale,
-    copy,
-    contextItems,
-  );
 
   return (
     <main
@@ -86,16 +100,16 @@ export function PublicKnowledgeHub({
           }}
         />
       ) : null}
-      <SiteShellContextRailRegistration modules={contextModules} />
-
       <PageHeader title={copy.heading} description={copy.intro} />
 
       {/* The same bar `/journals` and `/catalog` use, so a reader who has
           filtered one has filtered all three: search, one mode, a draft
           filter panel and chips above the results (DESIGN.md §5.1). */}
       <FilterBar
-        /* A query view may be a `/q` twin (ADR-0032): let Proxy decide. */
+        /* A query view may be a `/q` twin (ADR-0032): let Proxy decide, for
+           the controls and for the chips (`public-query-twin.ts`). */
         documentNavigation
+        documentLinks
         action={buildPublicKnowledgeHref(locale, {
           query: "",
           type: "all",
@@ -194,14 +208,34 @@ export function PublicKnowledgeHub({
       {state === "ready" ? (
         <KnowledgeResults locale={locale} copy={copy} items={items} />
       ) : null}
+      {topicsUnavailable && (state === "ready" || state === "empty") ? (
+        <div
+          data-knowledge-topics-unavailable="true"
+          className="grid gap-2 border-y border-border py-4"
+        >
+          <p className="font-semibold text-text">
+            {copy.topicsUnavailableTitle}
+          </p>
+          <p className="max-w-prose text-body-sm text-text-muted">
+            {copy.errorBody}
+          </p>
+          {/* The same view again, as a document (`public-query-twin.ts`). */}
+          <a
+            href={buildPublicKnowledgeHref(locale, request)}
+            className={buttonVariants({
+              variant: "secondary",
+              size: "sm",
+              className: "w-fit",
+            })}
+          >
+            {copy.retry}
+          </a>
+        </div>
+      ) : null}
 
       <section className="border-t border-border pt-6">
         <CatalogFrontDoor locale={locale} />
       </section>
-
-      <div className="border-t border-border pt-6 xl:hidden">
-        <SiteShellContextRailModules modules={contextModules} />
-      </div>
     </main>
   );
 }
@@ -217,7 +251,9 @@ function KnowledgeResults({
 }) {
   return (
     <div className="grid gap-7">
-      {(["guide", "answer", "topic"] as const).map((kind) => {
+      {/* Answers first: a gardener's question is why most readers are here.
+          Then the topics gardeners write under, then help with OverGarden. */}
+      {(["answer", "topic", "guide"] as const).map((kind) => {
         const sectionItems = items.filter((item) => item.kind === kind);
         if (sectionItems.length === 0) return null;
 
@@ -231,8 +267,8 @@ function KnowledgeResults({
           >
             {/* A list of things is a list (DESIGN.md §4.1). Each row is the
                 title, the sentence under it, and the facts a reader chooses
-                on — what it is, how much first-hand evidence stands behind
-                it, and when it was last touched. */}
+                on — what it is about and what it rests on, or how many
+                gardeners wrote under it and when last. */}
             <ul className="grid list-none">
               {sectionItems.map((item) => (
                 <ListRow
@@ -240,49 +276,14 @@ function KnowledgeResults({
                   data-trust-state={
                     item.kind === "topic" ? "user-evidence" : "editorial"
                   }
-                  href={itemHref(locale, item.path)}
+                  data-knowledge-subject={
+                    item.kind === "topic" ? undefined : item.subject
+                  }
+                  href={localizedPath(locale, item.path)}
                   title={item.title}
-                  description={item.description}
+                  description={item.description || undefined}
                   meta={
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Badge tone={item.kind === "topic" ? "neutral" : "info"}>
-                        {item.kind === "guide" ? (
-                          <BookOpen aria-hidden="true" />
-                        ) : item.kind === "answer" ? (
-                          <HelpCircle aria-hidden="true" />
-                        ) : (
-                          <Tags aria-hidden="true" />
-                        )}
-                        {item.kind === "topic"
-                          ? copy.journalEvidenceLabel
-                          : copy.editorialLabel}
-                      </Badge>
-                      <span>
-                        {formatPublicKnowledgeEvidenceCount(
-                          item.evidenceCount,
-                          locale,
-                          copy,
-                        )}
-                      </span>
-                      {item.objectKinds.map((objectKind) => (
-                        <span key={objectKind}>
-                          {copy.filters.kinds[objectKind]}
-                        </span>
-                      ))}
-                      {item.updatedDate ? (
-                        <time dateTime={toIsoDate(item.updatedDate)}>
-                          {copy.updatedLabel}:{" "}
-                          {formatDate(item.updatedDate, locale)}
-                        </time>
-                      ) : null}
-                      {item.kind === "topic" ? (
-                        <span>
-                          {item.indexable
-                            ? copy.topicIndexable
-                            : copy.topicNoindex}
-                        </span>
-                      ) : null}
-                    </span>
+                    <KnowledgeRowMeta locale={locale} copy={copy} item={item} />
                   }
                 />
               ))}
@@ -291,6 +292,53 @@ function KnowledgeResults({
         );
       })}
     </div>
+  );
+}
+
+function KnowledgeRowMeta({
+  locale,
+  copy,
+  item,
+}: {
+  locale: PublicLocale;
+  copy: PublicKnowledgeCopy;
+  item: PublicKnowledgeHubItem;
+}) {
+  if (item.kind === "topic") {
+    return (
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Badge tone="neutral">
+          <Tags aria-hidden="true" />
+          {copy.journalEvidenceLabel}
+        </Badge>
+        <span>
+          {formatPublicKnowledgeEvidenceCount(item.entryCount, locale, copy)}
+        </span>
+        {item.latestPublishedAt ? (
+          <time dateTime={toIsoDate(item.latestPublishedAt)}>
+            {copy.topicLatest(formatDate(item.latestPublishedAt, locale))}
+          </time>
+        ) : null}
+      </span>
+    );
+  }
+  return (
+    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <Badge tone={item.subject === "gardening" ? "info" : "neutral"}>
+        {item.kind === "guide" ? (
+          <BookOpen aria-hidden="true" />
+        ) : (
+          <HelpCircle aria-hidden="true" />
+        )}
+        {`${copy.subjects[item.subject]} · ${copy.formats[item.kind]}`}
+      </Badge>
+      {item.sourceCount > 0 ? (
+        <span>{copy.sourcesCount(item.sourceCount)}</span>
+      ) : null}
+      <time dateTime={toIsoDate(item.updatedDate)}>
+        {`${copy.updatedLabel}: ${formatDate(item.updatedDate, locale)}`}
+      </time>
+    </span>
   );
 }
 
@@ -400,31 +448,6 @@ function buildKnowledgeChips(
     });
   }
   return chips;
-}
-
-export function buildPublicKnowledgeContextModules(
-  locale: PublicLocale,
-  copy: PublicKnowledgeCopy,
-  items: readonly PublicKnowledgeHubItem[],
-): SiteShellContextRailModule[] {
-  return (["topic", "guide", "answer"] as const).map((kind) => ({
-    key: `knowledge-${kind}`,
-    title: sectionTitle(copy, kind),
-    items: items
-      .filter((item) => item.kind === kind)
-      .slice(0, kind === "topic" ? 6 : 3)
-      .map((item) => ({
-        href: itemHref(locale, item.path),
-        label: item.title,
-        meta: formatCount(item.evidenceCount, locale),
-      })),
-    emptyLabel: copy.emptyEvidenceTitle,
-  }));
-}
-
-function itemHref(locale: PublicLocale, path: string) {
-  const localized = localizedPath(locale, path);
-  return localized;
 }
 
 function sectionTitle(

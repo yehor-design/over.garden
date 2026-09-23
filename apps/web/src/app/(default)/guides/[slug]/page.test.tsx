@@ -3,10 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listPublicKnowledgeEvidence: vi.fn(),
+  listPublicKnowledgeTopics: vi.fn(),
 }));
 
 vi.mock("@/server/public-knowledge-evidence-repository", () => ({
   listPublicKnowledgeEvidence: mocks.listPublicKnowledgeEvidence,
+}));
+
+vi.mock("@/server/public-topic-repository", () => ({
+  listPublicKnowledgeTopics: mocks.listPublicKnowledgeTopics,
 }));
 
 vi.mock("@/lib/storage", () => ({
@@ -32,6 +37,7 @@ afterEach(() => {
 describe("/guides/[slug]", () => {
   it("renders a localized authored guide as a read-only public page", async () => {
     mocks.listPublicKnowledgeEvidence.mockResolvedValue(emptyEvidence());
+    mocks.listPublicKnowledgeTopics.mockResolvedValue([]);
     const html = renderToStaticMarkup(
       await GuideRoute({
         params: Promise.resolve({
@@ -43,11 +49,32 @@ describe("/guides/[slug]", () => {
 
     expect(html).toContain("Как да започнете жив запис на растение");
     expect(html).toContain("Изберете едно растение");
-    expect(html).toContain("Авторски материал");
+    // Help with OverGarden, said as such, with no pretence of a source
+    // (`OVE-498`, OG-UX-033).
+    expect(html).toContain("Помощ за OverGarden · Ръководство");
     expect(html).toContain("Редакция OverGarden");
-    expect(html).toContain("принципи за поверителност");
-    expect(html).toContain("Опит от публични дневници");
+    expect(html).not.toContain("принципи за поверителност");
+    expect(html).toContain("Основа и ограничения");
+    const about = html.slice(html.indexOf('data-knowledge-about="true"'));
+    expect(about).toContain(
+      "Няма външни източници: текстът описва самия OverGarden.",
+    );
+    expect(about).toContain(
+      "Това е помощ за OverGarden, а не градинарски съвет.",
+    );
+    // A specialist review is a question for advice, not for product help.
+    expect(about).not.toContain("Проверка от специалист");
+    expect(html).toContain("Записи на други градинари за растения");
+    expect(html).toContain("Тук все още няма записи на градинари");
+    // Its one related section: the gardening answer.
+    const related = html.slice(html.indexOf('data-knowledge-related="true"'));
+    expect(related).toContain(
+      'href="/bg/answers/why-are-tomato-leaves-yellow"',
+    );
+    expect(related).toContain("Градинарство · Отговор");
     expect(html).toContain('data-site-shell-context="route-owned"');
+    expect(html).toContain('"@type":"Article"');
+    expect(html).toContain('"about":"Помощ за OverGarden"');
     expect(html).toContain("/bg/knowledge");
     expect(html).not.toContain("/garden");
     expect(html).not.toContain("<form");

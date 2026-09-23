@@ -14,7 +14,12 @@ import {
   getContentAvailableLocales,
   getLocalizedRouteChrome,
 } from "@/server/public-localized-content";
-import { readPublicKnowledgeEvidence } from "@/server/public-cache";
+import {
+  readPublicKnowledgeEvidence,
+  readPublicKnowledgeTopics,
+} from "@/server/public-cache";
+import { resolveKnowledgeRelatedItems } from "@/server/public-knowledge-related";
+import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import { RootLoadingSkeleton } from "@/components/site-shell/root-loading-skeleton";
 import {
   deferStaticRenderAfterFailure,
@@ -24,15 +29,14 @@ import {
 } from "@/server/static-public-page";
 import {
   authoredContentEntityIds,
-  catalogEvidencePublicPath,
   guideVisibleText,
+  knowledgeRelatedPaths,
   listGuides,
   resolveAuthoredPublicSurfaceDiscovery,
   type GuideContent,
 } from "@/server/public-seo-content";
 import { resolveUnresolvedPublicSurfaceDiscovery } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
-import { publicTopicPath } from "@/lib/garden/public-paths";
 
 interface LocalizedGuideRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -92,9 +96,10 @@ export default async function GuideRoute({ params }: LocalizedGuideRouteProps) {
 
 /**
  * An authored page is a static document (ADR-0032 D8): its words are in the
- * code, and the one thing it reads — how much gardener evidence stands behind
- * it — is a cached read prerendered with the page. A failed read defers to the
- * request rather than caching a page whose evidence says nothing.
+ * code, and the two things it reads — the gardeners' entries beside it, and
+ * which of its related topics exist — are cached reads prerendered with the
+ * page. A failed read defers to the request rather than caching a page whose
+ * evidence says nothing.
  */
 export async function renderGuidePage(
   localeParam: PublicLocale,
@@ -109,20 +114,28 @@ export async function renderGuidePage(
 
   const surface = buildGuideSurface(localeParam, guide);
 
-  const evidenceResult = await readPublicKnowledgeEvidence(
-    guide.knowledge.evidence,
-    localeParam,
-  ).then(
-    (evidence) => ({
-      evidence,
-      state: evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
-    }),
-    (error: unknown) => {
+  const [evidenceResult, topics] = await Promise.all([
+    readPublicKnowledgeEvidence(guide.knowledge.evidence, localeParam).then(
+      (evidence) => ({
+        evidence,
+        state:
+          evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
+      }),
+      (error: unknown) => {
+        unstable_rethrow(error);
+        deferStaticRenderAfterFailure(phase);
+        return {
+          evidence: emptyEvidence(localeParam),
+          state: "error" as const,
+        };
+      },
+    ),
+    readPublicKnowledgeTopics().catch((error: unknown) => {
       unstable_rethrow(error);
       deferStaticRenderAfterFailure(phase);
-      return { evidence: emptyEvidence(localeParam), state: "error" as const };
-    },
-  );
+      return [];
+    }),
+  ]);
 
   return (
     <LocalizedGuidePage
@@ -132,6 +145,11 @@ export async function renderGuidePage(
       availableLocales={getLanguageSwitcherLocales()}
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
+      related={resolveKnowledgeRelatedItems(
+        localeParam,
+        guide.knowledge.related,
+        topics,
+      )}
       jsonLd={surface.jsonLd}
     />
   );
@@ -143,11 +161,10 @@ function buildGuideSurface(locale: PublicLocale, guide: GuideContent) {
     canonicalPath: localizedPath(locale, guide.path),
     equivalentLocales: getContentAvailableLocales(guide.path),
     visibleText: guideVisibleText(guide),
-    distinctPublicEntityIds: authoredContentEntityIds(guide.path, [
-      ...guide.relatedLinks.map((link) => link.href),
-      ...guide.knowledge.evidence.topicSlugs.map(publicTopicPath),
-      ...guide.knowledge.evidence.catalogSlugs.map(catalogEvidencePublicPath),
-    ]),
+    distinctPublicEntityIds: authoredContentEntityIds(
+      guide.path,
+      knowledgeRelatedPaths(guide),
+    ),
     meaningfulContentAt: `${guide.editorial.updatedDate}T00:00:00.000Z`,
     candidateState: "candidate",
   });
@@ -161,7 +178,9 @@ function buildGuideSurface(locale: PublicLocale, guide: GuideContent) {
       name: guide.title,
       description: guide.description,
       dateModified: `${guide.editorial.updatedDate}T00:00:00.000Z`,
-      trustQualifier: `${guide.editorial.author}; ${guide.editorial.source}`,
+      // What the guide is about, in words: help with OverGarden, not advice.
+      trustQualifier:
+        getPublicKnowledgeCopy(locale).subjects[guide.knowledge.subject],
     },
   });
 }

@@ -19,6 +19,7 @@ import {
 import type { PublicKnowledgeEvidenceRule } from "@/server/public-seo-content";
 import { publicTopicPath } from "@/lib/garden/public-paths";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
+import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -128,6 +129,15 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    // The same address rule the journals apply to what this hands them: the
+    // hundred ids taken here must be ones they can show, or a run of entries
+    // by handle-less authors fills the hundred and the page shows none
+    // (`OVE-498`; ADR-0029 D9).
+    .where(
+      publicAuthorHandleSql("journal_entries.owner_user_id"),
+      "is not",
+      null,
+    )
     .$narrowType<{ entryId: string; objectId: string; publishedAt: Date }>();
 
   query = query.where(publicLaunchSurfacePredicates());

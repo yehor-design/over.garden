@@ -14,29 +14,30 @@ const items: PublicKnowledgeHubItem[] = [
     title: "Як порівняти два спостереження без зайвих припущень",
     description: "Авторський порядок перевірки однієї зміни за раз.",
     objectKinds: ["plant"],
-    evidenceCount: 11,
+    subject: "product",
+    sourceCount: 0,
     updatedDate: "2026-07-10",
-    indexable: true,
+    searchText: "",
   },
   {
     kind: "answer",
     path: "/answers/visual-long-recovery-answer",
     title: "Що перевірити після стресу?",
-    description: "Коротка відповідь із датованим follow-up.",
+    description: "Коротка відповідь із джерелами.",
     objectKinds: ["plant", "animal"],
-    evidenceCount: 8,
+    subject: "gardening",
+    sourceCount: 4,
     updatedDate: "2026-07-09",
-    indexable: true,
+    searchText: "",
   },
   {
     kind: "topic",
     path: "/topics/care-checks",
     title: "Регулярні спостереження",
-    description: "Публічний досвід рослин, тварин і бджолосімей.",
+    description: "",
     objectKinds: ["plant", "animal"],
-    evidenceCount: 11,
-    updatedDate: "2026-07-10",
-    indexable: true,
+    entryCount: 11,
+    latestPublishedAt: "2026-07-10T10:00:00.000Z",
   },
 ];
 
@@ -48,7 +49,6 @@ describe("PublicKnowledgeHub", () => {
         copy={getPublicKnowledgeCopy("uk")}
         request={{ query: "", type: "all", kind: "all" }}
         items={items}
-        contextItems={items}
         state="ready"
       />,
     );
@@ -70,12 +70,30 @@ describe("PublicKnowledgeHub", () => {
     expect(html).toMatch(
       /data-knowledge-result-count="true"[^>]*aria-live="polite"/u,
     );
-    expect(html).toContain("Авторський матеріал");
-    expect(html).toContain("Досвід із публічних журналів");
-    expect(html).toContain("11 публічних записів");
+    // A row says what it is about and what it rests on (`OVE-498`,
+    // OG-UX-033): advice with its sources, help with OverGarden as help, a
+    // topic with its real count and recency — and nothing about indexing
+    // (OG-UX-032).
+    expect(html).toContain("Садівництво · Відповідь");
+    expect(html).toContain("4 джерела");
+    expect(html).toContain("Довідка OverGarden · Посібник");
+    expect(html).toContain("Записи садівників");
+    expect(html).toContain("11 записів садівників");
+    expect(html).toContain("останній запис");
+    expect(html).not.toMatch(/індексац/u);
     expect(html).toContain("/guides/visual-seasonal-observation");
     expect(html).toContain("/topics/care-checks");
-    expect(html).toContain('data-site-shell-context="route-owned"');
+    // Answers first, then topics, then help with OverGarden.
+    expect(html.indexOf('id="knowledge-answer"')).toBeLessThan(
+      html.indexOf('id="knowledge-topic"'),
+    );
+    expect(html.indexOf('id="knowledge-topic"')).toBeLessThan(
+      html.indexOf('id="knowledge-guide"'),
+    );
+    // One list of results, not the same list again in a rail and again
+    // under it (criterion 4).
+    expect(html).not.toContain('data-site-shell-context="route-owned"');
+    expect(html.match(/\/topics\/care-checks/gu)?.length).toBe(1);
     // The way into the catalogue says what its door does (`OVE-496`): a
     // reader asking what something is has a name, not a kingdom.
     const catalogue = html.slice(
@@ -101,7 +119,6 @@ describe("PublicKnowledgeHub", () => {
           copy={copy}
           request={{ query: "няма", type: "all", kind: "all" }}
           items={[]}
-          contextItems={[]}
           state={state}
         />,
       );
@@ -114,5 +131,28 @@ describe("PublicKnowledgeHub", () => {
     expect(render("empty")).toContain('data-screen-state="empty-no-results"');
     expect(render("empty")).not.toContain("/illustrations/");
     expect(render("error")).toContain('data-screen-state="error"');
+  });
+
+  it("keeps the answers and guides when only the topics could not be read", () => {
+    const copy = getPublicKnowledgeCopy("ru");
+    const html = renderToStaticMarkup(
+      <PublicKnowledgeHub
+        locale="ru"
+        copy={copy}
+        request={{ query: "", type: "all", kind: "plant" }}
+        items={items.filter((item) => item.kind !== "topic")}
+        state="ready"
+        topicsUnavailable
+      />,
+    );
+
+    expect(html).toContain("/answers/visual-long-recovery-answer");
+    expect(html).toContain('data-knowledge-topics-unavailable="true"');
+    expect(html).toContain(copy.topicsUnavailableTitle);
+    // Retried as the same view, by a document request.
+    expect(html).toMatch(
+      /<a href="\/ru\/knowledge\?kind=plant"[^>]*>Повторить<\/a>/u,
+    );
+    expect(html).not.toContain('data-screen-state="error"');
   });
 });

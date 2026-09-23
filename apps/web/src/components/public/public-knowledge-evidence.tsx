@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
-import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
 import { CalendarBlankIcon as CalendarDays } from "@/components/icons/CalendarBlank";
 import { WarningCircleIcon as CircleAlert } from "@/components/icons/WarningCircle";
 import { LinkIcon as Link2 } from "@/components/icons/Link";
@@ -15,7 +14,6 @@ import {
 } from "@/lib/public-knowledge-copy";
 import {
   contentLanguageAttribute,
-  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
@@ -26,48 +24,88 @@ export type PublicKnowledgeEvidenceState =
   | "loading"
   | "error";
 
+/**
+ * Gardeners' entries beside a text or under a topic (`OVE-498`).
+ *
+ * The heading says whose entries they are and what about, and the count is a
+ * sentence beneath it: a heading that read "9 публічних записів" told a
+ * screen reader's list of headings nothing. Under a text, `note` says what
+ * the entries are not — a check of the text — because an entry about a
+ * tomato is what a gardener saw, not a source.
+ *
+ * `retryHref` is the page the reader is on: a failed read is retried where
+ * it failed, not by sending the reader to the hub.
+ *
+ * On a topic's own page the count is already the page's header, and every
+ * entry is there for the one reason the page is named for, so `showCount` and
+ * `explainMatches` are off there rather than saying either twice.
+ */
 export function PublicKnowledgeEvidenceList({
   locale,
   copy,
   evidence,
   state,
+  title,
+  note,
+  headingId = "public-knowledge-evidence-heading",
+  retryHref,
+  showCount = true,
+  explainMatches = true,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
   evidence: PublicKnowledgeEvidence;
   state: PublicKnowledgeEvidenceState;
+  title: string;
+  note?: string;
+  headingId?: string;
+  retryHref: string;
+  showCount?: boolean;
+  explainMatches?: boolean;
 }) {
+  const count = formatPublicKnowledgeEvidenceCount(
+    evidence.totalCount,
+    locale,
+    copy,
+  );
+
   return (
     <section
       data-trust-state="user-evidence"
+      data-knowledge-evidence={state}
       className="grid gap-4 border-t border-border pt-6"
-      aria-labelledby="public-knowledge-evidence-heading"
+      aria-labelledby={headingId}
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="grid gap-1">
-          <p className="flex items-center gap-2 text-overline text-text-muted uppercase">
-            <BookOpenText className="size-4" aria-hidden="true" />
-            {copy.journalEvidenceLabel}
-          </p>
-          <h2
-            id="public-knowledge-evidence-heading"
-            className="text-h2 text-text-heading"
-          >
-            {formatPublicKnowledgeEvidenceCount(
-              evidence.totalCount,
-              locale,
-              copy,
-            )}
+        <div className="grid max-w-prose gap-1">
+          <h2 id={headingId} className="text-h2 text-text-heading">
+            {title}
           </h2>
+          {state === "ready" && showCount ? (
+            <p
+              className="text-body-sm text-text-muted"
+              data-knowledge-evidence-count="true"
+            >
+              {note ? `${count}. ${note}` : count}
+            </p>
+          ) : null}
         </div>
-        {evidence.totalCount > 0 ? (
-          <Link
+        {state === "ready" && evidence.totalCount > 0 ? (
+          // Into the journals' query view, so a plain link the browser
+          // follows (`public-query-twin.ts`): the client router may predict
+          // the unfiltered journals and change only the URL.
+          <a
             href={evidence.allEvidencePath}
+            data-knowledge-evidence-all="true"
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
-            {copy.viewAllEvidence}
+            {copy.viewAllEvidence(
+              new Intl.NumberFormat(localeTag(locale)).format(
+                evidence.totalCount,
+              ),
+            )}
             <ArrowRight aria-hidden="true" />
-          </Link>
+          </a>
         ) : null}
       </div>
 
@@ -82,7 +120,10 @@ export function PublicKnowledgeEvidenceList({
       ) : null}
 
       {state === "error" ? (
-        <div className="grid gap-3 border-y border-border py-5">
+        <div
+          className="grid gap-3 border-y border-border py-5"
+          data-knowledge-evidence-error="true"
+        >
           <p className="flex items-center gap-2 font-semibold text-text">
             <CircleAlert className="size-5" aria-hidden="true" />
             {copy.errorTitle}
@@ -90,8 +131,10 @@ export function PublicKnowledgeEvidenceList({
           <p className="max-w-prose text-body-sm text-text-muted">
             {copy.errorBody}
           </p>
-          <Link
-            href={localizedPath(locale, "/knowledge")}
+          {/* A plain document request for the same page: the failed part is
+              read again, and nothing else about the reader's place changes. */}
+          <a
+            href={retryHref}
             className={buttonVariants({
               variant: "secondary",
               size: "sm",
@@ -99,7 +142,7 @@ export function PublicKnowledgeEvidenceList({
             })}
           >
             {copy.retry}
-          </Link>
+          </a>
         </div>
       ) : null}
 
@@ -145,18 +188,20 @@ export function PublicKnowledgeEvidenceList({
                   )}
                   className="grid gap-1"
                 >
-                  <Link
-                    href={item.card.publicPath}
-                    className="text-h3 text-text-heading hover:underline"
-                  >
-                    {item.card.title}
-                  </Link>
+                  <h3 className="text-h3 text-text-heading">
+                    <Link
+                      href={item.card.publicPath}
+                      className="hover:underline"
+                    >
+                      {item.card.title}
+                    </Link>
+                  </h3>
                   <p className="line-clamp-3 text-body-sm text-text-muted">
                     {item.card.excerpt}
                   </p>
                 </div>
 
-                {item.matches.length > 0 ? (
+                {explainMatches && item.matches.length > 0 ? (
                   <div className="grid gap-1.5 border-l-2 border-primary/40 pl-3 text-xs">
                     <p className="flex items-center gap-1.5 font-semibold text-text">
                       <ScanSearch className="size-4" aria-hidden="true" />
