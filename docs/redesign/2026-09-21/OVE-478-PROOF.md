@@ -783,6 +783,16 @@ And in `pnpm test`:
   the digest; the pin follows (`11a1aa01`), as it did each time that
   component's controls changed before.
 
+And in CI, before any test ran:
+
+- **R2's stand-in.** On 2026-09-24 MinIO's Quay images began to require a
+  login, and every web job of this pull request's first CI run stopped
+  pulling `quay.io/minio/minio` ("unauthorized"); `main`, green that morning,
+  would have failed the same way. CI's S3 stand-in is moto's server now,
+  pinned, from PyPI — the stand-in every local run above used
+  (`.github/actions/web-setup/action.yml`; `TECH_STACK_DECISIONS.md`, CI
+  runtime boundary).
+
 Seen, and not this change's: one full run failed
 `attribution-outbox.test.ts` › "accepts the retained self-serve analytics
 alias", which asserts that the learning report finds no unattributed gardener
@@ -798,8 +808,8 @@ follow-up.
 
 The browser gate, the static steps and CI's database steps ran on the code at
 `176ceb91`; `pnpm test` ran again on `11a1aa01`, which moves one test's pinned
-digest and nothing else (Validation). The commits after it change documents
-and evidence only. The pull request, the CI runs of its head, the squash
+digest and nothing else (Validation). The commits after it change documents,
+evidence and CI's S3 stand-in only. The pull request, the CI runs of its head, the squash
 commit on `main` and the production deployment are recorded in the
 authenticated Linear receipt on OVE-478 after the merge, with the production
 reads of criterion 16 — as OVE-469's were.

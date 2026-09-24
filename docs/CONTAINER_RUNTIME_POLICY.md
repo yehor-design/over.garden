@@ -48,7 +48,7 @@ Use these labels when touching docs or Linear issues that still mention Docker:
 
 ## GitHub Actions Boundary
 
-OVE-75 keeps the GitHub Actions workflow on `ubuntu-latest` and keeps Docker-backed services there because GitHub-hosted Ubuntu does not run Apple Container. OVE-95 aligns the CI Postgres service with the production major version by using `postgres:18-alpine`. The current CI Docker usage is limited to the Postgres service container and the MinIO service started for the web job. This preserves the fresh-checkout bootstrap, generated-type drift check, lint, typecheck, tests, and build coverage.
+OVE-75 keeps the GitHub Actions workflow on `ubuntu-latest` and keeps Docker-backed services there because GitHub-hosted Ubuntu does not run Apple Container. OVE-95 aligns the CI Postgres service with the production major version by using `postgres:18-alpine`. The current CI Docker usage is limited to the Postgres and Meilisearch service containers. The web job's S3 stand-in is moto's server, a pinned PyPI package, since MinIO's images stopped serving anonymous pulls on 2026-09-24. This preserves the fresh-checkout bootstrap, generated-type drift check, lint, typecheck, tests, and build coverage.
 
 This boundary must not be read as a local runtime requirement. Supported local Mac development remains Apple Container-first through `infra/container-up`; Docker Desktop is not required for the OVE-73-proven web bootstrap path or the OVE-74-proven matching-image smoke path.
 
@@ -56,7 +56,7 @@ Do not replace the CI Docker service path with Apple Container until a separate 
 
 - a supported runner environment, such as macOS 26 on Apple Silicon or another Apple Container-capable runner;
 - runner availability, queue-time, concurrency, and cost tradeoffs versus hosted Ubuntu;
-- proof that the candidate runner can start the required Postgres, Meilisearch, and MinIO service contracts without weakening CI coverage;
+- proof that the candidate runner can start the required Postgres, Meilisearch, and S3 service contracts without weakening CI coverage;
 - proof commands for the replacement, including `pnpm local:bootstrap`, `pnpm db:types:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, and `BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build`;
 - an explicit fallback plan if the Apple Container CI runner is unavailable.
 

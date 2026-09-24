@@ -116,6 +116,11 @@ found were fixed rather than listed.
   move beyond run-to-run noise. The web font can still move a feed card
   (0.113 in an earlier pair; the cause is `main`'s too; DESIGN.md §9 allows
   0.02).
+- CI's S3 stand-in is moto's server, a pinned PyPI package: on 2026-09-24
+  MinIO's Quay images began to require a login, and every CI run failed
+  before a test (`TECH_STACK_DECISIONS.md`, CI runtime boundary). The local
+  `infra/` path and the restore drill still name MinIO images that no longer
+  pull anonymously; that is a follow-up.
 - Still open, each classified in the receipt: one screen reader was heard
   (Orca), not VoiceOver or NVDA; the production LCP budget is known gap 11;
   the feed's font shift; production was read after release, never written;
