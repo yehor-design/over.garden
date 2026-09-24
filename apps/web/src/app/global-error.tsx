@@ -1,7 +1,5 @@
 "use client";
 
-import "@/app/globals.css";
-
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
@@ -102,9 +100,16 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
       {/* Drawn as the shell is (DESIGN.md §3.2, `OVE-478`): the logo on a
           light header, the page's one heading, the retry as the primary
           action, and the language control in the footer. It used to be the
-          pre-redesign chrome — a dark bar with a brand block — and it read
-          none of the shell's styles: this document replaces the root
-          layout, so it imports `globals.css` itself, as Next requires. */}
+          pre-redesign chrome, a dark bar with a brand block.
+
+          It does not import `globals.css`. That import gave the bundler a
+          second entry for the app's stylesheet, and it merged the fonts'
+          stylesheet and the app's into one that every page then waited for:
+          first paint under applied throttling moved 0.2–0.35 s later on
+          every page measured. The class names resolve against the
+          stylesheet the failed layout already put in the document; a root
+          failure during the server render has only the typography above,
+          as before. */}
       <body className="flex min-h-dvh flex-col bg-surface text-text">
         <header className="flex min-h-14 items-center border-b border-border bg-surface px-2 sm:px-4">
           <a

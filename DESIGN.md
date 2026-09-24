@@ -884,6 +884,14 @@ The one way on keeps the reader's context: a removed or unknown entry or
 passport leads to its author's other entries or plants and animals while the
 profile answers, else to the directory of its family; anything else leads home.
 
+**The error documents and the app's stylesheet (`OVE-478`).** The raw
+`404`/`410` document has no stylesheet, so it carries the light theme's resolved
+token values from `lib/raw-document-palette.ts` (checked against `globals.css`
+by test). The global error page uses the shell's class names and must **not**
+import `globals.css`: the import merged the fonts' and the app's stylesheets
+into one file that every page waited for, and first paint under applied
+throttling moved 0.2–0.35 s later on every page measured.
+
 A skeleton must not outlive its data by design: a section that can fail settles
 into a failure class instead of a permanent skeleton — the framework defect in
 ADR-0023 is still unfixed upstream and this rule is what protects readers from it.

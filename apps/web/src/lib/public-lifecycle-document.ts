@@ -4,6 +4,10 @@ import {
   OVER_GARDEN_LOGO_VIEWBOX,
 } from "@/components/site-shell/over-garden-logo-paths";
 import {
+  RAW_DOCUMENT_PALETTE,
+  RAW_DOCUMENT_PALETTE_DECLARATIONS,
+} from "@/lib/raw-document-palette";
+import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "@/lib/interface-localization";
@@ -89,37 +93,13 @@ export function renderPublicLifecycleDocument(
 }
 
 /**
- * The light theme's semantic colours this document uses, each as the value
- * `globals.css` resolves the token to. The document has no stylesheet to read
- * them from, so they are written out once, here, with the token named beside
- * each; `public-lifecycle-document.test.ts` resolves every token through
- * `globals.css` and fails if one drifts.
+ * The colours this document uses: the light theme's semantic tokens, written
+ * out in `raw-document-palette.ts` because the document has no stylesheet to
+ * read them from. The test reads them under this name.
  */
-export const LIFECYCLE_DOCUMENT_PALETTE = {
-  surface: { token: "--color-surface", value: "oklch(1 0 0)" },
-  "surface-hover": {
-    token: "--color-surface-hover",
-    value: "oklch(0.955 0.004 150)",
-  },
-  line: { token: "--color-border", value: "oklch(0.917 0.005 150)" },
-  "line-control": {
-    token: "--color-border-control",
-    value: "oklch(0.585 0.008 150)",
-  },
-  muted: { token: "--color-text-muted", value: "oklch(0.487 0.008 150)" },
-  "action-hover": {
-    token: "--color-action-hover",
-    value: "oklch(0.395 0.008 150)",
-  },
-  heading: { token: "--color-text-heading", value: "oklch(0.285 0.007 150)" },
-  text: { token: "--color-text", value: "oklch(0.205 0.006 150)" },
-  action: { token: "--color-action", value: "oklch(0.205 0.006 150)" },
-  "on-fill": { token: "--color-text-on-fill", value: "oklch(1 0 0)" },
-} as const;
+export const LIFECYCLE_DOCUMENT_PALETTE = RAW_DOCUMENT_PALETTE;
 
-const PALETTE_DECLARATIONS = Object.entries(LIFECYCLE_DOCUMENT_PALETTE)
-  .map(([name, { value }]) => `--${name}: ${value};`)
-  .join(" ");
+const PALETTE_DECLARATIONS = RAW_DOCUMENT_PALETTE_DECLARATIONS;
 
 /** Radius-sm 0.5rem and radius-md 0.75rem; `text-h1` 26/32, and 32/38 from `md`. */
 const LIFECYCLE_DOCUMENT_STYLES = `:root { ${PALETTE_DECLARATIONS} --font-overgarden-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color-scheme: light; font-family: var(--font-overgarden-sans); font-optical-sizing: auto; font-synthesis: none; color: var(--text); background: var(--surface); }
@@ -222,7 +202,7 @@ function renderRawInterfaceLanguageControlStyles() {
       [data-interface-language-control] summary::-webkit-details-marker { display: none; }
       [data-interface-language-control] summary:hover { background: var(--surface-hover); }
       [data-interface-language-control][open] summary svg:last-child { transform: rotate(180deg); }
-      [data-interface-language-menu] { position: absolute; z-index: 20; bottom: calc(100% + 6px); left: 0; display: grid; min-width: 176px; gap: 2px; border: 1px solid var(--line); border-radius: 0.75rem; padding: 4px; color: var(--text); background: var(--surface); box-shadow: 0 1px 2px oklch(0 0 0 / 0.04), 0 4px 12px oklch(0 0 0 / 0.08); }
+      [data-interface-language-menu] { position: absolute; z-index: 20; bottom: calc(100% + 6px); left: 0; display: grid; min-width: 176px; gap: 2px; border: 1px solid var(--line); border-radius: 0.75rem; padding: 4px; color: var(--text); background: var(--surface); box-shadow: var(--shadow-popover); }
       [data-interface-language-menu] form { display: contents; }
       [data-interface-language-option] { display: flex; min-height: 44px; width: 100%; cursor: pointer; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 0.5rem; padding: 10px 12px; color: inherit; background: transparent; font: inherit; font-size: 0.875rem; line-height: 1.25rem; text-align: left; text-decoration: none; }
       [data-interface-language-option]:hover { background: var(--surface-hover); }

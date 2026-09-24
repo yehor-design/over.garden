@@ -228,7 +228,7 @@ const eslintConfig = defineConfig([
     // written once, beside the semantic token each copies, and
     // `public-lifecycle-document.test.ts` resolves each through `globals.css`
     // and fails if one drifts. One file, by path; every other gate stands.
-    files: ["src/lib/public-lifecycle-document.ts"],
+    files: ["src/lib/raw-document-palette.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",
