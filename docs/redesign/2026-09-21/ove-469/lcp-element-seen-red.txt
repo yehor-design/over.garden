@@ -1,0 +1,19 @@
+    at async handler (.next/server/chunks/apps_web_0jkmeni._.js:30:3471)
+  1) [chromium] › tests/lcp-element.spec.ts:307:7 › the largest contentful paint is never a lazy photograph › on the feed, an entry, the organism card, the directory and a profile 
+
+    Error: organism card (/species/ove469organism-solanum-lycopersicum-f92ea004) at 412 px: the LCP element http://127.0.0.1:9000/overgarden-public-gate/derivatives/e81caafb-5053-4531-aabd-70a7fff58c8a/1.webp is lazy
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not "lazy"
+
+      336 |           lcp?.loading ?? "not an image",
+      337 |           `${where}: the LCP element ${lcp?.src ?? lcp?.text} is lazy`,
+    > 338 |         ).not.toBe("lazy");
+          |               ^
+      339 |       }
+      340 |     }
+      341 |     // The fixture exists to make photographs the LCP: if none of them was,
+        at /Users/yehor/frontend/over.garden/apps/web/tests/lcp-element.spec.ts:338:15
+
+    Error Context: test-results/lcp-element-the-largest-co-f6e33-the-directory-and-a-profile-chromium/error-context.md

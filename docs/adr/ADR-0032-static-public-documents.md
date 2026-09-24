@@ -334,7 +334,8 @@ the change, and was corrected the day the release was measured on production.
 **A local production build, fixture data** — a 56 kB cover with variants and
 light cards around it. It measures the architecture and nothing else. Before
 the change the same build measured 4.06–4.28 s simulated, of which 2.90 s was
-render delay.
+render delay. No applied figure was taken before the change, so the applied
+column below has no "before" and is not a comparison (`OVE-469`).
 
 | Page | LCP, applied | FCP | TTI | CLS | LCP, simulated | Visible characters without a runtime |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -342,7 +343,9 @@ render delay.
 | a journal entry | **1.65 s** | 1.60 s | 2.31 s | 0 | 3.31 s | 0 → 2 179 |
 | an organism card | **1.74 s** | 1.74 s | 3.12 s | 0 | 3.97 s | 0 → 1 882 |
 
-**Production, real data**, before (2026-09-19) → after the release.
+**Production, real data**, before (2026-09-19) → after the release. Only `/`
+was measured before; the entry and the card were first measured after it, so
+their rows have no "before" taken the same way and say only where they stood.
 
 | Page | LCP, applied | FCP, applied | LCP, simulated | The LCP element's render delay | Visible characters without a runtime |
 | --- | --- | --- | --- | --- | --- |

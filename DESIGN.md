@@ -1917,6 +1917,9 @@ fixture measures the architecture and nothing else.
 | a journal entry | 1.65 s / 3.31 s | **4.40 s** / 4.27 s | — |
 | an organism card | 1.74 s / 3.97 s | **6.17 s** / 6.28 s — it was 7.05 s / 5.87 s while its first photograph was lazy (`OVE-470`) | — |
 
+A "—" is a row with no "before" taken the same way: it says where a page
+stood, not what changed.
+
 **The budget is not met on production** (`OVE-469`). The static document took
 React's start-up out of the path — the LCP element's render delay there is
 7–36 ms, CLS 0 — and what remains is the photograph's *load*: 3.7–5.0 s for a
@@ -1936,9 +1939,25 @@ yet — all of them predate the variants — and between the ladder's 480 and 12
 there is no rung for a phone, which at 412 px and a pixel ratio of 1.75 asks for
 721 px and is handed 1280.
 
-The simulated figure is what 337 kB of script on a public reading page costs,
-and it is the next thing to pay down — the rule below is not yet true of the
-shell, whose palette, sheet and sign-out dialog all ship to a guest.
+**First paint and the photograph pull against each other** (`OVE-469`,
+2026-09-24). A lazy photograph is asked for when layout finds it near the
+viewport, and on a slow connection that reaches thousands of pixels — so
+whatever brings the stylesheet in sooner brings the photographs below the fold
+in sooner, and at 100–450 kB each they take the link from the cover. Measured
+on the production-weight fixture (`pnpm fixture:production-weight`): one font
+file fewer took FCP on the feed from 1.93 s to 1.74 s and LCP from 2.95 s to
+3.80 s; an inlined stylesheet took FCP to 0.86 s and LCP to 5.33 s. Neither
+ships. The photographs' weight comes first, and by
+`docs/redesign/2026-09-21/ove-469/applied-throttling-model.py` even that leaves
+a photograph over 2.0 s while the framework's script arrives in seventeen
+requests. `tests/lcp-element.spec.ts` reads the browser's own LCP entry over
+real photographs of production's weight and fails if it is lazy.
+
+The simulated figure is what the script on a public reading page costs. Since
+`OVE-468` the shell's palette dialog, account menu, narrow bar's sheet, sign-out
+question and Better Auth's client arrive on their first press; what a guest
+loads before `load` on `/` is 238 kB, of which the framework — React, the
+router, the RSC client — is about 133 kB.
 
 - No component ships a client bundle to a public reading page unless it must.
 - The composer is the one heavy surface and it is workspace-only.

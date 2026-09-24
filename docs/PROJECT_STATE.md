@@ -288,6 +288,24 @@ code for controls they have not pressed (DESIGN.md §9).
 
 See `docs/redesign/2026-09-21/OVE-468-PROOF.md`.
 
+**Production LCP, first slice (OVE-469):** the 2.0 s budget is not met, and the
+levers this issue lists cannot meet it.
+- Production after the bundle diet (applied / simulated): `/` 5.73 / 5.61 s,
+  an entry 2.80 / 6.70 s, the species card 5.16 / 5.53 s. FCP is 2.8–2.9 s.
+  None of the 13 public photographs has a `srcset`.
+- First paint and the photograph pull against each other: a sooner stylesheet
+  means sooner lazy photographs below the fold (100–450 kB each), which take
+  the link from the cover. Measured, not modelled: one font file fewer, and an
+  inlined stylesheet, each made the feed's LCP worse. Neither ships.
+- `tests/lcp-element.spec.ts` reads the real LCP entry over production-weight
+  photographs and fails on a lazy one; `pnpm fixture:production-weight` seeds
+  them for local measurement.
+- What is left needs the owner: variants for the 13 photographs (a production
+  write), the gate's method, the budget itself, and a metric-matched fallback
+  font.
+
+See `docs/redesign/2026-09-21/OVE-469-PROOF.md`.
+
 **Passports and lineage (OVE-495):** the lineage pages are tasks between two
 named gardeners. Questions and claims are two tabs of one section; an
 invitation stands alone, reached from its link.
