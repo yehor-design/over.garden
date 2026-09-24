@@ -78,7 +78,7 @@ const COPY = {
       "Датиран публичен запис от дневника на жив обект в OverGarden.",
     journals: "Дневници",
     authorEntries: "Други записи на @{handle}",
-    feed: "Поток",
+    feed: "Емисия",
     saved: "Отметки",
     journal: "Дневник",
     aboutTitle: "За какво е този запис",

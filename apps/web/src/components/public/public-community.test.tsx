@@ -72,6 +72,7 @@ const COMMUNITY: PublicCommunityPageModel = {
         title: "Томат після тижня спеки",
         excerpt:
           "Зафіксувала стан листя, вологість субстрату і наступну перевірку.",
+        sourceLanguage: "uk",
         entryDate: "2026-07-12",
         publishedAt: "2026-07-12T12:00:00.000Z",
         addedAt: "2026-07-12T13:00:00.000Z",
@@ -427,6 +428,47 @@ describe("PublicCommunityView", () => {
     expect(html).toContain("Олена");
     expect(html).toContain("3 записи");
   });
+
+  // ADR-0029 D11, WCAG 3.1.2: a Bulgarian gardener's contribution on a
+  // Ukrainian community page is read in Bulgarian; the byline and the date
+  // above it stay the page's.
+  it("marks a contribution with its own language, and nothing around it", async () => {
+    const { PublicCommunityView } = await import("./public-community");
+    const [item] = COMMUNITY.contributions.items;
+    const html = renderToStaticMarkup(
+      <PublicCommunityView
+        locale="uk"
+        community={{
+          ...COMMUNITY,
+          contributions: {
+            ...COMMUNITY.contributions,
+            items: [
+              {
+                ...item,
+                sourceLanguage: "bg",
+                title: "Доматите след седмица жега",
+                excerpt: "Записах състоянието на листата.",
+              },
+            ],
+          },
+        }}
+        viewer="guest"
+        request={EMPTY_PUBLIC_COMMUNITY_VIEW_REQUEST}
+      />,
+    );
+
+    expect(html).toMatch(
+      /<div lang="bg"[^>]*><h3[^>]*><a[^>]*>Доматите след седмица жега<\/a><\/h3><p[^>]*>Записах състоянието на листата\.<\/p><\/div>/u,
+    );
+    expect(html.match(/lang="bg"/gu)).toHaveLength(1);
+    const byline = html.slice(
+      html.indexOf('data-entry-card-byline="true"'),
+      html.indexOf('<div lang="bg"'),
+    );
+    expect(byline).toContain("Олена");
+    expect(byline).toContain('dateTime="2026-07-12"');
+    expect(byline).not.toContain("lang=");
+  });
 });
 
 describe("PublicCommunityDiscussion", () => {
@@ -442,6 +484,7 @@ describe("PublicCommunityDiscussion", () => {
           title: "Томат після тижня спеки",
           href: "/@demo_olena/tomato-after-heat",
           excerpt: "Зафіксувала стан листя і наступну перевірку.",
+          sourceLanguage: "uk",
           authorLabel: "Олена",
           authorHref: "/@demo_olena",
           dateTime: "2026-07-12",

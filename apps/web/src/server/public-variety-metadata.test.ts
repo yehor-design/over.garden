@@ -230,6 +230,7 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
               " ",
             )
           : "short",
+        sourceLanguage: "uk",
         entryDate: new Date("2026-06-20T12:00:00.000Z"),
         publicPath: "/journal/entry-1",
         plantObjectDisplayName: "Balcony tomato",

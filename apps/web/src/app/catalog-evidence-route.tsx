@@ -99,6 +99,7 @@ import {
 } from "@/server/static-public-page";
 import type { PublicCatalogAddressRequest } from "@/lib/catalog/addresses";
 import {
+  contentLanguageAttribute,
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
   localizedPath,
@@ -654,11 +655,24 @@ async function renderCatalogEvidenceCard(
                         <h3
                           id={`organism-entry-${entry.id}-title`}
                           className="text-h3 break-words text-text-heading"
+                          // The gardener's words keep the gardener's language;
+                          // the date, region and name above them are the
+                          // page's (ADR-0029 D11).
+                          {...contentLanguageAttribute(
+                            entry.sourceLanguage,
+                            locale,
+                          )}
                         >
                           {entry.title}
                         </h3>
                       </div>
-                      <p className="max-w-prose text-body-sm whitespace-pre-wrap text-text">
+                      <p
+                        className="max-w-prose text-body-sm whitespace-pre-wrap text-text"
+                        {...contentLanguageAttribute(
+                          entry.sourceLanguage,
+                          locale,
+                        )}
+                      >
                         {entry.body}
                       </p>
                       <Link

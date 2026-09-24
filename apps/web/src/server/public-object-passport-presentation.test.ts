@@ -53,6 +53,25 @@ describe("public object passport presentation", () => {
     expect(animal.identity.label).toBe("Вид або порода");
     expect(animal.facts.map((fact) => fact.label)).toContain("Умови утримання");
   });
+
+  it("carries each entry's own language into the chronology (ADR-0029 D11)", () => {
+    const page = publicPassport();
+    const presentation = buildPublicObjectPassportPresentation(
+      {
+        ...page,
+        journalPreview: [
+          { ...page.journalPreview[0], sourceLanguage: "bg" },
+          page.journalPreview[1],
+        ],
+      },
+      "uk",
+      { confirmedProvenanceCount: 0 },
+    );
+
+    expect(
+      presentation.timeline.entries.map((entry) => entry.sourceLanguage),
+    ).toEqual(["bg", "uk"]);
+  });
 });
 
 function publicPassport(
@@ -89,6 +108,7 @@ function publicPassport(
         id: "entry-2",
         title: "Друга хвиля цвітіння",
         bodyPreview: "З'явилися нові китиці.",
+        sourceLanguage: "uk",
         entryDate: new Date("2026-07-12T12:00:00.000Z"),
         publicSlug: "second-update",
         publicPath: "/journal/second-update",
@@ -104,6 +124,7 @@ function publicPassport(
         id: "entry-1",
         title: "Перший запис",
         bodyPreview: "Висаджено у великий горщик.",
+        sourceLanguage: "uk",
         entryDate: new Date("2026-07-01T12:00:00.000Z"),
         publicSlug: "first-update",
         publicPath: "/journal/first-update",

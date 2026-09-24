@@ -71,13 +71,19 @@ export function formatOrganismFactParagraph(
       "gardener",
       input.gardenerCount,
     );
+    // "Веде 1 садівник", "ведуть 2 садівники": the verb follows the count,
+    // as the noun does.
+    const agreement =
+      new Intl.PluralRules(locale).select(input.gardenerCount) === "one"
+        ? "one"
+        : "other";
     sentences.push(
       input.regionCount > 0
-        ? fill(copy.gardenersWithRegions, {
+        ? fill(copy.gardenersWithRegions[agreement], {
             gardeners,
             regions: formatPublicCount(locale, "region", input.regionCount),
           })
-        : fill(copy.gardeners, { gardeners }),
+        : fill(copy.gardeners[agreement], { gardeners }),
     );
   } else {
     sentences.push(copy.noGardeners);

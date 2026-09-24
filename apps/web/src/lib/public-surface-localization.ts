@@ -207,8 +207,9 @@ interface PublicSurfaceCopy {
       identity: string;
       identityWithSpecies: string;
       forms: string;
-      gardeners: string;
-      gardenersWithRegions: string;
+      /** The verb agrees with the count: "веде 1 садівник", "ведуть 2 садівники". */
+      gardeners: Record<"one" | "other", string>;
+      gardenersWithRegions: Record<"one" | "other", string>;
       noGardeners: string;
       kind: Record<"species" | "plant_variety" | "breed", string>;
       /** ADR-0026 D11: what an organism with hosts is called on its card. */
@@ -465,9 +466,14 @@ const COPY = {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} виду {species}.",
         forms: "У каталозі {forms} цього виду.",
-        gardeners: "Публічні журнали ведуть {gardeners}.",
-        gardenersWithRegions:
-          "Публічні журнали ведуть {gardeners} у {regions}.",
+        gardeners: {
+          one: "Публічні журнали веде {gardeners}.",
+          other: "Публічні журнали ведуть {gardeners}.",
+        },
+        gardenersWithRegions: {
+          one: "Публічні журнали веде {gardeners} у {regions}.",
+          other: "Публічні журнали ведуть {gardeners} у {regions}.",
+        },
         noGardeners: "Публічних записів садівників ще немає.",
         kind: {
           species: "вид",
@@ -728,9 +734,14 @@ const COPY = {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} от вида {species}.",
         forms: "В каталога има {forms} на този вид.",
-        gardeners: "Публични дневници водят {gardeners}.",
-        gardenersWithRegions:
-          "Публични дневници водят {gardeners} в {regions}.",
+        gardeners: {
+          one: "Публични дневници води {gardeners}.",
+          other: "Публични дневници водят {gardeners}.",
+        },
+        gardenersWithRegions: {
+          one: "Публични дневници води {gardeners} в {regions}.",
+          other: "Публични дневници водят {gardeners} в {regions}.",
+        },
         noGardeners: "Все още няма публични записи от градинари.",
         kind: {
           species: "вид",
@@ -990,9 +1001,14 @@ const COPY = {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} вида {species}.",
         forms: "В каталоге {forms} этого вида.",
-        gardeners: "Публичные журналы ведут {gardeners}.",
-        gardenersWithRegions:
-          "Публичные журналы ведут {gardeners} в {regions}.",
+        gardeners: {
+          one: "Публичные журналы ведёт {gardeners}.",
+          other: "Публичные журналы ведут {gardeners}.",
+        },
+        gardenersWithRegions: {
+          one: "Публичные журналы ведёт {gardeners} в {regions}.",
+          other: "Публичные журналы ведут {gardeners} в {regions}.",
+        },
         noGardeners: "Публичных записей садоводов пока нет.",
         kind: {
           species: "вид",

@@ -38,7 +38,7 @@ describe("organism fact paragraph (ADR-0026 D9)", () => {
       regionCount: 0,
     };
     expect(formatOrganismFactParagraph("uk", form)).toBe(
-      "Де Барао — сорт виду Solanum lycopersicum L. Публічні журнали ведуть 1 садівник.",
+      "Де Барао — сорт виду Solanum lycopersicum L. Публічні журнали веде 1 садівник.",
     );
     expect(
       formatOrganismFactParagraph("uk", {
@@ -68,6 +68,30 @@ describe("organism fact paragraph (ADR-0026 D9)", () => {
       }),
     ).toBe(
       "Solanum lycopersicum L. — вид. В каталоге 21 форма этого вида. Публичные журналы ведут 5 садоводов в 1 области.",
+    );
+  });
+
+  it("puts the verb in the count's number, as the noun is", () => {
+    const one = { ...species, formCount: 0, gardenerCount: 1, regionCount: 1 };
+    expect(formatOrganismFactParagraph("uk", one)).toBe(
+      "Solanum lycopersicum L. — вид. Публічні журнали веде 1 садівник у 1 області.",
+    );
+    expect(formatOrganismFactParagraph("bg", one)).toBe(
+      "Solanum lycopersicum L. — вид. Публични дневници води 1 градинар в 1 област.",
+    );
+    expect(formatOrganismFactParagraph("ru", one)).toBe(
+      "Solanum lycopersicum L. — вид. Публичные журналы ведёт 1 садовод в 1 области.",
+    );
+    // 21 is "one" in Ukrainian and Russian, and plural in Bulgarian.
+    const many = { ...one, gardenerCount: 21, regionCount: 0 };
+    expect(formatOrganismFactParagraph("uk", many)).toBe(
+      "Solanum lycopersicum L. — вид. Публічні журнали веде 21 садівник.",
+    );
+    expect(formatOrganismFactParagraph("bg", many)).toBe(
+      "Solanum lycopersicum L. — вид. Публични дневници водят 21 градинари.",
+    );
+    expect(formatOrganismFactParagraph("ru", many)).toBe(
+      "Solanum lycopersicum L. — вид. Публичные журналы ведёт 21 садовод.",
     );
   });
 

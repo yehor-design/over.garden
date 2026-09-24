@@ -35,6 +35,7 @@ import {
   type PublicLivingObjectPassportPresentation,
 } from "@/lib/living-object-passport";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
+import { contentLanguageAttribute } from "@/lib/public-localization";
 import { cn } from "@/lib/utils";
 
 /**
@@ -556,6 +557,9 @@ function renderTimelineEntries(
     // saves nothing.
     const longBody = entry.body.length > 320;
     const titleId = `passport-entry-${entry.id}-title`;
+    // The gardener's words keep the gardener's language, and only they do:
+    // the date and the labels beside them are the page's (ADR-0029 D11).
+    const ugc = contentLanguageAttribute(entry.sourceLanguage, locale);
 
     return (
       <li key={entry.id} className="grid gap-2">
@@ -587,6 +591,7 @@ function renderTimelineEntries(
                 <h3
                   id={titleId}
                   className="text-h3 break-words text-text-heading"
+                  {...ugc}
                 >
                   <Link href={entry.href} variant="quiet">
                     {entry.title}
@@ -595,19 +600,28 @@ function renderTimelineEntries(
                 {longBody ? (
                   <details className="group/note mt-2">
                     <summary className="min-h-11 cursor-pointer list-none text-body-sm text-text">
-                      <span className="line-clamp-3 whitespace-pre-wrap">
+                      <span
+                        className="line-clamp-3 whitespace-pre-wrap"
+                        {...ugc}
+                      >
                         {entry.body}
                       </span>
                       <span className="text-link mt-1 inline-block text-caption font-semibold group-open/note:hidden">
                         {copy.readFullNote}
                       </span>
                     </summary>
-                    <p className="mt-2 max-w-prose text-body-sm whitespace-pre-wrap text-text">
+                    <p
+                      className="mt-2 max-w-prose text-body-sm whitespace-pre-wrap text-text"
+                      {...ugc}
+                    >
                       {entry.body}
                     </p>
                   </details>
                 ) : (
-                  <p className="mt-2 max-w-prose text-body-sm whitespace-pre-wrap text-text">
+                  <p
+                    className="mt-2 max-w-prose text-body-sm whitespace-pre-wrap text-text"
+                    {...ugc}
+                  >
                     {entry.body}
                   </p>
                 )}
@@ -653,7 +667,15 @@ function renderTimelineEntries(
                   >
                     <ArrowLeft size={16} className="shrink-0" />
                     <span className="truncate">
-                      {copy.newer}: {entry.newer.title}
+                      {`${copy.newer}: `}
+                      <span
+                        {...contentLanguageAttribute(
+                          entry.newer.sourceLanguage,
+                          locale,
+                        )}
+                      >
+                        {entry.newer.title}
+                      </span>
                     </span>
                   </Link>
                 ) : null}
@@ -664,7 +686,15 @@ function renderTimelineEntries(
                     className="inline-flex min-h-11 min-w-0 items-center gap-1"
                   >
                     <span className="truncate">
-                      {copy.older}: {entry.older.title}
+                      {`${copy.older}: `}
+                      <span
+                        {...contentLanguageAttribute(
+                          entry.older.sourceLanguage,
+                          locale,
+                        )}
+                      >
+                        {entry.older.title}
+                      </span>
                     </span>
                     <ArrowRight size={16} className="shrink-0" />
                   </Link>

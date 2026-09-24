@@ -234,6 +234,10 @@ describe("public journal directory", () => {
     expect(html).toContain("Фільтри (4)");
 
     expect(html).toContain("Кішка після адаптації");
+    // The card names one animal, as the feed's cards do; the plural is the
+    // filter's word.
+    expect(html).toContain("<span>Тварина</span>");
+    expect(html).not.toContain("<span>Тварини</span>");
     expect(html).toContain('href="/breed/domestic-shorthair"');
     expect(html).toContain('href="/@demo_danylo"');
     // Each result is an `<article>` a reader can be told the name of, and it

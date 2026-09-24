@@ -18,6 +18,7 @@ import {
 } from "@/lib/community-copy";
 import {
   isPublicLocale,
+  normalizePublicContentLanguage,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { communityDiscussionPath } from "@/lib/public-community-view";
@@ -188,6 +189,7 @@ function describeDiscussedEntry(
     contributionId: string;
     entryTitle: string;
     entryBody: string;
+    entrySourceLanguage: string | null;
     entryPublicSlug: string | null;
     entryNumber: number | null;
     entryDate: Date | string;
@@ -216,6 +218,9 @@ function describeDiscussedEntry(
     title: contribution.entryTitle,
     excerpt:
       excerpt.length <= 320 ? excerpt : `${excerpt.slice(0, 319).trimEnd()}…`,
+    sourceLanguage: normalizePublicContentLanguage(
+      contribution.entrySourceLanguage,
+    ),
     objectKind,
     href: publicJournalEntryAddress({
       authorHandle: contribution.addressHandle,

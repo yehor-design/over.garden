@@ -155,7 +155,7 @@ describe("the way back, once the page runs", () => {
       <DirectoryReturnLink
         href="/bg/journals"
         label="Дневници"
-        feedLabel="Поток"
+        feedLabel="Емисия"
         savedLabel="Отметки"
       />,
     );

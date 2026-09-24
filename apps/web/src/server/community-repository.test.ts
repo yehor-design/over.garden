@@ -157,6 +157,7 @@ function contributionRow(index: number): PublicCommunityContributionRow {
     entryNumber: index + 1,
     title: `Спостереження ${index}`,
     body: "Щоденникове спостереження з перевіреним контекстом.",
+    sourceLanguage: "uk",
     entryDate: "2026-07-13",
     publishedAt: new Date(Date.UTC(2026, 6, 13, 11, 0, index)),
     ownerUserId: `00000000-0000-4000-8000-${String(900 + index).padStart(12, "0")}`,
@@ -366,6 +367,10 @@ describe("OVE-184 community repository contracts", () => {
     expect(compiled.sql).toContain('inner join "plant_objects"');
     expect(compiled.sql).toContain('inner join "user_handle_registry"');
     expect(compiled.sql).toContain('inner join "user_public_profiles"');
+    // A card marks the gardener's words with their language (ADR-0029 D11).
+    expect(compiled.sql).toContain(
+      '"journal_entries"."source_language" as "sourceLanguage"',
+    );
     expect(compiled.sql).toContain(
       '"user_handle_registry"."user_id" = "journal_entries"."owner_user_id"',
     );
@@ -873,6 +878,8 @@ describe("OVE-184 community repository contracts", () => {
       entryNumber: index + 1,
       title: `Спостереження ${index}`,
       body: "Щоденникове спостереження з перевіреним контекстом. ".repeat(10),
+      // A row written before the column existed reads as the default.
+      sourceLanguage: index === 0 ? "bg" : null,
       entryDate: "2026-07-13",
       publishedAt: new Date(Date.UTC(2026, 6, 13, 11, 0, index)),
       ownerUserId: `00000000-0000-4000-8000-${String(900 + index).padStart(12, "0")}`,
@@ -913,7 +920,9 @@ describe("OVE-184 community repository contracts", () => {
       },
       coverUrl: "https://media.over.garden/covers/cover.png",
       viewerReportState: null,
+      sourceLanguage: "bg",
     });
+    expect(page.items[2]?.sourceLanguage).toBe("uk");
     expect(page.items[0]?.excerpt.length).toBeLessThanOrEqual(320);
     expect(page.nextCursor).toBeTruthy();
     expect(

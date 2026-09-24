@@ -407,7 +407,9 @@ function DirectoryResultCard({
       subject={{
         label: card.object.displayName,
         href: card.object.publicPath,
-        kindLabel: copy.kinds[card.object.kind],
+        // One plant, not the filter's "plants": the kind word every other
+        // card of an entry uses.
+        kindLabel: getEntryCardCopy(locale).kinds[card.object.kind],
         icon: KIND_ICONS[card.object.kind],
         // `undefined`, not an empty fragment: a fragment is truthy, and the
         // card drew its separator with nothing after it.

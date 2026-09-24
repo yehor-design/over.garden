@@ -155,7 +155,7 @@ describe("/", () => {
       "bg",
     );
     expect(html).toContain('lang="bg"');
-    expect(html).toContain(">Поток</h1>");
+    expect(html).toContain(">Емисия</h1>");
     // The active filters are in the URL and travel as hidden fields of the
     // discovery bar's GET form, so a change to one keeps the other.
     expect(html).toContain('type="hidden" name="topic" value="winter-care"');

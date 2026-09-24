@@ -821,3 +821,24 @@ evidence and CI's S3 stand-in only. The pull request, the CI runs of its head, t
 commit on `main` and the production deployment are recorded in the
 authenticated Linear receipt on OVE-478 after the merge, with the production
 reads of criterion 16 — as OVE-469's were.
+
+### Read after release
+
+Reading production after the release (criterion 16) found four defects that
+the sweep had not, all older than this change. yehor-design/over.garden#472
+fixes them:
+
+- **A gardener's words without `lang` on three surfaces.** The entries on
+  an organism's page, a passport's chronology and a community's cards carried
+  no `lang`. The sweep's language check looked for interface text in the wrong
+  language, not for a gardener's words left unmarked. On production, a
+  Bulgarian entry on the Ukrainian tomato page carried no `lang`, so a screen
+  reader speaks it in a Ukrainian voice.
+  OG-UX-030's closure in criterion 12 holds on those surfaces from #472.
+- **Two Bulgarian names for the feed.** The menu said «Емисия», while the page
+  it opens, and an entry's link back to it, said «Поток».
+- **A plural kind word on a `/journals` card.** The card named its object's
+  kind with the filter's plural («Томат · Рослини»), where every other card
+  says «Рослина».
+- **A verb that did not follow its count.** The page read «Публічні журнали
+  ведуть 1 садівник». A unit test and a browser spec had pinned that form.

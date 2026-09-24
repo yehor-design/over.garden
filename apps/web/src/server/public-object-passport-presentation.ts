@@ -33,6 +33,7 @@ export function buildPublicObjectPassportPresentation(
       id: entry.id,
       title: entry.title,
       body: entry.bodyPreview,
+      sourceLanguage: entry.sourceLanguage,
       entryDate: entry.entryDate,
       href: entry.publicPath,
       mediaPublicUrl: entry.mediaPublicUrl,

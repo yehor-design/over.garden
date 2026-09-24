@@ -166,7 +166,7 @@ test.describe("OVE-387 catalog picker", () => {
         has: page.locator("[data-organism-fact]"),
       });
       await expect(card.locator("[data-organism-fact]")).toContainText(
-        "Публічні журнали ведуть 1 садівник",
+        "Публічні журнали веде 1 садівник",
       );
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
         "content",
