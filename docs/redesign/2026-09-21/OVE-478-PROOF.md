@@ -791,6 +791,15 @@ And in CI, before any test ran:
   pinned, from PyPI — the stand-in every local run above used
   (`.github/actions/web-setup/action.yml`; `TECH_STACK_DECISIONS.md`, CI
   runtime boundary).
+- **A topic page nobody had written to.** `static-documents.spec.ts` read the
+  first curated topic by slug without JavaScript and wanted more than 600
+  visible characters. Which topics the gate's other specs have filled by then
+  depends on how the gate is sharded; with this change's two new specs in the
+  list, `animals` was empty in CI's second shard — 582 characters, no entry —
+  as it is on the local gate database (544, on `main` too). The spec already
+  publishes an entry through the real endpoint; it now reads the curated
+  topic that entry is listed in, and fails if there is none. It passed alone
+  on that database, where the old reading failed.
 
 Seen, and not this change's: one full run failed
 `attribution-outbox.test.ts` › "accepts the retained self-serve analytics
