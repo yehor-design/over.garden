@@ -18,7 +18,7 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { publicRegionCode, publicRegionLabel } from "@/lib/garden/regions";
 import { publicCatalogPermalinkPath } from "@/lib/catalog/addresses";
 import { localizedPath, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
@@ -146,7 +146,8 @@ export interface PublicVarietyEntry {
   publicPath: string;
   plantObjectDisplayName: string;
   varietyText: string | null;
-  safeLocationLabel: string | null;
+  /** The coarse region the entry may show, as a code; the page words it. */
+  safeRegionCode: string | null;
   media: {
     id: string;
     derivativeKey: string;
@@ -326,7 +327,7 @@ export async function getPublicVarietyPageByCatalogItemId(
       // ADR-0026 D6: an object linked by curation keeps the gardener's own
       // name in variety_text; the public page names the card, never the label.
       varietyText: item.canonicalName,
-      safeLocationLabel: getPublicLocationLabel(entry),
+      safeRegionCode: getPublicRegionCode(entry),
       media:
         entry.mediaDerivativeKey && entry.mediaId
           ? {
@@ -475,7 +476,7 @@ export function buildPublicVarietyDiscoverySource(
         entry.body,
         entry.plantObjectDisplayName,
         entry.varietyText ?? "",
-        entry.safeLocationLabel ?? "",
+        publicRegionLabel(routeLocale, entry.safeRegionCode) ?? "",
       ]),
     ],
     distinctPublicEntityIds: [
@@ -821,7 +822,7 @@ export function buildPublicVarietyEntriesQuery(
     .$narrowType<{ entryPublicSlug: string; addressHandle: string }>();
 }
 
-function getPublicLocationLabel(row: {
+function getPublicRegionCode(row: {
   varietyState: VarietyState | string;
   objectLocationVisibility: LocationVisibility | string;
   objectCoarseRegionCode: string | null;
@@ -829,16 +830,7 @@ function getPublicLocationLabel(row: {
   spaceCoarseRegionCode: string | null;
 }) {
   if (row.varietyState !== "selected") return null;
-  if (row.objectLocationVisibility !== "region") return null;
-
-  const code =
-    row.objectCoarseRegionCode ??
-    (row.spaceLocationVisibility === "region"
-      ? row.spaceCoarseRegionCode
-      : null);
-  const label = getCoarseRegionLabel(code);
-
-  return label ? `Region: ${label}` : null;
+  return publicRegionCode(row);
 }
 
 function normalizeCatalogPublicSlug(value: string) {

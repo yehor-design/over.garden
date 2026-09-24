@@ -28,6 +28,7 @@ import { Card } from "@/components/ui/card";
 import { Link as TextLink } from "@/components/ui/link";
 import { Section } from "@/components/ui/section";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+import { publicRegionLabel } from "@/lib/garden/regions";
 import {
   getPublicSurfaceCopy,
   publicObjectKindLabel,
@@ -93,7 +94,7 @@ export async function generateMetadata({
       const page = await getCachedPublicObjectPassportPage(objectId, locale);
       if (!page) throw new Error("Public lineage object unavailable.");
       return {
-        source: buildLineageObjectDiscoverySource(page),
+        source: buildLineageObjectDiscoverySource(page, locale),
         payload: page,
       };
     },
@@ -293,7 +294,7 @@ function buildLineageObjectSurface(
   locale: PublicLocale,
   page: PublicObjectPassportPage,
   discovery: PublicSurfaceDiscoveryResult = resolvePublicSurfaceDiscoveryForRequest(
-    buildLineageObjectDiscoverySource(page),
+    buildLineageObjectDiscoverySource(page, locale),
   ),
 ) {
   const copy = getPublicSurfaceCopy(locale);
@@ -314,6 +315,7 @@ function buildLineageObjectSurface(
 
 function buildLineageObjectDiscoverySource(
   page: PublicObjectPassportPage,
+  locale: PublicLocale,
 ): PublicSurfaceDiscoverySource {
   const journals = [...page.journalPreview, ...page.journalContinuation];
   return {
@@ -323,7 +325,7 @@ function buildLineageObjectDiscoverySource(
       page.object.displayName,
       page.object.catalogCanonicalName ?? "",
       page.object.varietyText ?? "",
-      page.object.safeLocationLabel ?? "",
+      publicRegionLabel(locale, page.object.safeRegionCode) ?? "",
       ...journals.flatMap((entry) => [entry.title, entry.bodyPreview]),
     ],
     distinctPublicEntityIds: [
@@ -460,7 +462,7 @@ function PublicLineageNodeMeta({
     node.varietyText ??
       node.catalogCanonicalName ??
       getPublicSurfaceCopy(locale).journal.catalogMatchPending,
-    node.safeLocationLabel,
+    publicRegionLabel(locale, node.safeRegionCode),
   ].filter(Boolean);
 
   return (
@@ -506,7 +508,7 @@ function buildPublicLineageNodeMap(
     catalogCanonicalName: passport.object.catalogCanonicalName,
     catalogPublicSlug: passport.object.catalogPublicSlug,
     catalogSpeciesSlug: passport.object.catalogSpeciesSlug,
-    safeLocationLabel: passport.object.safeLocationLabel,
+    safeRegionCode: passport.object.safeRegionCode,
   };
   const nodes = lineagePage?.nodes ?? [rootNode];
 

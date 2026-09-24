@@ -43,6 +43,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Input } from "@/components/ui/input";
+import { Radio, RadioGroup } from "@/components/ui/radio";
 import { Link } from "@/components/ui/link";
 import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
@@ -84,6 +85,20 @@ interface EntryDraftFields {
   body: string;
   contentDocument: JournalDocumentV1 | null;
   entryDate: string;
+}
+
+/**
+ * A plant or animal named while writing (`OVE-478`). It lives only in this
+ * editor until Publish, which creates it and its first entry in one
+ * transaction (`first_plant_entry`, the IA's "nested create") — so a failed
+ * publish leaves neither behind, and nothing here claims to be saved.
+ */
+interface NewObjectDraft {
+  name: string;
+  objectKind: "plant" | "animal";
+  spaceMode: "existing" | "new";
+  space: OwnedDestination | null;
+  newSpaceName: string;
 }
 
 /** One of a space's own objects, which a space entry must mention. */
@@ -198,6 +213,8 @@ export function EntryComposer({
     startingDestination,
   );
   const [choosing, setChoosing] = useState(startingDestination === null);
+  const [newObject, setNewObject] = useState<NewObjectDraft | null>(null);
+  const newObjectNameId = useId();
   const [draft, setDraft] = useState<EntryDraftFields>({
     title: "",
     body: "",
@@ -287,11 +304,63 @@ export function EntryComposer({
       setMentionedObjectIds([]);
     }
     setDestination(next);
+    setNewObject(null);
     setChoosing(false);
     setDestinationError(null);
-    setDraft((current) => withSuggestedTitle(current, { destination: next }));
+    setDraft((current) =>
+      withSuggestedTitle(current, { label: next.displayName }),
+    );
     // A pick is the whole question: the next keystroke is the entry.
     requestAnimationFrame(() => structuredComposerRef.current?.focus());
+  }
+
+  /**
+   * Name a new plant or animal without leaving the editor. The text, the
+   * date and every photograph stay where they are; the place it lives starts
+   * as the space the reader was writing in, visibly, and can be changed.
+   */
+  function startNewObject(name: string) {
+    if (persistenceFrozen) return;
+    const space =
+      destination?.kind === "space"
+        ? destination
+        : destination?.kind === "object" && destination.parent
+          ? {
+              kind: "space" as const,
+              id: destination.parent.id,
+              displayName: destination.parent.displayName,
+            }
+          : null;
+    setNewObject({
+      name,
+      objectKind: "plant",
+      spaceMode: "existing",
+      space,
+      newSpaceName: "",
+    });
+    setChoosing(false);
+    setMentionedObjectIds([]);
+    setDestinationError(null);
+    setDraft((current) => withSuggestedTitle(current, { label: name }));
+    requestAnimationFrame(() =>
+      document.getElementById(newObjectNameId)?.focus(),
+    );
+  }
+
+  function updateNewObject(change: Partial<NewObjectDraft>) {
+    if (persistenceFrozen) return;
+    setNewObject((current) => (current ? { ...current, ...change } : current));
+    setDestinationError(null);
+    if (change.name !== undefined) {
+      const name = change.name;
+      setDraft((current) => withSuggestedTitle(current, { label: name }));
+    }
+  }
+
+  function cancelNewObject() {
+    setNewObject(null);
+    setChoosing(true);
+    setDestinationError(null);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -302,12 +371,29 @@ export function EntryComposer({
     if (persistenceFrozen) return;
     setAuthRecoveryUrl(null);
 
-    if (!destination) {
+    if (newObject) {
+      if (!newObject.name.trim()) {
+        setDestinationError(copy.newObject.nameRequired);
+        // `window.` because this function names its own `document` below.
+        window.document.getElementById(newObjectNameId)?.focus();
+        return;
+      }
+      if (
+        newObject.spaceMode === "existing"
+          ? !newObject.space
+          : !newObject.newSpaceName.trim()
+      ) {
+        setDestinationError(copy.newObject.spaceRequired);
+        return;
+      }
+    } else if (!destination) {
       setChoosing(true);
       setDestinationError(copy.chooseFirst);
       return;
-    }
-    if (destination.kind === "space" && mentionedObjectIds.length === 0) {
+    } else if (
+      destination.kind === "space" &&
+      mentionedObjectIds.length === 0
+    ) {
       setDestinationError(copy.spaceMentions.required);
       return;
     }
@@ -343,7 +429,9 @@ export function EntryComposer({
       draft.title.trim() ||
       suggestJournalEntryTitle({
         entryDate: draft.entryDate,
-        objectLabel: destination.displayName,
+        objectLabel: newObject
+          ? newObject.name.trim()
+          : destination!.displayName,
         body,
         hasPhoto,
       });
@@ -357,17 +445,41 @@ export function EntryComposer({
     try {
       const topicTags = normalizeJournalTopicTagLabels(topicTagInput);
       const result = await local.publish({
-        context:
-          destination.kind === "object"
+        context: newObject
+          ? {
+              // The new one and its first entry, in one transaction: the
+              // server creates the object (and a new space, when one is
+              // named) only together with this entry.
+              target: "first_plant_entry",
+              spaceId:
+                newObject.spaceMode === "existing"
+                  ? (newObject.space?.id ?? null)
+                  : null,
+              spaceName:
+                newObject.spaceMode === "new"
+                  ? newObject.newSpaceName.trim()
+                  : null,
+              plantName: newObject.name.trim(),
+              objectKind: newObject.objectKind,
+              catalogItemId: null,
+              catalogLabel: null,
+              locationVisibility: "hidden",
+              coarseRegionCode: null,
+              entryDate: draft.entryDate,
+              activationSource: null,
+              mentionSelections: [],
+              topicTags,
+            }
+          : destination!.kind === "object"
             ? {
                 target: "plant_object_entry",
-                plantObjectId: destination.id,
+                plantObjectId: destination!.id,
                 entryDate: draft.entryDate,
                 topicTags,
               }
             : {
                 target: "space_entry",
-                spaceId: destination.id,
+                spaceId: destination!.id,
                 mentionedPlantObjectIds: mentionedObjectIds,
                 entryDate: draft.entryDate,
                 topicTags,
@@ -376,10 +488,11 @@ export function EntryComposer({
         document,
         coverMediaAssetId: selectedCoverMediaAssetId(coverSelection, document),
         disclosureAccepted,
-        returnTo:
-          destination.kind === "object"
-            ? `/garden/objects/${encodeURIComponent(destination.id)}`
-            : `/garden/spaces/${encodeURIComponent(destination.id)}#space-history`,
+        returnTo: newObject
+          ? "/garden"
+          : destination!.kind === "object"
+            ? `/garden/objects/${encodeURIComponent(destination!.id)}`
+            : `/garden/spaces/${encodeURIComponent(destination!.id)}#space-history`,
       });
       setSubmitState("published");
       setMessage(atomicCopy.published);
@@ -392,7 +505,12 @@ export function EntryComposer({
         );
         return;
       }
-      router.push(result.returnTo);
+      // A new plant or animal has a page only now: the answer names it.
+      router.push(
+        newObject && result.plantObjectId
+          ? `/garden/objects/${encodeURIComponent(result.plantObjectId)}`
+          : result.returnTo,
+      );
       router.refresh();
     } catch (error) {
       handleTransportBoundary(error);
@@ -483,12 +601,13 @@ export function EntryComposer({
 
   function withSuggestedTitle(
     nextDraft: EntryDraftFields,
-    options: { hasPhoto?: boolean; destination?: OwnedDestination } = {},
+    options: { hasPhoto?: boolean; label?: string } = {},
   ): EntryDraftFields {
-    const target = options.destination ?? destination;
+    const label =
+      options.label ?? (newObject ? newObject.name : destination?.displayName);
     const suggestion = suggestJournalEntryTitle({
       entryDate: nextDraft.entryDate,
-      objectLabel: target?.displayName ?? "",
+      objectLabel: label ?? "",
       body: nextDraft.body,
       hasPhoto: options.hasPhoto ?? hasPhoto,
     });
@@ -531,7 +650,11 @@ export function EntryComposer({
       }}
       data-entry-composer="true"
       data-local-composer-kind={
-        destination?.kind === "space" ? "space_entry" : "follow_up"
+        newObject
+          ? "first_entry"
+          : destination?.kind === "space"
+            ? "space_entry"
+            : "follow_up"
       }
       data-local-composer-read-only={persistenceFrozen || undefined}
       className="grid gap-4"
@@ -590,7 +713,92 @@ export function EntryComposer({
           data-entry-composer-destination="true"
           className="grid gap-3 rounded-lg border border-border p-3 sm:p-4"
         >
-          {destination && !choosing ? (
+          {newObject ? (
+            <fieldset
+              data-entry-composer-new-object="true"
+              className="grid min-w-0 gap-3"
+            >
+              <legend className="text-h4 text-text-heading">
+                {copy.newObject.title}
+              </legend>
+              <p className="text-body-sm text-text-muted">
+                {copy.newObject.help}
+              </p>
+              <Field label={copy.newObject.name} id={newObjectNameId}>
+                <Input
+                  name="newObjectName"
+                  maxLength={120}
+                  value={newObject.name}
+                  onChange={(event) =>
+                    updateNewObject({ name: event.target.value })
+                  }
+                  data-entry-composer-new-object-name="true"
+                />
+              </Field>
+              <RadioGroup legend={copy.newObject.kind} orientation="horizontal">
+                {(["plant", "animal"] as const).map((kind) => (
+                  <Radio
+                    key={kind}
+                    name="newObjectKind"
+                    value={kind}
+                    label={copy.newObject[kind]}
+                    checked={newObject.objectKind === kind}
+                    onChange={() => updateNewObject({ objectKind: kind })}
+                  />
+                ))}
+              </RadioGroup>
+              <RadioGroup
+                legend={copy.newObject.space}
+                orientation="horizontal"
+              >
+                {(["existing", "new"] as const).map((mode) => (
+                  <Radio
+                    key={mode}
+                    name="newObjectSpaceMode"
+                    value={mode}
+                    label={
+                      mode === "existing"
+                        ? copy.newObject.existingSpace
+                        : copy.newObject.newSpace
+                    }
+                    checked={newObject.spaceMode === mode}
+                    onChange={() => updateNewObject({ spaceMode: mode })}
+                  />
+                ))}
+              </RadioGroup>
+              {newObject.spaceMode === "existing" ? (
+                <OwnedDestinationPicker
+                  locale={locale}
+                  kind="space"
+                  selection={newObject.space}
+                  onSelect={(space) => updateNewObject({ space })}
+                />
+              ) : (
+                <Field label={copy.newObject.newSpaceName}>
+                  <Input
+                    name="newSpaceName"
+                    maxLength={120}
+                    value={newObject.newSpaceName}
+                    onChange={(event) =>
+                      updateNewObject({ newSpaceName: event.target.value })
+                    }
+                    data-entry-composer-new-space-name="true"
+                  />
+                </Field>
+              )}
+              <div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelNewObject}
+                  data-entry-composer-new-object-back="true"
+                >
+                  {copy.newObject.back}
+                </Button>
+              </div>
+            </fieldset>
+          ) : destination && !choosing ? (
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="min-w-0 text-body-sm">
                 <span className="text-text-muted">{copy.writingTo}</span>{" "}
@@ -622,6 +830,7 @@ export function EntryComposer({
                 locale={locale}
                 selection={destination}
                 onSelect={chooseDestination}
+                onCreate={startNewObject}
                 kind={forCommunity ? "object" : "all"}
                 autoFocus={startingDestination === null || choosing}
               />
@@ -669,7 +878,7 @@ export function EntryComposer({
           ) : null}
         </div>
 
-        {destination?.kind === "space" ? (
+        {!newObject && destination?.kind === "space" ? (
           <SpaceMentionChecklist
             key={destination.id}
             locale={locale}
@@ -690,7 +899,7 @@ export function EntryComposer({
 
         <div className="flex flex-col gap-1">
           <span className="text-body-sm font-medium text-text">
-            {destination?.kind === "space"
+            {!newObject && destination?.kind === "space"
               ? copy.whatHappened.space
               : copy.whatHappened.object}
           </span>

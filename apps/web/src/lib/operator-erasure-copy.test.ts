@@ -23,6 +23,19 @@ describe("operator erasure copy", () => {
       "future_count",
     );
   });
+
+  it("writes every count label in the reader's language, not Ukrainian", () => {
+    // BG and RU once spread the Ukrainian labels and overrode a dozen, so the
+    // other thirty read Ukrainian on a Bulgarian or Russian screen. Neither
+    // language writes і, ї, є, ґ or the apostrophe inside a word.
+    for (const locale of ["bg", "ru"] as const) {
+      for (const [key, label] of Object.entries(
+        getOperatorErasureCopy(locale).countLabels,
+      )) {
+        expect(`${key}: ${label}`).not.toMatch(/[іїєґІЇЄҐ]|\p{L}['’]\p{L}/u);
+      }
+    }
+  });
 });
 
 function recursiveKeys(value: unknown, prefix = ""): string[] {

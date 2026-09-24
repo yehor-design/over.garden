@@ -361,10 +361,25 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
     const replacement = composer.locator(
       '[data-owned-destination-picker="space"]',
     );
+    // The field still holds this name from the reflow loop, so focusing it
+    // shows that list at once and asks for it again 180 ms later; a key
+    // pressed in between highlights a row the fresh answer then resets, and
+    // Publish went out with the removed space (a race of the test's, seen on
+    // `main` too). Choose from the fresh list, and see the choice made.
+    const refreshed = page.waitForResponse((response) =>
+      response.url().includes("/api/garden/destinations?"),
+    );
     await replacement.getByRole("combobox").fill(fixture.spaces[17].name);
+    await refreshed;
     await expect(replacement.getByRole("option")).toHaveCount(1);
     await replacement.getByRole("combobox").press("ArrowDown");
     await replacement.getByRole("combobox").press("Enter");
+    await expect(
+      replacement.locator("[data-destination-selection]"),
+    ).toHaveAttribute(
+      "data-destination-selection",
+      `space:${fixture.spaces[17].id}`,
+    );
     const acknowledged = page.waitForResponse(
       (response) =>
         response.url().includes("/api/garden/entries") &&

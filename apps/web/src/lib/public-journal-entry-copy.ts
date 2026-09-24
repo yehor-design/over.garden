@@ -4,6 +4,11 @@ export interface PublicJournalEntryCopy {
   metadataTitleSuffix: string;
   metadataDescription: string;
   journals: string;
+  /**
+   * A missing entry's one way on when its author's profile still answers:
+   * their other entries (`OVE-478`). `{handle}` is the author's handle.
+   */
+  authorEntries: string;
   /** The way back when the reader came from the feed (`OVE-493`). */
   feed: string;
   /** The way back when the reader came from their bookmarks (`OVE-502`). */
@@ -40,6 +45,7 @@ const COPY = {
     metadataDescription:
       "Датований публічний запис із журналу живого об'єкта в OverGarden.",
     journals: "Журнали",
+    authorEntries: "Інші записи @{handle}",
     feed: "Стрічка",
     saved: "Закладки",
     journal: "Журнал",
@@ -71,6 +77,7 @@ const COPY = {
     metadataDescription:
       "Датиран публичен запис от дневника на жив обект в OverGarden.",
     journals: "Дневници",
+    authorEntries: "Други записи на @{handle}",
     feed: "Поток",
     saved: "Отметки",
     journal: "Дневник",
@@ -102,6 +109,7 @@ const COPY = {
     metadataDescription:
       "Датированная публичная запись из журнала живого объекта в OverGarden.",
     journals: "Журналы",
+    authorEntries: "Другие записи @{handle}",
     feed: "Лента",
     saved: "Закладки",
     journal: "Журнал",

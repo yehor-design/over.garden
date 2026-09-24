@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 
 import { waitForHydration } from "./helpers/hydration";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The journals directory stopped being a form (`OVE-448`).
@@ -30,8 +31,6 @@ import { waitForHydration } from "./helpers/hydration";
 
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
-
 async function selectLocale(context: BrowserContext, baseURL: string) {
   await context.addCookies([
     { name: INTERFACE_LOCALE_COOKIE, value: "uk", url: baseURL },
@@ -69,7 +68,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /**

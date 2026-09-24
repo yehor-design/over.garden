@@ -16,6 +16,7 @@ import {
   type OrganismFixture,
 } from "./helpers/organism-fixture";
 import { waitForHydration } from "./helpers/hydration";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The shell below `lg` (DESIGN.md §3.2, §4.3, §2.6; ADR-0031 D4, D9).
@@ -38,7 +39,6 @@ import { waitForHydration } from "./helpers/hydration";
 const OUTPUT = path.join(process.cwd(), "test-results", "mobile-shell");
 const PREFIX = "ove444";
 const TEST_PASSWORD = "OVE444-local-password-1!";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const LOCALES = ["uk", "bg", "ru"] as const;
 const WIDTHS = [320, 375, 768] as const;
 
@@ -104,7 +104,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /**

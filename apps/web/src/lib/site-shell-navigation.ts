@@ -307,10 +307,10 @@ export function getSiteShellNavigation(
       {
         key: "support",
         label: copy.shell.support,
-        // Unprefixed in every language. `/support` has no twin in the
-        // `[locale]` tree, so `/bg/support` answered 404 to every Bulgarian
-        // and Russian reader who pressed this link (found on production on
-        // 2026-09-21); the one address renders in the reader's own language.
+        // Unprefixed in every language: the one address renders in the
+        // reader's own language. `/bg/support` answered 404 when this link was
+        // prefixed (found on production on 2026-09-21); the `[locale]` twin
+        // added since (`OVE-476`) is `noindex` and not what this link names.
         href: "/support",
       },
       {

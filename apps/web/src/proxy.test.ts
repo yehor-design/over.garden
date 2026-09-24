@@ -233,7 +233,7 @@ describe("app route cache guardrail", () => {
       "/account/communities/example",
       "/account/moderation/comments",
       "/garden/privacy/erasure-requests",
-      "/garden/lineage/invitations/example",
+      "/garden/lineage/invitations/claim",
       // ADR-0027 retired the `/health` page, not the liveness endpoint that
       // shares its name.
       "/api/health",
@@ -1411,9 +1411,13 @@ describe("app route cache guardrail", () => {
     const privacyResponse = await responseFor("/privacy", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
-    const blogResponse = await responseFor("/blog/field-note", {
-      cookie: interfaceCookies("bulgaria", "ru"),
-    });
+    // A note that exists: a name no note has is a 404 now (OVE-478).
+    const blogResponse = await responseFor(
+      "/blog/ai-garden-advice-vs-real-garden-proof",
+      {
+        cookie: interfaceCookies("bulgaria", "ru"),
+      },
+    );
     const ugcResponse = await responseFor("/@yehor/post/12", {
       cookie: interfaceCookies("bulgaria", "bg"),
     });
@@ -1430,7 +1434,12 @@ describe("app route cache guardrail", () => {
 
     for (const [name, response, language, rendered] of [
       ["privacy", privacyResponse, "bg", "/bg/privacy"],
-      ["blog", blogResponse, "ru", "/ru/blog/field-note"],
+      [
+        "blog",
+        blogResponse,
+        "ru",
+        "/ru/blog/ai-garden-advice-vs-real-garden-proof",
+      ],
       ["journal", ugcResponse, "bg", "/bg/@yehor/post/12"],
       ["catalog", catalogResponse, "ru", "/ru/q/catalog"],
       ["topic", topicResponse, "bg", "/bg/topics/care-checks"],
@@ -1974,6 +1983,59 @@ describe("organism addresses (ADR-0026 D8)", () => {
       ]) {
         const response = await responseFor(path, document);
         expect(response.status, path).toBe(404);
+      }
+    });
+
+    it("404s a path under a section that none of its pages serves", async () => {
+      // Each of these reached its section's `[...missing]` catch-all and
+      // answered 200 with a `noindex` body until OVE-478.
+      for (const path of [
+        "/catalog/x",
+        "/journals/x",
+        "/privacy/x",
+        "/garden/x",
+        "/garden/objects/11111111-1111-4111-8111-111111111111/x",
+        // An invitation is `/garden/lineage/invitations/claim#…`; a name in
+        // its place was never an address.
+        "/garden/lineage/invitations/example",
+        "/account/x",
+        "/auth/x",
+        "/markets/ukraine/x",
+        "/bg/catalog/x",
+        "/ru/journals/x",
+      ]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(404);
+        expect(response.headers.get("X-Robots-Tag"), path).toBe(
+          "noindex, nofollow",
+        );
+      }
+    });
+
+    it("404s an authored page's name that no page has, and passes one that does", async () => {
+      // These rendered on demand, could not be static, and answered 500 —
+      // on production as well (OVE-478).
+      for (const path of [
+        "/answers/no-such-answer",
+        "/guides/no-such-guide",
+        "/blog/no-such-note",
+        "/markets/no-such-market",
+        "/bg/answers/no-such-answer",
+        "/ru/markets/no-such-market",
+      ]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(404);
+      }
+      for (const path of [
+        "/answers/why-are-tomato-leaves-yellow",
+        "/guides/start-a-living-plant-record",
+        "/bg/blog/ai-garden-advice-vs-real-garden-proof",
+        "/markets/ukraine",
+        "/garden/objects/11111111-1111-4111-8111-111111111111/settings",
+        "/notifications/settings",
+      ]) {
+        const response = await responseFor(path, document);
+        expect(response.status, path).toBe(200);
       }
     });
 

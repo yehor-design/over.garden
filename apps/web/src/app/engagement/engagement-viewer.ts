@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 
 import { getCurrentSession } from "@/server/auth-session";
 import {
@@ -60,6 +61,11 @@ export async function readLikeOwners(): Promise<EngagementLikeOwner[]> {
  * ADR-0023: a read that renders may not throw. A panel that cannot reach the
  * database shows zero and an un-pressed button rather than taking the page down,
  * and the failure still leaves one line in the log.
+ *
+ * Next's own signals are not failures and go back up first: this read asks for
+ * cookies, and a shell regenerated at runtime ends its prerender by rejecting
+ * that request. Caught here, each regeneration logged a degraded like panel
+ * that no reader ever saw — ten false incidents in one route sweep (`OVE-478`).
  */
 export interface ViewerLikeState {
   activeLikeCount: number;
@@ -74,6 +80,7 @@ export async function readViewerLikeState(input: {
     const target = normalizeEngagementTarget(input.kind, input.ref);
     return await readEngagementLikeState(target, await readLikeOwners());
   } catch (reason) {
+    unstable_rethrow(reason);
     recordWorkspaceSectionFailure(describeWorkspaceFailure(reason), {
       surface: "engagement_panel",
       section: "like_state",

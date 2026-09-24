@@ -17,6 +17,7 @@ import {
   signInSyntheticGardener,
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The community family (`OVE-454`): a list, a community, a discussion.
@@ -49,8 +50,6 @@ import {
 const FIXTURE_PREFIX = "ove454";
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
-
 let pool: Pool;
 let memberRequest: APIRequestContext | null = null;
 let fixture: {
@@ -99,7 +98,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /**

@@ -7,7 +7,6 @@ import { db } from "@/db";
 import type {
   CatalogKind,
   Database,
-  LocationVisibility,
   PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
@@ -23,7 +22,7 @@ import {
   publicObjectPassportPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { publicRegionCode } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   readMediaVariantExtras,
@@ -53,7 +52,8 @@ export interface PublicObjectPassportPage {
     catalogPublicSlug: string | null;
     catalogSpeciesSlug: string | null;
     catalogPath: string | null;
-    safeLocationLabel: string | null;
+    /** The coarse region the object may show, as a code; the page words it. */
+    safeRegionCode: string | null;
     publicEntryCount: number;
     firstEntryDate: Date | string;
     latestEntryDate: Date | string;
@@ -782,7 +782,7 @@ export function serializePublicObjectPassportPage(
       catalogPublicSlug: root.catalogPublicSlug,
       catalogSpeciesSlug: root.catalogSpeciesSlug,
       catalogPath,
-      safeLocationLabel: publicObjectPassportLocationLabel({
+      safeRegionCode: publicRegionCode({
         objectLocationVisibility: root.objectLocationVisibility,
         objectCoarseRegionCode: root.objectCoarseRegionCode,
         spaceLocationVisibility: root.spaceLocationVisibility,
@@ -830,24 +830,6 @@ export function serializePublicObjectPassportPage(
         ? "partial"
         : "verified",
   };
-}
-
-export function publicObjectPassportLocationLabel(input: {
-  objectLocationVisibility: LocationVisibility | string;
-  objectCoarseRegionCode: string | null;
-  spaceLocationVisibility: LocationVisibility | string;
-  spaceCoarseRegionCode: string | null;
-}) {
-  if (input.objectLocationVisibility !== "region") return null;
-
-  const code =
-    input.objectCoarseRegionCode ??
-    (input.spaceLocationVisibility === "region"
-      ? input.spaceCoarseRegionCode
-      : null);
-  const label = getCoarseRegionLabel(code);
-
-  return label ? `Region: ${label}` : null;
 }
 
 function publicJournalBodyPreview(body: string) {

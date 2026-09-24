@@ -917,7 +917,7 @@ describe("the catalogue's sources and its own numbers (ADR-0026 D10, D12, OVE-50
     const { generateMetadata } = await import("./page");
 
     await expect(generateMetadata()).resolves.toEqual({
-      title: "Джерела каталогу",
+      title: "Джерела каталогу | OverGarden",
       robots: { index: false, follow: false },
     });
   });

@@ -640,7 +640,7 @@ function page(kind: "species" | "breed" | "plant_variety", slug: string) {
         publicPath: "/journal/first-public-note",
         plantObjectDisplayName: "Balcony organism",
         varietyText: canonicalName,
-        safeLocationLabel: "Region: Kyiv",
+        safeRegionCode: "UA-30",
         media: null,
       },
     ],

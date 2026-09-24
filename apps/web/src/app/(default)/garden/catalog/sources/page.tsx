@@ -93,7 +93,7 @@ const MISSES_OUTCOME_ANCHOR = "misses-outcome";
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOperatorCatalogCopy(await getRequestInterfaceLocale());
   return {
-    title: copy.sources.metadataTitle,
+    title: `${copy.sources.metadataTitle} | OverGarden`,
     robots: { index: false, follow: false },
   };
 }

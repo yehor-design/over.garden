@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The editorial and reference surfaces (`OVE-453`).
@@ -29,8 +30,6 @@ import { expect, test, type BrowserContext, type Page } from "playwright/test";
 
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
-
 /**
  * Every path GA4 and GTM are wired on, with whether it has a prefixed twin.
  *
@@ -81,7 +80,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /** The first article the blog index links to, whatever the fixture holds. */

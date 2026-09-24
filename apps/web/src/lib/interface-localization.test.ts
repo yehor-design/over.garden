@@ -110,17 +110,13 @@ describe("interface locale contract", () => {
     });
 
     // And a reader who has chosen nothing starts in their country's language.
-    expect(
-      resolveInterfaceLocalization({ countryCode: "BG" }),
-    ).toEqual({
+    expect(resolveInterfaceLocalization({ countryCode: "BG" })).toEqual({
       market: "bulgaria",
       locale: "bg",
       marketSource: "country",
       localeSource: "market-default",
     });
-    expect(
-      resolveInterfaceLocalization({ countryCode: "UA" }),
-    ).toEqual({
+    expect(resolveInterfaceLocalization({ countryCode: "UA" })).toEqual({
       market: "ukraine",
       locale: "uk",
       marketSource: "country",
@@ -177,9 +173,6 @@ describe("interface locale contract", () => {
       "Следвани записи",
     );
     expect(getInterfaceCopy("ru").object.backToJournal).toBe("Назад к журналу");
-    expect(getInterfaceCopy("uk").navigation.livingObjects).toBe(
-      "Живі об'єкти",
-    );
     expect(getInterfaceCopy("bg").navigation.myGarden).toBe("Моята градина");
     expect(getInterfaceCopy("ru").shell.openMenu).toBe("Открыть навигацию");
     expect(getInterfaceCopy("bg").shell.loadingTitle).toBe(
@@ -189,5 +182,22 @@ describe("interface locale contract", () => {
     expect(getInterfaceCopy("uk").shell.languageControlTrigger).toBe(
       "Змінити мову",
     );
+  });
+
+  it("names the account as the IA does, never with the entry's or the profile's word", () => {
+    // INFORMATION_ARCHITECTURE.md, "Navigation and labels" (OVE-478). In
+    // Ukrainian «запис» is a journal entry and in Bulgarian «профил» is a
+    // gardener's public page, so neither may also name the sign-in account.
+    expect(
+      (["uk", "bg", "ru"] as const).map((locale) => {
+        const { account, accountRegion, openAccount } =
+          getInterfaceCopy(locale).shell;
+        return [account, accountRegion, openAccount];
+      }),
+    ).toEqual([
+      ["Акаунт", "Акаунт", "Відкрити меню акаунта"],
+      ["Акаунт", "Акаунт", "Отваряне на менюто на акаунта"],
+      ["Аккаунт", "Аккаунт", "Открыть меню аккаунта"],
+    ]);
   });
 });

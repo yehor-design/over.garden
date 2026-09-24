@@ -59,7 +59,7 @@ describe("owner scope (ADR-0022, D6)", () => {
       "data-mutation-scope-notice": "session_account_changed",
     });
     expect(notice.props.children).toBe(
-      "Влязохте като друг профил. Обновете страницата.",
+      "Влязохте с друг акаунт. Обновете страницата.",
     );
     expect(renderer!.root.findByType("main").props.children).toBe(
       "Composer text stays",
@@ -97,7 +97,9 @@ describe("owner scope (ADR-0022, D6)", () => {
         </OwnerScopeProvider>,
       );
     });
-    expect(renderer!.root.findAllByProps({ name: "ownerUserId" })).toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ name: "ownerUserId" })).toHaveLength(
+      0,
+    );
 
     await act(async () => nameOwner("owner-late"));
 
@@ -128,7 +130,9 @@ describe("owner scope (ADR-0022, D6)", () => {
       renderer!.root.findByProps({ name: "ownerUserId" }).props.value,
     ).toBe("owner-b");
     await act(async () => renderer!.update(tree(null)));
-    expect(renderer!.root.findAllByProps({ name: "ownerUserId" })).toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ name: "ownerUserId" })).toHaveLength(
+      0,
+    );
     await act(async () => renderer!.unmount());
   });
 

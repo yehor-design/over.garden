@@ -27,7 +27,8 @@ describe("public journal entry HTTP lifecycle", () => {
     expect(html).toContain("Записът не е намерен");
     expect(html).toContain('name="robots" content="noindex, nofollow"');
     expect(html).toContain('href="/bg/journals"');
-    expect(html).not.toMatch(
+    // The payload, not the constant stylesheet: its `@media` query is CSS.
+    expect(withoutStyles(html)).not.toMatch(
       /private|owner|email|entryId|spaceId|location|region|media/i,
     );
   });
@@ -38,8 +39,13 @@ describe("public journal entry HTTP lifecycle", () => {
     expect(html).toContain("Запис видалено");
     expect(html).toContain('name="robots" content="noindex, nofollow"');
     expect(html).toContain('href="/journals"');
-    expect(html).not.toMatch(
+    expect(withoutStyles(html)).not.toMatch(
       /entryId|owner|email|location|region|coordinates|journal body|media/i,
     );
   });
 });
+
+/** The document without its one `<style>` block, which carries no data. */
+function withoutStyles(html: string) {
+  return html.replace(/<style>[\s\S]*?<\/style>/u, "");
+}

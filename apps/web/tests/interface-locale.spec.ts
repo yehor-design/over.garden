@@ -10,6 +10,7 @@ import {
   removeSyntheticGardener,
   signInSyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * One page, one interface language — in a real engine, in all three languages
@@ -29,7 +30,6 @@ import {
  * `tests/site-shell.spec.ts` for why).
  */
 
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const PREFIX = "ove446";
 const TEST_PASSWORD = "OVE446-local-password-1!";
 
@@ -84,7 +84,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 test.describe("one page, one interface language", () => {

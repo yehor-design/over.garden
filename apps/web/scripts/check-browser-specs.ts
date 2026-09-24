@@ -17,7 +17,11 @@
  * - neither list names a file that is not there, and no spec is in both;
  * - CI and `gates:browser` both go through `scripts/run-browser-gate.ts` and
  *   spell no list of their own, because two lists is how seven specs came to be
- *   in neither.
+ *   in neither;
+ * - no spec spells its own axe tags: they are `WCAG_AA_TAGS` in
+ *   `tests/helpers/redesign-accessibility.ts`, because eighteen copies of a
+ *   WCAG 2.1 list is how the 24 px target rule went unscanned on half the
+ *   product after the bar moved to WCAG 2.2 (`OVE-478`).
  *
  * Usage: `pnpm check:browser-specs`.
  */
@@ -34,6 +38,9 @@ export const SPEC_DIRECTORY = "tests";
 export const CI_WORKFLOW = "../../.github/workflows/ci.yml";
 export const LOCAL_GATE_SCRIPT = "gates:browser";
 export const GATE_RUNNER = "scripts/run-browser-gate.ts";
+export const AXE_TAGS_HELPER = "tests/helpers/redesign-accessibility.ts";
+/** A WCAG tag spelled as a string: `"wcag2aa"`, `'wcag21aa'`, `"wcag22aa"`. */
+const WCAG_TAG_LITERAL = /["'`]wcag2\d?a{1,3}["'`]/u;
 
 export type BrowserSpecFailure =
   | { subject: string; reason: "unreferenced"; expected: string }
@@ -41,7 +48,8 @@ export type BrowserSpecFailure =
   | { subject: string; reason: "listed_twice"; expected: string }
   | { subject: string; reason: "missing_dedicated_script"; expected: string }
   | { subject: string; reason: "runner_not_used"; expected: string }
-  | { subject: string; reason: "second_list"; expected: string };
+  | { subject: string; reason: "second_list"; expected: string }
+  | { subject: string; reason: "own_wcag_tags"; expected: string };
 
 /** The spec files a text names, as `tests/<name>.spec.ts`. */
 export function specsNamedIn(text: string): string[] {
@@ -61,6 +69,8 @@ export function checkBrowserSpecs(input: {
   dedicated: Readonly<Record<string, { script: string; reason: string }>>;
   ciWorkflow: string;
   packageScripts: Readonly<Record<string, string>>;
+  /** Each spec's source, by file name, for the rules that read inside it. */
+  specSources?: Readonly<Record<string, string>>;
 }): BrowserSpecFailure[] {
   const failures: BrowserSpecFailure[] = [];
   const existing = new Set(input.specs);
@@ -131,6 +141,16 @@ export function checkBrowserSpecs(input: {
     }
   }
 
+  for (const [spec, source] of Object.entries(input.specSources ?? {})) {
+    if (WCAG_TAG_LITERAL.test(source)) {
+      failures.push({
+        subject: `tests/${spec}`,
+        reason: "own_wcag_tags",
+        expected: `it spells its own WCAG tags; import WCAG_AA_TAGS from ${AXE_TAGS_HELPER}, the one list, which includes wcag22aa`,
+      });
+    }
+  }
+
   return failures;
 }
 
@@ -147,6 +167,12 @@ export function runBrowserSpecGate(rootDir: string) {
     dedicated: DEDICATED_BROWSER_SPECS,
     ciWorkflow: readFileSync(join(rootDir, CI_WORKFLOW), "utf8"),
     packageScripts: packageJson.scripts ?? {},
+    specSources: Object.fromEntries(
+      specs.map((spec) => [
+        spec,
+        readFileSync(join(rootDir, SPEC_DIRECTORY, spec), "utf8"),
+      ]),
+    ),
   });
   return { specs, failures };
 }

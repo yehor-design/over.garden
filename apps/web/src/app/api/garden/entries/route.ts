@@ -298,6 +298,10 @@ async function createEntry(request: Request, scope: RequestScope) {
           scope,
           result as Awaited<ReturnType<typeof createFirstPlantEntry>>,
           normalizeActivationSource(body.context.activationSource),
+          // A space is created only when the request named a new one; a
+          // first entry into an existing space — the composer's new plant in
+          // one of the gardener's spaces (`OVE-478`) — creates none.
+          !body.context.spaceId,
         );
       }
     });
@@ -616,6 +620,10 @@ function buildAtomicCreateResponse(input: {
     entryId: input.entry.id,
     slug: input.entry.public_slug,
     revision: Number(input.entry.journal_revision ?? 1),
+    plantObjectId:
+      input.body.context.target === "plant_object_entry"
+        ? input.body.context.plantObjectId
+        : input.plantObjectId,
     card: {
       entryId: input.entry.id,
       title: input.entry.title,
@@ -834,6 +842,7 @@ async function recordFirstPlantEntryEvents(
   scope: RequestScope,
   result: Awaited<ReturnType<typeof createFirstPlantEntry>>,
   activationSource: ActivationSource | null,
+  spaceCreated: boolean,
 ) {
   if (!result.isNewEntry) return;
 
@@ -859,14 +868,16 @@ async function recordFirstPlantEntryEvents(
     journalEntryId: result.entry.id,
   };
 
-  await recordAnalyticsEventSafely(scope, {
-    eventName: "space_created",
-    properties: {
-      location_visibility_level: result.space
-        .location_visibility as LocationVisibility,
-    },
-    spaceId: result.space.id,
-  });
+  if (spaceCreated) {
+    await recordAnalyticsEventSafely(scope, {
+      eventName: "space_created",
+      properties: {
+        location_visibility_level: result.space
+          .location_visibility as LocationVisibility,
+      },
+      spaceId: result.space.id,
+    });
+  }
   await recordAnalyticsEventSafely(scope, {
     eventName: "object_created",
     properties: {

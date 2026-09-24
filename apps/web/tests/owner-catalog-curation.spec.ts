@@ -16,6 +16,7 @@ import {
 import {
   scanAccessibility,
   tabToControl,
+  WCAG_AA_TAGS,
 } from "./helpers/redesign-accessibility";
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
 
@@ -1427,7 +1428,7 @@ async function axeViolations(page: Page) {
     "utf8",
   );
   await page.evaluate(`(() => { ${axeSource} })()`);
-  return page.evaluate(async () => {
+  return page.evaluate(async (tags) => {
     const axe = (
       window as unknown as {
         axe: {
@@ -1449,14 +1450,14 @@ async function axeViolations(page: Page) {
         include: [["body"]],
         exclude: [["[data-base-ui-focus-guard]"]],
       },
-      { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] } },
+      { runOnly: { type: "tag", values: tags } },
     );
     return result.violations.map((violation) => ({
       id: violation.id,
       impact: violation.impact,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  });
+  }, WCAG_AA_TAGS);
 }
 
 async function pressUntil(

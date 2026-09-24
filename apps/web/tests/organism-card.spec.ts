@@ -6,6 +6,7 @@ import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
 
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The organism card (`OVE-452`).
@@ -38,7 +39,6 @@ import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const FIXTURE_PREFIX = "ove452";
 
 /** The order ADR-0026 D9 fixes, and the whole of it. */
@@ -107,7 +107,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /**

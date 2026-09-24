@@ -483,7 +483,10 @@ function SavedEntry({
         excerpt={card.excerpt}
         cover={
           card.mediaUrl
-            ? { src: card.mediaUrl, alt: publicCardMediaAltText({}) }
+            ? {
+                src: card.mediaUrl,
+                alt: publicCardMediaAltText({ caption: card.mediaCaption }),
+              }
             : null
         }
         author={{ displayName: card.author.label, href: card.author.href }}

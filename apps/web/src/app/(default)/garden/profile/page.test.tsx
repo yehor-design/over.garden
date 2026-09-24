@@ -72,7 +72,7 @@ vi.mock("@/components/auth/sign-out-control", () => ({
       data-sign-out-control={presentation}
       className="w-full"
     >
-      Вийти з облікового запису
+      Вийти з акаунта
     </button>
   ),
 }));

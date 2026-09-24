@@ -24,7 +24,7 @@ describe("organism fact paragraph (ADR-0026 D9)", () => {
       "Solanum lycopersicum L. — вид. В каталога има 3 форми на този вид. Публични дневници водят 2 градинари в 2 области.",
     );
     expect(formatOrganismFactParagraph("ru", species)).toBe(
-      "Solanum lycopersicum L. — вид. В каталоге 3 формы этого вида. Публичные дневники ведут 2 садовода в 2 областях.",
+      "Solanum lycopersicum L. — вид. В каталоге 3 формы этого вида. Публичные журналы ведут 2 садовода в 2 областях.",
     );
   });
 
@@ -67,7 +67,7 @@ describe("organism fact paragraph (ADR-0026 D9)", () => {
         regionCount: 1,
       }),
     ).toBe(
-      "Solanum lycopersicum L. — вид. В каталоге 21 форма этого вида. Публичные дневники ведут 5 садоводов в 1 области.",
+      "Solanum lycopersicum L. — вид. В каталоге 21 форма этого вида. Публичные журналы ведут 5 садоводов в 1 области.",
     );
   });
 

@@ -16,6 +16,7 @@ import {
   signInSyntheticGardener,
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The reader's own pages, proved in a browser (`OVE-456`).
@@ -39,7 +40,6 @@ import {
  */
 
 const PREFIX = "ove456";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const PHONE = { width: 375, height: 812 } as const;
 const DESKTOP = { width: 1_440, height: 900 } as const;
 
@@ -365,7 +365,7 @@ async function axeViolations(page: Page): Promise<Violation[]> {
       impact: violation.impact,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 async function scan(page: Page, url: string, label: string) {

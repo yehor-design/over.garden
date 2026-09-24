@@ -211,9 +211,9 @@ describe("a refusal", () => {
       "utf8",
     );
     expect(source).toContain("emailRef.current?.focus()");
-    expect(source.match(/aria-invalid=\{refused \|\| undefined\}/gu)).toHaveLength(
-      2,
-    );
+    expect(
+      source.match(/aria-invalid=\{refused \|\| undefined\}/gu),
+    ).toHaveLength(2);
     void refused;
   });
 });
@@ -315,9 +315,7 @@ describe("the focused screen (OVE-504)", () => {
       expect(html.match(/<h1\b/gu)).toHaveLength(1);
     }
     expect(render()).toMatch(/<h1[^>]*>Вхід до OverGarden<\/h1>/u);
-    expect(render({ mode: "sign-up" })).toMatch(
-      /<h1[^>]*>Новий обліковий запис<\/h1>/u,
-    );
+    expect(render({ mode: "sign-up" })).toMatch(/<h1[^>]*>Новий акаунт<\/h1>/u);
   });
 
   it("says each reason it was opened in its own sentence", () => {

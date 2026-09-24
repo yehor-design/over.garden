@@ -424,7 +424,7 @@ function FollowedFeedEntryCard({
         item.mediaUrl
           ? {
               src: item.mediaUrl,
-              alt: publicCardMediaAltText({}),
+              alt: publicCardMediaAltText({ caption: item.mediaCaption }),
             }
           : null
       }

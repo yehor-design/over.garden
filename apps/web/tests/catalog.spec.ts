@@ -10,6 +10,7 @@ import {
   requiredLocalDatabaseUrl,
   seedOrganismFixture,
 } from "./helpers/organism-fixture";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The catalogue's one door (`OVE-451`).
@@ -34,8 +35,6 @@ import {
 
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
-
 async function selectLocale(context: BrowserContext, baseURL: string) {
   await context.addCookies([
     { name: INTERFACE_LOCALE_COOKIE, value: "uk", url: baseURL },
@@ -73,7 +72,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 test.describe("the catalogue's one door", () => {

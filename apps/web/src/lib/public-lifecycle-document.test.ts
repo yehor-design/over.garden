@@ -1,6 +1,11 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
-import { renderPublicLifecycleDocument } from "./public-lifecycle-document";
+import {
+  LIFECYCLE_DOCUMENT_PALETTE,
+  renderPublicLifecycleDocument,
+} from "./public-lifecycle-document";
 
 describe("raw public lifecycle document", () => {
   it("renders Ukraine lifecycle UI in Ukrainian with no language-control artifact", () => {
@@ -40,6 +45,54 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain('href="/uk/journal/missing-entry"');
     expect(html).toContain('href="/bg/journal/missing-entry"');
     expect(html).toContain('href="/ru/journal/missing-entry"');
+    // The control is styled in Ukrainian too. Its styles used to be added for
+    // every locale but this one, so a Ukrainian tombstone drew the native
+    // disclosure triangle and spilled the three options open under it
+    // (`OVE-478`).
+    expect(html).toContain("[data-interface-language-menu] {");
+    expect(html).toContain(
+      "summary::-webkit-details-marker { display: none; }",
+    );
+  });
+
+  it("is drawn as the shell is: the logo on a light header, one action, the language control in the footer", () => {
+    const html = renderPublicLifecycleDocument({
+      locale: "uk",
+      pathname: "/@anna/post/3",
+      title: "Запис видалено",
+      description: "Цей публічний запис садового журналу видалено.",
+      actionHref: "/@anna#profile-entries",
+      actionLabel: "Інші записи @anna",
+    });
+
+    // The pre-redesign chrome was a black bar with a green brand block.
+    expect(html).not.toContain("rgb(47 125 50)");
+    expect(html).not.toContain("background: var(--fg)");
+    expect(html).toMatch(
+      /<header><span data-lifecycle-brand><svg [^>]*viewBox="0 0 469 235"[^>]*aria-hidden="true"/u,
+    );
+    expect(html).toContain('<span class="sr-only">OverGarden</span>');
+    // One heading, one sentence, one way on — the language control is the
+    // footer's, as in the shell (DESIGN.md §6).
+    expect(html.match(/<h1>/g)).toHaveLength(1);
+    expect(
+      html.match(/<main>[\s\S]*?<\/main>/u)?.[0].match(/<a /g),
+    ).toHaveLength(1);
+    expect(html).toMatch(
+      /<footer><nav aria-label="Вибір мови інтерфейсу" data-interface-language-control-host=/u,
+    );
+    // Every glyph is Phosphor, never a text character.
+    expect(html).not.toContain("▾");
+    expect(html).not.toContain("✓");
+    expect(html).not.toContain('content: "');
+    expect(html.match(/data-lifecycle-glyph="Translate"/g)).toHaveLength(1);
+    expect(html.match(/data-lifecycle-glyph="CaretDown"/g)).toHaveLength(1);
+    expect(html.match(/data-lifecycle-glyph="Check"/g)).toHaveLength(3);
+    expect(html).toContain(
+      '[data-interface-language-option][aria-checked="false"] [data-lifecycle-glyph] { visibility: hidden; }',
+    );
+    // The trigger's name carries the language it shows (WCAG 2.5.3).
+    expect(html).toContain('<summary aria-label="Змінити мову: Українська">');
   });
 
   it("renders exactly one control with three localized document links and safe view state", () => {
@@ -66,8 +119,9 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain('data-interface-locale="bg" lang="bg"');
     expect(html).toContain('data-interface-locale="ru" lang="ru"');
     expect(html).toContain('aria-checked="true"');
-    expect(html).toContain('aria-checked="true"]::after');
-    expect(html).toContain("font-weight: 700");
+    expect(html).toContain(
+      '[data-interface-language-option][aria-checked="true"] { font-weight: 600; }',
+    );
     expect(html).not.toContain("font-weight: 800");
     expect(html).toContain(
       'href="/bg/journal/missing-entry?engagement=interaction-unavailable&amp;authIntent=comment"',
@@ -86,14 +140,12 @@ describe("raw public lifecycle document", () => {
     // A tombstone carries no client bundle, so it carries no script either: the
     // language options are anchors, which is all a localized route needs.
     expect(html).not.toContain("<script");
+    // No styles for the status line and recovery button the old inline
+    // protocol drew: neither element exists in this document.
+    expect(html).not.toContain("data-interface-language-status");
+    expect(html).not.toContain("data-interface-language-recovery");
     expect(html).toContain(
-      "[data-interface-language-status]:empty { position: absolute",
-    );
-    expect(html).toContain(
-      "[data-interface-language-status] { flex: 1 0 100%; max-width: 24rem; color: inherit;",
-    );
-    expect(html).toContain(
-      "[data-interface-language-option]:focus-visible, [data-interface-language-recovery]:focus-visible { outline: 3px solid currentColor;",
+      "[data-interface-language-control] summary:focus-visible, [data-interface-language-option]:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }",
     );
     expect(html).not.toContain(
       "[data-interface-language-option]:focus-visible { outline: 2px solid transparent;",
@@ -130,6 +182,45 @@ describe("raw public lifecycle document", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain(privateObjectId);
     expect(html).not.toContain("never-copy-this");
+  });
+
+  it("draws its colours from the design tokens, as globals.css resolves them", () => {
+    // The document has no stylesheet, so its palette is written out; this is
+    // what keeps it from drifting away from the tokens it copies. The first
+    // declaration of a token that is not `@theme inline`'s bridge to itself
+    // is the light theme's.
+    const globals = readFileSync(
+      new URL("../app/globals.css", import.meta.url),
+      "utf8",
+    );
+    const resolve = (token: string): string | undefined => {
+      const declared = [
+        ...globals.matchAll(new RegExp(`${token}:\\s*([^;]+);`, "gu")),
+      ]
+        .map((match) => match[1]!.trim())
+        .find((value) => value !== `var(${token})`);
+      const reference = declared
+        ? /^var\((--[a-z0-9-]+)\)$/u.exec(declared)?.[1]
+        : undefined;
+      return reference ? resolve(reference) : declared;
+    };
+    for (const [name, { token, value }] of Object.entries(
+      LIFECYCLE_DOCUMENT_PALETTE,
+    )) {
+      expect(resolve(token), `${name} → ${token}`).toBe(value);
+    }
+    const html = renderPublicLifecycleDocument({
+      locale: "bg",
+      pathname: "/bg/journal/missing",
+      title: "Записът не е намерен",
+      description: "Този запис не е достъпен.",
+      actionHref: "/bg/journals",
+      actionLabel: "Дневници",
+    });
+    expect(html).not.toMatch(/#[0-9a-f]{3,8}\b/iu);
+    expect(html).toContain(
+      `--surface: ${LIFECYCLE_DOCUMENT_PALETTE.surface.value};`,
+    );
   });
 
   it("escapes authored lifecycle copy", () => {

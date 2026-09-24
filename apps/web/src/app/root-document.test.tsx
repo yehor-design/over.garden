@@ -94,7 +94,9 @@ describe("the static document", () => {
     // The async chrome cannot run under `renderToStaticMarkup`; what matters
     // here is what is *not* between `<body>` and the chrome: the boundary that
     // put every public page inside `<div hidden>` (`OVE-461`).
-    mocks.getSiteShellSessionState.mockReturnValue(new Promise(() => undefined));
+    mocks.getSiteShellSessionState.mockReturnValue(
+      new Promise(() => undefined),
+    );
     const element = StaticRootDocument({
       locale: "bg",
       children: <main>OverGarden</main>,
@@ -222,6 +224,11 @@ describe("the request-time document", () => {
     expect(html).not.toContain("data-owner-user-id");
     expect(html).toContain('data-authenticated="false"');
     expect(html).toContain('data-communities="false"');
+    // `<html lang>` is the layout's and stays the default locale's in the
+    // bytes; the segment corrects it the moment it is parsed (`OVE-478`).
+    expect(html).toContain(
+      '<script>document.documentElement.lang="bg"</script>',
+    );
   });
 
   it("draws the same consent notice a static document does, in the reader's language", async () => {

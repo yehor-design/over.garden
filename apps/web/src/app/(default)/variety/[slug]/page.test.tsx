@@ -121,7 +121,7 @@ describe("/variety/[slug]", () => {
           publicPath: "/journal/first-ripe-cluster",
           plantObjectDisplayName: "Balcony tomato",
           varietyText: "Pomidor Cheri",
-          safeLocationLabel: "Region: Kyiv",
+          safeRegionCode: "UA-30",
           media: null,
         },
       ],

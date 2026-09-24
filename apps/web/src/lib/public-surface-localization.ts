@@ -198,7 +198,8 @@ interface PublicSurfaceCopy {
   organism: {
     notFound: string;
     notFoundDescription: string;
-    browseObjects: string;
+    /** An organism's 404 leads to the catalogue, which is what it is part of. */
+    browseCatalogue: string;
     /** Names the card's crumbs: the catalogue, the species, its forms (`OVE-497`). */
     crumbsLabel: string;
     /** Fact paragraph templates (ADR-0026 D9): structured fields only. */
@@ -458,7 +459,7 @@ const COPY = {
       notFound: "Організм не знайдено",
       notFoundDescription:
         "За цією адресою немає виду, сорту чи породи. Адреси змінюються лише з постійним перенаправленням, тому посилання, ймовірно, було введено з помилкою.",
-      browseObjects: "Переглянути живі об'єкти",
+      browseCatalogue: "Відкрити каталог",
       crumbsLabel: "Шлях у каталозі",
       fact: {
         identity: "{name} — {kind}.",
@@ -721,7 +722,7 @@ const COPY = {
       notFound: "Организмът не е намерен",
       notFoundDescription:
         "На този адрес няма вид, сорт или порода. Адресите се променят само с постоянно пренасочване, така че връзката вероятно е въведена грешно.",
-      browseObjects: "Разгледайте живите обекти",
+      browseCatalogue: "Към каталога",
       crumbsLabel: "Път в каталога",
       fact: {
         identity: "{name} — {kind}.",
@@ -983,15 +984,15 @@ const COPY = {
       notFound: "Организм не найден",
       notFoundDescription:
         "По этому адресу нет вида, сорта или породы. Адреса меняются только с постоянным перенаправлением, поэтому ссылка, вероятно, введена с ошибкой.",
-      browseObjects: "Посмотреть живые объекты",
+      browseCatalogue: "Открыть каталог",
       crumbsLabel: "Путь в каталоге",
       fact: {
         identity: "{name} — {kind}.",
         identityWithSpecies: "{name} — {kind} вида {species}.",
         forms: "В каталоге {forms} этого вида.",
-        gardeners: "Публичные дневники ведут {gardeners}.",
+        gardeners: "Публичные журналы ведут {gardeners}.",
         gardenersWithRegions:
-          "Публичные дневники ведут {gardeners} в {regions}.",
+          "Публичные журналы ведут {gardeners} в {regions}.",
         noGardeners: "Публичных записей садоводов пока нет.",
         kind: {
           species: "вид",

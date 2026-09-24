@@ -1402,7 +1402,7 @@ function CommunityContributionCard({
                 intrinsicWidth: item.coverIntrinsicWidth,
                 intrinsicHeight: item.coverIntrinsicHeight,
               }).srcSet,
-              alt: publicCardMediaAltText({}),
+              alt: publicCardMediaAltText({ caption: item.coverCaption }),
               focalX: item.coverFocalX,
               focalY: item.coverFocalY,
               intrinsicWidth: item.coverIntrinsicWidth,

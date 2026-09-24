@@ -1,4 +1,5 @@
 import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
+import { publicRegionLabel } from "@/lib/garden/regions";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   buildLivingObjectTimeline,
@@ -45,10 +46,7 @@ export function buildPublicObjectPassportPresentation(
       relationLabel: copy.directObjectUpdate,
     })),
   );
-  const safeContext = localizeSafeLocationLabel(
-    page.object.safeLocationLabel,
-    locale,
-  );
+  const safeContext = publicRegionLabel(locale, page.object.safeRegionCode);
   const firstDate = formatLivingObjectPassportDate(
     page.object.firstEntryDate,
     locale,
@@ -213,17 +211,6 @@ export function buildPublicObjectPassportPresentation(
         : null,
     ].filter((action): action is NonNullable<typeof action> => action !== null),
   };
-}
-
-function localizeSafeLocationLabel(
-  label: string | null,
-  locale: InterfaceLocale,
-) {
-  if (!label) return null;
-  return label.replace(
-    /^Region:/,
-    `${getLivingObjectPassportCopy(locale).region}:`,
-  );
 }
 
 function uniquePublicMedia(

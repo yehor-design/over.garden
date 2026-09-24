@@ -46,21 +46,34 @@ export function LocalJournalComposerStatus({
             ? copy.failed
             : copy.localOnly;
 
+  // The idle note is a fact about the page, not news: in the live region it
+  // was announced whenever a composer appeared — "Зміни ще не опубліковано"
+  // straight after "Запис опубліковано.", on the page a publish lands on
+  // (heard with Orca, `OVE-478`). It stays on screen as plain text, and the
+  // region, present from the start, speaks only when the state changes.
+  const idle = state.status === "idle";
+
   return (
     <div
-      className="grid gap-2"
+      className="flex flex-col items-stretch gap-2"
       data-local-journal-composer-status={state.status}
     >
+      {idle ? (
+        <p className="text-body-sm text-text-muted">{message}</p>
+      ) : null}
+      {/* Empty while idle, and still there: a region that appears with its
+          words in it is announced by some readers and not by others. Its
+          negative margin gives back the gap an empty row would add. */}
       <p
         className={
           state.status === "failed"
-            ? "text-body-sm text-danger-text"
-            : "text-body-sm text-text-muted"
+            ? "text-body-sm text-danger-text empty:-mt-2"
+            : "text-body-sm text-text-muted empty:-mt-2"
         }
         role={state.status === "failed" ? "alert" : "status"}
         aria-live="polite"
       >
-        {message}
+        {idle ? null : message}
       </p>
       {/* A lease that cannot be renewed says so **before** the work is lost:
           the Worker holds staged photographs for two hours and the renewal
@@ -75,7 +88,7 @@ export function LocalJournalComposerStatus({
         <Button
           type="button"
           variant="ghost"
-          className="justify-self-start"
+          className="self-start"
           onClick={onCancelPublishing}
         >
           {copy.cancelPublishing}

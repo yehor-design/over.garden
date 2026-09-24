@@ -194,6 +194,16 @@ function EntryCard({
           <Link
             href={author.href}
             variant="muted"
+            // The prefix lives in the link's name, not in a visually hidden
+            // span beside the name: Chromium drops the space between an
+            // out-of-flow span and the text after it, and Orca read
+            // «АвторОлена» as one word (`OVE-478`). The visible name stays at
+            // the start of what is heard after the prefix (WCAG 2.5.3).
+            aria-label={
+              authorPrefix
+                ? `${authorPrefix} ${author.displayName}`
+                : undefined
+            }
             className="inline-flex min-h-11 min-w-0 items-center gap-2 text-body-sm font-medium text-text"
           >
             {/* The picture is the name's, which follows it: announcing its
@@ -205,14 +215,7 @@ function EntryCard({
                 size="sm"
               />
             </span>
-            <span className="truncate">
-              {authorPrefix ? (
-                <>
-                  <span className="sr-only">{authorPrefix}</span>{" "}
-                </>
-              ) : null}
-              {author.displayName}
-            </span>
+            <span className="truncate">{author.displayName}</span>
           </Link>
         ) : null}
         {author ? <span aria-hidden="true">·</span> : null}

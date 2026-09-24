@@ -8,9 +8,12 @@ import {
   ROOT_ROUTE_FILES,
   ROOT_ROUTE_SEGMENTS,
   ROOT_SEGMENTS_WITHOUT_INDEX,
+  SECTION_SUBPATHS,
   isSectionRootWithoutIndex,
   isUnknownLocalizedPath,
   isUnknownRootPath,
+  isUnservedSectionPath,
+  matchAuthoredAddress,
 } from "./root-route-segments";
 
 function directories(url: URL) {
@@ -88,6 +91,89 @@ describe("root route segments", () => {
       .sort();
 
     expect([...ROOT_SEGMENTS_WITHOUT_INDEX].sort()).toEqual(expected);
+  });
+
+  it("lists every address each section serves below its root, and no other", () => {
+    // Every `page.tsx` and `route.ts` below the section in both trees, route
+    // groups dropped; the section's own catch-all is what this table replaces.
+    const servedBelow = (section: string) => {
+      const found = new Set<string>();
+      const walk = (url: URL, parts: string[]) => {
+        if (!existsSync(fileURLToPath(url))) return;
+        if (
+          parts.length > 0 &&
+          (existsSync(fileURLToPath(new URL("page.tsx", url))) ||
+            existsSync(fileURLToPath(new URL("route.ts", url))))
+        ) {
+          found.add(parts.join("/"));
+        }
+        for (const child of directories(url)) {
+          if (child.startsWith("[...")) continue;
+          walk(
+            new URL(`${child}/`, url),
+            child.startsWith("(") ? parts : [...parts, child],
+          );
+        }
+      };
+      for (const tree of ["(default)", "[locale]"]) {
+        walk(new URL(`../app/${tree}/${section}/`, import.meta.url), []);
+      }
+      return [...found].sort();
+    };
+
+    for (const [section, patterns] of Object.entries(SECTION_SUBPATHS)) {
+      expect([...patterns].sort(), section).toEqual(servedBelow(section));
+    }
+  });
+
+  it("answers 404 below a section only where none of its pages match", () => {
+    for (const path of [
+      "/catalog/x",
+      "/garden/objects/1/x",
+      "/garden/spaces",
+      "/bg/journals/x",
+      "/ru/notifications/x",
+      "/markets/ukraine/x",
+      "/answers/a/b",
+      "/col/1/x",
+      "/bg/wikidata/Q1/x",
+    ]) {
+      expect(isUnservedSectionPath(path), path).toBe(true);
+    }
+    for (const path of [
+      "/catalog",
+      "/garden/objects/1",
+      "/garden/objects/new",
+      "/garden/lineage/invitations/claim/handoff",
+      "/auth/intent/start",
+      "/bg/notifications/settings",
+      "/answers/anything",
+      // One segment under a source alias is its handler's to look up.
+      "/col/1",
+      "/gbif/5",
+      // Not this table's question: a legacy prefix, an address looked up by
+      // the proxy, a handle.
+      "/uk/catalog/x",
+      "/species/a/b",
+      "/@yehor/x",
+    ]) {
+      expect(isUnservedSectionPath(path), path).toBe(false);
+    }
+  });
+
+  it("names the authored page an address asks for", () => {
+    expect(matchAuthoredAddress("/answers/why")).toEqual({
+      section: "answers",
+      name: "why",
+    });
+    expect(matchAuthoredAddress("/bg/markets/ukraine")).toEqual({
+      section: "markets",
+      name: "ukraine",
+    });
+    expect(matchAuthoredAddress("/uk/answers/why")).toBeNull();
+    expect(matchAuthoredAddress("/answers")).toBeNull();
+    expect(matchAuthoredAddress("/answers/a/b")).toBeNull();
+    expect(matchAuthoredAddress("/topics/plants")).toBeNull();
   });
 
   it("matches the [locale] tree's own directories exactly", () => {

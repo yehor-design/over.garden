@@ -9,6 +9,7 @@ import {
   removeSyntheticGardener,
   signInSyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The five authentication screens, and the one thing nobody had ever watched:
@@ -29,7 +30,6 @@ import {
 
 const PREFIX = "ove455";
 const TEST_PASSWORD = "OVE455-local-password-1!";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const OUTPUT = path.join(process.cwd(), "test-results", "auth-screen");
 
 const SCREENS = [
@@ -68,7 +68,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 test.describe("a successful sign-in, watched", () => {

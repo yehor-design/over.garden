@@ -85,6 +85,12 @@ export interface AtomicJournalCreateResponse {
   entryId: string;
   slug: string;
   revision: number;
+  /**
+   * The object the entry is on. A `first_plant_entry` creates it, so this is
+   * the only way its composer learns the new object's page (`OVE-478`).
+   * Absent from an edit's answer and from a space entry's.
+   */
+  plantObjectId?: string | null;
   card: {
     entryId: string;
     title: string;

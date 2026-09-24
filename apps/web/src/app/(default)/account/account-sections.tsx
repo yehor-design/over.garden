@@ -30,7 +30,7 @@ const COPY: Record<
     security: "Вхід і безпека",
   },
   bg: {
-    label: "Раздели на профила",
+    label: "Раздели на акаунта",
     profile: "Публичен профил",
     settings: "Настройки",
     security: "Вход и сигурност",

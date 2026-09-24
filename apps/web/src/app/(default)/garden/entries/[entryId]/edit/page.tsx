@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -13,6 +14,7 @@ import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 import { readOwnedDestination } from "@/server/owned-destination-repository";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { journalEntryDateInputValue } from "@/lib/garden/journal-entry-date";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { readAtomicJournalEditBaseline } from "@/server/journal-repository";
@@ -24,6 +26,19 @@ import {
 } from "@/server/workspace-failure";
 
 import { gardenEntryEditPath, JournalEntryEditShell } from "./edit-shell";
+
+/**
+ * The page's own title, as its siblings have theirs ("Налаштування об'єкта",
+ * "Простір"): it inherited the garden's "Простір саду", which names no page,
+ * and a screen reader announced that on arrival (WCAG 2.4.2, `OVE-478`).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestInterfaceLocale();
+  return {
+    title: `${getGardenWorkspaceCopy(locale).workspace.entryEdit.title} | OverGarden`,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function GardenEntryEditPage({
   params,

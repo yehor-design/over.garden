@@ -152,6 +152,17 @@ export async function RequestDocumentShell({
         ? { [OWNER_USER_ID_DOCUMENT_ATTRIBUTE]: shellSession.ownerUserId }
         : {})}
     >
+      {/* The document's own language (`OVE-478`). `<html lang>` belongs to
+          the layout, outside this boundary, so until here it is the default
+          locale's — and a reader who chose Bulgarian or Russian had a
+          Ukrainian document around their page: the title spoken in the wrong
+          voice, the browser offering to translate from Ukrainian. The parser
+          runs this the moment the segment arrives, before it is revealed. */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `document.documentElement.lang=${JSON.stringify(locale)}`,
+        }}
+      />
       <SiteShell
         locale={locale}
         market={market}

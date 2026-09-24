@@ -66,6 +66,7 @@ import {
   tryResolveWalkingSkeletonEnvironment,
 } from "@/lib/walking-skeleton/environment";
 
+import type { PublicLifecycleAuthor } from "@/lib/public-lifecycle-document";
 import { renderNotFoundUnknownRouteHtml } from "@/lib/public-unknown-route-lifecycle";
 import { isEppoArchiveEnabled } from "@/lib/catalog-source/eppo-archive-gate";
 import {
@@ -95,6 +96,8 @@ import {
   isSectionRootWithoutIndex,
   isUnknownLocalizedPath,
   isUnknownRootPath,
+  isUnservedSectionPath,
+  matchAuthoredAddress,
 } from "@/lib/root-route-segments";
 import {
   legacyAuthorScopedJournalEntryPath,
@@ -299,6 +302,29 @@ function notFoundDocument(html: string, status: 404 | 410 = 404) {
       "X-Robots-Tag": "noindex, nofollow",
     },
   });
+}
+
+/**
+ * The gardener a missing entry or passport was under, when their public
+ * profile still answers for a guest: the tombstone's one next action is then
+ * their other entries or objects rather than a directory (`OVE-478`).
+ *
+ * Read only on the way to a 404 or 410, never for a page that renders. A
+ * profile that is gone, unknown or unreadable gives `null`, and the document
+ * falls back to the journals directory — a lookup that fails must never turn
+ * a tombstone into an error.
+ */
+async function liveLifecycleAuthor(
+  handle: string,
+): Promise<PublicLifecycleAuthor | null> {
+  try {
+    const { getPublicProfileLifecycleLookup } =
+      await import("@/server/public-profile-repository");
+    const lookup = await getPublicProfileLifecycleLookup(handle);
+    return lookup.status === "active" ? { handle } : null;
+  } catch {
+    return null;
+  }
 }
 
 function getCanonicalTrailingSlashResponse(request: NextRequest) {
@@ -923,11 +949,24 @@ export async function proxy(request: NextRequest) {
   // (`/topics/Не слаг`, `/journal/a/b`). `src/app/missing-route.tsx` explains
   // why the page cannot fix this itself — the root loading boundary has
   // already streamed the shell by the time `notFound()` runs.
+  //
+  // And the two that remained (`OVE-478`): a path under a section that none
+  // of the section's pages serves (`/catalog/x`, `/garden/objects/1/x`), and
+  // an authored page's name that no page has (`/answers/x`), which rendered
+  // on demand and answered 500.
+  const authoredAddress = isDocumentNavigation
+    ? matchAuthoredAddress(request.nextUrl.pathname)
+    : null;
   if (
     isDocumentNavigation &&
     (isSectionRootWithoutIndex(request.nextUrl.pathname) ||
       isUnknownLocalizedPath(request.nextUrl.pathname) ||
-      unservableAddressNamespace(request.nextUrl.pathname) !== null)
+      unservableAddressNamespace(request.nextUrl.pathname) !== null ||
+      isUnservedSectionPath(request.nextUrl.pathname) ||
+      (authoredAddress !== null &&
+        !(await import("@/server/authored-addresses")).isKnownAuthoredAddress(
+          authoredAddress,
+        )))
   ) {
     return withAppRouteContract(
       notFoundDocument(
@@ -1206,7 +1245,11 @@ export async function proxy(request: NextRequest) {
     if (lookup?.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(
-          renderGonePublicObjectPassportHtml(locale, lifecycleLocation),
+          renderGonePublicObjectPassportHtml(
+            locale,
+            lifecycleLocation,
+            await liveLifecycleAuthor(authorScopedObject.handle),
+          ),
           410,
         ),
         request,
@@ -1236,7 +1279,11 @@ export async function proxy(request: NextRequest) {
       }
       return withAppRouteContract(
         notFoundDocument(
-          renderNotFoundPublicObjectPassportHtml(locale, lifecycleLocation),
+          renderNotFoundPublicObjectPassportHtml(
+            locale,
+            lifecycleLocation,
+            await liveLifecycleAuthor(authorScopedObject.handle),
+          ),
         ),
         request,
         localization,
@@ -1266,7 +1313,11 @@ export async function proxy(request: NextRequest) {
     if (lookup.status === "gone") {
       return withAppRouteContract(
         notFoundDocument(
-          renderGonePublicJournalEntryHtml(locale, lifecycleLocation),
+          renderGonePublicJournalEntryHtml(
+            locale,
+            lifecycleLocation,
+            await liveLifecycleAuthor(numberedEntry.handle),
+          ),
           410,
         ),
         request,
@@ -1297,7 +1348,11 @@ export async function proxy(request: NextRequest) {
       }
       return withAppRouteContract(
         notFoundDocument(
-          renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
+          renderNotFoundPublicJournalEntryHtml(
+            locale,
+            lifecycleLocation,
+            await liveLifecycleAuthor(numberedEntry.handle),
+          ),
         ),
         request,
         localization,

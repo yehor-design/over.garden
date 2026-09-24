@@ -17,6 +17,7 @@ import {
   seedOrganismFixture,
   type OrganismFixture,
 } from "./helpers/organism-fixture";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * Gates 7 and 8 of `DESIGN.md` §10: axe on the key screens, and a keyboard-only
@@ -40,8 +41,6 @@ const TEST_PASSWORD = "OVE442-local-password-1!";
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
 const PREFIX = "ove442";
-
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 
 interface Violation {
   id: string;
@@ -85,7 +84,7 @@ async function axeViolations(page: Page): Promise<Violation[]> {
       impact: violation.impact,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 async function scan(page: Page, url: string, label: string) {

@@ -40,9 +40,7 @@ describe("trust-sensitive interface copy", () => {
     expect(getTrustSurfaceCopy("ru").firstPublication.title).toBe(
       "Уведомление перед первой публикацией",
     );
-    expect(getTrustSurfaceCopy("uk").signOut.action).toBe(
-      "Вийти з облікового запису",
-    );
+    expect(getTrustSurfaceCopy("uk").signOut.action).toBe("Вийти з акаунта");
     for (const locale of LOCALES) {
       const signOutCopy = getTrustSurfaceCopy(locale).signOut;
       expect("syncFirst" in signOutCopy).toBe(false);
@@ -63,6 +61,24 @@ describe("trust-sensitive interface copy", () => {
     expect(getTrustSurfaceCopy("ru").signOut.confirmationDescription).toContain(
       "не сохраняются",
     );
+  });
+
+  it("keeps the entry's and the journal's words out of the account and the audit log", () => {
+    for (const locale of LOCALES) {
+      const copy = getTrustSurfaceCopy(locale);
+      // The acknowledgement and first-publication lines are versioned: they
+      // keep the wording a gardener accepted until a new version replaces it.
+      const unversioned = flattenStrings({
+        ...copy,
+        erasure: { ...copy.erasure, acknowledgementLines: [] },
+        firstPublication: { ...copy.firstPublication, lines: [] },
+      }).join("\n");
+
+      // «Обліковий запис» and «учётная запись» end in the word for an entry.
+      expect(unversioned).not.toMatch(/обліков|учётн|учетн/iu);
+      // What operators leave behind is a log; a journal is a gardener's.
+      expect(copy.privacy.retention[3]).toMatch(/^Протокол/u);
+    }
   });
 
   it("keeps catalog and provider literals unchanged inside localized guidance", () => {

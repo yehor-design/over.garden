@@ -92,6 +92,7 @@ const COMMUNITY: PublicCommunityPageModel = {
         coverFocalY: 0.5,
         coverIntrinsicWidth: 800,
         coverIntrinsicHeight: 600,
+        coverCaption: "Перша стигла китиця",
         viewerReportState: null,
         viewerIsAuthor: false,
       },
@@ -207,6 +208,9 @@ describe("PublicCommunityView", () => {
       'href="/communities/observation-and-care/discussions/00000000-0000-4000-8000-000000000201"',
     );
     expect(html).toContain('href="/topics/observation-and-care"');
+    // The photograph is described by the gardener's own caption; it was
+    // always alt="" here, captioned or not (OG-UX-029, OVE-478).
+    expect(html).toContain('alt="Перша стигла китиця"');
     expect(html).toContain('action="/auth/intent/start"');
     expect(html).toContain('name="targetKind" value="collection"');
     expect(html).toContain('name="targetRef" value="observation-and-care"');

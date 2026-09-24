@@ -17,6 +17,7 @@ import {
   signInSyntheticGardener,
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The public profile and the living-object passport (`OVE-450`).
@@ -42,7 +43,6 @@ import {
 
 const INTERFACE_LOCALE_COOKIE = "overgarden_interface_locale";
 const INTERFACE_MARKET_COOKIE = "overgarden_interface_market";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
 const FIXTURE_PREFIX = "ove450";
 
 interface ProfileFixture {
@@ -105,7 +105,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /**

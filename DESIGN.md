@@ -309,6 +309,16 @@ control. Server-rendered icons use server-compatible narrow imports. OVE-477
 migrated existing Lucide consumers and the scaffold configuration; the old import
 inventory is a migration baseline, not permission for new mixed families.
 
+**Size is pixels in the attribute and a token in the stylesheet (`OVE-478`).**
+The wrapper writes `width`/`height` as the number (16, 20, 24) and marks the
+glyph `data-og-icon-size="sm|md|lg"`; `globals.css` sizes that attribute from
+`--size-icon-*`. A `var()` in an SVG presentation attribute is not parsed by
+every engine: Chromium logged an error per icon and drew some as 150 × 288
+boxes. The raw `404`/`410` document has no React and no stylesheet, so its three
+glyphs (Translate, CaretDown, Check) are paths in
+`components/icons/raw-glyphs.ts`, checked against the installed Phosphor
+definitions by `raw-glyphs.test.ts` — the same family, never a hand-drawn one.
+
 ### 2.9 Illustration
 
 3D rendered objects, used sparingly, in the Airbnb / Digg / Remote manner
@@ -862,6 +872,17 @@ the ordinary navigation.
 | **Partial / degraded**  | the section renders its settled failure class with a reason, a reference code and a Retry (ADR-0023) |
 | **Error**               | `ErrorState`: what happened in one sentence, what to do, the digest, a Retry                         |
 | **Signed out**          | the real page behind it where possible, with one `Callout` and one link to `/auth/sign-in`           |
+| **Not found / gone**    | the raw lifecycle document: the shell's logo, one `h1`, one sentence, one way on, the footer language control |
+
+**Not found is a document, decided before anything streams (`OVE-478`).** Every
+address no page serves answers a real `404` from `proxy.ts` (ADR-0029 D3) — a
+path below a section none of its pages match (`SECTION_SUBPATHS` in
+`lib/root-route-segments.ts`, held to the filesystem by its test), and an
+answer's, guide's, note's or market's name the authored content does not have
+(`server/authored-addresses.ts`; these rendered on demand and answered `500`).
+The one way on keeps the reader's context: a removed or unknown entry or
+passport leads to its author's other entries or plants and animals while the
+profile answers, else to the directory of its family; anything else leads home.
 
 A skeleton must not outlive its data by design: a section that can fail settles
 into a failure class instead of a permanent skeleton — the framework defect in
@@ -943,6 +964,12 @@ widening the page at 320 px.
 - **A page number belongs to the list it paged.** Switching tabs rewrites the
   address to the page each panel was drawn at, so a reload shows the list the
   reader was looking at.
+
+**A tab strip's rule is inside the strip (`OVE-478`).** A strip that scrolls
+sideways clips at its padding box, and a border is outside it: the tab sitting
+on a border rule lost the lowest pixel of its underline and of its focus ring
+(found at 200 % zoom). The rule is `tab-strip-rule` (an inset shadow) over one
+pixel of padding the tabs' `-mb-px` reaches into.
 
 ### 5.7.1 The account's pages
 
@@ -1146,6 +1173,21 @@ and the consequences belong on the screen rather than in the reader's memory.
   memory and commits destination plus first entry atomically at Publish. Failure
   is not a saved draft or a saved object. See the IA transaction table.
 
+**A plant or an animal can be created while writing (`OVE-478`; FAST_ENTRY.md "Creating during writing").**
+The picker offers "Нова рослина чи тварина «{name}»" beside its results; the
+composer then asks, in place, the kind and the space (the one in context,
+another existing one, or a new one by name), and keeps the text, the date and
+the photographs. Publishing creates the object and the entry in one
+transaction (`first_plant_entry` with the space's id or a new space's name)
+and lands on the new object's page. "Обрати наявну" returns to the picker
+with nothing lost.
+
+**The idle note is not news.** "Зміни ще не опубліковано…" is plain text; the
+composer's live region is present from the start and speaks only on a change
+of state — publishing, published, failed. In the region, the note was
+announced whenever a composer appeared, straight after "Запис опубліковано."
+on the page a publish lands on (heard with Orca, `OVE-478`).
+
 ### 5.12 The owner's queue
 
 Three surfaces the owner sits at for an hour — the decision queue, the sources
@@ -1301,6 +1343,12 @@ press.
 A listing's discovery bar offers plants or animals once: where the kind is a
 mode or a facet, the `plants` and `animals` system topics are not offered
 again as topics. The feed's modes are Latest and Following (`/feed`).
+
+**"Автор" is part of the link's name, not a hidden span beside it.** Chromium
+dropped the space between a visually hidden prefix and the name after it, and
+Orca read «АвторОлена» as one word; Playwright's computed name had the space.
+The byline link carries `aria-label="{prefix} {name}"` (the visible name inside
+it, WCAG 2.5.3), on the card and on the entry page (`OVE-478`).
 
 ### 5.15 Lineage is a task between two named gardeners
 
@@ -1749,7 +1797,12 @@ chrome.** The design rules that follow:
   offering all three languages. Zero is a defect and two is a defect, and that
   includes the raw `404`/`410` lifecycle HTML and the global error fallback,
   which drew none for the Ukraine market until `OVE-446`. It lives in the
-  footer (§3.3).
+  footer (§3.3) — on the safe-exit pages too (the erasure request and its
+  queue), which drew none until `OVE-478`.
+- The document's `lang` is the reader's language. A request-time document's
+  `<html lang>` belongs to the static root layout, so the shell sets it as its
+  segment arrives (`root-document.tsx`); before `OVE-478` a Bulgarian or
+  Russian reader of a garden page had a Ukrainian document around it.
 - There is **no** locale notice. It compared the reader's language with the
   route's and offered the reader their own, which made sense only while an
   unprefixed address was always Ukrainian.

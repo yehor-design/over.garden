@@ -33,6 +33,7 @@ import {
 } from "@/components/site-shell/site-shell-context-rail";
 import { catalogIdentifierUrl } from "@/lib/catalog/addresses";
 import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
+import { publicRegionLabel } from "@/lib/garden/regions";
 import { cn } from "@/lib/utils";
 import type { CatalogKind } from "@/db/schema";
 import {
@@ -641,8 +642,10 @@ async function renderCatalogEvidenceCard(
                           <time dateTime={organismIsoDate(entry.entryDate)}>
                             {formatDate(entry.entryDate, locale)}
                           </time>
-                          {entry.safeLocationLabel ? (
-                            <span>{entry.safeLocationLabel}</span>
+                          {entry.safeRegionCode ? (
+                            <span>
+                              {publicRegionLabel(locale, entry.safeRegionCode)}
+                            </span>
                           ) : null}
                           <span>
                             {entry.varietyText ?? page.catalog.canonicalName}

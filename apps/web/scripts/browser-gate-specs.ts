@@ -79,6 +79,10 @@ export const BROWSER_GATE_SPECS = [
   "communities.spec.ts",
   "community-contribution.spec.ts",
   "community-moderation.spec.ts",
+  // The redesign, integrated (`OVE-478`): every family, every role, every
+  // language; and the six writing journeys on one large garden.
+  "route-families.spec.ts",
+  "writing-journeys.spec.ts",
 ] as const;
 
 /**

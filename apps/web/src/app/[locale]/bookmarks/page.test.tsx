@@ -110,6 +110,7 @@ const CARD: FollowedFeedItem = {
   },
   reasons: [],
   mediaUrl: null,
+  mediaCaption: null,
 };
 
 async function renderShelf(

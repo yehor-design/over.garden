@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -65,6 +66,21 @@ interface PlantObjectPageProps {
     authIntent?: string | string[];
     authControl?: string | string[];
   }>;
+}
+
+/**
+ * The page's own title, beside "Налаштування об'єкта" and "Походження
+ * об'єкта": it inherited the garden's "Простір саду", which names no page, and
+ * a screen reader announced that after every publish (WCAG 2.4.2, `OVE-478`).
+ * Not the object's name: that is a read, and a title that waits for a read is
+ * a page that cannot start (ADR-0023).
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestInterfaceLocale();
+  return {
+    title: `${getOwnerObjectCopy(locale).historyPage.title} | OverGarden`,
+    robots: { index: false, follow: false },
+  };
 }
 
 export default async function PlantObjectReadbackPage({

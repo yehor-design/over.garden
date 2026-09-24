@@ -79,12 +79,14 @@ describe("every browser spec is run by something (OVE-462)", () => {
         reason: "listed_twice",
       }),
     ]);
-    expect(check({ gate: ["a.spec.ts", "b.spec.ts", "gone.spec.ts"] })).toEqual([
-      expect.objectContaining({
-        subject: "tests/gone.spec.ts",
-        reason: "listed_but_missing",
-      }),
-    ]);
+    expect(check({ gate: ["a.spec.ts", "b.spec.ts", "gone.spec.ts"] })).toEqual(
+      [
+        expect.objectContaining({
+          subject: "tests/gone.spec.ts",
+          reason: "listed_but_missing",
+        }),
+      ],
+    );
   });
 
   it("fails when CI or the local gate stops going through the one runner", () => {
@@ -101,6 +103,23 @@ describe("every browser spec is run by something (OVE-462)", () => {
         packageScripts: { "gates:browser": "playwright test tests/a.spec.ts" },
       }).map((failure) => failure.reason),
     ).toEqual(["runner_not_used", "second_list"]);
+  });
+
+  it("fails on a spec that spells its own WCAG tags", () => {
+    // Seen red: eighteen specs scanned with a WCAG 2.1 list of their own, so
+    // axe's 24 px `target-size` rule never ran on them (OVE-478).
+    const failures = check({
+      specSources: {
+        "a.spec.ts": `const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];`,
+        "b.spec.ts": `import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";`,
+      },
+    });
+    expect(failures).toEqual([
+      expect.objectContaining({
+        subject: "tests/a.spec.ts",
+        reason: "own_wcag_tags",
+      }),
+    ]);
   });
 
   it("reads spec names out of a command line", () => {

@@ -1,0 +1,19 @@
+{
+  "what": "Production, before this release: read-only GETs through Vercel's authenticated fetch",
+  "production": "https://over.garden (main at 1aa34d6f)",
+  "readAt": "2026-09-24T11:55:35Z",
+  "answers": [
+    {
+      "path": "/answers/ove478-no-such",
+      "status": 500,
+      "title": "500: This page couldn’t load",
+      "note": "the framework's English error page, x-matched-path /500"
+    },
+    {
+      "path": "/catalog/ove478-no-such",
+      "status": 200,
+      "robots": "noindex in the body",
+      "note": "a catch-all's not-found body inside a 200"
+    }
+  ]
+}

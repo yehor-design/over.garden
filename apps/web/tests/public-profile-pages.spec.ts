@@ -317,7 +317,10 @@ test("a guest reads who the gardener is, then every entry, a page at a time", as
   const firstCard = page
     .locator('[data-profile-entries="true"]:visible [data-slot="entry-card"]')
     .first();
-  await expect(firstCard).toContainText("Автор");
+  // The prefix is the author link's name, not text of the card (`OVE-478`).
+  await expect(
+    firstCard.locator('[data-entry-card-byline="true"]').getByRole("link"),
+  ).toHaveAccessibleName(/^Автор \S/u);
   await expect(firstCard).toContainText("Обговорення");
   const pagination = page.getByRole("navigation", { name: "Сторінки записів" });
   await expect(pagination).toContainText("Сторінка 1 з 3");

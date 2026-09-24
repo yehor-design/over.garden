@@ -2,6 +2,7 @@ import { matchAddressPath } from "@/lib/address/match-address-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   renderPublicLifecycleDocument,
+  type PublicLifecycleAuthor,
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
@@ -11,6 +12,7 @@ import {
   MISSING_ADDRESS_SLUG,
   MISSING_ENTRY_NUMBER,
   publicJournalEntryPath,
+  publicProfilePath,
 } from "@/lib/garden/public-paths";
 
 /**
@@ -25,6 +27,7 @@ export function matchPublicJournalEntryPath(pathname: string) {
 export function renderGonePublicJournalEntryHtml(
   locale: InterfaceLocale,
   location?: PublicLifecycleRequestLocation,
+  author?: PublicLifecycleAuthor | null,
 ) {
   const copy = getPublicSurfaceCopy(locale).journal;
   return renderLifecycleDocument(
@@ -32,12 +35,14 @@ export function renderGonePublicJournalEntryHtml(
     copy.entryRemoved,
     copy.entryRemovedDescription,
     location,
+    author,
   );
 }
 
 export function renderNotFoundPublicJournalEntryHtml(
   locale: InterfaceLocale,
   location?: PublicLifecycleRequestLocation,
+  author?: PublicLifecycleAuthor | null,
 ) {
   const copy = getPublicSurfaceCopy(locale).journal;
   return renderLifecycleDocument(
@@ -45,17 +50,32 @@ export function renderNotFoundPublicJournalEntryHtml(
     copy.entryNotFound,
     copy.entryNotFoundDescription,
     location,
+    author,
   );
 }
 
+/**
+ * The one way on: the author's other entries when their profile still
+ * answers — the reader came for this gardener — and the journals directory
+ * when it does not, or when the address never named anyone (`OVE-478`).
+ */
 function renderLifecycleDocument(
   locale: InterfaceLocale,
   title: string,
   description: string,
   location?: PublicLifecycleRequestLocation,
+  author?: PublicLifecycleAuthor | null,
 ) {
-  const journalsPath = localizedPath(locale, "/journals");
-  const linkLabel = getPublicJournalEntryCopy(locale).journals;
+  const copy = getPublicJournalEntryCopy(locale);
+  const action = author
+    ? {
+        actionHref: `${publicProfilePath(locale, author.handle)}#profile-entries`,
+        actionLabel: copy.authorEntries.replace("{handle}", author.handle),
+      }
+    : {
+        actionHref: localizedPath(locale, "/journals"),
+        actionLabel: copy.journals,
+      };
 
   return renderPublicLifecycleDocument({
     locale,
@@ -65,7 +85,6 @@ function renderLifecycleDocument(
     search: location?.search,
     title,
     description,
-    actionHref: journalsPath,
-    actionLabel: linkLabel,
+    ...action,
   });
 }
