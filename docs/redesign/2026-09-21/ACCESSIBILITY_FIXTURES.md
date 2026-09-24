@@ -106,11 +106,20 @@ Unperformed AT steps must remain marked unperformed in a task receipt. Never
 substitute an axe score or screenshot for listening to the actual announcement.
 
 **Performed so far (OVE-478, 2026-09-24):** one real pairing — Orca 46.1 with
-Chromium 141 on Linux (AT-SPI 2.52, speech-dispatcher 0.12 with espeak-ng 1.51),
-keys pressed through the X server, what Orca said read from its own log. Steps
-1, 2, 3 and 5's selection and focus checks were walked; the transcript and what
-it found are in `OVE-478-PROOF.md` and `ove-478/screen-reader/`. VoiceOver +
-Safari and NVDA + Firefox/Chrome were not run (no macOS or Windows machine), and
-remain unperformed. Step 4 and step 5's forced colours are measured in a real
-engine by `tests/route-families.spec.ts`, which is a check of layout, not of
-listening. Step 6 was not performed with real photographs.
+Chromium 141 on Linux (AT-SPI 2.52, speech-dispatcher 0.12 with espeak-ng
+1.51), at 1280 × 900, keys pressed through the X server, what Orca said read
+from its own log; the transcript is `ove-478/screen-reader/`. Step 1:
+landmarks, headings and links on the home page, a 404, the journals, an entry
+and the gardener's collection. Step 2: global Write by keyboard only — three
+same-named tomatoes, each announced with its space, one chosen by arrows;
+a plant created while writing and cancelled back to the picker; focus after
+the journals' filters and the sign-out confirmation close. Focus above the
+mobile action bar is checked in a real engine rather than heard
+(`tests/route-families.spec.ts`). Step 3: validation (the required
+first-publication box, and Publish unavailable until it is ticked) and an
+offline Publish — one announcement, the text kept, focus kept on Publish, and
+Enter publishes on retry; a slow request was not staged. Steps 4 and 5 are
+measured in a real engine by `tests/route-families.spec.ts`, which checks
+layout, not listening. Step 6 was not performed with real photographs.
+VoiceOver + Safari and NVDA + Firefox/Chrome were not run (no macOS or Windows
+machine), and remain unperformed.

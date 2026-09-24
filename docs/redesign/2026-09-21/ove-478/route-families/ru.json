@@ -1,0 +1,1952 @@
+[
+  {
+    "family": "Feed · Latest",
+    "owner": "OVE-492",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Лента",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:#Породы ↔ a:Лента",
+      "a:#Породы ↔ a:Обзор",
+      "a:#Растения ↔ a:Обзор",
+      "a:#Растения ↔ a:Новая запись",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші яйця від нових курей — журнал 4б - Кури",
+      "Перші яйця від нових курей — журнал 4б",
+      "Посадила малину біля паркану — журнал 4 - Малина",
+      "Посадила малину біля паркану — журнал 4",
+      "Перші квіти на нижній китиці — журнал 1 - Томат / Домат / Tomato",
+      "Перші квіти на нижній китиці — журнал 1",
+      "Перша зав'язь на нижній китиці.",
+      "Перші зав'язі після тижня спеки",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні. Наступна перевірка за тиждень: дивлюся нижній ярус і зав'язь на другій китиці, бо саме там минулого року з'явилася перша пляма. Пасинки прибрала до другого листка.",
+      "Де Барао на грядці",
+      "Перше суцвіття",
+      "Перший публічний запис про рослину на балконі."
+    ]
+  },
+  {
+    "family": "Feed · Following",
+    "owner": "OVE-492",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/feed",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Лента подписок",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Лента подписок | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Сървърът записа, отговорът се из ↔ a:Лента",
+      "a:Сървърът записа, отговорът се из ↔ a:Обзор",
+      "a:Сървърът записа, отговорът се из ↔ a:Новая запись",
+      "a:Сървърът записа, отговорът се из ↔ a:Мой сад",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші яйця від нових курей — журнал 4б - Кури",
+      "Перші яйця від нових курей — журнал 4б",
+      "Посадила малину біля паркану — журнал 4 - Малина",
+      "Посадила малину біля паркану — журнал 4",
+      "Перші квіти на нижній китиці — журнал 1 - Томат / Домат / Tomato",
+      "Перші квіти на нижній китиці — журнал 1",
+      "Перша зав'язь на нижній китиці.",
+      "Перші зав'язі після тижня спеки",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні. Наступна перевірка за тиждень: дивлюся нижній ярус і зав'язь на другій китиці, бо саме там минулого року з'явилася перша пляма. Пасинки прибрала до другого листка.",
+      "Де Барао на грядці",
+      "Перше суцвіття",
+      "Перший публічний запис про рослину на балконі."
+    ]
+  },
+  {
+    "family": "Journals directory",
+    "owner": "OVE-492",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/journals",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Журналы",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Журналы | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші яйця від нових курей — журнал 4б - Кури",
+      "Перші яйця від нових курей — журнал 4б",
+      "Посадила малину біля паркану — журнал 4 - Малина",
+      "Посадила малину біля паркану — журнал 4",
+      "Перші квіти на нижній китиці — журнал 1 - Томат / Домат / Tomato",
+      "Перші квіти на нижній китиці — журнал 1",
+      "Перша зав'язь на нижній китиці.",
+      "Перші зав'язі після тижня спеки",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні. Наступна перевірка за тиждень: дивлюся нижній ярус і зав'язь на другій китиці, бо саме там минулого року з'явилася перша пляма. Пасинки прибрала до другого листка.",
+      "Де Барао на грядці",
+      "Перше суцвіття",
+      "Перший публічний запис про рослину на балконі."
+    ]
+  },
+  {
+    "family": "Journals · query view",
+    "owner": "OVE-482",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/journals?kind=plant",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Журналы",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Журналы | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Посадила малину біля паркану — журнал 4 - Малина",
+      "Посадила малину біля паркану — журнал 4",
+      "Перші квіти на нижній китиці — журнал 1 - Томат / Домат / Tomato",
+      "Перші квіти на нижній китиці — журнал 1",
+      "Перша зав'язь на нижній китиці.",
+      "Перші зав'язі після тижня спеки",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні. Наступна перевірка за тиждень: дивлюся нижній ярус і зав'язь на другій китиці, бо саме там минулого року з'явилася перша пляма. Пасинки прибрала до другого листка.",
+      "Де Барао на грядці",
+      "Перше суцвіття",
+      "Перший публічний запис про рослину на балконі.",
+      "Помідор на балконі",
+      "Балконні томати"
+    ]
+  },
+  {
+    "family": "Entry",
+    "owner": "OVE-493",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/@gardener_d2ae8b3f1671e003/post/1",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Перші зав'язі після тижня спеки",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Перші зав'язі після тижня спеки · Запись журнала | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші зав'язі після тижня спеки",
+      "Грядка з томатами у вечірньому світлі",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні.",
+      "Наступна перевірка за тиждень: дивлюся нижній ярус і зав'язь на другій китиці, бо саме там минулого року з'явилася перша пляма. Пасинки прибрала до другого листка."
+    ]
+  },
+  {
+    "family": "Entry · removed (seven-day 410)",
+    "owner": "OVE-478",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/@gardener_d2ae8b3f1671e003/post/2",
+    "status": 410,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Запись удалена",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Запись удалена | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "summary:Сменить язык: Русский ↔ a:Русский"
+    ],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Entry · number nobody has",
+    "owner": "OVE-478",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/@gardener_d2ae8b3f1671e003/post/999999",
+    "status": 404,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Запись не найдена",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Запись не найдена | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "summary:Сменить язык: Русский ↔ a:Русский"
+    ],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Public profile",
+    "owner": "OVE-494",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/@gardener_d2ae8b3f1671e003",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "@gardener_d2ae8b3f1671e003",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "@gardener_d2ae8b3f1671e003 (@gardener_d2ae8b3f1671e003) · публичный профиль | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Пожаловаться ↔ button:Записи1",
+      "button:Пожаловаться ↔ button:Объекты1",
+      "button:Заблокировать ↔ a:Автор @gardener_d2ae8b3f1671e003",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші зав'язі після тижня спеки",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні. Наступна перевірка за тиждень: дивлюся нижній ярус і зав'язь на другій китиці, бо саме там минулого року з'явилася перша пляма. Пасинки прибрала до другого листка."
+    ]
+  },
+  {
+    "family": "Object passport",
+    "owner": "OVE-495",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/@gardener_d2ae8b3f1671e003/objects/route-sweep-a33b43f2",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Томат Чорний принц",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Томат Чорний принц · живой объект | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші зав'язі після тижня спеки",
+      "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під корінь, мульча тримає вологу третій день, і нижній ярус уже не в'яне опівдні. Наступна перевірка за..."
+    ]
+  },
+  {
+    "family": "Catalogue · door",
+    "owner": "OVE-496",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/catalog",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Найдите растение или животное",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Каталог организмов | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Catalogue · register",
+    "owner": "OVE-496",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/catalog?q=tomato",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Каталог организмов",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Каталог организмов | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Все буквы ↔ a:Лента",
+      "a:Все буквы ↔ a:Обзор",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Organism card",
+    "owner": "OVE-497",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/species/ove478-routes-organism-0-solanum-lycopersicum-8774d1e0",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Solanum lycopersicum L.",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Solanum lycopersicum L. · вид | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перше суцвіття",
+      "Перший публічний запис про рослину на балконі.",
+      "помідор"
+    ]
+  },
+  {
+    "family": "Organism · form",
+    "owner": "OVE-497",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/species/ove478-routes-organism-0-solanum-lycopersicum-8774d1e0/ove478-routes-organism-0-de-barao-8774d1e0",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Де Барао",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Де Барао · сорт | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Нравится, 0 отметок нравится ↔ a:Лента",
+      "button:Нравится, 0 отметок нравится ↔ a:Обзор",
+      "button:Нравится, 0 отметок нравится ↔ a:Новая запись",
+      "button:Сохранить ↔ a:Новая запись",
+      "button:Сохранить ↔ a:Мой сад",
+      "button:Сохранить ↔ a:События",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перше суцвіття",
+      "Перший публічний запис про рослину на балконі."
+    ]
+  },
+  {
+    "family": "Communities",
+    "owner": "OVE-500",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/communities",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Сообщества",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Сообщества | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "summary:Сменить язык — Русский (RU) ↔ a:Лента",
+      "summary:Сменить язык — Русский (RU) ↔ a:Обзор",
+      "summary:Сменить язык — Русский (RU) ↔ a:Новая запись",
+      "summary:Сменить язык — Русский (RU) ↔ a:Мой сад",
+      "summary:Сменить язык — Русский (RU) ↔ a:События",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Knowledge hub",
+    "owner": "OVE-498",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/knowledge",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Знания",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Знания | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Почему желтеют листья томатов? ↔ a:Лента",
+      "a:Почему желтеют листья томатов? ↔ a:Обзор",
+      "a:Почему желтеют листья томатов? ↔ a:Новая запись",
+      "a:Почему желтеют листья томатов? ↔ a:Мой сад",
+      "a:Почему желтеют листья томатов? ↔ a:События",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Балконні томати"
+    ]
+  },
+  {
+    "family": "Answer",
+    "owner": "OVE-498",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/answers/why-are-tomato-leaves-yellow",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Почему желтеют листья томатов?",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Почему желтеют листья томатов? | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Guide",
+    "owner": "OVE-498",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/guides/start-a-living-plant-record",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Как начать живую запись растения",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Как начать живую запись растения | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Notes (blog)",
+    "owner": "OVE-499",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/blog",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Заметки OverGarden",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Заметки OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Note",
+    "owner": "OVE-499",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/blog/ai-garden-advice-vs-real-garden-proof",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Совет от AI — не то же самое, что датированная запись о вашем растении",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Совет от AI — не то же самое, что датированная запись о вашем растении | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Market page",
+    "owner": "OVE-499",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/markets/bulgaria",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "OverGarden для садоводов в Болгарии",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "OverGarden для садоводов в Болгарии | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Source archive (EPPO)",
+    "owner": "OVE-499",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/sources/eppo",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Архив EPPO",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Архив EPPO | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Privacy",
+    "owner": "OVE-505",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/privacy",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Уведомление о конфиденциальности",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Уведомление о конфиденциальности | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Support",
+    "owner": "OVE-505",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/support",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Поддержка и вопросы конфиденциальности",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Поддержка и вопросы конфиденциальности | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "First-publication disclosure",
+    "owner": "OVE-505",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/first-publication-disclosure",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Уведомление перед первой публикацией",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Уведомление перед первой публикацией | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Sign in",
+    "owner": "OVE-504",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/auth/sign-in",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Вход в OverGarden",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Вход в OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "input: ↔ button:Показать пароль",
+      "a:Вернуться к чтению ↔ a:Лента",
+      "a:Вернуться к чтению ↔ a:Обзор",
+      "a:Вернуться к чтению ↔ a:Новая запись",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Sign up",
+    "owner": "OVE-504",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/auth/sign-up",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Новый аккаунт",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Новый аккаунт",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "input: ↔ button:Показать пароль",
+      "a:Вернуться к чтению ↔ a:Лента",
+      "a:Вернуться к чтению ↔ a:Обзор",
+      "a:Вернуться к чтению ↔ a:Новая запись",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Sign-in help",
+    "owner": "OVE-504",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/auth/help",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Помощь со входом",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Помощь со входом",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "My garden · guest",
+    "owner": "OVE-489",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/garden",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Ведите историю своего сада",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Пространство сада | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Write · guest",
+    "owner": "OVE-486",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/garden/new",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Новая запись",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Новая запись | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Activity · guest",
+    "owner": "OVE-501",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/notifications",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "События",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "События | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Українська ↔ a:Обзор",
+      "a:Українська ↔ a:Новая запись",
+      "a:Українська ↔ a:Мой сад",
+      "a:Українська ↔ a:События",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Обзор",
+      "a:Български ↔ a:Новая запись",
+      "a:Български ↔ a:Мой сад",
+      "a:Български ↔ a:События",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Bookmarks · guest",
+    "owner": "OVE-502",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/bookmarks",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Закладки",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Закладки | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Українська ↔ a:Обзор",
+      "a:Українська ↔ a:Новая запись",
+      "a:Українська ↔ a:Мой сад",
+      "a:Українська ↔ a:События",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Обзор",
+      "a:Български ↔ a:Новая запись",
+      "a:Български ↔ a:Мой сад",
+      "a:Български ↔ a:События",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Wishlist · guest",
+    "owner": "OVE-502",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/wishlist",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Список желаний",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Список желаний | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Обзор",
+      "a:Български ↔ a:Новая запись",
+      "a:Български ↔ a:Мой сад",
+      "a:Български ↔ a:События",
+      "a:Русский ↔ a:Раскрытие первой публикации",
+      "a:Каталог ↔ a:Лента",
+      "a:Конфиденциальность ↔ a:Обзор",
+      "a:Конфиденциальность ↔ a:Новая запись",
+      "a:Конфиденциальность ↔ a:Мой сад"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Erasure request · guest",
+    "owner": "OVE-505",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/erasure",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Запрос на удаление данных",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Запрос на удаление данных | OverGarden",
+    "errorStates": 0,
+    "overlaps": [],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Unknown first segment",
+    "owner": "OVE-478",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/no-such-family-here",
+    "status": 404,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Страница не найдена",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Страница не найдена | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "summary:Сменить язык: Русский ↔ button:Русский"
+    ],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Community",
+    "owner": "OVE-500",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/communities/observation-and-care",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Наблюдения и уход",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Наблюдения и уход | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Topic",
+    "owner": "OVE-498",
+    "role": "guest",
+    "locale": "ru",
+    "address": "/ru/topics/breeds",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Породы",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Породы | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Перші яйця від нових курей — журнал 4б - Кури",
+      "Перші яйця від нових курей — журнал 4б",
+      "Посадила малину біля паркану — журнал 4 - Малина",
+      "Посадила малину біля паркану — журнал 4",
+      "Перші квіти на нижній китиці — журнал 1 - Томат / Домат / Tomato",
+      "Перші квіти на нижній китиці — журнал 1"
+    ]
+  },
+  {
+    "family": "My garden",
+    "owner": "OVE-489",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Пространство сада",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Пространство сада | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Балкон — південний бік",
+      "Растение · Балкон — південний бік"
+    ]
+  },
+  {
+    "family": "Write (global)",
+    "owner": "OVE-486",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/new",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Новая запись",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Новая запись | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "input: ↔ input:",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Write (contextual)",
+    "owner": "OVE-486",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/new?object=4511669f-dfd8-44ec-9e32-c552849c6431",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Новая запись",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Новая запись | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "input: ↔ input:",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Растение · Балкон — південний бік"
+    ]
+  },
+  {
+    "family": "Space setup",
+    "owner": "OVE-484",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/spaces/new",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Новое пространство",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Новое пространство | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Object setup",
+    "owner": "OVE-485",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/objects/new",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Новое растение или животное",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Новое растение или животное | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Space page",
+    "owner": "OVE-490",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/spaces/09bd3f6e-da94-4d59-9b60-6276dbf392fe",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Пространство",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Пространство | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Записать: Томат ↔ a:Лента",
+      "a:Записать: Томат ↔ a:Обзор",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Балкон — південний бік"
+    ]
+  },
+  {
+    "family": "Space settings",
+    "owner": "OVE-490",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/spaces/09bd3f6e-da94-4d59-9b60-6276dbf392fe/settings",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Настройки пространства",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Настройки пространства | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "select:Не показыватьПоказывать регион ↔ a:Лента",
+      "select:Не показыватьПоказывать регион ↔ a:Обзор",
+      "select:Не показыватьПоказывать регион ↔ a:Новая запись",
+      "select:Не показыватьПоказывать регион ↔ a:Мой сад",
+      "select:Не показыватьПоказывать регион ↔ a:События",
+      "select:Выберите регионУкраина — Винницк ↔ a:Лента",
+      "select:Выберите регионУкраина — Винницк ↔ a:Обзор",
+      "select:Выберите регионУкраина — Винницк ↔ a:Новая запись",
+      "select:Выберите регионУкраина — Винницк ↔ a:Мой сад",
+      "select:Выберите регионУкраина — Винницк ↔ a:События",
+      "button:Українська ↔ a:Конфиденциальность"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Object page",
+    "owner": "OVE-491",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/objects/4511669f-dfd8-44ec-9e32-c552849c6431",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Живой объект",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "История объекта | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Публичный паспорт этого объекта ↔ a:Лента",
+      "a:Публичный паспорт этого объекта ↔ a:Обзор",
+      "a:Публичный паспорт этого объекта ↔ a:Новая запись",
+      "a:Публичный паспорт этого объекта ↔ a:Мой сад",
+      "a:Публичный паспорт этого объекта ↔ a:События",
+      "input: ↔ input:",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Балкон — південний бік",
+      "Балкон — південний бік · Место скрыто",
+      "Растение · Балкон — південний бік",
+      "Перша зав'язь на нижній китиці."
+    ]
+  },
+  {
+    "family": "Object settings",
+    "owner": "OVE-491",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/objects/4511669f-dfd8-44ec-9e32-c552849c6431/settings",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Настройки объекта",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Настройки объекта | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Балкон — південний бік",
+      "Растение · Балкон — південний бік"
+    ]
+  },
+  {
+    "family": "Object provenance",
+    "owner": "OVE-491",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/objects/4511669f-dfd8-44ec-9e32-c552849c6431/provenance",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Происхождение объекта",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Происхождение объекта | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Балкон — південний бік",
+      "Растение · Балкон — південний бік"
+    ]
+  },
+  {
+    "family": "Entry editing",
+    "owner": "OVE-488",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/entries/f8fd488a-5a18-49d8-b9a6-6e1e98213558/edit",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Редактирование записи",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Редактирование записи | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Растение · Балкон — південний бік",
+      "Перша зав'язь на нижній китиці."
+    ]
+  },
+  {
+    "family": "Public profile editing",
+    "owner": "OVE-503",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/profile",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Мой публичный профиль",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Мой публичный профиль | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Українська"
+    ]
+  },
+  {
+    "family": "Account settings",
+    "owner": "OVE-503",
+    "role": "member",
+    "locale": "ru",
+    "address": "/account/settings",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Настройки",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Настройки | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "Українська"
+    ]
+  },
+  {
+    "family": "Sign-in and security",
+    "owner": "OVE-503",
+    "role": "member",
+    "locale": "ru",
+    "address": "/account/security",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Вход и безопасность",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Вход и безопасность | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Activity",
+    "owner": "OVE-501",
+    "role": "member",
+    "locale": "ru",
+    "address": "/ru/notifications",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "События",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "События | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Activity preferences",
+    "owner": "OVE-501",
+    "role": "member",
+    "locale": "ru",
+    "address": "/ru/notifications/settings",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Настройки событий",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Настройки событий | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Сохранить ↔ a:Лента",
+      "button:Сохранить ↔ a:Обзор",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Bookmarks",
+    "owner": "OVE-502",
+    "role": "member",
+    "locale": "ru",
+    "address": "/ru/bookmarks",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Закладки",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Закладки | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Wishlist",
+    "owner": "OVE-502",
+    "role": "member",
+    "locale": "ru",
+    "address": "/ru/wishlist",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Список желаний",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Список желаний | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "a:Українська ↔ a:Конфиденциальность",
+      "a:Български ↔ a:Конфиденциальность",
+      "a:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Erasure request",
+    "owner": "OVE-505",
+    "role": "member",
+    "locale": "ru",
+    "address": "/erasure",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Запрос на удаление данных",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Запрос на удаление данных | OverGarden",
+    "errorStates": 0,
+    "overlaps": [],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Lineage · questions",
+    "owner": "OVE-495",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/lineage/questions",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Вопросы о происхождении",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Вопросы о происхождении | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Lineage · claims",
+    "owner": "OVE-495",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/lineage/claims",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Заявки о происхождении",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Заявки о происхождении | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "summary:Сменить язык — Русский (RU) ↔ a:Лента",
+      "summary:Сменить язык — Русский (RU) ↔ a:Обзор",
+      "summary:Сменить язык — Русский (RU) ↔ a:Новая запись",
+      "summary:Сменить язык — Русский (RU) ↔ a:Мой сад",
+      "summary:Сменить язык — Русский (RU) ↔ a:События",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Owner queue · refused to a member",
+    "owner": "OVE-506",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/catalog/queue",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Очередь решений каталога",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Очередь решений каталога | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "summary:Сменить язык — Русский (RU) ↔ a:Лента",
+      "summary:Сменить язык — Русский (RU) ↔ a:Обзор",
+      "summary:Сменить язык — Русский (RU) ↔ a:Новая запись",
+      "summary:Сменить язык — Русский (RU) ↔ a:Мой сад",
+      "summary:Сменить язык — Русский (RU) ↔ a:События",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Українська ↔ a:Обзор",
+      "button:Українська ↔ a:Новая запись",
+      "button:Українська ↔ a:Мой сад",
+      "button:Українська ↔ a:События",
+      "button:Български ↔ a:Конфиденциальность"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Moderation · refused to a member",
+    "owner": "OVE-500",
+    "role": "member",
+    "locale": "ru",
+    "address": "/account/communities",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Модерация сообществ",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Модерация сообществ | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Українська ↔ a:Обзор",
+      "button:Українська ↔ a:Новая запись",
+      "button:Українська ↔ a:Мой сад",
+      "button:Українська ↔ a:События",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Обзор",
+      "button:Български ↔ a:Новая запись",
+      "button:Български ↔ a:Мой сад",
+      "button:Български ↔ a:События",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Erasure queue · refused to a member",
+    "owner": "OVE-505",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/privacy/erasure-requests",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Запросы на удаление",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Запросы на удаление | OverGarden",
+    "errorStates": 0,
+    "overlaps": [],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Workspace · unknown address",
+    "owner": "OVE-478",
+    "role": "member",
+    "locale": "ru",
+    "address": "/garden/no-such-page",
+    "status": 404,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Страница не найдена",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Страница не найдена | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "summary:Сменить язык: Русский ↔ button:Русский"
+    ],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Owner · decision queue",
+    "owner": "OVE-506",
+    "role": "owner",
+    "locale": "ru",
+    "address": "/garden/catalog/queue",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Очередь решений каталога",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Очередь решений каталога | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "OVE-506 Solanum 2f19a196 → OVE-506 синонім 2f19a196",
+      "OVE-506 Solanum ced0f842 → OVE-506 синонім ced0f842",
+      "OVE-506 Solanum 77b34bcc → OVE-506 синонім 77b34bcc"
+    ]
+  },
+  {
+    "family": "Owner · sources",
+    "owner": "OVE-506",
+    "role": "owner",
+    "locale": "ru",
+    "address": "/garden/catalog/sources",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Источники каталога",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Источники каталога | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Обновить: State Register of Plan ↔ a:Лента",
+      "button:Обновить: State Register of Plan ↔ a:Обзор",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": [
+      "«помідор 11b54633»",
+      "«домат черокі»",
+      "«помідор ove442-1790273027219»"
+    ]
+  },
+  {
+    "family": "Owner · erasure queue",
+    "owner": "OVE-505",
+    "role": "owner",
+    "locale": "ru",
+    "address": "/garden/privacy/erasure-requests",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Запросы на удаление",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Запросы на удаление | OverGarden",
+    "errorStates": 0,
+    "overlaps": [],
+    "clippedLabels": [],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Owner · community moderation",
+    "owner": "OVE-500",
+    "role": "owner",
+    "locale": "ru",
+    "address": "/account/communities",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Модерация сообществ",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Модерация сообществ | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  },
+  {
+    "family": "Owner · comment moderation",
+    "owner": "OVE-500",
+    "role": "owner",
+    "locale": "ru",
+    "address": "/account/moderation/comments",
+    "status": 200,
+    "lang": "ru",
+    "headings": 1,
+    "h1": "Модерация комментариев",
+    "mains": 1,
+    "languageControls": 1,
+    "overflow": 0,
+    "title": "Модерация комментариев | OverGarden",
+    "errorStates": 0,
+    "overlaps": [
+      "a:Перейти к основному содержанию ↔ button:Открыть навигацию",
+      "button:Українська ↔ a:Конфиденциальность",
+      "button:Български ↔ a:Конфиденциальность",
+      "button:Русский ↔ a:Раскрытие первой публикации"
+    ],
+    "clippedLabels": [
+      "a:Перейти к основному содержанию"
+    ],
+    "joinedWords": [],
+    "ukrainianLetters": []
+  }
+]

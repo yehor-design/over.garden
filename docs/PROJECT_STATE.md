@@ -83,8 +83,19 @@ found were fixed rather than listed.
   captions.
 - Heard with Orca 46.1 on Chromium 141: the author prefix merged with the name
   («АвторОлена»), the composer announced "not yet published" straight after
-  "published", and the object and edit pages were titled "Простір саду". All
-  three fixed; the transcript is in `ove-478/screen-reader/`.
+  "published", and the object and edit pages were titled "Простір саду". A
+  publish lost to the network left focus on the page's body — Publish was
+  disabled while it worked — and told a text note to fix "the marked photo".
+  The garden's group headings read «Простори3»: Chromium drops a space that
+  React writes alone after text, and thirty-odd more lines had the same shape.
+  All fixed: Publish shows as loading and keeps focus (DESIGN.md §4.4), a
+  failure names a photograph only when there is one, and every space between
+  two words is inside its text (DESIGN.md §5.14; `jsx-word-spaces.test.ts`
+  and the sweep fail the shape). The transcript is in
+  `ove-478/screen-reader/`.
+- With a phone's keyboard up, Tab scrolled the next control under the
+  composer's sticky publish row, hidden whole (WCAG 2.4.11); below `sm`,
+  focus keeps a sticky row's height clear (`data-bottom-sticky-row`).
 - Every browser spec scans axe with WCAG 2.2 AA (`WCAG_AA_TAGS`; the
   browser-spec gate fails one that spells its own tags). A tab strip clipped
   the lowest pixel of its focus ring at 200 % zoom; its rule is drawn inside it
@@ -96,10 +107,20 @@ found were fixed rather than listed.
   (the six FAST_ENTRY journeys with step counts, each publish read back from
   the database). Creating a plant or an animal while writing is new in the
   one composer.
+- Measured locally before and after, back to back on the production-weight
+  fixture: first paint 0.15–0.19 s later on three of four pages, because
+  `main`'s 58–90 icon console errors a page slowed the parser into an
+  earlier, emptier first frame that then shifted (CLS up to 0.30 on `main`,
+  at most 0.0004 on the candidate). `/journals`' LCP, an excerpt in that
+  first frame, moves with it (1.73 → 1.90 s); the photographs' LCP does not
+  move beyond run-to-run noise. The web font can still move a feed card
+  (0.113 in an earlier pair; the cause is `main`'s too; DESIGN.md §9 allows
+  0.02).
 - Still open, each classified in the receipt: one screen reader was heard
   (Orca), not VoiceOver or NVDA; the production LCP budget is known gap 11;
-  production was read after release, never written; no research with
-  gardeners was run, so there is no retention or conversion claim.
+  the feed's font shift; production was read after release, never written;
+  no research with gardeners was run, so there is no retention or conversion
+  claim.
 
 See `docs/redesign/2026-09-21/OVE-478-PROOF.md`.
 

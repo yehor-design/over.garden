@@ -1,0 +1,50 @@
+[
+  {
+    "zoom": "100",
+    "strip": "profile-tabs",
+    "item": "Записи1",
+    "focusVisible": true,
+    "outline": "2px solid",
+    "clipped": false
+  },
+  {
+    "zoom": "100",
+    "strip": "feed-bar",
+    "item": "Стрічка",
+    "focusVisible": true,
+    "outline": "2px solid",
+    "clipped": false
+  },
+  {
+    "zoom": "100",
+    "strip": "feed-bar",
+    "item": "Стрічка підписок",
+    "focusVisible": true,
+    "outline": "2px solid",
+    "clipped": false
+  },
+  {
+    "zoom": "200",
+    "strip": "profile-tabs",
+    "item": "Записи1",
+    "focusVisible": true,
+    "outline": "2px solid",
+    "clipped": false
+  },
+  {
+    "zoom": "200",
+    "strip": "feed-bar",
+    "item": "Стрічка",
+    "focusVisible": true,
+    "outline": "2px solid",
+    "clipped": false
+  },
+  {
+    "zoom": "200",
+    "strip": "feed-bar",
+    "item": "Стрічка підписок",
+    "focusVisible": true,
+    "outline": "2px solid",
+    "clipped": false
+  }
+]
