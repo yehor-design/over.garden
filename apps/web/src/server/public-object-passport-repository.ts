@@ -12,6 +12,7 @@ import type {
 } from "@/db/schema";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  normalizePublicContentLanguage,
   type PublicLocale,
 } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
@@ -117,6 +118,8 @@ export interface PublicObjectPassportJournalEntry {
   id: string;
   title: string;
   bodyPreview: string;
+  /** The language the gardener wrote in, for `lang` on their words (ADR-0029 D11). */
+  sourceLanguage: PublicLocale;
   entryDate: Date | string;
   publicSlug: string;
   publicPath: string;
@@ -165,6 +168,7 @@ interface PublicObjectPassportTimelineRow {
   entryId: string;
   entryTitle: string;
   entryBody: string;
+  entrySourceLanguage: string | null;
   entryDate: Date | string;
   entryPublicSlug: string;
   /** The `{n}` of the entry's address, `/@{handle}/post/{n}`. */
@@ -610,6 +614,7 @@ export function buildPublicObjectPassportTimelineQuery(
       "journal_entries.id as entryId",
       "journal_entries.title as entryTitle",
       "journal_entries.body as entryBody",
+      "journal_entries.source_language as entrySourceLanguage",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
       "journal_entries.author_entry_number as entryNumber",
@@ -697,6 +702,7 @@ export function serializePublicObjectPassportPage(
     id: entry.entryId,
     title: entry.entryTitle,
     bodyPreview: publicJournalBodyPreview(entry.entryBody),
+    sourceLanguage: normalizePublicContentLanguage(entry.entrySourceLanguage),
     entryDate: entry.entryDate,
     publicSlug: entry.entryPublicSlug,
     publicPath: publicJournalEntryAddress({

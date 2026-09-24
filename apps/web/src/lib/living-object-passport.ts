@@ -1,5 +1,6 @@
 import type { CatalogKind, PlantObjectKind, VarietyState } from "@/db/schema";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import type { PublicLocale } from "@/lib/public-localization";
 
 export type LivingObjectPassportAudience = "public" | "owner";
 
@@ -52,6 +53,12 @@ export interface LivingObjectPassportTimelineEntryInput {
   id: string;
   title: string;
   body: string;
+  /**
+   * The language the gardener wrote in. The title and the body carry it where
+   * it is not the page's; the date and the labels beside them never do
+   * (ADR-0029 D11).
+   */
+  sourceLanguage: PublicLocale;
   entryDate: Date | string;
   href: string;
   mediaPublicUrl: string | null;
@@ -68,6 +75,8 @@ export interface LivingObjectPassportTimelineEntryInput {
 export interface LivingObjectPassportAdjacentEntry {
   id: string;
   title: string;
+  /** The neighbour's own language, for `lang` on its title (ADR-0029 D11). */
+  sourceLanguage: PublicLocale;
   href: string;
 }
 
@@ -519,7 +528,14 @@ export function formatLivingObjectPassportEntryCount(
 function adjacentTimelineEntry(
   entry: LivingObjectPassportTimelineEntryInput | undefined,
 ): LivingObjectPassportAdjacentEntry | null {
-  return entry ? { id: entry.id, title: entry.title, href: entry.href } : null;
+  return entry
+    ? {
+        id: entry.id,
+        title: entry.title,
+        sourceLanguage: entry.sourceLanguage,
+        href: entry.href,
+      }
+    : null;
 }
 
 function timelineYear(value: Date | string) {

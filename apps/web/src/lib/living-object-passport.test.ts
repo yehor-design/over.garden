@@ -87,6 +87,7 @@ function timelineEntry(id: string, entryDate: string, href: string) {
     id,
     title: id,
     body: `${id} body`,
+    sourceLanguage: "uk" as const,
     entryDate,
     href,
     mediaPublicUrl: null,

@@ -1884,6 +1884,9 @@ export function buildPublicCommunityContributionCommentTargetQuery(
       // The public entry's opening, so the discussion shows what is being
       // discussed as a readable post (`OVE-500`, criterion 4).
       "journal_entries.body as entryBody",
+      // And the language it is written in, for `lang` on those words when it
+      // is not the page's (ADR-0029 D11).
+      "journal_entries.source_language as entrySourceLanguage",
       "journal_entries.public_slug as entryPublicSlug",
       "journal_entries.author_entry_number as entryNumber",
       "journal_entries.entry_date as entryDate",

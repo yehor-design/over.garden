@@ -13,6 +13,7 @@ import {
   publicJournalEntryAddress,
 } from "@/lib/garden/public-paths";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
+import { normalizePublicContentLanguage } from "@/lib/public-localization";
 
 import type { PlantObjectPage } from "./journal-repository";
 import type { ObjectProvenancePanel } from "./lineage-repository";
@@ -41,6 +42,7 @@ export function buildOwnerObjectPassportPresentation(
       id: entry.id,
       title: entry.title,
       body: entry.body,
+      sourceLanguage: normalizePublicContentLanguage(entry.source_language),
       entryDate: entry.entry_date,
       href:
         entry.visibility === "public" &&

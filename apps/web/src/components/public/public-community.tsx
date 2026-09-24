@@ -71,7 +71,11 @@ import {
   PUBLIC_COMMUNITY_OBJECT_KINDS,
   type PublicCommunityViewRequest,
 } from "@/lib/public-community-view";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import {
+  contentLanguageAttribute,
+  localizedPath,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import type {
   PublicCommunityContribution,
@@ -1379,6 +1383,9 @@ function CommunityContributionCard({
       href={item.href}
       title={item.title}
       headingLevel={3}
+      contentLanguage={
+        contentLanguageAttribute(item.sourceLanguage, locale).lang
+      }
       dateTime={isoDay(item.entryDate)}
       dateLabel={formatCommunityDate(item.entryDate, locale)}
       excerpt={item.excerpt}
@@ -1605,6 +1612,7 @@ export function PublicCommunityDiscussion({
     title: string;
     href: string;
     excerpt: string;
+    sourceLanguage: PublicLocale;
     authorLabel: string | null;
     authorHref: string | null;
     dateTime: string | undefined;
@@ -1634,7 +1642,13 @@ export function PublicCommunityDiscussion({
           />
         }
         title={copy.discussionTitle}
-        description={entry?.title}
+        description={
+          entry ? (
+            <span {...contentLanguageAttribute(entry.sourceLanguage, locale)}>
+              {entry.title}
+            </span>
+          ) : undefined
+        }
         actions={
           <NextLink
             href={communityPath}
@@ -1653,6 +1667,9 @@ export function PublicCommunityDiscussion({
             href={entry.href}
             title={entry.title}
             headingLevel={3}
+            contentLanguage={
+              contentLanguageAttribute(entry.sourceLanguage, locale).lang
+            }
             dateTime={entry.dateTime ?? ""}
             dateLabel={entry.dateLabel}
             excerpt={entry.excerpt}

@@ -252,6 +252,7 @@ export function publicVarietyPage(
           : aggregateBodyLength < 120
             ? "short"
             : Array.from({ length: 10 }, () => JOURNEY.safeBody).join(" "),
+        sourceLanguage: "uk",
         entryDate: JOURNEY.entryDate,
         publicPath: `/journal/${JOURNEY.publicSlug}`,
         plantObjectDisplayName: JOURNEY.plantDisplayName,

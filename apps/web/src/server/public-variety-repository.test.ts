@@ -130,6 +130,10 @@ describe("public variety repository query contracts", () => {
 
     expect(compiled.sql).toContain('"journal_entries"."title"');
     expect(compiled.sql).toContain('"journal_entries"."body"');
+    // The card marks the gardener's words with their language (ADR-0029 D11).
+    expect(compiled.sql).toContain(
+      '"journal_entries"."source_language" as "entrySourceLanguage"',
+    );
     expect(compiled.sql).toContain('"journal_entries"."entry_date"');
     expect(compiled.sql).toContain('from "media_assets"');
     expect(compiled.sql).not.toContain('left join "media_assets"');

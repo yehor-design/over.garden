@@ -26,6 +26,7 @@ import {
 import {
   PUBLIC_LOCALES,
   localizedPath,
+  normalizePublicContentLanguage,
   type PublicLocale,
 } from "@/lib/public-localization";
 import type { PublicSurfaceDiscoverySource } from "@/server/public-surface-discovery";
@@ -145,6 +146,8 @@ export interface PublicCommunityContributionRow {
   entryNumber: number | null;
   title: string;
   body: string;
+  /** The language the gardener wrote in. Never the reader's (ADR-0029 D11). */
+  sourceLanguage: string | null;
   entryDate: Date | string;
   publishedAt: Date | string | null;
   ownerUserId: string;
@@ -171,6 +174,11 @@ export interface PublicCommunityContribution {
   href: string;
   title: string;
   excerpt: string;
+  /**
+   * The language of the entry's own words, so a card can carry `lang` when it
+   * is not the page's (ADR-0029 D11, WCAG 3.1.2).
+   */
+  sourceLanguage: PublicLocale;
   entryDate: Date | string;
   publishedAt: Date | string;
   addedAt: Date | string;
@@ -1370,6 +1378,7 @@ export function serializePublicCommunityContributionPage(
         }),
         title: row.title,
         excerpt: publicExcerpt(row.body),
+        sourceLanguage: normalizePublicContentLanguage(row.sourceLanguage),
         entryDate: row.entryDate,
         publishedAt,
         addedAt: row.addedAt,
@@ -1823,6 +1832,7 @@ export function buildPublicCommunityContributionsQuery(
       "journal_entries.author_entry_number as entryNumber",
       "journal_entries.title as title",
       "journal_entries.body as body",
+      "journal_entries.source_language as sourceLanguage",
       "journal_entries.entry_date as entryDate",
       "journal_entries.published_at as publishedAt",
       "journal_entries.owner_user_id as ownerUserId",

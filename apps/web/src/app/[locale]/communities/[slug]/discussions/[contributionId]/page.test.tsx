@@ -122,6 +122,43 @@ describe("contribution discussion route", () => {
     expect(html).toContain('data-engagement-panel="true"');
   });
 
+  // ADR-0029 D11, WCAG 3.1.2: the entry under discussion keeps its author's
+  // language on a page in the reader's; its byline and date do not.
+  it("marks the discussed entry with its own language, and nothing around it", async () => {
+    mocks.targetQuery.mockReturnValue({
+      executeTakeFirst: async () =>
+        targetRow({
+          entrySourceLanguage: "bg",
+          entryTitle: "Доматите след седмица жега",
+          entryBody: "Листата   държат\nслед сутрешното поливане.",
+        }),
+    });
+
+    const html = renderToStaticMarkup(
+      await ContributionDiscussionRoute({
+        params: Promise.resolve({
+          locale: "uk",
+          slug: "observation-and-care",
+          contributionId: CONTRIBUTION_ID,
+        }),
+      }),
+    );
+
+    expect(html).toContain('<main lang="uk"');
+    // The page's header names the entry too, in the entry's language.
+    expect(html).toContain('<span lang="bg">Доматите след седмица жега</span>');
+    expect(html).toMatch(
+      /<div lang="bg"[^>]*><h3[^>]*><a[^>]*>Доматите след седмица жега<\/a><\/h3><p[^>]*>Листата държат след сутрешното поливане\.<\/p><\/div>/u,
+    );
+    const byline = html.slice(
+      html.indexOf('data-entry-card-byline="true"'),
+      html.indexOf('<div lang="bg"'),
+    );
+    expect(byline).toContain("Олена");
+    expect(byline).toContain('dateTime="2026-07-12"');
+    expect(byline).not.toContain("lang=");
+  });
+
   it("keeps a closed discussion readable rather than answering with one sentence", async () => {
     mocks.targetQuery.mockReturnValue({
       executeTakeFirst: async () => targetRow({ discussionState: "closed" }),

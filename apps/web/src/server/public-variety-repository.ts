@@ -16,6 +16,7 @@ import {
 } from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  normalizePublicContentLanguage,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { publicRegionCode, publicRegionLabel } from "@/lib/garden/regions";
@@ -142,6 +143,11 @@ export interface PublicVarietyEntry {
   id: string;
   title: string;
   body: string;
+  /**
+   * The language the gardener wrote in, so the card marks their words with it
+   * where it is not the page's (ADR-0029 D11, WCAG 3.1.2).
+   */
+  sourceLanguage: PublicLocale;
   entryDate: Date | string;
   publicPath: string;
   plantObjectDisplayName: string;
@@ -315,6 +321,7 @@ export async function getPublicVarietyPageByCatalogItemId(
       id: entry.entryId,
       title: entry.entryTitle,
       body: entry.entryBody,
+      sourceLanguage: normalizePublicContentLanguage(entry.entrySourceLanguage),
       entryDate: entry.entryDate,
       // An organism card gathers entries from every gardener, so each row
       // carries its own author's handle and the entry's number (ADR-0029 D9).
@@ -768,6 +775,7 @@ export function buildPublicVarietyEntriesQuery(
       "journal_entries.id as entryId",
       "journal_entries.title as entryTitle",
       "journal_entries.body as entryBody",
+      "journal_entries.source_language as entrySourceLanguage",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
       "journal_entries.author_entry_number as entryNumber",

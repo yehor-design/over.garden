@@ -117,6 +117,7 @@ describe("/variety/[slug]", () => {
           id: "entry-1",
           title: "First ripe cluster",
           body: "First-hand public note with no private fixture values.",
+          sourceLanguage: "uk",
           entryDate: "2026-06-20",
           publicPath: "/journal/first-ripe-cluster",
           plantObjectDisplayName: "Balcony tomato",
@@ -255,5 +256,44 @@ describe("/variety/[slug]", () => {
     expect(html).not.toContain("Публічний");
     expect(html).toContain("Pomidor Cheri");
     expect(html).toContain("First ripe cluster");
+  });
+
+  // ADR-0029 D11, WCAG 3.1.2: a Bulgarian gardener's entry on a Ukrainian
+  // card is read in Bulgarian. The date, region and name line above it are
+  // the card's own and stay Ukrainian.
+  it("marks a gardener's entry with its language, and nothing around it", async () => {
+    // The page `beforeEach` serves, with its one entry written in Bulgarian.
+    const page = await mocks.readPublicVarietyPageByCatalogItemId();
+    mocks.readPublicVarietyPageByCatalogItemId.mockResolvedValue({
+      ...page,
+      entries: [
+        {
+          ...page.entries[0],
+          sourceLanguage: "bg",
+          title: "Първата зряла китка",
+          body: "Узря три седмици след цъфтежа.",
+        },
+      ],
+    });
+    const { default: PublicVarietyRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await PublicVarietyRoute({
+        params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
+      }),
+    );
+
+    expect(html).toContain('<main lang="uk"');
+    expect(html).toMatch(/<h3[^>]*lang="bg"[^>]*>Първата зряла китка<\/h3>/u);
+    expect(html).toMatch(
+      /<p[^>]*lang="bg"[^>]*>Узря три седмици след цъфтежа\.<\/p>/u,
+    );
+    const card = html.slice(
+      html.indexOf('aria-labelledby="organism-entry-entry-1-title"'),
+    );
+    const dateline = card.slice(0, card.indexOf("<h3"));
+    expect(dateline).toContain('<time dateTime="2026-06-20');
+    expect(dateline).toContain("Регіон: Україна — місто Київ");
+    expect(dateline).toContain("Pomidor Cheri");
+    expect(dateline).not.toContain("lang=");
   });
 });

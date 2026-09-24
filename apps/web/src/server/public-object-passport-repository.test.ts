@@ -163,6 +163,11 @@ describe("public object passport repository query contracts", () => {
 
     expect(compiled.sql).toContain('from "journal_entries"');
     expect(compiled.sql).toContain('inner join "plant_objects"');
+    // The chronology marks the gardener's words with their language
+    // (ADR-0029 D11).
+    expect(compiled.sql).toContain(
+      '"journal_entries"."source_language" as "entrySourceLanguage"',
+    );
     expect(compiled.sql).not.toContain('left join "media_assets"');
     expect(compiled.sql).toContain('from "media_assets"');
     expect(compiled.sql).toContain(
@@ -270,6 +275,8 @@ describe("public object passport repository query contracts", () => {
           index === 0
             ? "Two new flower clusters opened after the balcony warmed."
             : `Public journal body ${index + 1}.`,
+        // A row written before the column existed reads as the default.
+        entrySourceLanguage: index === 0 ? "bg" : null,
         entryDate: new Date(`2026-07-0${Math.min(index + 1, 9)}T12:00:00.000Z`),
         entryPublicSlug: index === 0 ? "first-flowering" : `entry-${index + 1}`,
         entryNumber: index + 1,
@@ -320,10 +327,12 @@ describe("public object passport repository query contracts", () => {
     expect(page.journalPreview[0]).toMatchObject({
       title: "First flowering",
       bodyPreview: "Two new flower clusters opened after the balcony warmed.",
+      sourceLanguage: "bg",
       publicPath: "/@green_thumb/post/1",
       mediaPublicUrl:
         "https://media.over.garden/derivatives/first-flowering.webp",
     });
+    expect(page.journalPreview[1]?.sourceLanguage).toBe("uk");
     expect(page.journalPreview).toHaveLength(5);
     expect(page.journalContinuation).toHaveLength(5);
     expect(page.journalContinuation.at(-1)?.title).toBe("Entry 10");

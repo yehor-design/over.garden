@@ -194,6 +194,94 @@ describe("living-object passport V2 components", () => {
     expect(html).not.toContain('alt="Запис 7 photo"');
   });
 
+  // ADR-0029 D11, WCAG 3.1.2: a Bulgarian gardener's observations on a
+  // Ukrainian page are read in Bulgarian — folded or not — while the dates
+  // and labels beside them stay the page's.
+  it("marks a gardener's entries with their language, and nothing around them", () => {
+    const passport = publicPresentation();
+    const [latest, previous, ...rest] = passport.timeline.entries;
+    const html = renderToStaticMarkup(
+      <PublicLivingObjectPassportTimeline
+        passport={{
+          ...passport,
+          timeline: {
+            ...passport.timeline,
+            entries: [
+              {
+                ...latest,
+                sourceLanguage: "bg",
+                title: "Първата зряла китка",
+                body: "Узря три седмици след цъфтежа.",
+              },
+              {
+                ...previous,
+                sourceLanguage: "bg",
+                body: "Втора вълна цъфтеж. ".repeat(20),
+              },
+              ...rest,
+            ],
+          },
+        }}
+        locale="uk"
+      />,
+    );
+
+    expect(html).toMatch(
+      /<h3[^>]*lang="bg"[^>]*><a[^>]*>Първата зряла китка<\/a><\/h3>/u,
+    );
+    expect(html).toMatch(
+      /<p[^>]*lang="bg"[^>]*>Узря три седмици след цъфтежа\.<\/p>/u,
+    );
+    // A long note is drawn twice, clamped and in full; both are its words.
+    expect(html).toMatch(/<span[^>]*lang="bg"[^>]*>Втора вълна/u);
+    expect(html).toMatch(/<p[^>]*lang="bg"[^>]*>Втора вълна/u);
+    expect(html).toMatch(
+      /<span class="text-link[^"]*">Прочитати нотатку повністю<\/span>/u,
+    );
+    const card = html.slice(html.indexOf('id="passport-entry-entry-7"'));
+    const dateline = card.slice(0, card.indexOf("<h3"));
+    expect(dateline).toContain('<time dateTime="2026-07-07"');
+    expect(dateline).toContain("Публічний запис");
+    expect(dateline).not.toContain("lang=");
+    // Two for the first entry, three for the folded one; the Ukrainian
+    // entries after them match the page and carry none.
+    expect(html.match(/lang="bg"/gu)).toHaveLength(5);
+    expect(html).not.toContain('lang="uk"');
+  });
+
+  it("marks a neighbour's title in its own language, and not the label before it", () => {
+    const passport = publicPresentation();
+    const [latest, ...rest] = passport.timeline.entries;
+    const html = renderToStaticMarkup(
+      <PublicLivingObjectPassportTimeline
+        passport={{
+          ...passport,
+          timeline: {
+            ...passport.timeline,
+            entries: [
+              {
+                ...latest,
+                older: {
+                  id: "entry-bg",
+                  title: "Първата зряла китка",
+                  sourceLanguage: "bg",
+                  href: "/journal/entry-bg",
+                },
+              },
+              ...rest,
+            ],
+          },
+        }}
+        locale="uk"
+      />,
+    );
+
+    // The label is the page's and keeps its space inside its own text.
+    expect(html).toContain(
+      'Старіший запис: <span lang="bg">Първата зряла китка</span>',
+    );
+  });
+
   it("builds route-owned context modules without private payload fields", () => {
     const modules = buildLivingObjectPassportContextModules(
       publicPresentation(),
@@ -219,6 +307,7 @@ function publicPresentation(): PublicLivingObjectPassportPresentation {
       id: `entry-${number}`,
       title: `Запис ${number}`,
       body: `Зміст запису ${number}`,
+      sourceLanguage: "uk" as const,
       entryDate: `2026-07-${String(number).padStart(2, "0")}`,
       href: `/journal/entry-${number}`,
       mediaPublicUrl:
@@ -232,6 +321,7 @@ function publicPresentation(): PublicLivingObjectPassportPresentation {
           : {
               id: `entry-${number + 1}`,
               title: `Запис ${number + 1}`,
+              sourceLanguage: "uk" as const,
               href: `/journal/entry-${number + 1}`,
             },
       older:
@@ -240,6 +330,7 @@ function publicPresentation(): PublicLivingObjectPassportPresentation {
           : {
               id: `entry-${number - 1}`,
               title: `Запис ${number - 1}`,
+              sourceLanguage: "uk" as const,
               href: `/journal/entry-${number - 1}`,
             },
     };
