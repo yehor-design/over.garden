@@ -335,7 +335,7 @@ export function AnalyticsPrivacyControls({
         {copy.title}
       </h3>
       <p aria-live="polite" className="text-body-sm text-text">
-        {copy.statusPrefix}{" "}
+        {`${copy.statusPrefix} `}
         <strong data-privacy-choice-status={consent}>{statusLabel}</strong>
       </p>
       <p className="text-body-sm text-text-secondary">{copy.description}</p>
@@ -363,7 +363,7 @@ export function AnalyticsPrivacyControls({
           {copy.technicalSummary}
         </summary>
         <p className="mt-2">
-          {copy.preferenceKey}{" "}
+          {`${copy.preferenceKey} `}
           <code className="font-mono">
             {GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY}
           </code>

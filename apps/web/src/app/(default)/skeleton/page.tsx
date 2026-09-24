@@ -52,7 +52,7 @@ export default async function SkeletonPage() {
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No authenticated session. Use the canonical{" "}
+            {"No authenticated session. Use the canonical "}
             <Link className="font-medium text-foreground underline" href="/garden">
               garden sign-in flow
             </Link>

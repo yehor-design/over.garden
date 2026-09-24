@@ -192,6 +192,11 @@ export function JournalEntryEditComposer({
   }, [existingMedia, local.media.items]);
   const inlineIds = listJournalDocumentImageMediaIds(document);
   const selectedCoverId = selectedCoverMediaAssetId(cover);
+  // A failure names the photo's remedy only when there is a photo to fix.
+  const statusCopy =
+    inlineIds.length > 0 || selectedCoverId !== null
+      ? editCopy
+      : { ...editCopy, failed: editCopy.failedWithoutPhoto };
   const readiness = summarizeJournalMediaReadiness(
     selectedCoverId && !inlineIds.includes(selectedCoverId)
       ? [...inlineIds, selectedCoverId]
@@ -375,7 +380,7 @@ export function JournalEntryEditComposer({
       <LocalJournalComposerStatus
         state={local.state}
         lease={local.media.lease}
-        copy={editCopy}
+        copy={statusCopy}
         onCancelPublishing={local.cancelPublishing}
       />
       {/* The same loss, in the edit composer's own words: here the work is

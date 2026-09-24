@@ -130,7 +130,7 @@ export function AuthSurface({
       footer={
         <>
           <p className="text-text-secondary">
-            {screen.help.trouble}{" "}
+            {`${screen.help.trouble} `}
             <Link href={authHelpHref(next)} data-auth-help-link="true">
               {copy.signInHelp}
             </Link>

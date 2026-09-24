@@ -106,6 +106,11 @@ interface Measured {
   overlaps: string[];
   /** A control whose words are cut off by its own box, with no ellipsis. */
   clippedLabels: string[];
+  /**
+   * Two words a screen reader reads as one: a margin or padding draws the gap
+   * and the text has none («АвторОлена», «Простори3»).
+   */
+  joinedWords: string[];
 }
 
 const PREFIX = "ove478-routes";
@@ -802,14 +807,23 @@ async function sweep(
               const overlaps: string[] = [];
               for (let first = 0; first < controls.length; first += 1) {
                 const a = controls[first]!.getBoundingClientRect();
-                for (let second = first + 1; second < controls.length; second += 1) {
+                for (
+                  let second = first + 1;
+                  second < controls.length;
+                  second += 1
+                ) {
                   const other = controls[second]!;
-                  if (other.contains(controls[first]!) || controls[first]!.contains(other)) {
+                  if (
+                    other.contains(controls[first]!) ||
+                    controls[first]!.contains(other)
+                  ) {
                     continue;
                   }
                   const b = other.getBoundingClientRect();
-                  const width = Math.min(a.right, b.right) - Math.max(a.left, b.left);
-                  const height = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+                  const width =
+                    Math.min(a.right, b.right) - Math.max(a.left, b.left);
+                  const height =
+                    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
                   if (width > 2 && height > 2) {
                     overlaps.push(`${name(controls[first]!)} ↔ ${name(other)}`);
                   }
@@ -830,6 +844,114 @@ async function sweep(
                 clippedLabels: clippedLabels.slice(0, 12),
               };
             })(),
+            // OVE-478: words that run together for a screen reader
+            // («АвторОлена», «Простори3», heard with Orca). Chromium names a
+            // line's text as its text nodes, so two words need a space inside
+            // one of them. A margin or padding draws a gap and adds none; and
+            // a space alone right after a comment — the `<!-- -->` React
+            // writes between two pieces of text, as `{title}{" "}<span>`
+            // renders — is dropped from the name. A flex item or an
+            // inline-block is kept apart already. Letters and digits only: a
+            // joined "·" or ":" reads fine.
+            joinedWords: (() => {
+              const joined: string[] = [];
+              const word = /[\p{L}\p{N}]/u;
+              const ends = (text: string) => word.test(text.slice(-1));
+              const starts = (text: string) => word.test(text.slice(0, 1));
+              const label = (left: string, right: string) =>
+                `${left.trim().slice(-24)}|${right.trim().slice(0, 24)}`;
+              const hidden = (node: Node) =>
+                !!(
+                  node instanceof Element ? node : node.parentElement
+                )?.closest(
+                  '[aria-hidden="true"], [hidden], script, style, template, noscript',
+                );
+              const isInline = (node: Element) => {
+                const style = getComputedStyle(node);
+                return (
+                  style.display === "inline" && style.position !== "absolute"
+                );
+              };
+              // The text a sibling puts on the line, or "" where the line
+              // breaks there or nothing is read.
+              const textOf = (node: Node | null) =>
+                node === null || hidden(node)
+                  ? ""
+                  : node.nodeType === Node.TEXT_NODE
+                    ? (node.textContent ?? "")
+                    : node instanceof Element && isInline(node)
+                      ? (node.textContent ?? "")
+                      : "";
+              const lone = (node: Node | null) =>
+                node?.nodeType === Node.TEXT_NODE && !node.textContent?.trim();
+              // What stands before a node as Chromium names it: a lone space
+              // after a comment is not there.
+              const previousOf = (node: Node) => {
+                const previous = node.previousSibling;
+                return lone(previous) &&
+                  previous!.previousSibling?.nodeType === Node.COMMENT_NODE
+                  ? previous!.previousSibling.previousSibling
+                  : previous;
+              };
+              const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+              );
+              for (
+                let node = walker.nextNode();
+                node;
+                node = walker.nextNode()
+              ) {
+                if (hidden(node)) continue;
+                if (node.nodeType === Node.TEXT_NODE) {
+                  // A dropped space between two words.
+                  if (
+                    lone(node) &&
+                    node.previousSibling?.nodeType === Node.COMMENT_NODE
+                  ) {
+                    const before = textOf(node.previousSibling.previousSibling);
+                    // `{a} {b}` writes a comment on both sides of the space.
+                    let next = node.nextSibling;
+                    while (next?.nodeType === Node.COMMENT_NODE) {
+                      next = next.nextSibling;
+                    }
+                    const after = textOf(next);
+                    if (ends(before) && starts(after)) {
+                      joined.push(label(before, after));
+                    }
+                  }
+                  continue;
+                }
+                const element = node as Element;
+                if (!isInline(element) || !visible(element)) continue;
+                const style = getComputedStyle(element);
+                const own = element.textContent ?? "";
+                const startGap =
+                  parseFloat(style.marginLeft) + parseFloat(style.paddingLeft) >
+                  0;
+                const endGap =
+                  parseFloat(style.marginRight) +
+                    parseFloat(style.paddingRight) >
+                  0;
+                const before = textOf(previousOf(element));
+                const after = textOf(element.nextSibling);
+                if (own.trim()) {
+                  if (startGap && ends(before) && starts(own)) {
+                    joined.push(label(before, own));
+                  }
+                  if (endGap && ends(own) && starts(after)) {
+                    joined.push(label(own, after));
+                  }
+                } else if (
+                  (startGap || endGap) &&
+                  ends(before) &&
+                  starts(after)
+                ) {
+                  joined.push(label(before, after));
+                }
+              }
+              return [...new Set(joined)].slice(0, 12);
+            })(),
             // Neither Bulgarian nor Russian writes і, ї, є or ґ. A gardener's
             // own words may, so this is recorded for review rather than
             // failed on; the language names in the switcher are endonyms.
@@ -842,7 +964,9 @@ async function sweep(
                         .filter(
                           (element) =>
                             visible(element) &&
-                            !element.closest("[data-interface-language-control]"),
+                            !element.closest(
+                              "[data-interface-language-control]",
+                            ),
                         )
                         .flatMap((element) =>
                           [...element.childNodes]
@@ -933,6 +1057,9 @@ for (const locale of ["uk", "bg", "ru"] as const) {
       // A page that renders its error state has a read that failed: in a
       // sweep over fixtures that exist, that is a defect, not a state.
       if (row.errorStates > 0) wrong.push(`${row.errorStates} error state(s)`);
+      if (row.joinedWords.length > 0) {
+        wrong.push(`words read as one: ${row.joinedWords.join(", ")}`);
+      }
       return wrong.length
         ? [`${row.role} ${row.family} (${row.address}): ${wrong.join("; ")}`]
         : [];
@@ -1095,7 +1222,9 @@ test("the horizontal strips have no vertical track, and clip no focus ring, at 1
         }));
         expect(track.overflowY, name).toBe("hidden");
         // Nothing is cut off vertically, so there is nothing to scroll to.
-        expect(track.scrollHeight, name).toBeLessThanOrEqual(track.clientHeight);
+        expect(track.scrollHeight, name).toBeLessThanOrEqual(
+          track.clientHeight,
+        );
 
         // Tab into the strip, then through it.
         let inside = false;
@@ -1133,7 +1262,9 @@ test("the horizontal strips have no vertical track, and clip no focus ring, at 1
           if (!ring) break;
           measured.push({ zoom: zoom.label, strip: name, ...ring });
           expect(ring.focusVisible, `${name}: ${ring.item}`).toBe(true);
-          expect(ring.outline, `${name}: ${ring.item}`).not.toMatch(/^0px|none/u);
+          expect(ring.outline, `${name}: ${ring.item}`).not.toMatch(
+            /^0px|none/u,
+          );
           expect(ring.clipped, `${name} at ${zoom.label} %: ${ring.item}`).toBe(
             false,
           );
@@ -1164,7 +1295,11 @@ test("the first journals result is on the first screen at laptop heights", async
   browser,
   baseURL,
 }) => {
-  const measured: Array<{ viewport: string; firstResultTop: number; height: number }> = [];
+  const measured: Array<{
+    viewport: string;
+    firstResultTop: number;
+    height: number;
+  }> = [];
   for (const viewport of [
     { width: 1280, height: 720 },
     { width: 1366, height: 768 },
@@ -1175,7 +1310,9 @@ test("the first journals result is on the first screen at laptop heights", async
     try {
       await page.goto("/journals", { waitUntil: "load" });
       const first = page
-        .locator('[data-public-journal-directory="true"] [data-slot="entry-card"]:visible')
+        .locator(
+          '[data-public-journal-directory="true"] [data-slot="entry-card"]:visible',
+        )
         .first();
       await expect(first).toBeVisible({ timeout: 20_000 });
       const heading = first.getByRole("heading").first();
@@ -1284,7 +1421,10 @@ test("at 200 % text, in forced colours with reduced motion, and on a phone held 
                 const style = getComputedStyle(focused);
                 return `${style.outlineWidth} ${style.outlineStyle}`;
               }),
-            { message: `${address}: the ring in forced colours`, timeout: 3_000 },
+            {
+              message: `${address}: the ring in forced colours`,
+              timeout: 3_000,
+            },
           )
           .not.toMatch(/^0px|none/u);
         const facts = await page.evaluate(() => {
@@ -1311,10 +1451,15 @@ test("at 200 % text, in forced colours with reduced motion, and on a phone held 
             moving,
           };
         });
-        measured.push({ setting: "forced-colours+reduced-motion", address, ...facts });
-        expect(facts.outline, `${address}: the ring in forced colours`).not.toMatch(
-          /^0px|none/u,
-        );
+        measured.push({
+          setting: "forced-colours+reduced-motion",
+          address,
+          ...facts,
+        });
+        expect(
+          facts.outline,
+          `${address}: the ring in forced colours`,
+        ).not.toMatch(/^0px|none/u);
         if (facts.currentUnderlined !== null) {
           expect(facts.currentUnderlined, `${address}: the current page`).toBe(
             true,
@@ -1366,7 +1511,12 @@ test("at 200 % text, in forced colours with reduced motion, and on a phone held 
                 return true;
               }
               const top = document.elementFromPoint(x!, y!);
-              return !!top && top !== focused && !focused.contains(top) && !top.contains(focused);
+              return (
+                !!top &&
+                top !== focused &&
+                !focused.contains(top) &&
+                !top.contains(focused)
+              );
             });
             return covered
               ? `${focused.tagName.toLowerCase()}:${(focused.getAttribute("aria-label") ?? focused.textContent ?? "").trim().slice(0, 30)}`
@@ -1375,7 +1525,9 @@ test("at 200 % text, in forced colours with reduced motion, and on a phone held 
           if (obscured) hidden.push(obscured);
         }
         measured.push({ setting: `phone-${label}`, address, overflow, hidden });
-        expect(hidden, `${address} ${label}: focus under the chrome`).toEqual([]);
+        expect(hidden, `${address} ${label}: focus under the chrome`).toEqual(
+          [],
+        );
       }
       await page.goto(entry.entryPath, { waitUntil: "load" });
       await page.screenshot({
@@ -1406,33 +1558,86 @@ test("at 200 % text, in forced colours with reduced motion, and on a phone held 
       await page.goto("/garden/new", { waitUntil: "load" });
       const picker = page.getByRole("combobox").first();
       await expect(picker).toBeVisible({ timeout: 20_000 });
+      // The text is an editor only once it has hydrated; before that Tab has
+      // nothing to land on there.
+      await expect(
+        page
+          .locator("[data-lexical-journal-canvas] [contenteditable='true']")
+          .first(),
+      ).toBeAttached({ timeout: 20_000 });
       const reached: string[] = [];
       const hidden: string[] = [];
-      for (let step = 0; step < 30; step += 1) {
+      const isPublish = (name: string) =>
+        name.startsWith("button:") && name.includes("Опублікувати");
+      for (let step = 0; step < 60; step += 1) {
         const focused = await page.evaluate(() => {
           const element = document.activeElement as HTMLElement | null;
           if (!element || element === document.body) return null;
           const box = element.getBoundingClientRect();
-          const centre = document.elementFromPoint(
-            box.left + box.width / 2,
-            Math.min(box.top + box.height / 2, innerHeight - 1),
-          );
-          const inView = box.bottom > 0 && box.top < innerHeight;
-          const covered =
-            !centre || !(centre === element || element.contains(centre) || centre.contains(element));
+          // As the phone check above: hidden when its centre and both
+          // corners are off screen or under something else (WCAG 2.4.11).
+          const points = [
+            [box.left + box.width / 2, box.top + box.height / 2],
+            [box.left + 2, box.top + 2],
+            [box.right - 2, box.bottom - 2],
+          ];
+          const over: string[] = [];
+          const covered = points.every(([x, y]) => {
+            if (y! < 0 || y! > innerHeight || x! < 0 || x! > innerWidth) {
+              over.push("off screen");
+              return true;
+            }
+            const top = document.elementFromPoint(x!, y!);
+            const under =
+              !!top &&
+              top !== element &&
+              !element.contains(top) &&
+              !top.contains(element);
+            if (under)
+              over.push(
+                `${top.tagName.toLowerCase()}.${[...top.classList].slice(0, 3).join(".")}`,
+              );
+            return under;
+          });
+          const role = element.getAttribute("role");
+          const name = `${element.tagName.toLowerCase()}${role ? `[${role}]` : ""}:${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 30)}`;
           return {
-            name: `${element.tagName.toLowerCase()}:${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 30)}`,
-            obscured: !inView || covered,
+            name,
+            obscured: covered
+              ? `${name} (${[...new Set(over)].join(", ")}; ${Math.round(box.top)}–${Math.round(box.bottom)} of ${innerHeight})`
+              : null,
+            unticked:
+              element instanceof HTMLInputElement &&
+              element.type === "checkbox" &&
+              !element.checked,
           };
         });
         if (focused) {
           reached.push(focused.name);
-          if (focused.obscured) hidden.push(focused.name);
+          if (focused.obscured) hidden.push(focused.obscured);
+          if (isPublish(focused.name)) break;
+          // Publish is unavailable until the first-publication box is
+          // ticked, so a keyboard ticks it on the way, as a person would.
+          if (focused.unticked) await page.keyboard.press("Space");
         }
         await page.keyboard.press("Tab");
       }
-      measured.push({ setting: "phone-keyboard-up", address: "/garden/new", reached, hidden });
-      expect(reached.some((name) => name.startsWith("input:"))).toBe(true);
+      measured.push({
+        setting: "phone-keyboard-up",
+        address: "/garden/new",
+        reached,
+        hidden,
+      });
+      const walked = reached.join(" | ");
+      expect(
+        reached.some((name) => name.startsWith("input[combobox]:")),
+        `the destination field: ${walked}`,
+      ).toBe(true);
+      expect(
+        reached.some((name) => name.includes("Вміст запису")),
+        `the text: ${walked}`,
+      ).toBe(true);
+      expect(reached.some(isPublish), `Publish: ${walked}`).toBe(true);
       expect(hidden, "/garden/new with the keyboard up").toEqual([]);
     } finally {
       await context.close();

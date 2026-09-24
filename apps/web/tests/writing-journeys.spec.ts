@@ -634,13 +634,23 @@ test("5 · a failed publish is retried with nothing lost and nothing doubled —
       if (attempts === 1) return route.abort("connectionreset");
       return route.continue();
     });
-    await composer.locator('[data-entry-composer-publish="true"]').click();
+    // By the keyboard: the retry is Enter where the reader already is. A
+    // Publish disabled while it worked gave focus up, and a failed publish
+    // left the reader on the page's body, where Enter retried nothing — and
+    // the failure named a photograph this note does not have (heard with
+    // Orca, `OVE-478`).
+    const publish = composer.locator('[data-entry-composer-publish="true"]');
+    await publish.focus();
+    await page.keyboard.press("Enter");
     await expect(
       composer.locator('[data-entry-composer-message="true"]'),
-    ).not.toBeEmpty({ timeout: 30_000 });
+    ).toHaveText("Записът не е публикуван. Опитайте да публикувате отново.", {
+      timeout: 30_000,
+    });
+    await expect(publish).toBeFocused();
     await expect(editorOf(composer)).toContainText(lostBody);
     expect(await entriesWithBody(lostBody)).toHaveLength(0);
-    await composer.locator('[data-entry-composer-publish="true"]').click();
+    await page.keyboard.press("Enter");
     await page.waitForURL(new RegExp(`/garden/objects/${target.id}$`, "u"), {
       timeout: 30_000,
     });
@@ -690,8 +700,8 @@ test("5 · a failed publish is retried with nothing lost and nothing doubled —
       activationsToPublish: 2,
       steps: [
         "Write (object)",
-        "Publish → connection reset before the server",
-        "Publish again → acknowledged once",
+        "Publish (Enter) → connection reset before the server; focus stays on Publish",
+        "Publish again (Enter) → acknowledged once",
         "Write (object)",
         "Publish → committed, answer lost",
         "Publish again → same publish id, answered from the committed entry",

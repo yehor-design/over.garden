@@ -463,10 +463,15 @@ size. Three things keep clear of it, and none may do it another way:
 
 - **Focus.** `scroll-padding-bottom` scrolls a control the keyboard reaches
   above both (WCAG 2.4.11). Before it, a focused link sat 44 px under the tab
-  bar at 320 px whether or not the reader had answered.
+  bar at 320 px whether or not the reader had answered. Below `sm` it keeps a
+  sticky row's height clear as well (`--sticky-row-room`): with a phone's
+  keyboard up, Tab scrolled the next control under the composer's publish
+  row, hidden whole (`OVE-478`).
 - **A row that sticks to the bottom** — a composer's publish row, a setup
   step's "Next" — is `sticky above-bottom-chrome` (or `-gap`), never a raw
   `bottom-*` offset: a setup flow opened at 320 px with "Next" under the bar.
+  It carries `data-bottom-sticky-row`, which is how focus knows to clear it;
+  `globals.test.ts` fails a sticky row without it.
 - **The end of the page.** The column clears the tab bar; the spacer after the
   shell clears the question, so the last row can be scrolled above it.
 
@@ -1125,6 +1130,10 @@ and the consequences belong on the screen rather than in the reader's memory.
   day; a space entry asks which of the space's own objects it mentions, because
   the server requires one to twelve; and a publish refused for an ended session
   keeps the text and offers sign-in in a new tab rather than navigating away.
+  While it publishes, Publish is loading, not disabled (§4.4): a disabled
+  button gave focus up, and a publish lost to the network left the reader on
+  the page's body, where Enter retried nothing. The failure names the photo's
+  remedy only when the entry has a photograph (heard with Orca, `OVE-478`).
 - **One readable responsive canvas.** Use the main content cap and fluid inner
   padding. Keep advanced block controls in a focusable menu on narrow screens;
   the old fixed 56 px gutter must not steal writing space. Slash commands and
@@ -1357,6 +1366,17 @@ dropped the space between a visually hidden prefix and the name after it, and
 Orca read «АвторОлена» as one word; Playwright's computed name had the space.
 The byline link carries `aria-label="{prefix} {name}"` (the visible name inside
 it, WCAG 2.5.3), on the card and on the entry page (`OVE-478`).
+
+**A space between two words lives inside the text.** Chromium names a line
+by its text nodes. A margin or padding draws a gap and adds no space; and a
+space standing alone right after text — `{label}{" "}<time>` or `{a} {b}`,
+which React writes after a `<!-- -->` separator — is dropped from the
+accessibility tree. Orca read the garden's group headings as «Простори3» and
+a request's date as «Надіслано24 вересня» while the page showed the space.
+Write it into the text: `{`${label} `}<time>`. `src/lib/jsx-word-spaces.test.ts`
+fails a lone space after text in the source, and
+`tests/route-families.spec.ts` fails a swept page where two words are read as
+one (`OVE-478`).
 
 ### 5.15 Lineage is a task between two named gardeners
 

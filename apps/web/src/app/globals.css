@@ -610,8 +610,9 @@
    number, `--bottom-chrome-height`, and three things keep clear of it:
 
    - focus. `scroll-padding-bottom` scrolls a control the keyboard reaches
-     above both (WCAG 2.4.11). There was none for the tab bar at all: at
-     320 px a focused link on /journals sat 44 px beneath it, answered or not;
+     above both (WCAG 2.4.11), and above a row that sticks to them. There was
+     none for the tab bar at all: at 320 px a focused link on /journals sat
+     44 px beneath it, answered or not;
    - a row that sticks to the bottom of the screen — the composer's publish
      row, a setup step's "Next" — which sits on top of them
      (`above-bottom-chrome`). A setup flow opened at 320 px with its "Next"
@@ -637,8 +638,25 @@ html {
   --bottom-chrome-height: calc(
     var(--bottom-bar-room) + var(--consent-notice-room)
   );
+  --sticky-row-room: 0px;
   /* Room for the focus ring as well: 2px of outline 2px off the control. */
-  scroll-padding-bottom: calc(var(--bottom-chrome-height) + 0.5rem);
+  scroll-padding-bottom: calc(
+    var(--bottom-chrome-height) + var(--sticky-row-room) + 0.5rem
+  );
+}
+
+/* A row that sticks to the bottom of a small screen — a composer's publish
+   row, a setup step's actions (`data-bottom-sticky-row`) — sits on top of the
+   chrome, and focus keeps clear of it as it does of the chrome: a control Tab
+   reached further down was scrolled to just above the chrome, under the row,
+   and hidden whole (WCAG 2.4.11; found with a phone's keyboard up in
+   `OVE-478`). Its room is the row's own height — a 2.75rem control, 0.75rem
+   of padding above and below, a 1px rule each side — and the publish row's
+   0.5rem gap above the chrome. From `sm` the rows are not sticky. */
+@media (width < 40rem) {
+  html:has([data-bottom-sticky-row]) {
+    --sticky-row-room: calc(2.75rem + 1.5rem + 2px + 0.5rem);
+  }
 }
 
 @media (width < 64rem) {

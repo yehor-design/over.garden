@@ -117,7 +117,8 @@ export function openStep(target: HTMLElement | null) {
 /**
  * Kept in view above a phone keyboard: the actions stick to the bottom — on
  * top of the tab bar and the consent notice, never underneath them (`OVE-505`;
- * `above-bottom-chrome` in `globals.css`).
+ * `above-bottom-chrome` in `globals.css`) — and a control Tab reaches is
+ * scrolled clear of them (`data-bottom-sticky-row`, `OVE-478`).
  */
 export function ProgressiveActions({
   children,
@@ -125,7 +126,10 @@ export function ProgressiveActions({
   children: React.ReactNode;
 }) {
   return (
-    <div className="sticky above-bottom-chrome -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-4 pt-3 pb-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:pb-0">
+    <div
+      data-bottom-sticky-row="true"
+      className="sticky above-bottom-chrome -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-surface px-4 pt-3 pb-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:pb-0"
+    >
       {children}
     </div>
   );

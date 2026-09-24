@@ -315,7 +315,7 @@ function CommentReportCard({
           {copy.reportStates[item.reportState]}
         </Badge>
         <span className="text-caption text-text-muted">
-          {copy.reportedOn}{" "}
+          {`${copy.reportedOn} `}
           <time dateTime={new Date(item.createdAt).toISOString()}>
             {formatOperatorDate(locale, item.createdAt, {
               dateStyle: "medium",

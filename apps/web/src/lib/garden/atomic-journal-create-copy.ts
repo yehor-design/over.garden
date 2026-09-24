@@ -11,7 +11,16 @@ export interface AtomicJournalCreateCopy {
   waitingMedia: string;
   publishing: string;
   published: string;
+  /**
+   * A failed publish of an entry with photographs, one of which may be
+   * marked.
+   */
   failed: string;
+  /**
+   * The same failure with no photograph in the entry. The photo's remedy
+   * named a photograph that was not there (heard with Orca, `OVE-478`).
+   */
+  failedWithoutPhoto: string;
   cancelPublishing: string;
   publish: string;
   /**
@@ -49,6 +58,7 @@ const COPY: Record<PublicLocale, AtomicJournalCreateCopy> = {
     published: "Запис опубліковано.",
     failed:
       "Запис не опубліковано. Виправте позначене фото або спробуйте опублікувати ще раз.",
+    failedWithoutPhoto: "Запис не опубліковано. Спробуйте опублікувати ще раз.",
     cancelPublishing: "Скасувати публікацію",
     publishMeaning:
       "Запис одразу стає публічним і потрапляє в пошук. Чернеток немає.",
@@ -76,6 +86,8 @@ const COPY: Record<PublicLocale, AtomicJournalCreateCopy> = {
     published: "Записът е публикуван.",
     failed:
       "Записът не е публикуван. Поправете отбелязаната снимка или опитайте да публикувате отново.",
+    failedWithoutPhoto:
+      "Записът не е публикуван. Опитайте да публикувате отново.",
     cancelPublishing: "Откажи публикуването",
     publishMeaning:
       "Записът веднага става публичен и влиза в търсенето. Няма чернови.",
@@ -104,6 +116,8 @@ const COPY: Record<PublicLocale, AtomicJournalCreateCopy> = {
     published: "Запись опубликована.",
     failed:
       "Запись не опубликована. Исправьте отмеченное фото или попробуйте опубликовать снова.",
+    failedWithoutPhoto:
+      "Запись не опубликована. Попробуйте опубликовать снова.",
     cancelPublishing: "Отменить публикацию",
     publishMeaning:
       "Запись сразу становится публичной и попадает в поиск. Черновиков нет.",

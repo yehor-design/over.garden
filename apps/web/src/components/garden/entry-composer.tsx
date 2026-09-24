@@ -243,6 +243,10 @@ export function EntryComposer({
       ? (coverSelection.mediaAssetId ?? null)
       : null;
   const hasPhoto = storyImageIds.length > 0 || separateCoverId !== null;
+  // A failure names the photo's remedy only when there is a photo to fix.
+  const failedCopy = hasPhoto
+    ? atomicCopy.failed
+    : atomicCopy.failedWithoutPhoto;
   // A suggested title is not the reader's work; only what they wrote is.
   const dirty = Boolean(
     (titleEdited && draft.title) ||
@@ -369,6 +373,9 @@ export function EntryComposer({
     if (event.target !== event.currentTarget) return;
     event.preventDefault();
     if (persistenceFrozen) return;
+    // Publish stays focusable while it works (DESIGN.md §4.4), so a second
+    // press lands here: the publish already on its way is the only one.
+    if (submitState === "publishing") return;
     setAuthRecoveryUrl(null);
 
     if (newObject) {
@@ -523,7 +530,7 @@ export function EntryComposer({
         return;
       }
       setSubmitState("failed");
-      setMessage(atomicCopy.failed);
+      setMessage(failedCopy);
     }
   }
 
@@ -635,9 +642,14 @@ export function EntryComposer({
     setCoverSelection(next);
   }
 
+  // Publishing is not "blocked", though the rest of the form is frozen while
+  // it runs: a disabled button gives up focus, and a publish that failed left
+  // the reader on the document's body, where Enter retried nothing (heard
+  // with Orca, `OVE-478`). It shows as loading and stays where the reader is
+  // (DESIGN.md §4.4).
+  const publishing = submitState === "publishing";
   const publishBlocked =
-    submitState === "publishing" ||
-    persistenceFrozen ||
+    (persistenceFrozen && !publishing) ||
     (requiresFirstPublicationDisclosure && !disclosureAccepted);
 
   return (
@@ -662,7 +674,7 @@ export function EntryComposer({
       <LocalJournalComposerStatus
         state={local.state}
         lease={local.media.lease}
-        copy={atomicCopy}
+        copy={{ ...atomicCopy, failed: failedCopy }}
         onCancelPublishing={local.cancelPublishing}
       />
       <UnpublishedWorkGuard
@@ -1092,12 +1104,16 @@ export function EntryComposer({
         {atomicCopy.publishMeaning}
       </p>
 
-      <div className="sticky above-bottom-chrome-gap z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      <div
+        data-bottom-sticky-row="true"
+        className="sticky above-bottom-chrome-gap z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none"
+      >
         <Button
           type="submit"
           data-auth-intent-control="save"
           data-entry-composer-publish="true"
           disabled={publishBlocked}
+          loading={publishing}
           className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />
@@ -1257,7 +1273,7 @@ function SpaceMentionChecklist({
         </p>
       ) : status === "error" ? (
         <p role="alert" className="text-caption text-danger-text">
-          {copy.unavailable}{" "}
+          {`${copy.unavailable} `}
           <button
             type="button"
             className="underline"

@@ -376,7 +376,7 @@ function PublicLineageEdgeCard({
           </h3>
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="neutral">
-              {copy.passport.depth} {edge.depth}
+              {`${copy.passport.depth} ${edge.depth}`}
             </Badge>
             <time
               dateTime={edgeDateTime(edge.createdAt)}
@@ -434,9 +434,12 @@ function PublicLineageNodeDescription({
     <div className="grid min-w-0 gap-1">
       <dt className="text-overline text-text-muted uppercase">{label}</dt>
       <dd className="text-body-sm font-medium break-words text-text">
-        {node.displayName}
+        {/* The space is in the name's own text: a margin adds none, and a
+            lone space after text is dropped from what a screen reader reads
+            (`OVE-478`). */}
+        {isCurrent ? `${node.displayName} ` : node.displayName}
         {isCurrent ? (
-          <span className="ml-2 text-caption font-normal text-text-muted">
+          <span className="ml-1 text-caption font-normal text-text-muted">
             {copy.passport.thisObject}
           </span>
         ) : null}

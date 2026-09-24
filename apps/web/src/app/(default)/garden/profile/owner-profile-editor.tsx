@@ -725,7 +725,7 @@ export function OwnerProfileEditor({
           </h2>
         </div>
         <p className="min-w-0 text-body-sm text-text-muted">
-          {copy.currentHandle}{" "}
+          {`${copy.currentHandle} `}
           <strong className="wrap-anywhere text-text">{address}</strong>
         </p>
         <div className="grid max-w-xl gap-2 rounded-lg border border-border bg-surface-sunken p-4">

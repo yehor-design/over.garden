@@ -77,9 +77,11 @@ export default async function LocalizedFirstPublicationDisclosurePage({
           heading: copy.aboutTitle,
           body: (
             <div className="grid gap-2 text-text-secondary">
+              {/* One string: a space between two pieces of JSX text is
+                  written after React's `<!-- -->`, and Chromium drops it
+                  from what a screen reader reads (`OVE-478`). */}
               <p>
-                {copy.version} {FIRST_PUBLICATION_DISCLOSURE_VERSION}.{" "}
-                {copy.statusLabel}.
+                {`${copy.version} ${FIRST_PUBLICATION_DISCLOSURE_VERSION}. ${copy.statusLabel}.`}
               </p>
               <p>{copy.body}</p>
             </div>

@@ -817,9 +817,9 @@ async function renderCatalogEvidenceCard(
                   <span className="font-medium">
                     {presenceRegionLabel(cardCopy, entry.regionCode)}
                   </span>{" "}
-                  <span>{cardCopy.presence[entry.status]}</span>
+                  <span>{cardCopy.presence[entry.status]}</span>{" "}
                   {/* What EPPO wrote, so a badge is never surer than its source. */}
-                  <span className="ml-2 text-caption text-text-muted">
+                  <span className="ml-1 text-caption text-text-muted">
                     {entry.sourceName}: {entry.verbatim}
                     {observed
                       ? ` · ${cardCopy.sections.observedOn}: ${observed}`
@@ -989,16 +989,21 @@ async function renderCatalogEvidenceCard(
                   className="grid gap-2"
                 >
                   <h3 className="text-h3 text-text-heading">
-                    {group.sourceName}
+                    {/* Spaces inside the text, not only margins: a lone
+                        space after text is dropped from the heading's name
+                        (`OVE-478`). */}
+                    {group.sourceVersion || observed
+                      ? `${group.sourceName} `
+                      : group.sourceName}
                     {group.sourceVersion ? (
-                      <span className="ml-2 text-body-sm font-normal text-text-muted">
-                        {publicCopy.sourceCredits.versionLabel}:{" "}
-                        {group.sourceVersion}
+                      <span className="ml-1 text-body-sm font-normal text-text-muted">
+                        {`${publicCopy.sourceCredits.versionLabel}: ${group.sourceVersion}`}
                       </span>
                     ) : null}
+                    {group.sourceVersion && observed ? " " : null}
                     {observed ? (
-                      <span className="ml-2 text-body-sm font-normal text-text-muted">
-                        {cardCopy.sections.observedOn}: {observed}
+                      <span className="ml-1 text-body-sm font-normal text-text-muted">
+                        {`${cardCopy.sections.observedOn}: ${observed}`}
                       </span>
                     ) : null}
                   </h3>

@@ -495,7 +495,7 @@ function SavedEntry({
         engagement={
           <>
             <span className="text-caption text-text-muted">
-              {copy.common.saved} {formatDate(item.addedAt, locale)}
+              {`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
             </span>
             <BookmarkForm
               action={removeBookmarkFromShelfAction}
@@ -550,7 +550,7 @@ function BookmarkRow({
               {copy.bookmarks.unavailable[item.target.kind]}
             </span>
           )}
-          {copy.common.saved} {formatDate(item.addedAt, locale)}
+          {`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
         </>
       }
       actions={

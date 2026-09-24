@@ -462,7 +462,8 @@ function ProfilePageMissing({
 }) {
   return (
     <p className="text-body-sm text-text-muted">
-      {message} <TextLink href={href}>{firstPageLabel}</TextLink>
+      {`${message} `}
+      <TextLink href={href}>{firstPageLabel}</TextLink>
     </p>
   );
 }

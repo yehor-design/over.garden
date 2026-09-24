@@ -124,7 +124,8 @@ export function MetaMarketingPrivacyControls({
         {copy.title}
       </h3>
       <p aria-live="polite" className="text-body-sm text-text">
-        {copy.statusPrefix} <strong>{statusLabel}</strong>
+        {`${copy.statusPrefix} `}
+        <strong>{statusLabel}</strong>
       </p>
       <p className="text-body-sm text-text-secondary">{copy.description}</p>
       <div className="flex flex-wrap gap-2">
@@ -151,7 +152,7 @@ export function MetaMarketingPrivacyControls({
           {copy.technicalSummary}
         </summary>
         <p className="mt-2">
-          {copy.preferenceKey}{" "}
+          {`${copy.preferenceKey} `}
           <code className="font-mono">
             {META_MARKETING_CONSENT_STORAGE_KEY}
           </code>

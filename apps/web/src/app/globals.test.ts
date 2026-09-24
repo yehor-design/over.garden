@@ -482,8 +482,8 @@ describe("global responsive floor", () => {
       "var(--analytics-consent-notice-height, var(--consent-notice-estimate))",
     );
     // Focus, the sticky rows and the end of the page all read it.
-    expect(globals).toContain(
-      "scroll-padding-bottom: calc(var(--bottom-chrome-height) + 0.5rem);",
+    expect(globals).toMatch(
+      /scroll-padding-bottom: calc\(\s*var\(--bottom-chrome-height\) \+ var\(--sticky-row-room\) \+ 0\.5rem\s*\);/u,
     );
     expect(globals).toMatch(
       /@utility above-bottom-chrome \{\s*bottom: var\(--bottom-chrome-height, 0px\);/u,
@@ -504,6 +504,29 @@ describe("global responsive floor", () => {
     );
     // No guessed height is left to be wrong in another language.
     expect(globals).not.toContain("11rem");
+  });
+
+  it("scrolls a focused control clear of a row that sticks to the bottom", () => {
+    // `OVE-478`: with a phone's keyboard up, Tab scrolled the next control to
+    // just above the chrome — under the composer's publish row, hidden whole
+    // (WCAG 2.4.11). Below `sm`, where the rows stick, focus keeps the row's
+    // own height clear as well.
+    expect(globals).toMatch(
+      /@media \(width < 40rem\) \{\s*html:has\(\[data-bottom-sticky-row\]\) \{\s*--sticky-row-room: calc\(2\.75rem \+ 1\.5rem \+ 2px \+ 0\.5rem\);/u,
+    );
+    // Every row that sticks there says so, or focus scrolls under it.
+    const unmarked = sourceFiles.flatMap((file) => {
+      const lines = readFileSync(file, "utf8").split("\n");
+      return lines.flatMap((line, index) =>
+        /\bsticky above-bottom-chrome/u.test(line) &&
+        !lines
+          .slice(Math.max(0, index - 3), index + 1)
+          .some((near) => near.includes("data-bottom-sticky-row"))
+          ? [`${relativeToSource(file)}:${index + 1}`]
+          : [],
+      );
+    });
+    expect(unmarked).toEqual([]);
   });
 
   it("still collapses every duration for a reader who asked for less motion", () => {

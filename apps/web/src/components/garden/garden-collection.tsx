@@ -404,14 +404,17 @@ function NoResults({
 }
 
 function GroupTitle({ title, count }: { title: string; count?: number }) {
+  if (typeof count !== "number") return <>{title}</>;
+  // The space is in the title's own text. A margin draws a gap and adds none,
+  // and a `{" "}` after text is written after React's `<!-- -->`, where
+  // Chromium drops it from the heading's name: Orca read "Простори3"
+  // (`OVE-478`).
   return (
     <>
-      {title}
-      {typeof count === "number" ? (
-        <span className="ml-2 align-middle text-body-sm font-normal text-text-muted tabular-nums">
-          {count}
-        </span>
-      ) : null}
+      {`${title} `}
+      <span className="ml-1 align-middle text-body-sm font-normal text-text-muted tabular-nums">
+        {count}
+      </span>
     </>
   );
 }
