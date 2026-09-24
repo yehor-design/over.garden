@@ -1,0 +1,143 @@
+{
+  "issue": "OVE-469",
+  "proof": "Each page loaded at a phone's and a desk's width over production-weight photographs with no variants; the browser's own largest-contentful-paint entry is read once every image in the viewport has finished.",
+  "photographs": [
+    94000,
+    103000,
+    147000,
+    209000,
+    453000
+  ],
+  "receipts": [
+    {
+      "page": "/",
+      "viewport": "412x823",
+      "lcp": {
+        "tag": "P",
+        "loading": null,
+        "fetchPriority": null,
+        "src": null,
+        "text": "Короткий запис без фотографії, щоб оновити публічні списки.",
+        "size": 14828,
+        "time": 112
+      }
+    },
+    {
+      "page": "/@gardener_8647a1b73c194596/post/1",
+      "viewport": "412x823",
+      "lcp": {
+        "tag": "IMG",
+        "loading": "eager",
+        "fetchPriority": "high",
+        "src": "http://127.0.0.1:9000/overgarden-public-gate/derivatives/6c77c0f3-cc0f-4564-baab-2831c450f0d6/1.webp",
+        "text": null,
+        "size": 81225,
+        "time": 40
+      }
+    },
+    {
+      "page": "/species/ove469organism-solanum-lycopersicum-c347f912",
+      "viewport": "412x823",
+      "lcp": {
+        "tag": "IMG",
+        "loading": "eager",
+        "fetchPriority": "high",
+        "src": "http://127.0.0.1:9000/overgarden-public-gate/derivatives/a4b0481f-df41-4cca-b9ce-a6986bcb9ec7/1.webp",
+        "text": null,
+        "size": 36808,
+        "time": 76
+      }
+    },
+    {
+      "page": "/journals",
+      "viewport": "412x823",
+      "lcp": {
+        "tag": "P",
+        "loading": null,
+        "fetchPriority": null,
+        "src": null,
+        "text": "Короткий запис без фотографії, щоб оновити публічні списки.",
+        "size": 14828,
+        "time": 44
+      }
+    },
+    {
+      "page": "/@gardener_8647a1b73c194596",
+      "viewport": "412x823",
+      "lcp": {
+        "tag": "IMG",
+        "loading": "eager",
+        "fetchPriority": "high",
+        "src": "http://127.0.0.1:9000/overgarden-public-gate/derivatives/6c77c0f3-cc0f-4564-baab-2831c450f0d6/1.webp",
+        "text": null,
+        "size": 62264,
+        "time": 36
+      }
+    },
+    {
+      "page": "/",
+      "viewport": "1440x900",
+      "lcp": {
+        "tag": "P",
+        "loading": null,
+        "fetchPriority": null,
+        "src": null,
+        "text": "Новий приріст рівний, листя без плям на зворотному боці. Поливала ввечері під ко",
+        "size": 56028,
+        "time": 36
+      }
+    },
+    {
+      "page": "/@gardener_8647a1b73c194596/post/1",
+      "viewport": "1440x900",
+      "lcp": {
+        "tag": "IMG",
+        "loading": "eager",
+        "fetchPriority": "high",
+        "src": "http://127.0.0.1:9000/overgarden-public-gate/derivatives/6c77c0f3-cc0f-4564-baab-2831c450f0d6/1.webp",
+        "text": null,
+        "size": 242064,
+        "time": 36
+      }
+    },
+    {
+      "page": "/species/ove469organism-solanum-lycopersicum-c347f912",
+      "viewport": "1440x900",
+      "lcp": {
+        "tag": "P",
+        "loading": null,
+        "fetchPriority": null,
+        "src": null,
+        "text": "Solanum lycopersicum L. — вид. У каталозі 1 форма цього виду. Публічні журнали в",
+        "size": 30192,
+        "time": 44
+      }
+    },
+    {
+      "page": "/journals",
+      "viewport": "1440x900",
+      "lcp": {
+        "tag": "P",
+        "loading": null,
+        "fetchPriority": null,
+        "src": null,
+        "text": "Окремі датовані записи з публічних журналів. Уся історія рослини чи тварини — на",
+        "size": 20786,
+        "time": 44
+      }
+    },
+    {
+      "page": "/@gardener_8647a1b73c194596",
+      "viewport": "1440x900",
+      "lcp": {
+        "tag": "IMG",
+        "loading": "eager",
+        "fetchPriority": "high",
+        "src": "http://127.0.0.1:9000/overgarden-public-gate/derivatives/6c77c0f3-cc0f-4564-baab-2831c450f0d6/1.webp",
+        "text": null,
+        "size": 237456,
+        "time": 40
+      }
+    }
+  ]
+}

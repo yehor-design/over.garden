@@ -1,0 +1,160 @@
+{
+  "issue": "OVE-469",
+  "mode": "inventory",
+  "databaseHost": "digitalocean_managed",
+  "mediaBase": "https://media.over.garden",
+  "at": "2026-09-24T06:12:39.779Z",
+  "rows": [
+    {
+      "id": "185f7b8d-4387-52be-b9d5-07ed2bd813ce",
+      "key": "derivatives/4d65460c-1cff-40fb-a601-93c58953ce39.webp",
+      "served": 200,
+      "primaryBytes": 95282,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ]
+    },
+    {
+      "id": "2f7f11d8-9636-58fb-8eb0-d50a137b3c89",
+      "key": "derivatives/9aaba26f-43ab-440c-a85b-207efc701dae.webp",
+      "served": 200,
+      "primaryBytes": 146564,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ]
+    },
+    {
+      "id": "35d42887-9413-5fab-9546-28598a2e793e",
+      "key": "derivatives/a5a0647b-c521-4a90-9ea6-377ee4655c4f.webp",
+      "served": 200,
+      "primaryBytes": 182386,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ]
+    },
+    {
+      "id": "36177b03-2ceb-5b75-83d2-fb92d2d1cd07",
+      "key": "derivatives/e5a0c83e-1403-40d4-a7fb-af621d76de3d.webp",
+      "served": 200,
+      "primaryBytes": 452702,
+      "rowIntrinsic": [
+        1600,
+        1200
+      ]
+    },
+    {
+      "id": "36285ad7-150d-54c0-a91c-f007a0c3ed76",
+      "key": "derivatives/8f09c947-591b-4d26-b767-0a09cd5fefed.webp",
+      "served": 200,
+      "primaryBytes": 168276,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ]
+    },
+    {
+      "id": "541cf37b-c6a3-4884-8965-dccdda391c82",
+      "key": "derivatives/541cf37b-c6a3-4884-8965-dccdda391c82/1.webp",
+      "served": 200,
+      "primaryBytes": 93700,
+      "rowIntrinsic": [
+        1080,
+        720
+      ]
+    },
+    {
+      "id": "74c256cf-3952-5883-80c6-3b8b3f65c0aa",
+      "key": "derivatives/7595be33-d6c5-4da6-80e4-01c89561bc4a.webp",
+      "served": 200,
+      "primaryBytes": 208280,
+      "rowIntrinsic": [
+        1600,
+        1061
+      ]
+    },
+    {
+      "id": "77f8ef38-1704-523a-991d-a0a6a840a326",
+      "key": "derivatives/b954385a-427b-42b7-8395-8c754cd4457e.webp",
+      "served": 200,
+      "primaryBytes": 208264,
+      "rowIntrinsic": [
+        1600,
+        1066
+      ]
+    },
+    {
+      "id": "7b01906c-8544-56bd-846e-c547087a3e87",
+      "key": "derivatives/683c32fe-a60e-4867-82de-3db2729a6569.webp",
+      "served": 200,
+      "primaryBytes": 102554,
+      "rowIntrinsic": [
+        1200,
+        1600
+      ]
+    },
+    {
+      "id": "89235afe-2b66-509a-a467-4628285bf9a0",
+      "key": "derivatives/0de1bd7a-ba37-4520-a481-0c2f574bf537.webp",
+      "served": 200,
+      "primaryBytes": 137644,
+      "rowIntrinsic": [
+        1067,
+        1600
+      ]
+    },
+    {
+      "id": "916f6441-cf96-5a72-841f-3352e660afd2",
+      "key": "derivatives/e0789520-1d5c-47df-9307-da38b217d107.webp",
+      "served": 200,
+      "primaryBytes": 116910,
+      "rowIntrinsic": [
+        1067,
+        1600
+      ]
+    },
+    {
+      "id": "91f424bd-6b03-5161-aecc-10ea3982618e",
+      "key": "derivatives/2f559755-1a32-4cb5-8e4a-840b57c488fa.webp",
+      "served": 200,
+      "primaryBytes": 96900,
+      "rowIntrinsic": [
+        1279,
+        1600
+      ]
+    },
+    {
+      "id": "96c28525-041f-58a5-894b-5a6b0246d171",
+      "key": "derivatives/5547f929-658f-4630-a20e-3b44c7b265a6.webp",
+      "served": 200,
+      "primaryBytes": 132672,
+      "rowIntrinsic": [
+        1067,
+        1600
+      ]
+    },
+    {
+      "id": "a4733423-482d-5260-9615-395728c8df11",
+      "key": "derivatives/ff7d3c7a-47e5-4161-873e-474cff0e6bef.webp",
+      "served": 200,
+      "primaryBytes": 206404,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ]
+    },
+    {
+      "id": "e5ccad0d-126c-5503-b243-7a97dc30fc64",
+      "key": "derivatives/ceea98a5-d731-47c5-8bcb-9406df466d8e.webp",
+      "served": 200,
+      "primaryBytes": 273376,
+      "rowIntrinsic": [
+        1200,
+        1600
+      ]
+    }
+  ],
+  "candidates": 15
+}

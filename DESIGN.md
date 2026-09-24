@@ -1917,6 +1917,9 @@ fixture measures the architecture and nothing else.
 | a journal entry | 1.65 s / 3.31 s | **4.40 s** / 4.27 s | — |
 | an organism card | 1.74 s / 3.97 s | **6.17 s** / 6.28 s — it was 7.05 s / 5.87 s while its first photograph was lazy (`OVE-470`) | — |
 
+A "—" is a row with no "before" taken the same way: it says where a page
+stood, not what changed.
+
 **The budget is not met on production** (`OVE-469`). The static document took
 React's start-up out of the path — the LCP element's render delay there is
 7–36 ms, CLS 0 — and what remains is the photograph's *load*: 3.7–5.0 s for a
@@ -1931,14 +1934,44 @@ stylesheet arrives at 2.99 s where a server that sends by priority would have
 sent it first. And under this method a 92 kB photograph cannot make 2.0 s even
 alone on the link (asked for at 0.69 s + 562 ms of emulated latency + 92 kB at
 184 kB/s ≈ 1.9 s, before there is a stylesheet to paint it with): the budget
-needs the LCP photograph near 40 kB. No photograph on production has a `srcset`
-yet — all of them predate the variants — and between the ladder's 480 and 1280
-there is no rung for a phone, which at 412 px and a pixel ratio of 1.75 asks for
-721 px and is handed 1280.
+needs the LCP photograph near 40 kB. Since 2026-09-24 every public photograph
+on production has its 480 and 1280 variants, and the feed sends 1.28 MB where it
+sent 2.17 MB. But between the ladder's 480 and 1280 there is no rung for a
+phone. At 412 px and a pixel ratio of 1.75 a full-width slot asks for 663–721 px
+and is handed the 1280 variant, or a 1,080 px original whole.
 
-The simulated figure is what 337 kB of script on a public reading page costs,
-and it is the next thing to pay down — the rule below is not yet true of the
-shell, whose palette, sheet and sign-out dialog all ship to a guest.
+**First paint and the photograph pull against each other** (`OVE-469`,
+2026-09-24). A lazy photograph is asked for when layout finds it near the
+viewport, and on a slow connection that reaches thousands of pixels — so
+whatever brings the stylesheet in sooner brings the photographs below the fold
+in sooner, and at 100–450 kB each they take the link from the cover. Measured
+on the production-weight fixture (`pnpm fixture:production-weight`): one font
+file fewer took FCP on the feed from 1.93 s to 1.74 s and LCP from 2.95 s to
+3.80 s; an inlined stylesheet took FCP to 0.86 s and LCP to 5.33 s. Neither
+ships. The photographs' weight comes first, and by
+`docs/redesign/2026-09-21/ove-469/applied-throttling-model.py` even that leaves
+a photograph over 2.0 s while the framework's script arrives in seventeen
+requests. `tests/lcp-element.spec.ts` reads the browser's own LCP entry over
+real photographs of production's weight and fails if it is lazy.
+
+**Where production stands, and whose decision the rest is** (`OVE-469`,
+2026-09-24). With the variants, production measures, applied:
+
+- `/`: 5.32 s (5.73 s before);
+- an organism card: 5.09 s;
+- a journal entry with no photograph: 2.82 s.
+
+The model predicts the feed at 5.29 s. It puts a phone rung at about 4.0 s, and
+a page with nothing below the fold and two fonts at 3.3 s. The owner closed
+`OVE-469` with these figures. The budget for a page led by a photograph, and
+the method it is measured by, are an open decision: `docs/PROJECT_STATE.md`,
+known gap 11.
+
+The simulated figure is what the script on a public reading page costs. Since
+`OVE-468` the shell's palette dialog, account menu, narrow bar's sheet, sign-out
+question and Better Auth's client arrive on their first press; what a guest
+loads before `load` on `/` is 238 kB, of which the framework — React, the
+router, the RSC client — is about 133 kB.
 
 - No component ships a client bundle to a public reading page unless it must.
 - The composer is the one heavy surface and it is workspace-only.
