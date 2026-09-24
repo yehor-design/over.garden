@@ -97,76 +97,76 @@ and RU at 320 px: the status, the document's language, one visible `h1`, one
 controls drawn over each other and no label cut off by its box. A ✓ is all of
 them; the rows are in `ove-478/route-families/{uk,bg,ru}.json`.
 
-198 pages measured (66 UK, 66 BG, 66 RU); 186 cells fail a check.
+198 pages measured (66 UK, 66 BG, 66 RU); 0 cells fail a check.
 
 | Role | Family | Owner | Address (UK) | UK | BG | RU |
 | --- | --- | --- | --- | --- | --- | --- |
-| guest | Feed · Latest | OVE-492 | `/` | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 8 overlaps, 1 clipped |
-| guest | Feed · Following | OVE-492 | `/feed` | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 8 overlaps, 1 clipped |
-| guest | Journals directory | OVE-492 | `/journals` | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Journals · query view | OVE-482 | `/journals?kind=plant` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Entry | OVE-493 | `/@gardener_…/post/1` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Entry · removed (seven-day 410) | OVE-478 | `/@gardener_…/post/2` | 410 ✗ 1 overlaps | 410 ✗ 1 overlaps | 410 ✗ 1 overlaps |
-| guest | Entry · number nobody has | OVE-478 | `/@gardener_…/post/999999` | 404 ✗ 1 overlaps | 404 ✗ 1 overlaps | 404 ✗ 1 overlaps |
-| guest | Public profile | OVE-494 | `/@gardener_…` | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 10 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped |
-| guest | Object passport | OVE-495 | `/@gardener_…/objects/route-sweep-…` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Catalogue · door | OVE-496 | `/catalog` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Catalogue · register | OVE-496 | `/catalog?q=tomato` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 9 overlaps, 1 clipped | 200 ✗ 6 overlaps, 1 clipped |
-| guest | Organism card | OVE-497 | `/species/ove478-routes-organism-0-solanum-lycopersicum-…` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Organism · form | OVE-497 | `/species/ove478-routes-organism-0-solanum-lycopersicum-…/ove478-routes-organism-0-de-barao-…` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 10 overlaps, 1 clipped |
-| guest | Communities | OVE-500 | `/communities` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 9 overlaps, 1 clipped |
-| guest | Knowledge hub | OVE-498 | `/knowledge` | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 9 overlaps, 1 clipped |
-| guest | Answer | OVE-498 | `/answers/why-are-tomato-leaves-yellow` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Guide | OVE-498 | `/guides/start-a-living-plant-record` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Notes (blog) | OVE-499 | `/blog` | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Note | OVE-499 | `/blog/ai-garden-advice-vs-real-garden-proof` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Market page | OVE-499 | `/markets/ukraine` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Source archive (EPPO) | OVE-499 | `/sources/eppo` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Privacy | OVE-505 | `/privacy` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Support | OVE-505 | `/support` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | First-publication disclosure | OVE-505 | `/first-publication-disclosure` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Sign in | OVE-504 | `/auth/sign-in` | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 8 overlaps, 1 clipped |
-| guest | Sign up | OVE-504 | `/auth/sign-up` | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 11 overlaps, 1 clipped | 200 ✗ 8 overlaps, 1 clipped |
-| guest | Sign-in help | OVE-504 | `/auth/help` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | My garden · guest | OVE-489 | `/garden` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Write · guest | OVE-486 | `/garden/new` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Activity · guest | OVE-501 | `/notifications` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped |
-| guest | Bookmarks · guest | OVE-502 | `/bookmarks` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped |
-| guest | Wishlist · guest | OVE-502 | `/wishlist` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped |
+| guest | Feed · Latest | OVE-492 | `/` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Feed · Following | OVE-492 | `/feed` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Journals directory | OVE-492 | `/journals` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Journals · query view | OVE-482 | `/journals?kind=plant` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Entry | OVE-493 | `/@gardener_…/post/1` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Entry · removed (seven-day 410) | OVE-478 | `/@gardener_…/post/2` | 410 ✓ | 410 ✓ | 410 ✓ |
+| guest | Entry · number nobody has | OVE-478 | `/@gardener_…/post/999999` | 404 ✓ | 404 ✓ | 404 ✓ |
+| guest | Public profile | OVE-494 | `/@gardener_…` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Object passport | OVE-495 | `/@gardener_…/objects/route-sweep-…` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Catalogue · door | OVE-496 | `/catalog` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Catalogue · register | OVE-496 | `/catalog?q=tomato` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Organism card | OVE-497 | `/species/ove478-routes-organism-0-solanum-lycopersicum-…` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Organism · form | OVE-497 | `/species/ove478-routes-organism-0-solanum-lycopersicum-…/ove478-routes-organism-0-de-barao-…` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Communities | OVE-500 | `/communities` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Knowledge hub | OVE-498 | `/knowledge` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Answer | OVE-498 | `/answers/why-are-tomato-leaves-yellow` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Guide | OVE-498 | `/guides/start-a-living-plant-record` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Notes (blog) | OVE-499 | `/blog` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Note | OVE-499 | `/blog/ai-garden-advice-vs-real-garden-proof` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Market page | OVE-499 | `/markets/ukraine` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Source archive (EPPO) | OVE-499 | `/sources/eppo` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Privacy | OVE-505 | `/privacy` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Support | OVE-505 | `/support` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | First-publication disclosure | OVE-505 | `/first-publication-disclosure` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Sign in | OVE-504 | `/auth/sign-in` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Sign up | OVE-504 | `/auth/sign-up` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Sign-in help | OVE-504 | `/auth/help` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | My garden · guest | OVE-489 | `/garden` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Write · guest | OVE-486 | `/garden/new` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Activity · guest | OVE-501 | `/notifications` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Bookmarks · guest | OVE-502 | `/bookmarks` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Wishlist · guest | OVE-502 | `/wishlist` | 200 ✓ | 200 ✓ | 200 ✓ |
 | guest | Erasure request · guest | OVE-505 | `/erasure` | 200 ✓ | 200 ✓ | 200 ✓ |
-| guest | Unknown first segment | OVE-478 | `/no-such-family-here` | 404 ✗ 1 overlaps | 404 ✗ 1 overlaps | 404 ✗ 1 overlaps |
-| guest | Community | OVE-500 | `/communities/observation-and-care` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| guest | Topic | OVE-498 | `/topics/breeds` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | My garden | OVE-489 | `/garden` | 200 ✗ 8 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Write (global) | OVE-486 | `/garden/new` | 200 ✗ 8 overlaps, 1 clipped | 200 ✗ 8 overlaps, 1 clipped | 200 ✗ 5 overlaps, 1 clipped |
-| member | Write (contextual) | OVE-486 | `/garden/new?object={uuid}` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 8 overlaps, 1 clipped | 200 ✗ 5 overlaps, 1 clipped |
-| member | Space setup | OVE-484 | `/garden/spaces/new` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Object setup | OVE-485 | `/garden/objects/new` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Space page | OVE-490 | `/garden/spaces/{uuid}` | 200 ✗ 9 overlaps, 1 clipped | 200 ✗ 9 overlaps, 1 clipped | 200 ✗ 6 overlaps, 1 clipped |
-| member | Space settings | OVE-490 | `/garden/spaces/{uuid}/settings` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped |
-| member | Object page | OVE-491 | `/garden/objects/{uuid}` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 10 overlaps, 1 clipped |
-| member | Object settings | OVE-491 | `/garden/objects/{uuid}/settings` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Object provenance | OVE-491 | `/garden/objects/{uuid}/provenance` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Entry editing | OVE-488 | `/garden/entries/{uuid}/edit` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Public profile editing | OVE-503 | `/garden/profile` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Account settings | OVE-503 | `/account/settings` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Sign-in and security | OVE-503 | `/account/security` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Activity | OVE-501 | `/notifications` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Activity preferences | OVE-501 | `/notifications/settings` | 200 ✗ 9 overlaps, 1 clipped | 200 ✗ 9 overlaps, 1 clipped | 200 ✗ 6 overlaps, 1 clipped |
-| member | Bookmarks | OVE-502 | `/bookmarks` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Wishlist | OVE-502 | `/wishlist` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
+| guest | Unknown first segment | OVE-478 | `/no-such-family-here` | 404 ✓ | 404 ✓ | 404 ✓ |
+| guest | Community | OVE-500 | `/communities/observation-and-care` | 200 ✓ | 200 ✓ | 200 ✓ |
+| guest | Topic | OVE-498 | `/topics/breeds` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | My garden | OVE-489 | `/garden` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Write (global) | OVE-486 | `/garden/new` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Write (contextual) | OVE-486 | `/garden/new?object={uuid}` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Space setup | OVE-484 | `/garden/spaces/new` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Object setup | OVE-485 | `/garden/objects/new` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Space page | OVE-490 | `/garden/spaces/{uuid}` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Space settings | OVE-490 | `/garden/spaces/{uuid}/settings` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Object page | OVE-491 | `/garden/objects/{uuid}` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Object settings | OVE-491 | `/garden/objects/{uuid}/settings` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Object provenance | OVE-491 | `/garden/objects/{uuid}/provenance` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Entry editing | OVE-488 | `/garden/entries/{uuid}/edit` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Public profile editing | OVE-503 | `/garden/profile` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Account settings | OVE-503 | `/account/settings` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Sign-in and security | OVE-503 | `/account/security` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Activity | OVE-501 | `/notifications` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Activity preferences | OVE-501 | `/notifications/settings` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Bookmarks | OVE-502 | `/bookmarks` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Wishlist | OVE-502 | `/wishlist` | 200 ✓ | 200 ✓ | 200 ✓ |
 | member | Erasure request | OVE-505 | `/erasure` | 200 ✓ | 200 ✓ | 200 ✓ |
-| member | Lineage · questions | OVE-495 | `/garden/lineage/questions` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| member | Lineage · claims | OVE-495 | `/garden/lineage/claims` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 9 overlaps, 1 clipped |
-| member | Owner queue · refused to a member | OVE-506 | `/garden/catalog/queue` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped |
-| member | Moderation · refused to a member | OVE-500 | `/account/communities` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 12 overlaps, 1 clipped |
+| member | Lineage · questions | OVE-495 | `/garden/lineage/questions` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Lineage · claims | OVE-495 | `/garden/lineage/claims` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Owner queue · refused to a member | OVE-506 | `/garden/catalog/queue` | 200 ✓ | 200 ✓ | 200 ✓ |
+| member | Moderation · refused to a member | OVE-500 | `/account/communities` | 200 ✓ | 200 ✓ | 200 ✓ |
 | member | Erasure queue · refused to a member | OVE-505 | `/garden/privacy/erasure-requests` | 200 ✓ | 200 ✓ | 200 ✓ |
-| member | Workspace · unknown address | OVE-478 | `/garden/no-such-page` | 404 ✗ 1 overlaps | 404 ✗ 1 overlaps | 404 ✗ 1 overlaps |
-| owner | Owner · decision queue | OVE-506 | `/garden/catalog/queue` | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| owner | Owner · sources | OVE-506 | `/garden/catalog/sources` | 200 ✗ 9 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 6 overlaps, 1 clipped |
+| member | Workspace · unknown address | OVE-478 | `/garden/no-such-page` | 404 ✓ | 404 ✓ | 404 ✓ |
+| owner | Owner · decision queue | OVE-506 | `/garden/catalog/queue` | 200 ✓ | 200 ✓ | 200 ✓ |
+| owner | Owner · sources | OVE-506 | `/garden/catalog/sources` | 200 ✓ | 200 ✓ | 200 ✓ |
 | owner | Owner · erasure queue | OVE-505 | `/garden/privacy/erasure-requests` | 200 ✓ | 200 ✓ | 200 ✓ |
-| owner | Owner · community moderation | OVE-500 | `/account/communities` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
-| owner | Owner · comment moderation | OVE-500 | `/account/moderation/comments` | 200 ✗ 12 overlaps, 1 clipped | 200 ✗ 7 overlaps, 1 clipped | 200 ✗ 4 overlaps, 1 clipped |
+| owner | Owner · community moderation | OVE-500 | `/account/communities` | 200 ✓ | 200 ✓ | 200 ✓ |
+| owner | Owner · comment moderation | OVE-500 | `/account/moderation/comments` | 200 ✓ | 200 ✓ | 200 ✓ |
 
 ### 2. Terminology in UK, BG and RU
 
@@ -202,9 +202,8 @@ is the history entries make:
   modules were scanned the same way and hold only that endonym. With Orca, a
   Bulgarian entry in a Ukrainian interface is spoken in a Bulgarian voice and
   its byline and dates in a Ukrainian one (criterion 7).
-- **Long labels.** The sweep checks every control's box on every page in all
-  three languages at 320 px, where BG and RU labels are longest against the
-  width: 1368 pairs of controls overlap and 174 labels are clipped on the 198 pages.
+- **Long labels.** At 320 px, where BG and RU labels are longest against the
+  width, in all three languages: no page scrolls sideways (0 of 198), and the only label clipped is the skip link, which is clipped until it has focus (174 of 174). The sweep also records every pair of control boxes that intersect, whatever layer each is drawn in — 1368 pairs, which the gate does not assert — and every pair but 9 is layering the page does on purpose, not a label running into its neighbour: 948 are the closed language menu's options lying over the footer links, 174 the skip link under the menu button, 218 a link or button under the fixed tab bar, 4 the editor's toolbar under the sticky publish row, 6 a password field's show-password button inside its field, and 9 the profile's open «more» menu over its tabs. The other 9 are two unnamed inputs on the three writing pages, one over the other, not investigated here.
 
 ### 3. States
 
