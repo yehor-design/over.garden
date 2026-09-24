@@ -11,9 +11,14 @@ import { Pool } from "pg";
 
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import {
+  publishPlantEntryThroughEndpoint,
+  removePlantEntryPublisher,
+} from "./helpers/publish-plant-entry";
+import {
   scanAccessibility,
   tabToControl,
 } from "./helpers/redesign-accessibility";
+import type { SyntheticGardener } from "./helpers/synthetic-gardener";
 
 /**
  * `OVE-498`: knowledge says what each piece is and what it rests on.
@@ -23,11 +28,20 @@ import {
  *
  * The pieces are the product's own: the tomato answer, gardening advice with
  * four cited sources, and the first-record guide, help with OverGarden. Both
- * are prerendered at build, so the gardeners' entries beside them are
- * whatever the gate's database held then — which for the tomato species and
- * for the `plants` topic is nothing a listing can show, and each page says
- * so. The populated side is read on the spec's own topic, `Балконні томати`,
- * with two entries by a gardener who has an address.
+ * are static documents, so the gardeners' entries beside them are whatever
+ * the database held when they were last rendered. For the tomato species that
+ * is nothing a listing can show, and the answer says so.
+ *
+ * The `plants` topic is not left to the rest of the gate. Other specs publish
+ * entries about plants, which re-renders these pages, and delete them by SQL,
+ * which does not — so a count taken here could disagree with a page rendered
+ * a minute earlier, and it failed CI that way. This spec publishes its own
+ * entry into `plants` through the real endpoint: that fills the topic for the
+ * whole run, whatever else comes and goes, and re-renders the pages that list
+ * it. So the guide's evidence, the answer's related topic and the `plants`
+ * page are read populated. A topic's exact counts and its own search are read
+ * on the spec's own topic, `Балконні томати`, with two entries by a gardener
+ * who has an address.
  *
  * That fixture is created if it is missing and never deleted. Other specs walk
  * every curated topic and request each one; a topic that vanished between the
@@ -81,16 +95,27 @@ const FIXTURE = {
 type Locale = "uk" | "bg" | "ru";
 
 let pool: Pool;
-/** Whether `plants` held an entry a listing can show when the pages were built. */
-let plantsAddressable = 0;
+/** The author of this spec's own entry in `plants`. */
+let plantsPublisher: SyntheticGardener | null = null;
 const contexts: BrowserContext[] = [];
 
 test.describe.configure({ mode: "serial" });
 
-test.beforeAll(async () => {
+test.beforeAll(async ({ browser, baseURL }) => {
+  // A sign-up, which the limiter may make wait (`auth-rate-limit.ts`).
+  test.setTimeout(120_000);
+  if (!baseURL) throw new Error("Playwright baseURL is required");
   pool = new Pool({ connectionString: requiredLocalDatabaseUrl(), max: 2 });
   mkdirSync(SCREENSHOTS, { recursive: true });
   await ensureTopicFixture(pool);
+  plantsPublisher = await publishPlantEntryThroughEndpoint({
+    baseURL,
+    browser,
+    pool,
+    prefix: "ove498plants",
+    title: "Перше суцвіття на томаті",
+    text: "На третьому тижні після пересадки з'явилося перше суцвіття. Поливаю зранку, підживлення ще не давала.",
+  });
   // The same rule the pages count by: an entry whose author has an address.
   const plants = await pool.query<{ entries: number }>(
     `select count(distinct je.id)::int as entries
@@ -101,11 +126,16 @@ test.beforeAll(async () => {
         and s.review_state = 'accepted'
         and s.public_membership_state = 'eligible'
         and je.visibility = 'public' and je.lifecycle_state = 'active'
+        and je.owner_user_id = $1::uuid
         and exists (select 1 from user_handle_registry h
                      where h.user_id = je.owner_user_id
                        and h.lifecycle_state = 'current')`,
+    [plantsPublisher.id],
   );
-  plantsAddressable = plants.rows[0]?.entries ?? 0;
+  expect(
+    plants.rows[0]?.entries,
+    "this spec's own entry is not one the `plants` topic can list",
+  ).toBe(1);
   const tomato = await pool.query(
     `select 1 from catalog_items where public_slug = 'solanum-lycopersicum'`,
   );
@@ -178,6 +208,7 @@ async function ensureTopicFixture(pool: Pool) {
 
 test.afterAll(async () => {
   for (const context of contexts) await context.close();
+  if (pool) await removePlantEntryPublisher(pool, plantsPublisher);
   await pool?.end();
 });
 
@@ -259,8 +290,8 @@ test.describe("knowledge that says what it rests on (OVE-498)", () => {
     );
 
     // The page's outline, in the order a reader needs it. The related
-    // section is its one topic, `plants`, listed only while the topic holds
-    // an entry a listing can show.
+    // section is its one topic, `plants`, listed while the topic holds an
+    // entry a listing can show — this spec's own.
     expect(headings).toEqual([
       "answer-concise",
       "answer-causes",
@@ -269,7 +300,7 @@ test.describe("knowledge that says what it rests on (OVE-498)", () => {
       "answer-evidence",
       "answer-product-help",
       "answer-about",
-      ...(plantsAddressable > 0 ? ["answer-related"] : []),
+      "answer-related",
     ]);
 
     // Every citation lands on a source the page lists, and every source is
@@ -318,13 +349,9 @@ test.describe("knowledge that says what it rests on (OVE-498)", () => {
     expect(main).toContain("Записів садівників тут поки немає");
     expect(main).not.toContain("data-knowledge-evidence-count");
 
-    // One related section, of what exists — or none over nothing.
-    if (plantsAddressable > 0) {
-      const related = main.slice(main.indexOf('data-knowledge-related="true"'));
-      expect(related).toContain(`href="${TOPIC}"`);
-    } else {
-      expect(main).not.toContain('data-knowledge-related="true"');
-    }
+    // One related section, of what exists.
+    const related = main.slice(main.indexOf('data-knowledge-related="true"'));
+    expect(related).toContain(`href="${TOPIC}"`);
 
     // What stays as it was: the address, the language alternates, the
     // index decision and the structured data (criterion 5).
@@ -401,16 +428,11 @@ test.describe("knowledge that says what it rests on (OVE-498)", () => {
     expect(about).not.toContain("Перевірка фахівцем");
     // Other gardeners' plant records beside it — the `plants` topic's — and
     // the rest one document request away, the journals' query view
-    // (`public-query-twin.ts`). With none a listing can show, it says so.
-    if (plantsAddressable > 0) {
-      expect(main).toContain('data-knowledge-evidence="ready"');
-      expect(main).toMatch(
-        /<a href="\/journals\?topic=plants" data-knowledge-evidence-all="true"[^>]*>Усі записи \(\d+\)/u,
-      );
-    } else {
-      expect(main).toContain('data-knowledge-evidence="empty"');
-      expect(main).toContain("Записів садівників тут поки немає");
-    }
+    // (`public-query-twin.ts`).
+    expect(main).toContain('data-knowledge-evidence="ready"');
+    expect(main).toMatch(
+      /<a href="\/journals\?topic=plants" data-knowledge-evidence-all="true"[^>]*>Усі записи \(\d+\)/u,
+    );
     const related = main.slice(main.indexOf('data-knowledge-related="true"'));
     expect(related).toContain(`href="${ANSWER}"`);
     expect(related).toContain("Садівництво · Відповідь");
@@ -575,9 +597,7 @@ test.describe("knowledge that says what it rests on (OVE-498)", () => {
       page.locator('aside[data-site-shell-region="context"]'),
     ).toHaveCount(0);
     await expect(
-      topic.locator(
-        `[data-knowledge-evidence="${plantsAddressable > 0 ? "ready" : "empty"}"]`,
-      ),
+      topic.locator('[data-knowledge-evidence="ready"]'),
     ).toBeVisible();
     await page.screenshot({
       path: path.join(SCREENSHOTS, "topic-1280.png"),
@@ -644,7 +664,7 @@ test.describe("knowledge that says what it rests on (OVE-498)", () => {
       const ids = await page
         .locator('main[data-public-article="true"] h2[id]')
         .evaluateAll((nodes) => nodes.map((node) => node.id));
-      expect(ids).toHaveLength(plantsAddressable > 0 ? 8 : 7);
+      expect(ids).toHaveLength(8);
       // Above xl the rail is the contents; below it, the foot of the article.
       const contents =
         width >= 1280

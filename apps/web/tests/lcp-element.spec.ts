@@ -5,11 +5,6 @@ import path from "node:path";
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { Pool } from "pg";
 
-import { buildAtomicTextJournalCreateRequest } from "../scripts/atomic-journal-text-request";
-import {
-  ATOMIC_JOURNAL_CREATE_PROTOCOL,
-  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
-} from "../src/lib/garden/entry-contracts";
 import {
   cleanupPublishedEntryFixture,
   seedPublishedEntryFixture,
@@ -30,9 +25,10 @@ import {
   type WeighedPhotograph,
 } from "./helpers/production-weight-photographs";
 import {
-  removeSyntheticGardener,
-  signInSyntheticGardener,
-} from "./helpers/synthetic-gardener";
+  publishPlantEntryThroughEndpoint,
+  removePlantEntryPublisher,
+} from "./helpers/publish-plant-entry";
+import type { SyntheticGardener } from "./helpers/synthetic-gardener";
 
 /**
  * No public page's largest contentful paint is a lazy photograph (`OVE-469`).
@@ -174,7 +170,7 @@ test.describe("the largest contentful paint is never a lazy photograph", () => {
   let organism: OrganismFixture | null = null;
   const entries: PublishedEntryFixture[] = [];
   const keys: string[] = [];
-  let publisherId: string | null = null;
+  let publisher: SyntheticGardener | null = null;
   const receipts: Array<{
     page: string;
     viewport: string;
@@ -223,53 +219,16 @@ test.describe("the largest contentful paint is never a lazy photograph", () => {
     }
 
     // The listings and the card are cached documents, and rows written here
-    // do not expire them. A publish through the real endpoint does — it
-    // expires the feed, the directory, the profiles and the catalogue — so the
+    // do not expire them. A publish through the real endpoint does, so the
     // next visit renders all of the above from the database.
-    const writer = await browser.newContext();
-    try {
-      const gardener = await signInSyntheticGardener({
-        baseURL,
-        context: writer,
-        pool,
-        prefix: "ove469publisher",
-      });
-      publisherId = gardener.id;
-      const spaceId = randomUUID();
-      await pool.query(
-        "insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)",
-        [spaceId, gardener.id, "LCP proof"],
-      );
-      const objectId = randomUUID();
-      await pool.query(
-        `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, variety_state)
-         values ($1, $2, $3, 'LCP proof tomato', 'plant', 'unknown')`,
-        [objectId, gardener.id, spaceId],
-      );
-      const response = await writer.request.post(
-        `${baseURL}/api/garden/entries`,
-        {
-          headers: {
-            origin: baseURL,
-            [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]:
-              ATOMIC_JOURNAL_CREATE_PROTOCOL,
-          },
-          data: buildAtomicTextJournalCreateRequest({
-            publishId: randomUUID(),
-            context: {
-              target: "plant_object_entry",
-              plantObjectId: objectId,
-              entryDate: new Date().toISOString().slice(0, 10),
-            },
-            title: "Перевірка найбільшого зображення",
-            text: "Короткий запис без фотографії, щоб оновити публічні списки.",
-          }),
-        },
-      );
-      expect(response.status(), await response.text()).toBe(200);
-    } finally {
-      await writer.close();
-    }
+    publisher = await publishPlantEntryThroughEndpoint({
+      baseURL,
+      browser,
+      pool,
+      prefix: "ove469publisher",
+      title: "Перевірка найбільшого зображення",
+      text: "Короткий запис без фотографії, щоб оновити публічні списки.",
+    });
   });
 
   test.afterAll(async () => {
@@ -277,12 +236,7 @@ test.describe("the largest contentful paint is never a lazy photograph", () => {
       await cleanupPublishedEntryFixture(pool, entry).catch(() => undefined);
     if (organism)
       await cleanupOrganismFixture(pool, organism).catch(() => undefined);
-    if (publisherId) {
-      await pool.query("delete from journal_entries where owner_user_id = $1", [
-        publisherId,
-      ]);
-      await removeSyntheticGardener(pool, publisherId);
-    }
+    await removePlantEntryPublisher(pool, publisher);
     await deleteLocalMediaObjects(keys);
     await pool.end();
     mkdirSync(OUTPUT, { recursive: true });
