@@ -422,6 +422,26 @@ starts earlier with a later finish has not been established, and is not
 explained away here. Both are recorded; the controls say the method holds to
 ±0.05 s.
 
+**After the variants** (`OVE-469`, 2026-09-24). Every public photograph on
+production was given its 480 and 1280 variants the way the upload path makes
+them, and the pages were read back the same way. The "before" is production
+after `OVE-468`, the day before; median of three; the entry has no photograph
+and is the control:
+
+| Page | LCP, applied | FCP, applied | LCP, simulated | Bytes transferred |
+| --- | --- | --- | --- | --- |
+| `/` | 5.73 s → **5.32 s** | 2.87 s → 2.87 s | 5.61 s → 4.64 s | 2.17 MB → 1.28 MB |
+| `/@yehor/post/9` (control) | 2.80 s → 2.82 s | 2.80 s → 2.82 s | 6.70 s → 4.64 s | 1.06 MB → 1.06 MB |
+| `/species/solanum-lycopersicum` | 5.16 s → **5.09 s** | 2.92 s → 2.94 s | 5.53 s → 5.61 s | 1.45 MB → 1.24 MB |
+
+The feed sends 41 % fewer bytes and paints its cover 0.4 s sooner. The cover
+did not change: at 1,080 px it has only a 480 variant, and a phone asks for
+663 px. The simulated figure moved on the control by as much as anywhere, so
+it is not read as a change. `ove-469/applied-throttling-model.py` predicted the
+feed at 5.29 s. It puts a phone rung at about 4.0 s. The owner closed `OVE-469`
+with these figures; the budget's number and method for a page led by a
+photograph are open (`docs/PROJECT_STATE.md`, known gap 11).
+
 The card first measured **5.10 s** after the conversion, with the text on
 screen at 1.74 s. The second, later LCP candidate was the same paragraph as a
 *new DOM node*: the shell set two pieces of state right after mount, the update

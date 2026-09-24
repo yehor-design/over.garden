@@ -1934,10 +1934,11 @@ stylesheet arrives at 2.99 s where a server that sends by priority would have
 sent it first. And under this method a 92 kB photograph cannot make 2.0 s even
 alone on the link (asked for at 0.69 s + 562 ms of emulated latency + 92 kB at
 184 kB/s ≈ 1.9 s, before there is a stylesheet to paint it with): the budget
-needs the LCP photograph near 40 kB. No photograph on production has a `srcset`
-yet — all of them predate the variants — and between the ladder's 480 and 1280
-there is no rung for a phone, which at 412 px and a pixel ratio of 1.75 asks for
-721 px and is handed 1280.
+needs the LCP photograph near 40 kB. Since 2026-09-24 every public photograph
+on production has its 480 and 1280 variants, and the feed sends 1.28 MB where it
+sent 2.17 MB. But between the ladder's 480 and 1280 there is no rung for a
+phone. At 412 px and a pixel ratio of 1.75 a full-width slot asks for 663–721 px
+and is handed the 1280 variant, or a 1,080 px original whole.
 
 **First paint and the photograph pull against each other** (`OVE-469`,
 2026-09-24). A lazy photograph is asked for when layout finds it near the
@@ -1952,6 +1953,19 @@ ships. The photographs' weight comes first, and by
 a photograph over 2.0 s while the framework's script arrives in seventeen
 requests. `tests/lcp-element.spec.ts` reads the browser's own LCP entry over
 real photographs of production's weight and fails if it is lazy.
+
+**Where production stands, and whose decision the rest is** (`OVE-469`,
+2026-09-24). With the variants, production measures, applied:
+
+- `/`: 5.32 s (5.73 s before);
+- an organism card: 5.09 s;
+- a journal entry with no photograph: 2.82 s.
+
+The model predicts the feed at 5.29 s. It puts a phone rung at about 4.0 s, and
+a page with nothing below the fold and two fonts at 3.3 s. The owner closed
+`OVE-469` with these figures. The budget for a page led by a photograph, and
+the method it is measured by, are an open decision: `docs/PROJECT_STATE.md`,
+known gap 11.
 
 The simulated figure is what the script on a public reading page costs. Since
 `OVE-468` the shell's palette dialog, account menu, narrow bar's sheet, sign-out

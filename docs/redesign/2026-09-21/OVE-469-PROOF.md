@@ -1,10 +1,13 @@
-# LCP ≤ 2.0 s on production data — OVE-469, first slice
+# LCP ≤ 2.0 s on production data — OVE-469
 
 The exact tested and merged commits, CI runs and the production checks are in
-the authenticated Linear receipt. This slice delivers criteria 1, 2 and 5 and
-the measurements that decide criterion 3. Criterion 3 — LCP ≤ 2.0 s and FCP
-≤ 1.5 s applied, on production — is **not met**, and this document says why
-with numbers, because the answer is a decision for the owner, not a lever.
+the authenticated Linear receipt. This delivers criteria 1, 2, 4 and 5, gives
+every public photograph on production its variants, and measures what decides
+criterion 3. Criterion 3 — LCP ≤ 2.0 s and FCP ≤ 1.5 s applied, on
+production — is **not met**, and this document says why with numbers. On
+2026-09-24 the owner closed the issue with these facts and left the budget's
+number and method for photograph-led pages as an open decision
+(`docs/PROJECT_STATE.md`, known gap 11).
 
 ## The baseline
 
@@ -93,7 +96,7 @@ evaluated here before it may cost a production release.
 - **The script (lever 5)** is the chrome's bundle diet, released the day
   before this baseline.
 
-## What this slice ships
+## What ships
 
 - **Criterion 2.** `tests/lcp-element.spec.ts`, in the gate, reads the
   browser's own `largest-contentful-paint` entry at 412 and 1,440 px on:
@@ -118,6 +121,35 @@ evaluated here before it may cost a production release.
 - **Criterion 1.** ADR-0032's consequences and DESIGN.md §9 now say which rows
   have no "before" taken the same way, instead of leaving a reader to compare
   across environments.
+- **Criterion 4.** CLS is 0 on every page measured on production, before and
+  after, and on the local fixture with what ships. The gate is green three
+  times in a row on the final code, each run in CI's order:
+  - two full local runs, each on a fresh database: create it, bootstrap it,
+    build against it, then the gate;
+  - CI itself.
+
+  Each gave 389 passed and the one existing skip. CI passed one of them, an
+  owner-curation test, only on its retry: for a moment that page holds two
+  copies of its owner surface. It is unrelated to this change and has a task
+  of its own. Getting there took two fixes to the gate. Both were races, and
+  neither was caused by this change:
+  - **`knowledge-pages.spec.ts` compared cached pages with a count taken
+    once.** It counted the `plants` topic's entries in `beforeAll` and
+    expected four cached pages to agree. Any spec's publish re-renders those
+    pages with its plant entry, and its cleanup deletes the row by SQL, which
+    re-renders nothing. So the answer kept a related section over a topic that
+    was empty again. This failed `main` twice on 2026-09-23 and this branch's
+    first CI run; this branch's spec began after that failure, so it was not
+    the cause. The spec now publishes its own `plants` entry through the real
+    endpoint (`tests/helpers/publish-plant-entry.ts`), which fills the topic
+    for the whole run, and asserts the populated side.
+  - **`scanAccessibility` scanned a page whose title had not arrived.** After
+    a client navigation the next page's `<title>` streams in with its
+    metadata, which can land after its content. The fifth local run failed
+    once in `organism-pages.spec.ts`: its trace shows the forms register's
+    head without a title when the scan began, and with it 194 ms later. The
+    scan now waits for a non-empty title. A page without one still fails, by
+    name.
 
 ## Variants for the photographs already published
 
@@ -144,14 +176,51 @@ day with `scripts/backfill-media-variants.ts`.
   allows only `{1280, 480}`, so that is a migration and a change to the upload
   path and the staging worker, not a backfill.
 
-## What needs the owner
+## Production with the variants
 
-Criterion 3 cannot be met by the levers this issue lists, and the ones that
-could reach it change something that is not this task's to change:
+Read back on 2026-09-24, after the backfill, the same way as the baseline:
+Lighthouse CLI 13.5.0, median of three, the same three pages
+(`ove-469/lighthouse/production-after-variants*`). The text-only entry is the
+control: it has no photograph, so nothing here changed it.
+
+| Page | LCP applied | FCP applied | LCP simulated | Bytes transferred |
+| --- | --- | --- | --- | --- |
+| `/` | 5.73 → **5.32 s** | 2.87 → 2.87 s | 5.61 → 4.64 s | 2.17 → 1.28 MB |
+| `/@yehor/post/9` (control) | 2.80 → 2.82 s | 2.80 → 2.82 s | 6.70 → 4.64 s | 1.06 → 1.06 MB |
+| `/species/solanum-lycopersicum` | 5.16 → **5.09 s** | 2.92 → 2.94 s | 5.53 → 5.61 s | 1.45 → 1.24 MB |
+
+- **All 15 public photographs are now sent with a `srcset`** on the 15 public
+  pages that show them (`production-photographs-srcset-after-variants.json`).
+  The first read after the backfill still found `/` and `/journals` without
+  one: that read got the cached page and started its refresh, and the page
+  served twenty seconds later had it.
+- **The feed sends 41 % fewer bytes and paints its cover 0.4 s sooner.** The
+  cover itself is unchanged: it is 1,080 px, so it has only a 480 variant, and
+  a phone asks for 663 px. It is asked for at 0.69 s and finishes at 5.34 s.
+  At 2.86 s seven photographs below the fold join it:
+  - the five in the half- and third-width slots now weigh 26–50 kB each;
+  - the two full-width cards still take their 1280 variants, 303 and 153 kB.
+- **The model holds.** `applied-throttling-model.py`, given these weights,
+  predicts the cover at 5.29 s against 5.32 s measured. With a phone rung
+  (720 px: a cover of about 60 kB, full-width cards of 80–103 kB) it predicts
+  4.03 s. It predicts 3.56 s with nothing below the fold before the paint as
+  well, and 3.25 s with only the two normal faces preloaded on top of that.
+- **The simulated figure is not read as a change.** It moved on the control
+  too, by 2.1 s, and on `/` its three runs spread from 3.96 to 5.63 s.
+- CLS is 0 on all three pages, as it was.
+
+## What the owner decided
+
+The owner chose, on 2026-09-24, to close this issue with the facts above rather
+than hold it open for 2.0 s. Criterion 3 cannot be met by the levers this issue
+lists, and the ones that could reach it change something that is not this
+task's to change. They stay open as one decision, recorded as known gap 11 in
+`docs/PROJECT_STATE.md`. A Linear card could not be created: the workspace is at
+its free issue limit.
 
 - **The photographs' weight.** Done for the existing ladder, above. A phone
-  rung, which would lighten the cover itself, is the next step, and it needs a
-  migration.
+  rung would lighten the cover itself and the full-width cards, to about 4.0 s
+  by the model. It needs a migration.
 - **The method.** Applied throttling shares the link per request, so a page's
   number of requests counts as much as its bytes, and a correct priority counts
   for nothing. Field data, or the simulated figure, would measure a different

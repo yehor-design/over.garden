@@ -288,11 +288,17 @@ code for controls they have not pressed (DESIGN.md §9).
 
 See `docs/redesign/2026-09-21/OVE-468-PROOF.md`.
 
-**Production LCP, first slice (OVE-469):** the 2.0 s budget is not met, and the
-levers this issue lists cannot meet it.
+**Production LCP (OVE-469), closed 2026-09-24 with the budget not met:** the
+levers this issue lists cannot meet 2.0 s, and the owner closed it with the
+measured facts. The budget's number and method for a page led by a photograph
+are known gap 11.
 - Production after the bundle diet (applied / simulated): `/` 5.73 / 5.61 s,
   an entry 2.80 / 6.70 s, the species card 5.16 / 5.53 s. FCP is 2.8–2.9 s.
-  None of the 13 public photographs has a `srcset`.
+  None of the 13 public photographs had a `srcset`.
+- Every live public photograph now has its variants: 15 rows, 29 objects,
+  made in a browser by `scripts/backfill-media-variants.ts` with the owner's
+  approval. The feed sends 1.28 MB instead of 2.17 MB and measures 5.32 s
+  applied; the species card 5.09 s; the text entry, the control, 2.82 s.
 - First paint and the photograph pull against each other: a sooner stylesheet
   means sooner lazy photographs below the fold (100–450 kB each), which take
   the link from the cover. Measured, not modelled: one font file fewer, and an
@@ -300,9 +306,12 @@ levers this issue lists cannot meet it.
 - `tests/lcp-element.spec.ts` reads the real LCP entry over production-weight
   photographs and fails on a lazy one; `pnpm fixture:production-weight` seeds
   them for local measurement.
-- What is left needs the owner: variants for the 13 photographs (a production
-  write), the gate's method, the budget itself, and a metric-matched fallback
-  font.
+- Two races in the gate are fixed:
+  - `knowledge-pages.spec.ts` publishes its own `plants` entry. It had been
+    counting a topic that other specs change underneath it, and it failed
+    `main` twice on 2026-09-23.
+  - The accessibility scan waits for the page's title. After a client
+    navigation, that title streams in after the content.
 
 See `docs/redesign/2026-09-21/OVE-469-PROOF.md`.
 
@@ -2315,6 +2324,31 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
     evidence that the runtime holds one is that the learning-attribution cron,
     whose only production caller is its own scheduled route, advanced an outbox
     row three and a half days ago.
+11. **The LCP budget is not met on production for a page led by a photograph,
+    and which number it should be, measured how, is the owner's open decision.**
+    Lighthouse CLI 13.5.0 on 2026-09-24, applied slow 4G, median of three:
+    - `/` 5.32 s;
+    - `/species/solanum-lycopersicum` 5.09 s;
+    - a text-only entry 2.82 s;
+    - FCP 2.8–2.9 s everywhere.
+
+    DESIGN.md §9 says 2.0 s, measured the way ADR-0032 D9 says. `OVE-469`
+    showed with `docs/redesign/2026-09-21/ove-469/applied-throttling-model.py`
+    that no lever inside the architecture reaches it that way. The model
+    predicts the feed at 5.29 s. The method shares the link evenly between the
+    requests in flight, whatever their priority, and the framework's script is
+    17–23 of them.
+    - A phone rung (720 px) in the variant ladder would bring the feed to about
+      4.0 s. That is a migration, because `variant_long_edges` allows only
+      `{1280, 480}`, and a change to the upload path and the staging worker.
+    - Real visitors' LCP would measure something else, and there is none to
+      read (gap 4).
+
+    On 2026-09-24 the owner closed `OVE-469` with these facts and left the
+    number and the method to a task of their own. Linear refused to create
+    that card: the workspace is at its free issue limit. So the decision is
+    recorded here until the card exists. The proof, the model and the
+    baseline are in `docs/redesign/2026-09-21/OVE-469-PROOF.md`.
 
 ## How to check any of this yourself
 
