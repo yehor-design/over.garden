@@ -125,10 +125,10 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
     description:
       "Четете реални публични дневници за растения, животни и пчелни семейства без регистрация.",
     feed: {
-      heading: "Поток",
+      heading: "Емисия",
       headingDescription:
         "Публични записи на градинари от Украйна и България, от най-новия.",
-      filterLabel: "Филтриране на потока",
+      filterLabel: "Филтриране на емисията",
       recentFilter: "Последни",
       followedFilter: "Следвани",
       plantFilter: "Растения",
@@ -140,8 +140,8 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       topicFilterLabel: "Проверени теми",
       ...entryCardFeedLabels("bg"),
       loadMore: "Следваща страница",
-      firstPage: "Към началото на потока",
-      paginationLabel: "Страници на потока",
+      firstPage: "Към началото на емисията",
+      paginationLabel: "Страници на емисията",
       endOfFeed: "Прегледахте всички налични записи",
       emptyTitle: "Все още няма публични записи тук",
       emptyBody:
@@ -151,7 +151,7 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       noResultsTitle: "С тези филтри не е намерено нищо",
       activeFiltersLabel: "Активни филтри",
       loadingLabel: "Зареждане на публичните дневници",
-      errorTitle: "Потокът не може да се зареди",
+      errorTitle: "Емисията не може да се зареди",
       errorBody:
         "Опитайте отново или продължете с проверените материали на OverGarden.",
       errorReference: "Код за справка:",

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { getLocalizedHomeContent } from "@/server/public-localized-content";
+import { getPublicJournalEntryCopy } from "./public-journal-entry-copy";
 import {
   getInterfaceCopy,
   parseInterfaceLocalizationHint,
@@ -198,6 +200,22 @@ describe("interface locale contract", () => {
       ["Акаунт", "Акаунт", "Відкрити меню акаунта"],
       ["Акаунт", "Акаунт", "Отваряне на менюто на акаунта"],
       ["Аккаунт", "Аккаунт", "Открыть меню аккаунта"],
+    ]);
+  });
+
+  it("calls the feed one thing in the menu, on the page and on the way back", () => {
+    // The Bulgarian menu said «Емисия» and the page it opened said «Поток»,
+    // as did an entry's way back to it.
+    expect(
+      (["uk", "bg", "ru"] as const).map((locale) => [
+        getInterfaceCopy(locale).navigation.feed,
+        getLocalizedHomeContent(locale).feed.heading,
+        getPublicJournalEntryCopy(locale).feed,
+      ]),
+    ).toEqual([
+      ["Стрічка", "Стрічка", "Стрічка"],
+      ["Емисия", "Емисия", "Емисия"],
+      ["Лента", "Лента", "Лента"],
     ]);
   });
 });
