@@ -119,15 +119,39 @@ evaluated here before it may cost a production release.
   have no "before" taken the same way, instead of leaving a reader to compare
   across environments.
 
+## Variants for the photographs already published
+
+The owner chose this lever on 2026-09-24. It was applied to production the same
+day with `scripts/backfill-media-variants.ts`.
+
+- **Inventory**, read-only (`ove-469/media-variants-inventory.json`): 15 live,
+  public photographs had no variants — the 13 on entry pages and two more. All
+  were served, 93–453 kB, each row with its intrinsic size.
+- **Apply** (`ove-469/media-variants-apply.json`): each variant was made the
+  way the upload path makes one, in a browser (headless Chromium): the whole
+  photograph drawn once, each variant drawn from it smoothed at "high", WebP at
+  quality 85 (ADR-0022 D2).
+  - 29 variants were written beside their primaries (14 at 1280, 15 at 480),
+    none replacing an object.
+  - Each row now records its variants, in one guarded statement. Every
+    decoded size matched the row's.
+  - All 29 answer 200 from `media.over.garden` with the bytes written.
+- **What it buys:** the 480 variants weigh 493 kB together, against 2.62 MB for
+  the primaries. The listings' small slots (224–336 px) now take those.
+- **What it does not:** the feed's cover is 1,080 px, so it has only a 480
+  variant, and a phone asks for about 663 px. It still takes the 94 kB
+  original. A phone rung (720) is what would lighten the cover. The database
+  allows only `{1280, 480}`, so that is a migration and a change to the upload
+  path and the staging worker, not a backfill.
+
 ## What needs the owner
 
 Criterion 3 cannot be met by the levers this issue lists, and the ones that
 could reach it change something that is not this task's to change:
 
-- **The photographs' weight.** Variants for the 13 photographs, possibly with a
-  phone-sized rung, would be browser-made WebP within ADR-0022 D2. It is a
-  production write: new objects in R2 and variant columns on 13 rows. By the
-  model it takes `/` from 5.6 s toward 4 s, not to 2.0 s.
+- **The photographs' weight.** Done for the existing ladder, above. A phone
+  rung, which would lighten the cover itself, is the next step, and it needs a
+  migration.
 - **The method.** Applied throttling shares the link per request, so a page's
   number of requests counts as much as its bytes, and a correct priority counts
   for nothing. Field data, or the simulated figure, would measure a different

@@ -1,0 +1,439 @@
+{
+  "issue": "OVE-469",
+  "mode": "apply",
+  "databaseHost": "digitalocean_managed",
+  "mediaBase": "https://media.over.garden",
+  "at": "2026-09-24T06:13:11.890Z",
+  "rows": [
+    {
+      "id": "185f7b8d-4387-52be-b9d5-07ed2bd813ce",
+      "key": "derivatives/4d65460c-1cff-40fb-a601-93c58953ce39.webp",
+      "served": 200,
+      "primaryBytes": 95282,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ],
+      "actualIntrinsic": [
+        1600,
+        1067
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/4d65460c-1cff-40fb-a601-93c58953ce39-1280.webp",
+          "bytes": 65866,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/4d65460c-1cff-40fb-a601-93c58953ce39-480.webp",
+          "bytes": 18480,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "2f7f11d8-9636-58fb-8eb0-d50a137b3c89",
+      "key": "derivatives/9aaba26f-43ab-440c-a85b-207efc701dae.webp",
+      "served": 200,
+      "primaryBytes": 146564,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ],
+      "actualIntrinsic": [
+        1600,
+        1067
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/9aaba26f-43ab-440c-a85b-207efc701dae-1280.webp",
+          "bytes": 111966,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/9aaba26f-43ab-440c-a85b-207efc701dae-480.webp",
+          "bytes": 32906,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "35d42887-9413-5fab-9546-28598a2e793e",
+      "key": "derivatives/a5a0647b-c521-4a90-9ea6-377ee4655c4f.webp",
+      "served": 200,
+      "primaryBytes": 182386,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ],
+      "actualIntrinsic": [
+        1600,
+        1067
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/a5a0647b-c521-4a90-9ea6-377ee4655c4f-1280.webp",
+          "bytes": 128768,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/a5a0647b-c521-4a90-9ea6-377ee4655c4f-480.webp",
+          "bytes": 32414,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "36177b03-2ceb-5b75-83d2-fb92d2d1cd07",
+      "key": "derivatives/e5a0c83e-1403-40d4-a7fb-af621d76de3d.webp",
+      "served": 200,
+      "primaryBytes": 452702,
+      "rowIntrinsic": [
+        1600,
+        1200
+      ],
+      "actualIntrinsic": [
+        1600,
+        1200
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/e5a0c83e-1403-40d4-a7fb-af621d76de3d-1280.webp",
+          "bytes": 302440,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/e5a0c83e-1403-40d4-a7fb-af621d76de3d-480.webp",
+          "bytes": 53726,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "36285ad7-150d-54c0-a91c-f007a0c3ed76",
+      "key": "derivatives/8f09c947-591b-4d26-b767-0a09cd5fefed.webp",
+      "served": 200,
+      "primaryBytes": 168276,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ],
+      "actualIntrinsic": [
+        1600,
+        1067
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/8f09c947-591b-4d26-b767-0a09cd5fefed-1280.webp",
+          "bytes": 131966,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/8f09c947-591b-4d26-b767-0a09cd5fefed-480.webp",
+          "bytes": 35320,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "541cf37b-c6a3-4884-8965-dccdda391c82",
+      "key": "derivatives/541cf37b-c6a3-4884-8965-dccdda391c82/1.webp",
+      "served": 200,
+      "primaryBytes": 93700,
+      "rowIntrinsic": [
+        1080,
+        720
+      ],
+      "actualIntrinsic": [
+        1080,
+        720
+      ],
+      "variants": [
+        {
+          "longEdge": 480,
+          "key": "derivatives/541cf37b-c6a3-4884-8965-dccdda391c82/1-480.webp",
+          "bytes": 32160,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "74c256cf-3952-5883-80c6-3b8b3f65c0aa",
+      "key": "derivatives/7595be33-d6c5-4da6-80e4-01c89561bc4a.webp",
+      "served": 200,
+      "primaryBytes": 208280,
+      "rowIntrinsic": [
+        1600,
+        1061
+      ],
+      "actualIntrinsic": [
+        1600,
+        1061
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/7595be33-d6c5-4da6-80e4-01c89561bc4a-1280.webp",
+          "bytes": 152694,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/7595be33-d6c5-4da6-80e4-01c89561bc4a-480.webp",
+          "bytes": 41534,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "77f8ef38-1704-523a-991d-a0a6a840a326",
+      "key": "derivatives/b954385a-427b-42b7-8395-8c754cd4457e.webp",
+      "served": 200,
+      "primaryBytes": 208264,
+      "rowIntrinsic": [
+        1600,
+        1066
+      ],
+      "actualIntrinsic": [
+        1600,
+        1066
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/b954385a-427b-42b7-8395-8c754cd4457e-1280.webp",
+          "bytes": 160912,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/b954385a-427b-42b7-8395-8c754cd4457e-480.webp",
+          "bytes": 41620,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "7b01906c-8544-56bd-846e-c547087a3e87",
+      "key": "derivatives/683c32fe-a60e-4867-82de-3db2729a6569.webp",
+      "served": 200,
+      "primaryBytes": 102554,
+      "rowIntrinsic": [
+        1200,
+        1600
+      ],
+      "actualIntrinsic": [
+        1200,
+        1600
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/683c32fe-a60e-4867-82de-3db2729a6569-1280.webp",
+          "bytes": 78788,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/683c32fe-a60e-4867-82de-3db2729a6569-480.webp",
+          "bytes": 25402,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "89235afe-2b66-509a-a467-4628285bf9a0",
+      "key": "derivatives/0de1bd7a-ba37-4520-a481-0c2f574bf537.webp",
+      "served": 200,
+      "primaryBytes": 137644,
+      "rowIntrinsic": [
+        1067,
+        1600
+      ],
+      "actualIntrinsic": [
+        1067,
+        1600
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/0de1bd7a-ba37-4520-a481-0c2f574bf537-1280.webp",
+          "bytes": 97560,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/0de1bd7a-ba37-4520-a481-0c2f574bf537-480.webp",
+          "bytes": 24306,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "916f6441-cf96-5a72-841f-3352e660afd2",
+      "key": "derivatives/e0789520-1d5c-47df-9307-da38b217d107.webp",
+      "served": 200,
+      "primaryBytes": 116910,
+      "rowIntrinsic": [
+        1067,
+        1600
+      ],
+      "actualIntrinsic": [
+        1067,
+        1600
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/e0789520-1d5c-47df-9307-da38b217d107-1280.webp",
+          "bytes": 89126,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/e0789520-1d5c-47df-9307-da38b217d107-480.webp",
+          "bytes": 25978,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "91f424bd-6b03-5161-aecc-10ea3982618e",
+      "key": "derivatives/2f559755-1a32-4cb5-8e4a-840b57c488fa.webp",
+      "served": 200,
+      "primaryBytes": 96900,
+      "rowIntrinsic": [
+        1279,
+        1600
+      ],
+      "actualIntrinsic": [
+        1279,
+        1600
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/2f559755-1a32-4cb5-8e4a-840b57c488fa-1280.webp",
+          "bytes": 71086,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/2f559755-1a32-4cb5-8e4a-840b57c488fa-480.webp",
+          "bytes": 17764,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "96c28525-041f-58a5-894b-5a6b0246d171",
+      "key": "derivatives/5547f929-658f-4630-a20e-3b44c7b265a6.webp",
+      "served": 200,
+      "primaryBytes": 132672,
+      "rowIntrinsic": [
+        1067,
+        1600
+      ],
+      "actualIntrinsic": [
+        1067,
+        1600
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/5547f929-658f-4630-a20e-3b44c7b265a6-1280.webp",
+          "bytes": 100794,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/5547f929-658f-4630-a20e-3b44c7b265a6-480.webp",
+          "bytes": 29202,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "a4733423-482d-5260-9615-395728c8df11",
+      "key": "derivatives/ff7d3c7a-47e5-4161-873e-474cff0e6bef.webp",
+      "served": 200,
+      "primaryBytes": 206404,
+      "rowIntrinsic": [
+        1600,
+        1067
+      ],
+      "actualIntrinsic": [
+        1600,
+        1067
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/ff7d3c7a-47e5-4161-873e-474cff0e6bef-1280.webp",
+          "bytes": 138414,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/ff7d3c7a-47e5-4161-873e-474cff0e6bef-480.webp",
+          "bytes": 32214,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    },
+    {
+      "id": "e5ccad0d-126c-5503-b243-7a97dc30fc64",
+      "key": "derivatives/ceea98a5-d731-47c5-8bcb-9406df466d8e.webp",
+      "served": 200,
+      "primaryBytes": 273376,
+      "rowIntrinsic": [
+        1200,
+        1600
+      ],
+      "actualIntrinsic": [
+        1200,
+        1600
+      ],
+      "variants": [
+        {
+          "longEdge": 1280,
+          "key": "derivatives/ceea98a5-d731-47c5-8bcb-9406df466d8e-1280.webp",
+          "bytes": 201478,
+          "action": "uploaded"
+        },
+        {
+          "longEdge": 480,
+          "key": "derivatives/ceea98a5-d731-47c5-8bcb-9406df466d8e-480.webp",
+          "bytes": 49692,
+          "action": "uploaded"
+        }
+      ],
+      "rowUpdated": true
+    }
+  ],
+  "candidates": 15
+}
