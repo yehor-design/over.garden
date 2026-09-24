@@ -1,3 +1,12 @@
+import { rawGlyphSvg } from "@/components/icons/raw-glyphs";
+import {
+  OVER_GARDEN_LOGO_PATHS,
+  OVER_GARDEN_LOGO_VIEWBOX,
+} from "@/components/site-shell/over-garden-logo-paths";
+import {
+  RAW_DOCUMENT_PALETTE,
+  RAW_DOCUMENT_PALETTE_DECLARATIONS,
+} from "@/lib/raw-document-palette";
 import {
   getInterfaceCopy,
   type InterfaceLocale,
@@ -19,6 +28,16 @@ export interface PublicLifecycleRequestLocation {
   search?: InterfaceRouteSearchInput;
 }
 
+/**
+ * The gardener a missing entry or passport was under, when their public
+ * profile still answers. The proxy reads it only on the way to a 404 or 410,
+ * so that the one next action keeps the reader with that gardener rather than
+ * sending them to a directory (`OVE-478`).
+ */
+export interface PublicLifecycleAuthor {
+  handle: string;
+}
+
 export interface PublicLifecycleDocumentInput extends PublicLifecycleRequestLocation {
   locale: InterfaceLocale;
   title: string;
@@ -31,13 +50,22 @@ export interface PublicLifecycleDocumentInput extends PublicLifecycleRequestLoca
  * Render the application-owned raw 404/410 document used by Proxy lifecycle
  * lookups. These responses bypass React and therefore own their complete
  * market-aware language control here rather than delegating to SiteShell.
+ *
+ * It is drawn the way the shell is (DESIGN.md §3.2, `OVE-478`): the logo on a
+ * light header, the page's one heading, one sentence and **one** next action
+ * as the shell's primary button, and the language control in the footer —
+ * the one place the shell keeps it (§6). It used to be the pre-redesign
+ * chrome, a black bar with a green brand block, and in Ukrainian its language
+ * menu had no styles at all: the native disclosure triangle and the three
+ * options spilled open under it.
+ *
+ * The colours are the semantic tokens' values (`globals.css`, light theme),
+ * written out because this document has no stylesheet to read them from.
  */
 export function renderPublicLifecycleDocument(
   input: PublicLifecycleDocumentInput,
 ) {
   const languageControl = renderRawInterfaceLanguageControl(input);
-  const languageControlStyles =
-    input.locale === "uk" ? "" : renderRawInterfaceLanguageControlStyles();
 
   return `<!doctype html>
 <html lang="${escapeAttribute(input.locale)}">
@@ -48,29 +76,52 @@ export function renderPublicLifecycleDocument(
     <meta name="referrer" content="no-referrer" />
     <title>${escapeHtml(input.title)} | OverGarden</title>
     <style>
-      :root { --fg: rgb(23 23 23); --bg: rgb(255 255 255); --brand: rgb(47 125 50); --muted: rgb(102 102 102); --line: rgb(212 212 212); --font-overgarden-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color-scheme: light; font-family: var(--font-overgarden-sans); font-optical-sizing: auto; font-synthesis: none; color: var(--fg); background: var(--bg); }
-      * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; }
-      button, input, select, textarea { font: inherit; }
-      header { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px 0 20px; color: var(--bg); background: var(--fg); font-weight: 700; }
-      header > span { display: inline-flex; min-height: 56px; align-items: center; padding: 0 18px; background: var(--brand); }
-      main { width: min(760px, 100%); margin: 0 auto; padding: 40px 20px; }
-      h1 { margin: 0; font-size: 2rem; line-height: 1.15; }
-      p { max-width: 42rem; margin: 16px 0 0; color: var(--muted); line-height: 1.65; }
-      main > a { display: inline-flex; margin-top: 24px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; color: inherit; font-weight: 650; text-decoration: none; }
-      main > a:hover { border-color: var(--brand); color: var(--brand); }
-      ${languageControlStyles}
+      ${LIFECYCLE_DOCUMENT_STYLES}
+      ${renderRawInterfaceLanguageControlStyles()}
     </style>
   </head>
   <body>
-    <header><span>OverGarden</span>${languageControl}</header>
+    <header>${renderRawLogo()}</header>
     <main>
       <h1>${escapeHtml(input.title)}</h1>
       <p>${escapeHtml(input.description)}</p>
       <a href="${escapeAttribute(input.actionHref)}" rel="noreferrer" referrerpolicy="no-referrer">${escapeHtml(input.actionLabel)}</a>
     </main>
+    <footer>${languageControl}</footer>
   </body>
 </html>`;
+}
+
+/**
+ * The colours this document uses: the light theme's semantic tokens, written
+ * out in `raw-document-palette.ts` because the document has no stylesheet to
+ * read them from. The test reads them under this name.
+ */
+export const LIFECYCLE_DOCUMENT_PALETTE = RAW_DOCUMENT_PALETTE;
+
+const PALETTE_DECLARATIONS = RAW_DOCUMENT_PALETTE_DECLARATIONS;
+
+/** Radius-sm 0.5rem and radius-md 0.75rem; `text-h1` 26/32, and 32/38 from `md`. */
+const LIFECYCLE_DOCUMENT_STYLES = `:root { ${PALETTE_DECLARATIONS} --font-overgarden-sans: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; color-scheme: light; font-family: var(--font-overgarden-sans); font-optical-sizing: auto; font-synthesis: none; color: var(--text); background: var(--surface); }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: flex; flex-direction: column; }
+      button, input, select, textarea { font: inherit; }
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+      header { display: flex; min-height: 56px; align-items: center; border-bottom: 1px solid var(--line); padding: 0 16px; background: var(--surface); }
+      [data-lifecycle-brand] { display: inline-flex; min-height: 44px; align-items: center; color: var(--action); }
+      [data-lifecycle-brand] svg { display: block; width: auto; height: 28px; }
+      main { flex: 1 0 auto; width: min(704px, 100%); margin: 0 auto; padding: 48px 20px; }
+      h1 { margin: 0; color: var(--heading); font-size: 1.625rem; font-weight: 700; line-height: 2rem; overflow-wrap: anywhere; }
+      @media (min-width: 48rem) { h1 { font-size: 2rem; line-height: 2.375rem; } }
+      p { max-width: 42rem; margin: 12px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.5rem; }
+      main > a { display: inline-flex; min-height: 44px; max-width: 100%; align-items: center; margin-top: 24px; border-radius: 0.75rem; padding: 10px 16px; color: var(--on-fill); background: var(--action); font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; text-decoration: none; overflow-wrap: anywhere; }
+      main > a:hover { background: var(--action-hover); }
+      main > a:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+      footer { border-top: 1px solid var(--line); padding: 24px 20px; }`;
+
+function renderRawLogo() {
+  const paths = OVER_GARDEN_LOGO_PATHS.map((d) => `<path d="${d}"/>`).join("");
+  return `<span data-lifecycle-brand><svg xmlns="http://www.w3.org/2000/svg" viewBox="${OVER_GARDEN_LOGO_VIEWBOX}" fill="currentColor" aria-hidden="true" focusable="false">${paths}</svg><span class="sr-only">OverGarden</span></span>`;
 }
 
 function renderRawInterfaceLanguageControl(
@@ -87,14 +138,18 @@ function renderRawInterfaceLanguageControl(
       localizedLink: routePolicy.mode === "localized-link",
     }),
   ).join("");
+  const current = PUBLIC_LOCALE_CONFIG[input.locale];
   // No script. A tombstone is raw HTML with no React and no bundle, so the
   // language control here is exactly what it looks like: links on a localized
   // route, and a form post on an unprefixed one. The 110-line inline protocol
   // this replaces reimplemented the coordinator's flush, retry and pending
   // states for a page whose whole point is that nothing works on it any more.
+  //
+  // The trigger's name carries the language it shows (WCAG 2.5.3): a reader
+  // who says what they see — "Українська" — reaches it by voice.
   return `<nav aria-label="${escapeAttribute(copy.languageControlLabel)}" data-interface-language-control-host="raw-lifecycle-interface-language-control">
       <details data-interface-language-control="true">
-        <summary aria-label="${escapeAttribute(copy.languageControlTrigger)}">${escapeHtml(PUBLIC_LOCALE_CONFIG[input.locale].label)}</summary>
+        <summary aria-label="${escapeAttribute(`${copy.languageControlTrigger}: ${current.label}`)}">${rawGlyphSvg("Translate", "data-lifecycle-glyph")}<span>${escapeHtml(current.label)}</span>${rawGlyphSvg("CaretDown", "data-lifecycle-glyph")}</summary>
         <div role="menu" data-interface-language-menu>${options}</div>
       </details>
     </nav>`;
@@ -110,6 +165,7 @@ function renderRawLanguageOption(input: {
   const config = PUBLIC_LOCALE_CONFIG[input.locale];
   const selected = input.locale === input.currentLocale;
   const commonAttributes = `data-interface-language-option data-interface-locale="${input.locale}" lang="${escapeAttribute(config.htmlLang)}" role="menuitemradio" aria-checked="${selected ? "true" : "false"}"`;
+  const content = `<span>${escapeHtml(config.label)}</span>${rawGlyphSvg("Check", "data-lifecycle-glyph")}`;
 
   if (input.localizedLink) {
     const target = buildInterfaceLocaleChoiceTarget({
@@ -118,7 +174,7 @@ function renderRawLanguageOption(input: {
       search: input.search,
     });
     if (!target) return "";
-    return `<a ${commonAttributes} href="${escapeAttribute(target)}" hreflang="${config.htmlLang}" rel="noreferrer" referrerpolicy="no-referrer">${escapeHtml(config.label)}</a>`;
+    return `<a ${commonAttributes} href="${escapeAttribute(target)}" hreflang="${config.htmlLang}" rel="noreferrer" referrerpolicy="no-referrer">${content}</a>`;
   }
 
   // Unprefixed route: the choice has nowhere to live but the cookie, so it is a
@@ -127,29 +183,32 @@ function renderRawLanguageOption(input: {
   // No `returnTo`. A tombstone must not copy the identity of the thing that is
   // gone into its own markup, and the endpoint's fallback is the home page —
   // which is where a reader on a 410 is going anyway.
-  return `<form method="post" action="${escapeAttribute(INTERFACE_LOCALE_PREFERENCE_ENDPOINT)}" style="display:inline">
+  return `<form method="post" action="${escapeAttribute(INTERFACE_LOCALE_PREFERENCE_ENDPOINT)}">
       <input type="hidden" name="locale" value="${escapeAttribute(input.locale)}" />
-      <button ${commonAttributes} type="submit">${escapeHtml(config.label)}</button>
+      <button ${commonAttributes} type="submit">${content}</button>
     </form>`;
 }
 
+/**
+ * The footer's disclosure, drawn as the shell's `InterfaceLanguageControl`
+ * is: a 44 px trigger with the Translate glyph and the current language, a
+ * menu that opens upward from the footer, and a Check beside the chosen
+ * option. Every glyph is Phosphor (`components/icons/raw-glyphs.ts`).
+ */
 function renderRawInterfaceLanguageControlStyles() {
-  return `[data-interface-language-control-host] { display: flex; max-width: min(24rem, calc(100vw - 10rem)); align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; padding-block: 8px; }
-      [data-interface-language-control] { position: relative; font-weight: 500; }
-      [data-interface-language-control] summary { display: inline-flex; min-height: 40px; max-width: min(138px, 40vw); cursor: pointer; list-style: none; align-items: center; gap: 6px; overflow: hidden; border: 1px solid rgb(255 255 255 / 35%); border-radius: 6px; padding: 7px 10px; white-space: nowrap; text-overflow: ellipsis; }
+  return `[data-interface-language-control-host] { display: flex; justify-content: flex-start; }
+      [data-interface-language-control] { position: relative; }
+      [data-interface-language-control] summary { display: inline-flex; min-height: 44px; cursor: pointer; list-style: none; align-items: center; gap: 6px; border: 1px solid var(--line-control); border-radius: 0.5rem; padding: 8px 12px; color: var(--text); background: var(--surface); font-size: 0.875rem; font-weight: 500; line-height: 1.25rem; }
       [data-interface-language-control] summary::-webkit-details-marker { display: none; }
-      [data-interface-language-control] summary::after { content: "▾"; font-size: 0.75rem; }
-      [data-interface-language-control][open] summary::after { transform: rotate(180deg); }
-      [data-interface-language-control] summary[aria-disabled="true"] { cursor: not-allowed; opacity: 0.72; }
-      [data-interface-language-menu] { position: absolute; z-index: 20; top: calc(100% + 6px); right: 0; display: grid; min-width: 168px; gap: 2px; border: 1px solid var(--line); border-radius: 7px; padding: 4px; color: var(--fg); background: var(--bg); box-shadow: 0 12px 32px rgb(0 0 0 / 18%); }
-      [data-interface-language-option] { display: flex; min-height: 42px; width: 100%; cursor: pointer; align-items: center; justify-content: space-between; border: 0; border-radius: 5px; padding: 9px 10px; color: inherit; background: transparent; font: inherit; text-align: left; text-decoration: none; }
-      [data-interface-language-option]:hover { background: rgb(0 0 0 / 7%); }
-      [data-interface-language-control] summary:focus-visible, [data-interface-language-option]:focus-visible, [data-interface-language-recovery]:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
-      [data-interface-language-option]:focus-visible { background: rgb(0 0 0 / 7%); }
-      [data-interface-language-option][aria-checked="true"]::after { content: "✓"; font-weight: 700; }
-      [data-interface-language-recovery] { min-height: 40px; cursor: pointer; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--fg); background: var(--bg); font: inherit; }
-      [data-interface-language-status] { flex: 1 0 100%; max-width: 24rem; color: inherit; font-size: 0.8125rem; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; text-align: right; }
-      [data-interface-language-status]:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }`;
+      [data-interface-language-control] summary:hover { background: var(--surface-hover); }
+      [data-interface-language-control][open] summary svg:last-child { transform: rotate(180deg); }
+      [data-interface-language-menu] { position: absolute; z-index: 20; bottom: calc(100% + 6px); left: 0; display: grid; min-width: 176px; gap: 2px; border: 1px solid var(--line); border-radius: 0.75rem; padding: 4px; color: var(--text); background: var(--surface); box-shadow: var(--shadow-popover); }
+      [data-interface-language-menu] form { display: contents; }
+      [data-interface-language-option] { display: flex; min-height: 44px; width: 100%; cursor: pointer; align-items: center; justify-content: space-between; gap: 12px; border: 0; border-radius: 0.5rem; padding: 10px 12px; color: inherit; background: transparent; font: inherit; font-size: 0.875rem; line-height: 1.25rem; text-align: left; text-decoration: none; }
+      [data-interface-language-option]:hover { background: var(--surface-hover); }
+      [data-interface-language-option][aria-checked="true"] { font-weight: 600; }
+      [data-interface-language-option][aria-checked="false"] [data-lifecycle-glyph] { visibility: hidden; }
+      [data-interface-language-control] summary:focus-visible, [data-interface-language-option]:focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }`;
 }
 
 export function escapeHtml(value: string) {

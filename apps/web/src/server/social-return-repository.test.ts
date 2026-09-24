@@ -966,8 +966,16 @@ describe("OVE-502 saved entries drawn as the feed draws them", () => {
     const database = activityDb({
       [entries]: [savedRow],
       [media]: [
-        { entryId: SAVED, derivativeKey: "public/entries/one-640.webp" },
-        { entryId: SAVED, derivativeKey: "public/entries/two-640.webp" },
+        {
+          entryId: SAVED,
+          derivativeKey: "public/entries/one-640.webp",
+          caption: "  Жовті плями на нижньому листі ",
+        },
+        {
+          entryId: SAVED,
+          derivativeKey: "public/entries/two-640.webp",
+          caption: "Другий кадр",
+        },
       ],
     });
 
@@ -988,6 +996,9 @@ describe("OVE-502 saved entries drawn as the feed draws them", () => {
         object: { href: "/@green_thumb/objects/balcony-tomato" },
         reasons: [],
         mediaUrl: "https://media.over.garden/public/entries/one-640.webp",
+        // The first photograph's own description is its `alt` on the card;
+        // it once always rendered `alt=""`, captioned or not (OG-UX-029).
+        mediaCaption: "Жовті плями на нижньому листі",
       });
       // The same card the followed feed draws for the same entry, reasons
       // and photograph aside.
@@ -1004,10 +1015,16 @@ describe("OVE-502 saved entries drawn as the feed draws them", () => {
         12,
         "bg",
       ).items;
-      expect({ ...card, reasons: [], mediaUrl: null }).toEqual({
+      expect({
+        ...card,
+        reasons: [],
+        mediaUrl: null,
+        mediaCaption: null,
+      }).toEqual({
         ...feedCard,
         reasons: [],
         mediaUrl: null,
+        mediaCaption: null,
       });
       // The entries, then their photographs: two round trips, no more.
       expect(database.rounds()).toHaveLength(2);

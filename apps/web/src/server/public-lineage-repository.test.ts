@@ -16,7 +16,6 @@ import type { Database } from "@/db/schema";
 import {
   buildPublicLineageEdgesForSubjectsQuery,
   buildPublicLineageRootObjectQuery,
-  publicLineageNodeLocationLabel,
 } from "./public-lineage-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -136,26 +135,5 @@ describe("public lineage repository query contracts", () => {
       "owner_only_until_confirmed",
       "active",
     ]);
-  });
-
-  it("suppresses hidden or unsupported regions in the public node label", () => {
-    expect(
-      publicLineageNodeLocationLabel({
-        locationVisibility: "region",
-        coarseRegionCode: "UA-30",
-      }),
-    ).toBe("Region: Ukraine - Kyiv City");
-    expect(
-      publicLineageNodeLocationLabel({
-        locationVisibility: "hidden",
-        coarseRegionCode: "UA-30",
-      }),
-    ).toBeNull();
-    expect(
-      publicLineageNodeLocationLabel({
-        locationVisibility: "region",
-        coarseRegionCode: "Kyiv apartment balcony",
-      }),
-    ).toBeNull();
   });
 });

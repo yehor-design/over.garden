@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/components/auth/sign-out-control", () => ({
   SignOutControl: ({ presentation }: { presentation: string }) => (
     <button type="button" data-sign-out-control={presentation}>
-      Изход от профила
+      Изход от акаунта
     </button>
   ),
 }));
@@ -47,7 +47,7 @@ describe("authenticated utility region", () => {
       'data-interface-language-control="site-shell-interface-language-control"',
     );
     expect(html).toContain("Управление на текущата сесия");
-    expect(html).toContain("Изход от профила");
+    expect(html).toContain("Изход от акаунта");
     expect(html).not.toMatch(/user[-_ ]?id|session[-_ ]?id|email|token/i);
   });
 

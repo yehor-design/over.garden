@@ -78,7 +78,7 @@ Typography is wired once and never re-verified (ADR-0022, D7):
 
 ## CI runtime boundary
 
-GitHub Actions currently runs on `ubuntu-latest`. Its Postgres 18 service container and MinIO `docker run` path are a `ci-required` Docker exception because Apple Container is not an Ubuntu service-container runtime. This keeps bootstrap, generated-type drift, lint, typecheck, test, and build coverage aligned with the production Postgres major version without reintroducing Docker Desktop as a supported-Mac local prerequisite.
+GitHub Actions currently runs on `ubuntu-latest`. Its Postgres 18 service container is a `ci-required` Docker exception because Apple Container is not an Ubuntu service-container runtime. R2's stand-in in CI is moto's S3 server, a pinned PyPI package (`.github/actions/web-setup`): MinIO's images stopped serving anonymous pulls, on Docker Hub on 2026-09-12 and on Quay on 2026-09-24, and every run then failed before a test ran. This keeps bootstrap, generated-type drift, lint, typecheck, test, and build coverage aligned with the production Postgres major version without reintroducing Docker Desktop as a supported-Mac local prerequisite.
 
 Do not migrate CI to Apple Container unless the replacement change documents runner support, runner cost/availability/concurrency, complete service-contract proof commands, and fallback behavior in `docs/CONTAINER_RUNTIME_POLICY.md`.
 

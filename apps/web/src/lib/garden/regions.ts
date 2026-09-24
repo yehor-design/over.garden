@@ -317,6 +317,48 @@ export function getLocalizedCoarseRegionLabel(
   return normalized ? LOCALIZED_COARSE_REGION_LABELS[locale][normalized] : null;
 }
 
+const PUBLIC_REGION_WORD: Record<InterfaceLocale, string> = {
+  uk: "Регіон",
+  bg: "Регион",
+  ru: "Регион",
+};
+
+/**
+ * The one line a public page shows a coarse region as — «Регіон: Україна —
+ * місто Київ» — in the reader's language. The entry page, the organism card
+ * and the lineage pages printed the English label under every interface
+ * («Region: Ukraine - Kyiv City»), because the repositories wrote the line
+ * and knew no locale (`OVE-478`). They hand over the code now, and the page
+ * that knows its reader writes the line here.
+ */
+export function publicRegionLabel(
+  locale: InterfaceLocale,
+  value: string | null | undefined,
+): string | null {
+  const label = getLocalizedCoarseRegionLabel(locale, value);
+  return label ? `${PUBLIC_REGION_WORD[locale]}: ${label}` : null;
+}
+
+/**
+ * The region an object may show publicly: its own when it shows one, else
+ * its space's when the space shows one, else none. Only a code — never a
+ * label, which belongs to the page and its reader.
+ */
+export function publicRegionCode(input: {
+  objectLocationVisibility: string;
+  objectCoarseRegionCode: string | null;
+  spaceLocationVisibility?: string | null;
+  spaceCoarseRegionCode?: string | null;
+}): string | null {
+  if (input.objectLocationVisibility !== "region") return null;
+  return normalizeCoarseRegionCode(
+    input.objectCoarseRegionCode ??
+      (input.spaceLocationVisibility === "region"
+        ? input.spaceCoarseRegionCode
+        : null),
+  );
+}
+
 export function getLocalizedCoarseRegionOptions(locale: InterfaceLocale) {
   return COARSE_REGIONS.map(({ code }) => ({
     value: code,

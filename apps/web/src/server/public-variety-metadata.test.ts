@@ -234,7 +234,7 @@ function buildPage({ rich }: { rich: boolean }): PublicVarietyPage {
         publicPath: "/journal/entry-1",
         plantObjectDisplayName: "Balcony tomato",
         varietyText: "Pomidor Cheri",
-        safeLocationLabel: null,
+        safeRegionCode: null,
         media: null,
       },
     ],

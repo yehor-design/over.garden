@@ -239,9 +239,7 @@ async function renderSignedOutFollowedFeed({
             </Link>
           }
         >
-          <p>
-            {copy.feed.signedOutPublic} {copy.feed.signIn}
-          </p>
+          <p>{`${copy.feed.signedOutPublic} ${copy.feed.signIn}`}</p>
         </Callout>
 
         {feed.entries.length === 0 ? (
@@ -424,7 +422,7 @@ function FollowedFeedEntryCard({
         item.mediaUrl
           ? {
               src: item.mediaUrl,
-              alt: publicCardMediaAltText({}),
+              alt: publicCardMediaAltText({ caption: item.mediaCaption }),
             }
           : null
       }

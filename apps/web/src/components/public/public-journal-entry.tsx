@@ -26,7 +26,7 @@ import {
   normalizeJournalDocument,
   type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 import { entryCardDates } from "@/lib/entry-card-dates";
 import { getLivingObjectPassportDomain } from "@/lib/living-object-passport";
 import type { PublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
@@ -111,7 +111,7 @@ export function PublicJournalEntryView({
   children?: ReactNode;
 }) {
   const contextModules = buildContextModules(page, copy);
-  const location = getSafeLocation(page, copy);
+  const location = getSafeLocation(page, copy, locale);
   const mentionedProfiles = page.mentionedProfiles ?? [];
 
   // A photograph the story already shows is never shown again (`OVE-471`).
@@ -177,6 +177,19 @@ export function PublicJournalEntryView({
               <>
                 <Link
                   href={page.author.profilePath}
+                  // "Автор", the name and the handle, spaced: a visually
+                  // hidden span beside the name lost its space in Chromium's
+                  // accessibility tree, and Orca read them as one word
+                  // (`OVE-478`).
+                  aria-label={[
+                    copy.by,
+                    page.author.displayName,
+                    page.author.mention === page.author.displayName
+                      ? null
+                      : page.author.mention,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   className="flex w-fit min-w-0 items-center gap-2 text-body-sm text-text underline-offset-2 hover:text-text-link hover:underline"
                 >
                   {/* The picture is the name's, which follows it. */}
@@ -188,7 +201,6 @@ export function PublicJournalEntryView({
                     />
                   </span>
                   <span className="min-w-0">
-                    <span className="sr-only">{`${copy.by} `}</span>
                     <strong>{page.author.displayName}</strong>
                     {/* A gardener who has set no display name is shown by
                         their handle, and then the mention beside it is the
@@ -724,6 +736,7 @@ function buildContextModules(
 function getSafeLocation(
   page: PublicJournalEntryPage,
   copy: PublicJournalEntryCopy,
+  locale: PublicLocale,
 ) {
   const locationSource =
     page.context.kind === "object" ? page.context.object : page.context.space;
@@ -736,7 +749,9 @@ function getSafeLocation(
     (page.context.space.locationVisibility === "region"
       ? page.context.space.coarseRegionCode
       : null);
-  const label = getCoarseRegionLabel(code);
+  // In the reader's language: the English label was printed under every
+  // interface (`OVE-478`).
+  const label = getLocalizedCoarseRegionLabel(locale, code);
   return label ? `${copy.safeRegion}: ${label}` : copy.locationHidden;
 }
 

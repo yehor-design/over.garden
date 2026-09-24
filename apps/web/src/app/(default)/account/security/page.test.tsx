@@ -53,7 +53,7 @@ vi.mock("@/app/(default)/garden/account-methods-panel", () => ({
 vi.mock("@/components/auth/sign-out-control", () => ({
   SignOutControl: ({ presentation }: { presentation: string }) => (
     <button type="button" data-sign-out-control={presentation}>
-      Вийти з облікового запису
+      Вийти з акаунта
     </button>
   ),
 }));
@@ -90,7 +90,7 @@ describe("/account/security (OVE-503)", () => {
     );
     expect(mocks.getCurrentAccountMethodProjection).toHaveBeenCalledOnce();
     expect(html).toContain('data-account-methods="ready:true:true:false"');
-    expect(html).toContain("Обліковий запис і безпека");
+    expect(html).toContain("Акаунт і безпека");
     expect(html).toContain('data-sign-out-control="profile"');
     expect(html).not.toContain('name="displayName"');
     expect(html).not.toContain('name="handle"');

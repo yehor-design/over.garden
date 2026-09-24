@@ -1265,7 +1265,7 @@ describe("the owner's decision queue (ADR-0026 D10, OVE-506)", () => {
     const { generateMetadata } = await import("./page");
 
     await expect(generateMetadata()).resolves.toEqual({
-      title: "Черга рішень каталогу",
+      title: "Черга рішень каталогу | OverGarden",
       robots: { index: false, follow: false },
     });
   });

@@ -16,6 +16,7 @@ import {
   removeSyntheticGardener,
   signInSyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The command palette, driven by keyboard alone (DESIGN.md §5.2, ADR-0031 D7).
@@ -33,8 +34,6 @@ import {
 
 const PREFIX = "ove445";
 const TEST_PASSWORD = "OVE445-local-password-1!";
-const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21aa"];
-
 async function selectLocale(context: BrowserContext, baseURL: string) {
   await context.addCookies([
     { name: "overgarden_interface_locale", value: "uk", url: baseURL },
@@ -71,7 +70,7 @@ async function axeViolations(page: Page) {
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, AXE_TAGS);
+  }, WCAG_AA_TAGS);
 }
 
 /** The palette's own state, read the way a screen reader would. */

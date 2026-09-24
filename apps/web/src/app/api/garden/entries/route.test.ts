@@ -215,6 +215,9 @@ describe("POST /api/garden/entries atomic create", () => {
       slug: "first-flowers-00000000",
       revision: 1,
       returnTo: "/garden?space=current#space-journal",
+      // The object this entry created: a composer that named it while
+      // writing learns its page only from here (`OVE-478`).
+      plantObjectId: OBJECT_ID,
       card: { entryId: ENTRY_ID, title: "First flowers" },
     });
     expect(mocks.createFirstPlantEntry).toHaveBeenCalledWith(
@@ -237,6 +240,37 @@ describe("POST /api/garden/entries atomic create", () => {
     expect(
       JSON.stringify(mocks.recordAnalyticsEventSafely.mock.calls),
     ).not.toMatch(/Two new flower clusters|media_key|coordinate|latitude/i);
+    // An existing space was chosen, so no space was created (`OVE-478`).
+    const events = mocks.recordAnalyticsEventSafely.mock.calls.map(
+      ([, event]) => (event as { eventName: string }).eventName,
+    );
+    expect(events).toContain("object_created");
+    expect(events).not.toContain("space_created");
+  });
+
+  it("records a space as created only when the first entry named a new one", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      atomicJsonRequest(
+        atomicRequest({
+          context: {
+            target: "first_plant_entry",
+            spaceName: "Теплиця",
+            plantName: "Cherry tomato",
+            entryDate: "2026-08-23",
+          },
+          returnTo: "/garden",
+        }),
+      ),
+    );
+    expect(response.status).toBe(200);
+    const deferred = mocks.scheduleLearningAttributionDrain.mock.calls[0]?.[0];
+    await deferred?.();
+    const events = mocks.recordAnalyticsEventSafely.mock.calls.map(
+      ([, event]) => (event as { eventName: string }).eventName,
+    );
+    expect(events).toContain("space_created");
+    expect(events).toContain("object_created");
   });
 
   it("claims ordered exact media, finalizes after commit, and HEAD-proves final WebP", async () => {
@@ -301,6 +335,7 @@ describe("POST /api/garden/entries atomic create", () => {
     );
     expect(body).toMatchObject({
       returnTo: `/garden/objects/${OBJECT_ID}#follow-up-composer`,
+      plantObjectId: OBJECT_ID,
       card: { coverUrl: `https://media.over.garden/${publicPath}` },
     });
     const deferred = mocks.scheduleLearningAttributionDrain.mock.calls[0]?.[0];

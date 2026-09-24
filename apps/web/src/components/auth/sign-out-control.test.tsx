@@ -33,7 +33,7 @@ describe("shared sign-out control", () => {
 
     expect(html).toContain('data-sign-out-control="profile"');
     expect(html).toContain('data-sign-out-phase="idle"');
-    expect(html).toContain("Вийти з облікового запису");
+    expect(html).toContain("Вийти з акаунта");
     expect(html).toContain("w-full");
     expect(html).not.toMatch(/user[-_ ]?id|session[-_ ]?id|email|token/i);
   });
@@ -43,7 +43,7 @@ describe("shared sign-out control", () => {
     const { SignOutControl } = await import("./sign-out-control");
     const html = renderToStaticMarkup(<SignOutControl />);
 
-    expect(html).toContain("Вийти з облікового запису");
+    expect(html).toContain("Вийти з акаунта");
     expect(html).not.toContain('aria-busy="true"');
     expect(html).not.toContain(" disabled=");
     expect(html).not.toMatch(/Перевіряємо|Завершуємо|помилка|повтор/i);

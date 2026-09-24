@@ -90,6 +90,7 @@ describe("/{locale}/feed", () => {
           publishedAt: "2026-07-04T08:00:00.000Z",
           reasons: ["people", "objects"],
           mediaUrl: null,
+          mediaCaption: null,
         },
       ],
       nextCursor: "safe-cursor",
@@ -273,6 +274,7 @@ describe("/{locale}/feed", () => {
         publishedAt: "2026-07-04T08:00:00.000Z",
         reasons: ["people", "objects"],
         mediaUrl: `https://media.over.garden/feed-${index}.webp`,
+        mediaCaption: index === 0 ? "Жовті плями на нижньому листі" : null,
       })),
       nextCursor: null,
     });
@@ -288,5 +290,9 @@ describe("/{locale}/feed", () => {
     // second card is already below the fold on every width this page has.
     expect(html.match(/loading="eager"/g)).toHaveLength(1);
     expect(html.match(/loading="lazy"/g)).toHaveLength(3);
+    // A captioned photograph is described by its caption; the others repeat
+    // nothing the card's own title already says (OG-UX-029).
+    expect(html).toContain('alt="Жовті плями на нижньому листі"');
+    expect(html.match(/alt=""/g)).toHaveLength(3);
   });
 });

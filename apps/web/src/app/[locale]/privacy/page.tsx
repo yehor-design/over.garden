@@ -127,9 +127,7 @@ export default async function LocalizedPrivacyNoticePage({
           heading: copy.aboutTitle,
           body: (
             <div className="grid gap-3 text-text-secondary">
-              <p>
-                {copy.statusPrefix} {copy.statusLabel}
-              </p>
+              <p>{`${copy.statusPrefix} ${copy.statusLabel}`}</p>
               <PolicyList lines={copy.boundaries} />
               <p className="text-caption text-text-muted">
                 {copy.versionsLabel

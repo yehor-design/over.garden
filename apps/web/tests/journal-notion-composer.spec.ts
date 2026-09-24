@@ -10,6 +10,7 @@ import {
   type Page,
 } from "playwright/test";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 import { Pool } from "pg";
 
 
@@ -428,7 +429,7 @@ async function axeViolations(page: Page) {
     "utf8",
   );
   await page.evaluate(`(() => { ${axeSource} })()`);
-  return page.evaluate(async () => {
+  return page.evaluate(async (tags) => {
     const axe = (
       window as unknown as {
         axe: {
@@ -456,7 +457,7 @@ async function axeViolations(page: Page) {
         exclude: [["[data-base-ui-focus-guard]"]],
       } as unknown as Document,
       {
-        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+        runOnly: { type: "tag", values: tags },
       },
     );
     // The selector too: a violation without a path costs an afternoon.
@@ -465,7 +466,7 @@ async function axeViolations(page: Page) {
       impact: violation.impact,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  });
+  }, WCAG_AA_TAGS);
 }
 
 /** The gutter is positioned imperatively one frame after the pointer moves. */

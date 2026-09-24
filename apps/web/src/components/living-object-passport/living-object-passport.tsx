@@ -2,6 +2,8 @@
 // `Link` carries link typography, and `buttonVariants` would have to fight it.
 import NextLink from "next/link";
 import type { ReactNode } from "react";
+import { ArrowLeftIcon as ArrowLeft } from "@/components/icons/ArrowLeft";
+import { ArrowRightIcon as ArrowRight } from "@/components/icons/ArrowRight";
 import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
 import { CaretRightIcon as ChevronRight } from "@/components/icons/CaretRight";
 import { ImageBrokenIcon as ImageOff } from "@/components/icons/ImageBroken";
@@ -640,14 +642,18 @@ function renderTimelineEntries(
                 aria-label={`${copy.chronology}: ${entry.title}`}
                 className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-border pt-3 text-caption"
               >
+                {/* Phosphor arrows, not "←" and "→": a text arrow is a
+                    second icon family and is read aloud as "left arrow"
+                    before every title (DESIGN.md §2.8, `OVE-478`). */}
                 {entry.newer ? (
                   <Link
                     href={entry.newer.href}
                     variant="muted"
                     className="inline-flex min-h-11 min-w-0 items-center gap-1"
                   >
+                    <ArrowLeft size={16} className="shrink-0" />
                     <span className="truncate">
-                      ← {copy.newer}: {entry.newer.title}
+                      {copy.newer}: {entry.newer.title}
                     </span>
                   </Link>
                 ) : null}
@@ -658,8 +664,9 @@ function renderTimelineEntries(
                     className="inline-flex min-h-11 min-w-0 items-center gap-1"
                   >
                     <span className="truncate">
-                      {copy.older}: {entry.older.title} →
+                      {copy.older}: {entry.older.title}
                     </span>
+                    <ArrowRight size={16} className="shrink-0" />
                   </Link>
                 ) : null}
               </nav>

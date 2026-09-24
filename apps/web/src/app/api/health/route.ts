@@ -1,8 +1,10 @@
 import { connection } from "next/server";
 
 /**
- * Liveness only (ADR-0022, D5): proves the function answers. Secret classes,
- * database details, and version facts stay on the owner-only `/health` page.
+ * Liveness only (ADR-0022, D5): proves the function answers, and says nothing
+ * else. Secret classes, database details and version facts are not published
+ * anywhere: the owner-only `/health` page that held them is retired
+ * (ADR-0027).
  */
 export async function GET() {
   await connection();

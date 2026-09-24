@@ -102,8 +102,12 @@ function LanguageControlView({
       className={cn("relative min-w-0 text-text", compact && "text-right")}
     >
       <details className="group/language relative">
+        {/* The name carries the language the trigger shows (WCAG 2.5.3,
+            label in name): "Змінити мову" alone left out the visible "UK",
+            so a reader who says what they see could not reach it by voice
+            (`OVE-478`). */}
         <summary
-          aria-label={copy.languageControlTrigger}
+          aria-label={`${copy.languageControlTrigger} — ${PUBLIC_LOCALE_CONFIG[locale].label} (${PUBLIC_LOCALE_CONFIG[locale].shortLabel})`}
           data-interface-language-trigger="true"
           className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-body-sm font-medium outline-none hover:bg-surface-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:min-h-8 sm:py-1"
         >

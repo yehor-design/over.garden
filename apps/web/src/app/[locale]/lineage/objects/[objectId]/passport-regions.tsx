@@ -86,7 +86,7 @@ export function LineageInteractionPanel({
     >
       <div className="grid gap-1">
         <p className="text-body-sm font-medium text-text">
-          {copy.passport.lineageUpdatesFrom} {target.displayName}
+          {`${copy.passport.lineageUpdatesFrom} ${target.displayName}`}
         </p>
         <p className="text-caption text-text-muted">
           {copy.passport.lineageQuestionSafety}

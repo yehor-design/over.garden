@@ -33,30 +33,24 @@ export interface InterfaceCopy {
     workspaceTitle: string;
     workspaceDescription: string;
   };
+  /**
+   * Only the labels the shell renders. A label nobody reads is still
+   * translated and reviewed, and it keeps a word the product dropped — a
+   * "Drafts" entry for gardeners who have no drafts — alive in three languages.
+   */
   navigation: {
     feed: string;
     explore: string;
     activity: string;
     gardenShort: string;
     catalogue: string;
-    /** The tab bar's fifth slot. Identity-neutral: signed out it means
-     *  "sign in", signed in it means "your profile" (ADR-0031 D4). */
-    you: string;
-    livingObjects: string;
-    journals: string;
     communities: string;
     knowledge: string;
     myGarden: string;
-    addObject: string;
-    addUpdate: string;
-    drafts: string;
-    garden: string;
     followedFeed: string;
-    notifications: string;
     bookmarks: string;
     wishlist: string;
     lineageClaims: string;
-    profile: string;
     publicProfile: string;
     signIn: string;
   };
@@ -73,7 +67,6 @@ export interface InterfaceCopy {
     mobileNavigation: string;
     contextTitle: string;
     contextDescription: string;
-    startJournal: string;
     privacy: string;
     account: string;
     loadingTitle: string;
@@ -161,22 +154,13 @@ const INTERFACE_COPY = {
       activity: "Події",
       gardenShort: "Мій сад",
       catalogue: "Каталог",
-      livingObjects: "Живі об'єкти",
-      you: "Ви",
-      journals: "Журнали",
       communities: "Спільноти",
       knowledge: "Знання",
       myGarden: "Мій сад",
-      addObject: "Додати об'єкт",
-      addUpdate: "Новий запис",
-      drafts: "Чернетки",
-      garden: "Сад",
       followedFeed: "Стрічка підписок",
-      notifications: "Сповіщення",
       bookmarks: "Закладки",
       wishlist: "Список бажань",
       lineageClaims: "Запити щодо походження",
-      profile: "Профіль",
       publicProfile: "Публічний профіль",
       signIn: "Увійти",
     },
@@ -201,9 +185,9 @@ const INTERFACE_COPY = {
       contextTitle: "Далі",
       contextDescription:
         "Продовжуйте читати публічні історії або відкрийте власний журнал.",
-      startJournal: "Почати журнал",
       privacy: "Приватність",
-      account: "Обліковий запис",
+      // «Акаунт», never «обліковий запис»: «запис» is a journal entry here.
+      account: "Акаунт",
       loadingTitle: "Завантаження OverGarden",
       errorEyebrow: "Не вдалося відкрити розділ",
       errorTitle: "Цю сторінку не вдалося завантажити",
@@ -215,7 +199,7 @@ const INTERFACE_COPY = {
       primaryAction: "Новий запис",
       footerNavigation: "Навігація в підвалі",
       contextRail: "Додатковий контекст",
-      accountRegion: "Обліковий запис",
+      accountRegion: "Акаунт",
       footerTagline:
         "Публічний журнал садівництва: кожен запис відкритий і може з’являтися в пошуку.",
       support: "Підтримка",
@@ -223,7 +207,7 @@ const INTERFACE_COPY = {
       sourcesTitle: "Джерела даних",
       sourcesDescription:
         "Назви організмів — з Catalogue of Life; реєстрові дані — з EPPO Global Database. Світлини належать їхнім авторам.",
-      openAccount: "Відкрити меню облікового запису",
+      openAccount: "Відкрити меню акаунта",
     },
     palette: {
       open: "Пошук",
@@ -279,22 +263,13 @@ const INTERFACE_COPY = {
       activity: "Известия",
       gardenShort: "Градина",
       catalogue: "Каталог",
-      livingObjects: "Живи обекти",
-      you: "Вие",
-      journals: "Дневници",
       communities: "Общности",
       knowledge: "Знания",
       myGarden: "Моята градина",
-      addObject: "Добавяне на обект",
-      addUpdate: "Нов запис",
-      drafts: "Чернови",
-      garden: "Градина",
       followedFeed: "Следвани записи",
-      notifications: "Известия",
       bookmarks: "Отметки",
       wishlist: "Списък с желания",
       lineageClaims: "Заявки за произход",
-      profile: "Профил",
       publicProfile: "Публичен профил",
       signIn: "Вход",
     },
@@ -319,9 +294,9 @@ const INTERFACE_COPY = {
       contextTitle: "Следващо",
       contextDescription:
         "Продължете с публичните истории или отворете свой дневник.",
-      startJournal: "Започване на дневник",
       privacy: "Поверителност",
-      account: "Профил",
+      // «Акаунт», never «Профил»: a profile is the public page of a gardener.
+      account: "Акаунт",
       loadingTitle: "Зареждане на OverGarden",
       errorEyebrow: "Разделът не може да се отвори",
       errorTitle: "Тази страница не може да се зареди",
@@ -333,7 +308,7 @@ const INTERFACE_COPY = {
       primaryAction: "Нов запис",
       footerNavigation: "Навигация в долния колонтитул",
       contextRail: "Допълнителен контекст",
-      accountRegion: "Профил",
+      accountRegion: "Акаунт",
       footerTagline:
         "Публичен дневник за градинарство: всеки запис е отворен и може да се появява в търсачките.",
       support: "Поддръжка",
@@ -341,7 +316,7 @@ const INTERFACE_COPY = {
       sourcesTitle: "Източници на данни",
       sourcesDescription:
         "Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.",
-      openAccount: "Отваряне на менюто на профила",
+      openAccount: "Отваряне на менюто на акаунта",
     },
     palette: {
       open: "Търсене",
@@ -397,22 +372,13 @@ const INTERFACE_COPY = {
       activity: "События",
       gardenShort: "Мой сад",
       catalogue: "Каталог",
-      livingObjects: "Живые объекты",
-      you: "Вы",
-      journals: "Журналы",
       communities: "Сообщества",
       knowledge: "Знания",
       myGarden: "Мой сад",
-      addObject: "Добавить объект",
-      addUpdate: "Новая запись",
-      drafts: "Черновики",
-      garden: "Сад",
       followedFeed: "Лента подписок",
-      notifications: "Уведомления",
       bookmarks: "Закладки",
       wishlist: "Список желаний",
       lineageClaims: "Заявки о происхождении",
-      profile: "Профиль",
       publicProfile: "Публичный профиль",
       signIn: "Войти",
     },
@@ -437,7 +403,6 @@ const INTERFACE_COPY = {
       contextTitle: "Дальше",
       contextDescription:
         "Продолжайте читать публичные истории или откройте свой журнал.",
-      startJournal: "Начать журнал",
       privacy: "Конфиденциальность",
       account: "Аккаунт",
       loadingTitle: "Загрузка OverGarden",

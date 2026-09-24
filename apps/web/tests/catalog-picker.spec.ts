@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 import { Pool } from "pg";
 
 /**
@@ -453,7 +454,7 @@ async function runAxeOnComposer(page: Page) {
     "utf8",
   );
   await page.evaluate(`(() => { ${axeSource} })()`);
-  const violations = await page.evaluate(async () => {
+  const violations = await page.evaluate(async (tags) => {
     const axe = (
       window as unknown as {
         axe: {
@@ -473,14 +474,14 @@ async function runAxeOnComposer(page: Page) {
     const composer = document.querySelector("#first-entry-composer");
     if (!composer) throw new Error("composer missing");
     const result = await axe.run(composer, {
-      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+      runOnly: { type: "tag", values: tags },
     });
     return result.violations.map((violation) => ({
       id: violation.id,
       impact: violation.impact,
       nodes: violation.nodes.length,
     }));
-  });
+  }, WCAG_AA_TAGS);
   expect(violations, JSON.stringify(violations)).toEqual([]);
 }
 

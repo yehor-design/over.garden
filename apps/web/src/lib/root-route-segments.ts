@@ -161,6 +161,142 @@ export const LOCALE_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
 ]);
 
 /**
+ * Every address a section serves below its root: one pattern per `page.tsx`
+ * or `route.ts` under `src/app/(default)/<section>` and
+ * `src/app/[locale]/<section>`, with route groups dropped and a dynamic
+ * segment spelled as its directory is.
+ *
+ * A path under one of these sections that matches none of them reached the
+ * section's `[...missing]` catch-all and answered 200 with a `noindex` body —
+ * `/catalog/x`, `/garden/objects/1/x`, `/bg/journals/x` — which is the fourth
+ * outcome ADR-0029 D3 rules out (`OVE-478`). The proxy answers 404 to it now,
+ * before anything streams.
+ *
+ * Absent on purpose: the sections whose sub-addresses the proxy resolves by
+ * looking them up (`species`, `variety`, `breed`, `topics`, `communities`,
+ * `journal`), `skeleton`, and everything that is not a document. The source
+ * aliases (`col`, `eppo`, `gbif`, `id`, `wikidata`) are here with their one
+ * segment, which their own handler looks up; what lies below it is nothing.
+ * The one dynamic segment of `answers`, `guides`, `blog` and `markets` is a
+ * name from the authored content, checked by `src/server/authored-addresses.ts`.
+ * `root-route-segments.test.ts` fails when this table and the filesystem drift.
+ */
+export const SECTION_SUBPATHS: Readonly<Record<string, readonly string[]>> = {
+  account: [
+    "communities",
+    "communities/[slug]",
+    "communities/[slug]/settings",
+    "moderation/comments",
+    "security",
+    "settings",
+  ],
+  answers: ["[slug]"],
+  auth: [
+    "help",
+    "intent",
+    "intent/resume",
+    "intent/start",
+    "reset-password",
+    "sign-in",
+    "sign-up",
+  ],
+  blog: ["[slug]"],
+  bookmarks: [],
+  catalog: [],
+  col: ["[id]"],
+  eppo: ["[code]"],
+  erasure: [],
+  feed: [],
+  "first-publication-disclosure": [],
+  garden: [
+    "catalog/queue",
+    "catalog/sources",
+    "entries/[entryId]/edit",
+    "lineage/claims",
+    "lineage/invitations/claim",
+    "lineage/invitations/claim/handoff",
+    "lineage/questions",
+    "new",
+    "objects/[objectId]",
+    "objects/[objectId]/provenance",
+    "objects/[objectId]/settings",
+    "objects/new",
+    "privacy/erasure-requests",
+    "profile",
+    "spaces/[spaceId]",
+    "spaces/[spaceId]/settings",
+    "spaces/new",
+  ],
+  gbif: ["[key]"],
+  guides: ["[slug]"],
+  id: ["[uuid]"],
+  journals: [],
+  knowledge: [],
+  lineage: ["objects/[objectId]"],
+  markets: ["[market]"],
+  notifications: ["settings"],
+  privacy: [],
+  sources: ["eppo", "eppo/[code]"],
+  support: [],
+  wikidata: ["[qid]"],
+  wishlist: [],
+};
+
+/** The path's segments after an optional `bg`/`ru`/`uk` prefix. */
+function segmentsAfterLocale(pathname: string) {
+  const segments = pathname.split("/").filter((segment) => segment.length > 0);
+  const first = segments[0];
+  return first && isPublicLocale(first)
+    ? { prefix: first, rest: segments.slice(1) }
+    : { prefix: null, rest: segments };
+}
+
+/**
+ * True when a path lies under a section of `SECTION_SUBPATHS` and matches none
+ * of its addresses. The section root is not this function's question
+ * (`isSectionRootWithoutIndex` is), and `/uk/**` is the legacy prefix that
+ * folds to the unprefixed path with a 308 further down.
+ */
+export function isUnservedSectionPath(pathname: string): boolean {
+  const { prefix, rest } = segmentsAfterLocale(pathname);
+  if (prefix === DEFAULT_PUBLIC_LOCALE) return false;
+  const [section, ...below] = rest;
+  if (!section || below.length === 0) return false;
+  const patterns = SECTION_SUBPATHS[section];
+  if (!patterns) return false;
+  return !patterns.some((pattern) => {
+    const parts = pattern.split("/");
+    return (
+      parts.length === below.length &&
+      parts.every((part, index) => part.startsWith("[") || part === below[index])
+    );
+  });
+}
+
+/** The authored sections whose one dynamic segment is a name, not an id. */
+export type AuthoredSection = "answers" | "blog" | "guides" | "markets";
+
+/**
+ * `/answers/<slug>`, `/guides/<slug>`, `/blog/<slug>` and `/markets/<market>`,
+ * with or without a `bg`/`ru` prefix: the name to check against the authored
+ * content before the page renders. An unknown one rendered on demand, could
+ * not be a static page, and answered 500 (`OVE-478`).
+ */
+export function matchAuthoredAddress(
+  pathname: string,
+): { section: AuthoredSection; name: string } | null {
+  const { prefix, rest } = segmentsAfterLocale(pathname);
+  if (prefix === DEFAULT_PUBLIC_LOCALE || rest.length !== 2) return null;
+  const [section, name] = rest as [string, string];
+  return section === "answers" ||
+    section === "blog" ||
+    section === "guides" ||
+    section === "markets"
+    ? { section, name }
+    : null;
+}
+
+/**
  * True when a locale-prefixed path asks for a section the prefixed tree does
  * not have. A handle is not a section, and the locale root itself is a page.
  */

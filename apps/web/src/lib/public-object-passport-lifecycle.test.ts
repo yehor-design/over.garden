@@ -50,9 +50,25 @@ describe("public object passport HTTP lifecycle", () => {
 
     expect(html).toContain("Паспорт видалено");
     expect(html).toContain('name="robots" content="noindex, nofollow"');
-    expect(html).toContain('href="/catalog"');
-    expect(html).not.toMatch(
+    // A passport is a gardener's object: with no profile to lead to, the way
+    // on is the journals, not the organism catalogue (OG-UX-019, OVE-478).
+    expect(html).toContain('href="/journals"');
+    expect(html).not.toContain('href="/catalog"');
+    // The payload, not the constant stylesheet: its `@media` query is CSS.
+    expect(html.replace(/<style>[\s\S]*?<\/style>/u, "")).not.toMatch(
       /objectId|owner|email|location|region|coordinates|journal body|media/i,
+    );
+  });
+
+  it("leads to the gardener's other plants and animals while their profile answers", () => {
+    const html = renderGonePublicObjectPassportHtml("bg", undefined, {
+      handle: "yehor",
+    });
+    expect(html).toContain('href="/bg/@yehor#profile-objects"');
+    expect(html).toContain("Растения и животни на @yehor");
+    // One way on, never two.
+    expect(html.match(/<main>[\s\S]*<\/main>/u)?.[0].match(/<a /gu)).toHaveLength(
+      1,
     );
   });
 });

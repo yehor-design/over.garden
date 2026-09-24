@@ -7,7 +7,13 @@ export interface AtomicJournalEditCopy {
   waitingMedia: string;
   publishing: string;
   published: string;
+  /**
+   * A failed save of an entry with photographs, one of which may be
+   * marked.
+   */
   failed: string;
+  /** The same failure with no photograph in the entry (`OVE-478`). */
+  failedWithoutPhoto: string;
   cancelPublishing: string;
   save: string;
   cancelEditing: string;
@@ -39,6 +45,7 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     publishing: "Зберігаємо весь запис одним оновленням…",
     published: "Зміни збережено.",
     failed: "Зміни не збережено. Виправте позначене фото або спробуйте ще раз.",
+    failedWithoutPhoto: "Зміни не збережено. Спробуйте ще раз.",
     cancelPublishing: "Скасувати збереження",
     save: "Зберегти зміни",
     cancelEditing: "Скасувати редагування",
@@ -67,6 +74,7 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     published: "Промените са запазени.",
     failed:
       "Промените не са запазени. Поправете отбелязаната снимка или опитайте отново.",
+    failedWithoutPhoto: "Промените не са запазени. Опитайте отново.",
     cancelPublishing: "Откажи запазването",
     save: "Запази промените",
     cancelEditing: "Откажи редактирането",
@@ -96,6 +104,7 @@ const COPY: Record<PublicLocale, AtomicJournalEditCopy> = {
     published: "Изменения сохранены.",
     failed:
       "Изменения не сохранены. Исправьте отмеченное фото или попробуйте ещё раз.",
+    failedWithoutPhoto: "Изменения не сохранены. Попробуйте ещё раз.",
     cancelPublishing: "Отменить сохранение",
     save: "Сохранить изменения",
     cancelEditing: "Отменить редактирование",

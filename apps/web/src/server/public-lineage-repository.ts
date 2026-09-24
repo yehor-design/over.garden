@@ -7,11 +7,10 @@ import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import type {
   CatalogKind,
   Database,
-  LocationVisibility,
   PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { publicRegionCode } from "@/lib/garden/regions";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
@@ -30,7 +29,8 @@ export interface PublicLineageNode {
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
   catalogSpeciesSlug: string | null;
-  safeLocationLabel: string | null;
+  /** The coarse region the object may show, as a code; the page words it. */
+  safeRegionCode: string | null;
 }
 
 export interface PublicLineageEdge {
@@ -373,16 +373,6 @@ export function buildPublicLineageEdgesForSubjectsQuery(
     .orderBy("lineage_provenance_edges.id", "asc");
 }
 
-export function publicLineageNodeLocationLabel(input: {
-  locationVisibility: LocationVisibility | string;
-  coarseRegionCode: string | null;
-}) {
-  if (input.locationVisibility !== "region") return null;
-
-  const label = getCoarseRegionLabel(input.coarseRegionCode);
-  return label ? `Region: ${label}` : null;
-}
-
 function mapPublicLineageNode(row: PublicLineageNodeRow): PublicLineageNode {
   return {
     plantObjectId: row.plantObjectId,
@@ -394,9 +384,9 @@ function mapPublicLineageNode(row: PublicLineageNodeRow): PublicLineageNode {
     catalogCanonicalName: row.catalogCanonicalName,
     catalogPublicSlug: row.catalogPublicSlug,
     catalogSpeciesSlug: row.catalogSpeciesSlug,
-    safeLocationLabel: publicLineageNodeLocationLabel({
-      locationVisibility: row.locationVisibility,
-      coarseRegionCode: row.coarseRegionCode,
+    safeRegionCode: publicRegionCode({
+      objectLocationVisibility: row.locationVisibility,
+      objectCoarseRegionCode: row.coarseRegionCode,
     }),
   };
 }

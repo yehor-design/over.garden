@@ -476,9 +476,12 @@ function SpaceObjects({
       id="space-objects"
       title={
         <>
-          {copy.objects.title}
+          {/* The space is in the title's own text: a margin adds none, and
+              a lone space after text is dropped from the heading's name
+              ("Простори3", heard with Orca, `OVE-478`). */}
+          {group.total > 0 ? `${copy.objects.title} ` : copy.objects.title}
           {group.total > 0 ? (
-            <span className="ml-2 align-middle text-body-sm font-normal text-text-muted tabular-nums">
+            <span className="ml-1 align-middle text-body-sm font-normal text-text-muted tabular-nums">
               {group.total}
             </span>
           ) : null}
@@ -595,9 +598,12 @@ function SpaceHistory({
       id="space-history"
       title={
         <>
-          {copy.history.title}
+          {/* The space is in the title's own text: a margin adds none, and
+              a lone space after text is dropped from the heading's name
+              ("Простори3", heard with Orca, `OVE-478`). */}
+          {history.total > 0 ? `${copy.history.title} ` : copy.history.title}
           {history.total > 0 ? (
-            <span className="ml-2 align-middle text-body-sm font-normal text-text-muted tabular-nums">
+            <span className="ml-1 align-middle text-body-sm font-normal text-text-muted tabular-nums">
               {history.total}
             </span>
           ) : null}

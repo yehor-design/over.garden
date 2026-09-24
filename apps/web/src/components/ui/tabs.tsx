@@ -42,9 +42,15 @@ function tabTriggerClass(selected: boolean, className?: string) {
   );
 }
 
-/** The strip both shapes draw: one rule, the tabs sitting on it. */
+/**
+ * The strip both shapes draw: one rule, the tabs sitting on it. The rule is
+ * inside the strip (`tab-strip-rule`, with the pixel of padding the tabs'
+ * `-mb-px` reaches into), because a strip that scrolls sideways clips what
+ * lies on its border: with a border rule, the selected underline and the
+ * focus ring each lost their lowest pixel (`OVE-478`).
+ */
 const TAB_STRIP_CLASS =
-  "flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border";
+  "tab-strip-rule flex gap-1 overflow-x-auto overflow-y-hidden pb-px";
 
 function Tabs({
   className,

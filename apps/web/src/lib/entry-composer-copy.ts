@@ -52,6 +52,26 @@ export interface EntryComposerCopy {
     space: string;
     unavailable: string;
   };
+  /**
+   * A plant or animal the gardener does not have yet, named while writing
+   * (`OVE-478`, FAST_ENTRY "Creating during writing"). Nothing is created
+   * before Publish: the new one and its first entry are acknowledged together.
+   */
+  newObject: {
+    title: string;
+    help: string;
+    name: string;
+    kind: string;
+    plant: string;
+    animal: string;
+    space: string;
+    existingSpace: string;
+    newSpace: string;
+    newSpaceName: string;
+    back: string;
+    nameRequired: string;
+    spaceRequired: string;
+  };
 }
 
 const uk: EntryComposerCopy = {
@@ -105,6 +125,21 @@ const uk: EntryComposerCopy = {
       "Простору з цього посилання немає у вашому саду — можливо, його видалили. Оберіть, куди записати.",
     unavailable:
       "Не вдалося відкрити місце з цього посилання. Оберіть його нижче або спробуйте ще раз пізніше.",
+  },
+  newObject: {
+    title: "Нова рослина чи тварина",
+    help: "Вона з’явиться у вашому саду разом із цим записом, коли ви його опублікуєте. До того нічого не збережено.",
+    name: "Назва",
+    kind: "Це",
+    plant: "Рослина",
+    animal: "Тварина",
+    space: "Де вона",
+    existingSpace: "У моєму просторі",
+    newSpace: "У новому просторі",
+    newSpaceName: "Назва нового простору",
+    back: "Обрати наявну",
+    nameRequired: "Назвіть рослину чи тварину.",
+    spaceRequired: "Оберіть простір або назвіть новий.",
   },
 };
 
@@ -160,6 +195,21 @@ const bg: EntryComposerCopy = {
     unavailable:
       "Мястото от тази връзка не можа да се отвори. Изберете го по-долу или опитайте отново по-късно.",
   },
+  newObject: {
+    title: "Ново растение или животно",
+    help: "Ще се появи в градината ви заедно с този запис, когато го публикувате. Дотогава нищо не е запазено.",
+    name: "Име",
+    kind: "Това е",
+    plant: "Растение",
+    animal: "Животно",
+    space: "Къде е",
+    existingSpace: "В мое пространство",
+    newSpace: "В ново пространство",
+    newSpaceName: "Име на новото пространство",
+    back: "Изберете съществуващо",
+    nameRequired: "Дайте име на растението или животното.",
+    spaceRequired: "Изберете пространство или дайте име на ново.",
+  },
 };
 
 const ru: EntryComposerCopy = {
@@ -213,6 +263,21 @@ const ru: EntryComposerCopy = {
       "Пространства из этой ссылки нет в вашем саду — возможно, его удалили. Выберите, куда написать.",
     unavailable:
       "Не удалось открыть место из этой ссылки. Выберите его ниже или попробуйте ещё раз позже.",
+  },
+  newObject: {
+    title: "Новое растение или животное",
+    help: "Оно появится в вашем саду вместе с этой записью, когда вы её опубликуете. До этого ничего не сохранено.",
+    name: "Название",
+    kind: "Это",
+    plant: "Растение",
+    animal: "Животное",
+    space: "Где оно",
+    existingSpace: "В моём пространстве",
+    newSpace: "В новом пространстве",
+    newSpaceName: "Название нового пространства",
+    back: "Выбрать существующее",
+    nameRequired: "Назовите растение или животное.",
+    spaceRequired: "Выберите пространство или назовите новое.",
   },
 };
 

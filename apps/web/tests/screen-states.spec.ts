@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test, type Page } from "playwright/test";
+import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
 
 /**
  * The six states of DESIGN.md §5.4, in a real engine, with the real stylesheet.
@@ -56,7 +57,7 @@ async function axeViolations(page: Page, selector: string) {
     "utf8",
   );
   await page.evaluate(`(() => { ${axeSource} })()`);
-  return page.evaluate(async (root) => {
+  return page.evaluate(async ({ root, tags }) => {
     const axe = (
       window as unknown as {
         axe: {
@@ -75,13 +76,13 @@ async function axeViolations(page: Page, selector: string) {
     const element = document.querySelector(root);
     if (!element) throw new Error(`No ${root} to scan.`);
     const result = await axe.run(element, {
-      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+      runOnly: { type: "tag", values: tags },
     });
     return result.violations.map((violation) => ({
       id: violation.id,
       targets: violation.nodes.map((node) => node.target.join(" ")),
     }));
-  }, selector);
+  }, { root: selector, tags: WCAG_AA_TAGS });
 }
 
 test.describe("the six states DESIGN.md §5.4 names", () => {

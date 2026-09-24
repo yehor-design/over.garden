@@ -310,12 +310,34 @@ function largestPhotographOnTheFirstScreen() {
   return candidates[0] ?? null;
 }
 
-/** The gate database's curated topics, as addresses. */
-async function curatedTopicPaths(pool: Pool) {
+/**
+ * The curated topic this spec's own publish is listed in, as an address.
+ *
+ * A topic page lists what gardeners published into it, and which topics the
+ * gate's other specs have filled by the time this one runs depends on how the
+ * gate is sharded: the first curated topic by slug, `animals`, was empty in
+ * one shard, a page of 582 visible characters with no entry on it. So the
+ * spec reads the topic its own entry is in — by the rule the pages list by —
+ * and fails if there is none rather than reading no topic at all.
+ */
+async function curatedTopicPaths(pool: Pool, ownerUserId: string | null) {
   const topic = await pool.query<{ slug: string }>(
-    `select slug from journal_topics
-      where trust_state = 'curated' order by slug limit 1`,
+    `select distinct t.slug
+       from journal_topics t
+       join journal_entry_topic_signals s on s.topic_id = t.id
+       join journal_entries je on je.id = s.journal_entry_id
+      where t.trust_state = 'curated'
+        and s.review_state = 'accepted'
+        and s.public_membership_state = 'eligible'
+        and je.visibility = 'public' and je.lifecycle_state = 'active'
+        and je.owner_user_id = $1::uuid
+      order by t.slug
+      limit 1`,
+    [ownerUserId],
   );
+  if (topic.rows.length === 0) {
+    throw new Error("This spec's own entry is listed in no curated topic");
+  }
   return topic.rows.map((row) => `/topics/${row.slug}`);
 }
 
@@ -883,7 +905,7 @@ test.describe("a public page is a static document", () => {
         "/markets/ukraine",
         "/sources/eppo",
         ...(await activeCommunityPaths(pool)),
-        ...(await curatedTopicPaths(pool)),
+        ...(await curatedTopicPaths(pool, directoryWriterId)),
       ]) {
         await page.goto(address, { waitUntil: "load" });
         await expect(page.locator("h1").first(), address).toBeVisible();
@@ -933,7 +955,7 @@ test.describe("a public page is a static document", () => {
       "/markets/ukraine",
       "/sources/eppo",
       ...(await activeCommunityPaths(pool, true)),
-      ...(await curatedTopicPaths(pool)),
+      ...(await curatedTopicPaths(pool, directoryWriterId)),
     ]) {
       await page.setViewportSize({ width: 1_440, height: 900 });
       await page.goto(address, { waitUntil: "load" });

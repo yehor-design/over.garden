@@ -414,7 +414,7 @@ function DirectoryResultCard({
         meta: card.safeRegionCode ? (
           <>
             <MapPin aria-hidden="true" className="size-4" />
-            {copy.safeRegion} {card.safeRegionCode}
+            {`${copy.safeRegion} ${card.safeRegionCode}`}
           </>
         ) : undefined,
       }}

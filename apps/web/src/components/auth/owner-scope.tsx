@@ -87,7 +87,7 @@ const NOTICE_COPY: Record<
   bg: {
     session_required:
       "Сесията приключи. Влезте отново, текстът остава на екрана.",
-    session_account_changed: "Влязохте като друг профил. Обновете страницата.",
+    session_account_changed: "Влязохте с друг акаунт. Обновете страницата.",
   },
   ru: {
     session_required:

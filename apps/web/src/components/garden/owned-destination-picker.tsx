@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useOptionalOwnerScope } from "@/components/auth/owner-scope";
 import { ownerScopeHeaders } from "@/lib/auth/session-signal";
+import { PlusIcon as Plus } from "@/components/icons/Plus";
 import { Button } from "@/components/ui/button";
 import {
   ComboboxRoot,
@@ -26,6 +27,7 @@ export function OwnedDestinationPicker({
   locale,
   selection,
   onSelect,
+  onCreate,
   kind = "all",
   disabled = false,
   autoFocus = false,
@@ -33,6 +35,14 @@ export function OwnedDestinationPicker({
   locale: InterfaceLocale;
   selection: OwnedDestination | null;
   onSelect: (value: OwnedDestination) => void;
+  /**
+   * A plant or animal the gardener does not have yet (`OVE-478`). An explicit
+   * action of its own, beside the results and never instead of them: a match
+   * that exists stays one press away, and a search that finds nothing is not
+   * turned into a new object by itself (FAST_ENTRY "Creating during writing").
+   * It receives what was typed, as the new one's name.
+   */
+  onCreate?: (name: string) => void;
   kind?: DestinationFilter;
   disabled?: boolean;
   /**
@@ -282,6 +292,24 @@ export function OwnedDestinationPicker({
           </ComboboxOption>
         ))}
       </ComboboxList>
+      {onCreate && kind !== "space" ? (
+        <div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={disabled}
+            data-owned-destination-create="true"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onCreate(query.trim())}
+          >
+            <Plus size={16} />
+            {query.trim()
+              ? copy.createNamed.replace("{name}", query.trim())
+              : copy.createNew}
+          </Button>
+        </div>
+      ) : null}
       {visible && currentPage?.nextCursor ? (
         <Button
           type="button"

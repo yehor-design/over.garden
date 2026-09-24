@@ -219,7 +219,7 @@ export function CommunityReportCard({
           {copy.reportStates[item.reportState]}
         </Badge>
         <span className="text-caption text-text-muted">
-          {copy.reportedOn}{" "}
+          {`${copy.reportedOn} `}
           <time dateTime={new Date(item.reportedAt).toISOString()}>
             {formatOperatorDate(locale, item.reportedAt, {
               dateStyle: "medium",
@@ -227,8 +227,7 @@ export function CommunityReportCard({
           </time>
           {item.resolvedAt ? (
             <>
-              {" · "}
-              {copy.resolvedOn}{" "}
+              {` · ${copy.resolvedOn} `}
               <time dateTime={new Date(item.resolvedAt).toISOString()}>
                 {formatOperatorDate(locale, item.resolvedAt, {
                   dateStyle: "medium",

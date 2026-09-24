@@ -161,6 +161,8 @@ export interface PublicCommunityContributionRow {
   coverFocalY: number | null;
   coverIntrinsicWidth: number | null;
   coverIntrinsicHeight: number | null;
+  /** The gardener's own description of that photograph, if they wrote one. */
+  coverCaption?: string | null;
   viewerReportState: string | null;
 }
 
@@ -189,6 +191,11 @@ export interface PublicCommunityContribution {
   coverFocalY: number | null;
   coverIntrinsicWidth: number | null;
   coverIntrinsicHeight: number | null;
+  /**
+   * The photograph's description, its `alt` on the card; without one it is
+   * decorative, the card's title already naming the entry (OG-UX-029).
+   */
+  coverCaption: string | null;
   viewerReportState: Extract<
     CommunityReportState,
     "submitted" | "reviewed"
@@ -1395,6 +1402,9 @@ export function serializePublicCommunityContributionPage(
           : null,
         coverIntrinsicWidth: row.coverIntrinsicWidth ?? null,
         coverIntrinsicHeight: row.coverIntrinsicHeight ?? null,
+        coverCaption: row.coverDerivativeKey
+          ? row.coverCaption?.trim() || null
+          : null,
         viewerReportState: normalizeProjectedOpenReportState(
           row.viewerReportState,
         ),
@@ -1913,6 +1923,24 @@ export function buildPublicCommunityContributionsQuery(
           media_assets.id asc
         limit 1
       )`.as("coverIntrinsicHeight"),
+      sql<string | null>`(
+        select media_assets.caption
+        from media_assets
+        where media_assets.journal_entry_id = journal_entries.id
+          and ${publicMediaEligibilityPredicate("media_assets")}
+          and (
+            media_assets.id = journal_entries.cover_media_asset_id
+            or media_assets.usage_role = 'inline'
+          )
+        order by
+          case
+            when media_assets.id = journal_entries.cover_media_asset_id then 0
+            else 1
+          end asc,
+          media_assets.document_position asc nulls last,
+          media_assets.id asc
+        limit 1
+      )`.as("coverCaption"),
       viewerReportState.as("viewerReportState"),
     ])
     .where("community_contributions.community_id", "=", communityId)

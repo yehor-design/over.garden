@@ -26,7 +26,7 @@ export const JOURNEY = {
   catalogPublicSlug: "pomidor-cheri-0000000101",
   catalogCanonicalName: "Помідор чері",
   regionCode: "UA-30",
-  regionLabel: "Ukraine - Kyiv City",
+  regionLabel: "Україна — місто Київ",
   safeTitle: "First flowers on the balcony",
   safeBody:
     "Two cherry tomato trusses opened this morning. The seedlings from the spring sowing are finally fruiting and the bees found them fast.",
@@ -258,9 +258,9 @@ export function publicVarietyPage(
         varietyText: overrides.poisonVisibleText
           ? POISON.email
           : JOURNEY.catalogCanonicalName,
-        safeLocationLabel: overrides.poisonVisibleText
+        safeRegionCode: overrides.poisonVisibleText
           ? POISON.exifGps
-          : JOURNEY.regionLabel,
+          : JOURNEY.regionCode,
         media: {
           id: JOURNEY.mediaId,
           derivativeKey: POISON.quarantineKey,

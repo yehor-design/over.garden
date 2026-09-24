@@ -267,10 +267,10 @@ export default async function ErasureRequestPage({
 
       <Section id="erasure-about" title={copy.aboutTitle} className="gap-2">
         <p className="text-body-sm text-text-secondary">
-          {copy.statusPrefix} {copy.legalStatusLabel}
+          {`${copy.statusPrefix} ${copy.legalStatusLabel}`}
         </p>
         <p className="text-caption text-text-muted">
-          {copy.intakeVersion} {ERASURE_REQUEST_INTAKE_VERSION}
+          {`${copy.intakeVersion} ${ERASURE_REQUEST_INTAKE_VERSION}`}
         </p>
       </Section>
     </main>
@@ -309,8 +309,9 @@ function RequestStatusCard({
       </div>
       {status.handled ? (
         <p className="text-text">
-          {copy.outcome} <strong>{status.handled.label}</strong>.{" "}
-          {status.handled.description}
+          {`${copy.outcome} `}
+          <strong>{status.handled.label}</strong>
+          {`. ${status.handled.description}`}
         </p>
       ) : null}
       <div className="grid gap-1 rounded-md bg-surface-sunken p-3">
@@ -318,8 +319,7 @@ function RequestStatusCard({
         <p className="text-text-secondary">{nextStep(request, copy)}</p>
       </div>
       <p className="text-caption text-text-muted">
-        {copy.submitted} {formatDate(locale, request.submittedAt)}.{" "}
-        {copy.reference}{" "}
+        {`${copy.submitted} ${formatDate(locale, request.submittedAt)}. ${copy.reference} `}
         <span className="font-mono text-mono">
           {formatErasureRequestReference(request.id)}
         </span>

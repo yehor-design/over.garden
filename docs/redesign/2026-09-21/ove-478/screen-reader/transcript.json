@@ -1,0 +1,1622 @@
+{
+  "versions": {
+    "orca": "46.1-1ubuntu1",
+    "atSpi": "2.52.0-1build1",
+    "speechDispatcher": "0.12.0~rc2-2build3",
+    "espeakNg": "1.51+dfsg-12build1",
+    "chromium": "Chromium 141.0.7390.37",
+    "display": "Xvfb :99, 1280×900"
+  },
+  "base": "http://localhost:3999",
+  "transcript": [
+    {
+      "step": "Guest opens the home page (uk)",
+      "keys": [
+        "(load /)"
+      ],
+      "spoken": [
+        "Finished loading OverGarden.",
+        "Page has 11 landmarks, 11 headings, 67 unvisited links.",
+        "Перейти до основного вмісту link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "lang": "uk",
+        "title": "OverGarden"
+      }
+    },
+    {
+      "step": "Next heading ×3 (H)",
+      "keys": [
+        "h",
+        "h",
+        "h"
+      ],
+      "spoken": [
+        "h",
+        "Стрічка heading level 1.",
+        "h",
+        "Перші яйця від нових курей — журнал 4б - Кури link heading level 2.",
+        "h",
+        "Посадила малину біля паркану — журнал 4 - Малина link heading level 2."
+      ],
+      "languages": [
+        "uk"
+      ]
+    },
+    {
+      "step": "Next link (K)",
+      "keys": [
+        "k"
+      ],
+      "spoken": [
+        "k",
+        "#Породи link."
+      ],
+      "languages": [
+        "uk"
+      ]
+    },
+    {
+      "step": "Next landmark until the language navigation — m 1",
+      "keys": [
+        "m"
+      ],
+      "spoken": [
+        "m",
+        "Що показати",
+        "Останні link.",
+        "Підписки link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Останні"
+      }
+    },
+    {
+      "step": "Next landmark until the language navigation — m 2",
+      "keys": [
+        "m"
+      ],
+      "spoken": [
+        "m",
+        "Сторінки стрічки",
+        "До початку стрічки push button grayed.",
+        "Наступна сторінка link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "body",
+        "role": null,
+        "name": null
+      }
+    },
+    {
+      "step": "Next landmark until the language navigation — m 3",
+      "keys": [
+        "m"
+      ],
+      "spoken": [
+        "m"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "body",
+        "role": null,
+        "name": null
+      }
+    },
+    {
+      "step": "Next landmark until the language navigation — m 4",
+      "keys": [
+        "m"
+      ],
+      "spoken": [
+        "Публічний журнал садівництва: кожен запис відкритий і ",
+        "m",
+        "Вибір мови інтерфейсу",
+        "Змінити мову — Українська (UK) toggle button collapsed.",
+        "UK."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "summary",
+        "role": null,
+        "name": "Змінити мову — Українська (UK)"
+      }
+    },
+    {
+      "step": "Open the language control (Enter)",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "return"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "summary",
+        "role": null,
+        "name": "Змінити мову — Українська (UK)"
+      }
+    },
+    {
+      "step": "Next option (Tab)",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "expanded",
+        "tab",
+        "menu",
+        "Українська selected radio menu item.",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": "menuitemradio",
+        "name": "Українська"
+      }
+    },
+    {
+      "step": "Next option (Tab)",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": "menuitemradio",
+        "name": "Български"
+      }
+    },
+    {
+      "step": "Choose it (Enter)",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "Български not selected radio menu item.",
+        "return",
+        "Browse mode",
+        "Към основното съдържание link."
+      ],
+      "languages": [
+        "bg"
+      ],
+      "observed": {
+        "url": "http://localhost:3999/bg",
+        "lang": "bg"
+      }
+    },
+    {
+      "step": "An unknown answer (was a 500) — bg",
+      "keys": [
+        "(load /bg/answers/ove478-no-such)"
+      ],
+      "spoken": [
+        "Finished loading Страницата не е намерена | OverGarden.",
+        "Page has 4 landmarks, 1 heading, 1 visited link."
+      ],
+      "languages": [],
+      "observed": {
+        "lang": "bg",
+        "title": "Страницата не е намерена | OverGarden"
+      }
+    },
+    {
+      "step": "Tab to the one way on",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "banner OverGarden.",
+        "tab",
+        "main content",
+        "Към OverGarden visited link."
+      ],
+      "languages": [
+        "bg"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Към OverGarden"
+      }
+    },
+    {
+      "step": "Tab again: the language control is next, nothing else",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "leaving main content.",
+        "information",
+        "navigation Избор на език на интерфейса",
+        "Смяна на езика: Български toggle button collapsed.",
+        "Focus mode"
+      ],
+      "languages": [
+        "bg"
+      ],
+      "observed": {
+        "tag": "summary",
+        "role": null,
+        "name": "Смяна на езика: Български"
+      }
+    },
+    {
+      "step": "Guest opens the journals (uk)",
+      "keys": [
+        "(load /journals)"
+      ],
+      "spoken": [
+        "17 записів",
+        "Browse mode",
+        "Перейти до основного вмісту link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "lang": "uk",
+        "title": "Журнали | OverGarden"
+      }
+    },
+    {
+      "step": "To the filters — Tab 1",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Перейти до основного вмісту"
+      }
+    },
+    {
+      "step": "To the filters — Tab 2",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Перейти до основного вмісту link.",
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "OverGarden"
+      }
+    },
+    {
+      "step": "To the filters — Tab 3",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "banner",
+        "OverGarden link.",
+        "tab",
+        "Пошук link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Пошук"
+      }
+    },
+    {
+      "step": "To the filters — Tab 4",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Стрічка"
+      }
+    },
+    {
+      "step": "To the filters — Tab 5",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "navigation Основна навігація",
+        "List with 2 items.",
+        "Стрічка link.",
+        "tab",
+        "Огляд link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Огляд"
+      }
+    },
+    {
+      "step": "To the filters — Tab 6",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "leaving list.",
+        "leaving navigation.",
+        "navigation Моє",
+        "List with 2 items.",
+        "Мій сад link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Мій сад"
+      }
+    },
+    {
+      "step": "To the filters — Tab 7",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Події"
+      }
+    },
+    {
+      "step": "To the filters — Tab 8",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Події link.",
+        "tab",
+        "leaving list.",
+        "leaving navigation.",
+        "Новий запис link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Новий запис"
+      }
+    },
+    {
+      "step": "To the filters — Tab 9",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Увійти"
+      }
+    },
+    {
+      "step": "To the filters — Tab 10",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Увійти link.",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Стрічка"
+      }
+    },
+    {
+      "step": "To the filters — Tab 11",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "leaving banner.",
+        "navigation Стрічка",
+        "Стрічка link.",
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Стрічка підписок"
+      }
+    },
+    {
+      "step": "To the filters — Tab 12",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Стрічка підписок link.",
+        "tab",
+        "leaving navigation.",
+        "main content",
+        "Пошук у публічних журналах entry Проблема, догляд, об'єкт або ідентичність.",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": ""
+      }
+    },
+    {
+      "step": "To the filters — Tab 13",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "Знайти push button.",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Знайти"
+      }
+    },
+    {
+      "step": "To the filters — Tab 14",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Усі об'єкти"
+      }
+    },
+    {
+      "step": "To the filters — Tab 15",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "navigation Що показати",
+        "List with 3 items.",
+        "Усі об'єкти link.",
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Рослини"
+      }
+    },
+    {
+      "step": "To the filters — Tab 16",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Рослини link.",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Тварини"
+      }
+    },
+    {
+      "step": "To the filters — Tab 17",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Тварини link.",
+        "tab",
+        "leaving list.",
+        "leaving navigation.",
+        "Фільтри collapsed push button.",
+        "opens dialog",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Фільтри"
+      }
+    },
+    {
+      "step": "Open the filters (Enter)",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "return",
+        "expanded",
+        "Фільтри журналів",
+        "Фільтри журналів",
+        "Результати зміняться, коли ви натиснете «Показати результати». «Закрити» нічого не змінює.",
+        "Результати зміняться, коли ви натиснете «Показати результати». «Закрити» нічого не змінює.",
+        "Ідентичність",
+        "Ідентичність",
+        "Усі ідентичності",
+        "Solanum lycopersicum L. (1)",
+        "Де Барао (1)",
+        "Тема або проблема",
+        "Тема або проблема",
+        "Усі теми",
+        "Породи (14)",
+        "Балконні томати (2)",
+        "Види (2)",
+        "Сорти рослин (1)",
+        "Сезон",
+        "Сезон",
+        "Усі сезони",
+        "Зима",
+        "Весна",
+        "Літо",
+        "Осінь",
+        "Безпечний регіон",
+        "Безпечний регіон",
+        "Усі публічні регіони",
+        "Очистити фільтри",
+        "Очистити фільтри",
+        "Показати результати"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Фільтри"
+      }
+    },
+    {
+      "step": "Escape: the filters close",
+      "keys": [
+        "Escape"
+      ],
+      "spoken": [
+        "escape"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Фільтри"
+      }
+    },
+    {
+      "step": "Gardener opens Write (uk): the picker has focus",
+      "keys": [
+        "(load /garden/new)"
+      ],
+      "spoken": [
+        "collapsed",
+        "Loading.  Please wait.",
+        "Browse mode",
+        "main content.",
+        "main content",
+        "Куди записати? editable combo box.",
+        "Шукаємо…",
+        "opens listbox",
+        "Focus mode",
+        "Шукаємо…",
+        "expanded",
+        "Шукаємо…"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "lang": "uk",
+        "title": "Новий запис | OverGarden"
+      }
+    },
+    {
+      "step": "Types a plant the gardener does not have",
+      "keys": [
+        "(text) Малина"
+      ],
+      "spoken": [
+        "collapsed",
+        "Шукаємо…",
+        "Шукаємо…",
+        "Нічого не знайдено. Спробуйте іншу назву."
+      ]
+    },
+    {
+      "step": "To «New plant or animal» — Tab 1",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Нічого не знайдено. Спробуйте іншу назву.",
+        "tab",
+        "Очистити пошук push button.",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Очистити пошук"
+      }
+    },
+    {
+      "step": "To «New plant or animal» — Tab 2",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "Нова рослина чи тварина «Малина» push button."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Нова рослина чи тварина «Малина»"
+      }
+    },
+    {
+      "step": "Start it (Enter): the name field has focus",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "return",
+        "Нова рослина чи тварина panel.",
+        "Назва entry Малина.",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": "",
+        "value": "Малина"
+      }
+    },
+    {
+      "step": "To «Choose an existing one» — Tab 1",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "Це panel.",
+        "Рослина.",
+        "selected radio button",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": ""
+      }
+    },
+    {
+      "step": "To «Choose an existing one» — Tab 2",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "leaving panel.",
+        "Де вона panel.",
+        "У моєму просторі.",
+        "selected radio button"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": ""
+      }
+    },
+    {
+      "step": "To «Choose an existing one» — Tab 3",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "leaving panel.",
+        "Знайти свій простір editable combo box.",
+        "opens listbox",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": ""
+      }
+    },
+    {
+      "step": "To «Choose an existing one» — Tab 4",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "expanded",
+        "tab",
+        "Обрати наявну push button.",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Обрати наявну"
+      }
+    },
+    {
+      "step": "Choose an existing one (Enter): back to the picker",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "return",
+        "expanded"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": "",
+        "value": ""
+      }
+    },
+    {
+      "step": "Out of the field and back in (Shift+Tab, Tab)",
+      "keys": [
+        "shift+Tab",
+        "Tab"
+      ],
+      "spoken": [
+        "left shift",
+        "leaving main content.",
+        "banner",
+        "Акаунт collapsed push button.",
+        "opens menu",
+        "Focus mode",
+        "tab",
+        "leaving banner.",
+        "main content",
+        "Куди записати? editable combo box.",
+        "opens listbox",
+        "expanded",
+        "expanded"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": ""
+      }
+    },
+    {
+      "step": "Types the plant's name",
+      "keys": [
+        "(text) Томат"
+      ],
+      "spoken": [
+        "Шукаємо…",
+        "Шукаємо…",
+        "expanded"
+      ]
+    },
+    {
+      "step": "Down: the first result",
+      "keys": [
+        "Down"
+      ],
+      "spoken": [
+        "Томат черрі Рослина · Балкон.",
+        "not selected."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": ""
+      }
+    },
+    {
+      "step": "Down: the second",
+      "keys": [
+        "Down"
+      ],
+      "spoken": [],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": ""
+      }
+    },
+    {
+      "step": "Down: the third",
+      "keys": [
+        "Down"
+      ],
+      "spoken": [
+        "Томат черрі Рослина · Город.",
+        "not selected."
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": ""
+      }
+    },
+    {
+      "step": "Up ×2: to the one on the balcony",
+      "keys": [
+        "Up",
+        "Up"
+      ],
+      "spoken": [
+        "Томат черрі Рослина · Теплиця.",
+        "not selected.",
+        "Томат черрі Рослина · Город.",
+        "not selected."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": "combobox",
+        "name": ""
+      }
+    },
+    {
+      "step": "Choose it (Enter): focus moves to the text",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "Томат черрі Рослина · Балкон.",
+        "not selected.",
+        "return",
+        "Вміст запису entry."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "div",
+        "role": "textbox",
+        "name": "Вміст запису"
+      }
+    },
+    {
+      "step": "Writes the note",
+      "keys": [
+        "(text) Перша зав'язь на нижній китиці."
+      ],
+      "spoken": []
+    },
+    {
+      "step": "To the first-publication box — Tab 1",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Додати блок"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 2",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Додати блок collapsed push button.",
+        "opens menu",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Перетягнути блок: Текст, 1 / 1"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 3",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Перетягнути блок: Текст, 1 / 1 collapsed push button.",
+        "opens menu",
+        "tab",
+        "Інструменти запису panel.",
+        "Фото push button.",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Фото"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 4",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Жирний"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 5",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Жирний toggle button not pressed.",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Курсив"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 6",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Курсив toggle button not pressed.",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Маркований список"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 7",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Маркований список toggle button not pressed.",
+        "tab",
+        "Блок collapsed push button.",
+        "opens menu",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Блок"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 8",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Підказки та скорочення"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 9",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Підказки та скорочення collapsed push button.",
+        "opens dialog",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "summary",
+        "role": null,
+        "name": "Більше деталей"
+      }
+    },
+    {
+      "step": "To the first-publication box — Tab 10",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "leaving panel.",
+        "Більше деталей toggle button collapsed.",
+        "tab",
+        "Я розумію, що цей запис і вибрані фото одразу стануть публічними. check box not checked required.",
+        "invalid entry.",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": ""
+      }
+    },
+    {
+      "step": "Next button (B): is Publish available",
+      "keys": [
+        "b"
+      ],
+      "spoken": [
+        "b",
+        "Опублікувати push button grayed clickable."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "body",
+        "role": null,
+        "name": null
+      }
+    },
+    {
+      "step": "Previous form field (Shift+F): back to the box",
+      "keys": [
+        "shift+f"
+      ],
+      "spoken": [
+        "left shift",
+        "F",
+        "Я розумію, що цей запис і вибрані фото одразу стануть публічними. check box not checked required.",
+        "invalid entry."
+      ],
+      "languages": [
+        ""
+      ],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": ""
+      }
+    },
+    {
+      "step": "Tick it (Space)",
+      "keys": [
+        "space"
+      ],
+      "spoken": [
+        "space"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "input",
+        "role": null,
+        "name": "",
+        "checked": true,
+        "reachedBoxByTab": true
+      }
+    },
+    {
+      "step": "To Publish — Tab 1",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "checked",
+        "tab",
+        "Що саме буде публічним link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Що саме буде публічним"
+      }
+    },
+    {
+      "step": "To Publish — Tab 2",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "Опублікувати push button clickable."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Опублікувати"
+      }
+    },
+    {
+      "step": "Publish (Enter) with the network gone",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "return",
+        "Запис не опубліковано. Спробуйте опублікувати ще раз."
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Опублікувати",
+        "text": "Перша зав'язь на нижній китиці."
+      }
+    },
+    {
+      "step": "Publish again (Enter), the network back",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "return",
+        "Запис опубліковано.",
+        "Історія об'єкта | OverGarden"
+      ],
+      "languages": [],
+      "observed": {
+        "url": "http://localhost:3999/garden/objects/031758d3-2a3f-4f64-8948-d075166d9d3d",
+        "reachedPublish": true,
+        "entries": 1
+      }
+    },
+    {
+      "step": "A Bulgarian entry, read in a Ukrainian interface",
+      "keys": [
+        "(load /@gardener_fa86ab69c74e41c2/post/2)"
+      ],
+      "spoken": [
+        "0 вподобань",
+        "Finished loading Първи цветове на балкона · Запис журналу | OverGarden.",
+        "Page has 12 landmarks, 3 headings, 20 unvisited links.",
+        "Перейти до основного вмісту link.",
+        "0 вподобань"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "lang": "uk",
+        "title": "Първи цветове на балкона · Запис журналу | OverGarden"
+      }
+    },
+    {
+      "step": "To the entry's heading (H)",
+      "keys": [
+        "h"
+      ],
+      "spoken": [
+        "h",
+        "Първи цветове на балкона heading level 1."
+      ],
+      "languages": [
+        "bg"
+      ]
+    },
+    {
+      "step": "Line by line (Down ×6)",
+      "keys": [
+        "Down",
+        "Down",
+        "Down",
+        "Down",
+        "Down",
+        "Down"
+      ],
+      "spoken": [
+        "Доматите цъфнаха след дъжда. Утре ще ги полея сутринта.",
+        "region Про що цей запис",
+        "Про що цей запис heading level 2.",
+        "Description list with 1 term.",
+        "Ідентичність description term.",
+        "Ідентичність уточнюється description value.",
+        "leaving list.",
+        "Відкрити паспорт link.",
+        "leaving region.",
+        "Дії із записом panel.",
+        "Подобається, 0 вподобань toggle button not pressed."
+      ],
+      "languages": [
+        "bg",
+        "uk",
+        ""
+      ]
+    },
+    {
+      "step": "Gardener opens My garden (uk)",
+      "keys": [
+        "(load /garden)"
+      ],
+      "spoken": [
+        "Loading.  Please wait.",
+        "Finished loading.",
+        "Page has 1 landmark.",
+        "main content.",
+        "У саду — простори: 3, рослини й тварини: 3"
+      ],
+      "languages": [],
+      "observed": {
+        "lang": "uk",
+        "title": "Простір саду | OverGarden"
+      }
+    },
+    {
+      "step": "Next heading ×3 (H)",
+      "keys": [
+        "h",
+        "h",
+        "h"
+      ],
+      "spoken": [
+        "h",
+        "Простір саду heading level 1.",
+        "h",
+        "Простори 3 heading level 2.",
+        "h"
+      ],
+      "languages": [
+        "uk"
+      ]
+    },
+    {
+      "step": "Account menu (focus put on its button; Enter)",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "Рослини й тварини 3 heading level 2.",
+        "return",
+        "leaving region.",
+        "leaving main content.",
+        "banner",
+        "Акаунт push button grayed.",
+        "opens menu"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Публічний профіль"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 1",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab",
+        "Закладки link.",
+        "Focus mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Закладки"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 2",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Список бажань"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 3",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Список бажань link.",
+        "tab",
+        "Запити щодо походження link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Запити щодо походження"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 4",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Налаштування"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 5",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "leaving panel.",
+        "Налаштування panel.",
+        "Налаштування link.",
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Вхід і безпека"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 6",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Вхід і безпека link.",
+        "tab"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Приватність"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 7",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "Приватність link.",
+        "tab",
+        "Видалення даних link."
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "a",
+        "role": null,
+        "name": "Видалення даних"
+      }
+    },
+    {
+      "step": "To Sign out — Tab 8",
+      "keys": [
+        "Tab"
+      ],
+      "spoken": [
+        "tab"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Вийти з акаунта"
+      }
+    },
+    {
+      "step": "Sign out (Enter): the confirmation opens",
+      "keys": [
+        "Return"
+      ],
+      "spoken": [
+        "leaving panel.",
+        "Вийти з акаунта push button.",
+        "return",
+        "alert Завершити сеанс?",
+        "Завершити сеанс? До успішної публікації текст залишається лише у відкритій вкладці. Чернетки не зберігаються; вихід, закриття чи перезавантаження вкладки видалить неопубліковані зміни.",
+        "Залишитися в акаунті push button.",
+        "Browse mode"
+      ],
+      "languages": [
+        "uk"
+      ],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Залишитися в акаунті"
+      }
+    },
+    {
+      "step": "Escape: the confirmation closes",
+      "keys": [
+        "Escape"
+      ],
+      "spoken": [
+        "escape",
+        "У саду — простори: 3, рослини й тварини: 3"
+      ],
+      "languages": [],
+      "observed": {
+        "tag": "button",
+        "role": null,
+        "name": "Вийти з акаунта"
+      }
+    },
+    {
+      "step": "(context) gardener",
+      "keys": [],
+      "spoken": [],
+      "observed": {
+        "gardener": "190dc246-f601-4e86-9482-1eb03814831f",
+        "spaceId": "038f57e5-5180-4300-817b-c2434ce8cb0f",
+        "objectId": "031758d3-2a3f-4f64-8948-d075166d9d3d",
+        "reachedLanguageNavigation": true,
+        "reachedFilters": true,
+        "reachedCreate": true,
+        "reachedBack": true,
+        "reachedBoxByTab": true,
+        "reachedPublish": true,
+        "reachedSignOut": true
+      }
+    }
+  ]
+}

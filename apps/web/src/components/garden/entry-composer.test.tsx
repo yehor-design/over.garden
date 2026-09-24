@@ -138,6 +138,35 @@ describe("the one entry composer (OVE-486)", () => {
     },
   );
 
+  it("offers a new plant or animal beside the picker, and publishes it with its first entry in one transaction (OVE-478)", async () => {
+    const html = renderToStaticMarkup(
+      <EntryComposer
+        locale="uk"
+        initialDestination={null}
+        today="2026-07-16"
+        requiresFirstPublicationDisclosure={false}
+      />,
+    );
+    expect(html).toContain('data-owned-destination-create="true"');
+    expect(html).toContain("Нова рослина чи тварина");
+
+    // The request the new-object mode sends is the atomic first entry: the
+    // object (and a named new space) exist only together with this entry.
+    const source = await readFile(
+      fileURLToPath(new URL("./entry-composer.tsx", import.meta.url)),
+      "utf8",
+    );
+    expect(source).toContain('target: "first_plant_entry"');
+    expect(source).toContain("onCreate={startNewObject}");
+    expect(source).toMatch(
+      /newObject && result\.plantObjectId\s*\?\s*`\/garden\/objects\/\$\{encodeURIComponent\(result\.plantObjectId\)\}`/u,
+    );
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      const copy = getEntryComposerCopy(locale).newObject;
+      for (const text of Object.values(copy)) expect(text).not.toBe("");
+    }
+  });
+
   it("opens the owned-destination picker at once when launched with nothing chosen", () => {
     const html = renderToStaticMarkup(
       <EntryComposer

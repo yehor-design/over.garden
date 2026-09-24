@@ -222,6 +222,23 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // The raw `404`/`410` lifecycle document the proxy answers with is the
+    // one page with no stylesheet and no React: it cannot read a token, so it
+    // carries the light theme's resolved values itself (`OVE-478`). They are
+    // written once, beside the semantic token each copies, and
+    // `public-lifecycle-document.test.ts` resolves each through `globals.css`
+    // and fails if one drifts. One file, by path; every other gate stands.
+    files: ["src/lib/raw-document-palette.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...layoutGates,
+        ...styleGate,
+        ...rawControlGate,
+      ],
+    },
+  },
+  {
     // OVE-197 subject-aware media needs continuous focal object-position and
     // marker coordinates; those cannot be expressed as static design tokens,
     // so the arbitrary-value gate and the inline-style gate stand down here.

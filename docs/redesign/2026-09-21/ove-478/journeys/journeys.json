@@ -1,0 +1,107 @@
+[
+  {
+    "journey": "same-name object note",
+    "locale": "uk",
+    "viewport": "1280",
+    "activationsBeforeWriting": 2,
+    "activationsToPublish": 1,
+    "steps": [
+      "Write (shell)",
+      "choose the tomato in its space",
+      "Publish"
+    ],
+    "destination": "object b6d95b6f-c6b6-474a-bab5-72f425a32451 in \"Терасата до южния прозорец — наблюдения на многогодишните растения 2\"",
+    "acknowledged": true
+  },
+  {
+    "journey": "space weather note",
+    "locale": "bg",
+    "viewport": "390",
+    "activationsBeforeWriting": 1,
+    "activationsToPublish": 2,
+    "steps": [
+      "Write (space)",
+      "mention one plant (required for a space entry)",
+      "Publish"
+    ],
+    "destination": "space a66c37e9-0767-4224-a2e1-299d1012c1e5 (mentions c196b59c-65c7-41fb-afcd-c0ebdde79dcc)",
+    "acknowledged": true
+  },
+  {
+    "journey": "change destination after text and photograph",
+    "locale": "ru",
+    "viewport": "1280",
+    "activationsBeforeWriting": 1,
+    "activationsToPublish": 3,
+    "steps": [
+      "Write (object)",
+      "Change",
+      "choose the other tomato",
+      "Publish"
+    ],
+    "destination": "request for object 1b083c32-bb34-4613-9910-86cd81e12668 (was c196b59c-65c7-41fb-afcd-c0ebdde79dcc); promotion refused locally",
+    "acknowledged": false
+  },
+  {
+    "journey": "create a plant while writing",
+    "locale": "uk",
+    "viewport": "390",
+    "activationsBeforeWriting": 3,
+    "activationsToPublish": 1,
+    "steps": [
+      "Write",
+      "New plant or animal «Малина»",
+      "choose its space",
+      "Publish"
+    ],
+    "destination": "new object ca5203cc-c6b5-46ce-a33c-906ee7dd0dfc in \"Терраса у южного окна — наблюдения за многолетними растениями 3\"",
+    "acknowledged": true
+  },
+  {
+    "journey": "create an animal in a new space while writing",
+    "locale": "uk",
+    "viewport": "390",
+    "activationsBeforeWriting": 4,
+    "activationsToPublish": 1,
+    "steps": [
+      "Write",
+      "New plant or animal «Кури»",
+      "animal",
+      "in a new space",
+      "Publish"
+    ],
+    "destination": "new object bb3b5cbd-3da6-4688-95ff-5484615576ca in new space \"Курник\"",
+    "acknowledged": true
+  },
+  {
+    "journey": "failed publish recovery",
+    "locale": "bg",
+    "viewport": "1280",
+    "activationsBeforeWriting": 1,
+    "activationsToPublish": 2,
+    "steps": [
+      "Write (object)",
+      "Publish (Enter) → connection reset before the server; focus stays on Publish",
+      "Publish again (Enter) → acknowledged once",
+      "Write (object)",
+      "Publish → committed, answer lost",
+      "Publish again → same publish id, answered from the committed entry"
+    ],
+    "destination": "object b6d95b6f-c6b6-474a-bab5-72f425a32451; one row per note",
+    "acknowledged": true
+  },
+  {
+    "journey": "find the published entry",
+    "locale": "ru",
+    "viewport": "390",
+    "activationsBeforeWriting": 0,
+    "activationsToPublish": 0,
+    "steps": [
+      "search My garden",
+      "open the tomato",
+      "open the entry"
+    ],
+    "destination": "/@gardener_70f3164ef44d4562/post/1",
+    "acknowledged": true
+  }
+]

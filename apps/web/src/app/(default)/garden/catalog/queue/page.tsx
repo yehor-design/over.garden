@@ -93,7 +93,7 @@ const AUTOMATIC_OUTCOME_ANCHOR = "automatic-outcome";
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getOperatorCatalogCopy(await getRequestInterfaceLocale());
   return {
-    title: copy.queue.metadataTitle,
+    title: `${copy.queue.metadataTitle} | OverGarden`,
     robots: { index: false, follow: false },
   };
 }

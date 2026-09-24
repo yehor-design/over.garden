@@ -1,8 +1,9 @@
 name: Web app setup
 description: >-
-  pnpm, Node, the per-run Better Auth fixture, dependencies, MinIO, Meilisearch
-  and a bootstrapped schema. Shared by the two jobs of the Web app gate, which
-  each declare the Postgres and Meilisearch services this expects.
+  pnpm, Node, the per-run Better Auth fixture, dependencies, an S3 stand-in for
+  R2, Meilisearch and a bootstrapped schema. Shared by the two jobs of the Web
+  app gate, which each declare the Postgres and Meilisearch services this
+  expects.
 
 runs:
   using: composite
@@ -33,34 +34,35 @@ runs:
       working-directory: apps/web
       run: pnpm install --frozen-lockfile
 
-    # `minio/minio` on Docker Hub stopped serving anonymous pulls on
-    # 2026-09-12 — every run, on every branch and on main, failed with
-    # "pull access denied ... may require 'docker login'". Quay is MinIO's
-    # own registry and serves the same images anonymously. Pinned to a
-    # release rather than `latest`, so a registry's tag moving under us is
-    # never again a red build on a branch that changed nothing.
-    - name: Start MinIO
+    # R2's stand-in. MinIO's images stopped serving anonymous pulls, first
+    # `minio/minio` on Docker Hub (2026-09-12), then `quay.io/minio/minio`
+    # (2026-09-24): every run, on every branch and on main, failed with
+    # "unauthorized" before a test ran. What CI needs of R2 is the S3 API on
+    # :9000 — a bucket, its objects and a public-read policy — and moto's
+    # server gives it, from PyPI, pinned so that nothing moves under a branch
+    # that changed nothing. It is the stand-in the full local gate runs on
+    # (`OVE-478-PROOF.md`, Validation). moto accepts any credentials.
+    - name: Set up Python for the S3 stand-in
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+
+    - name: Start the S3 stand-in
       shell: bash
-      working-directory: apps/web
       run: |
-        docker run --detach --rm \
-          --name overgarden-ci-minio \
-          -p 9000:9000 \
-          -p 9001:9001 \
-          -e MINIO_ROOT_USER=overgarden-ci \
-          -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
-          quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data --console-address ":9001"
+        python -m pip install --quiet --disable-pip-version-check "moto[server]==5.2.3"
+        nohup moto_server -H 0.0.0.0 -p 9000 > "$RUNNER_TEMP/s3-stand-in.log" 2>&1 &
 
         for _ in {1..30}; do
-          if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
-            echo "MinIO is ready."
+          if curl -fsS http://localhost:9000/ >/dev/null 2>&1; then
+            echo "The S3 stand-in is ready."
             exit 0
           fi
           sleep 2
         done
 
-        echo "MinIO did not become ready in time."
-        docker logs overgarden-ci-minio || true
+        echo "The S3 stand-in did not become ready in time."
+        cat "$RUNNER_TEMP/s3-stand-in.log" || true
         exit 1
 
     - name: Verify Meilisearch service

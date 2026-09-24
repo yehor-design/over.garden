@@ -402,7 +402,7 @@ function WishlistRow({
           {item.available ? null : (
             <span className="block">{copy.wishlist.unavailable}</span>
           )}
-          {copy.common.saved} {formatDate(item.addedAt, locale)}
+          {`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
         </>
       }
       actions={

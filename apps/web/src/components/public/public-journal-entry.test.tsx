@@ -503,7 +503,10 @@ describe("the entry reads as the card did (OVE-493)", () => {
     expect(html).toMatch(
       /<span aria-hidden="true" class="contents"><span data-slot="avatar"/u,
     );
-    expect(html).toContain('<span class="sr-only">Автор </span>');
+    // "Автор", the name and the handle, as the link's name: a visually
+    // hidden prefix lost its space in Chromium and Orca read one word.
+    expect(html).toContain('aria-label="Автор Олена @olena"');
+    expect(html).not.toContain('<span class="sr-only">Автор');
     // The kind in words beside the object.
     expect(html).toMatch(/data-entry-context="true"[\s\S]*?Рослина/u);
   });

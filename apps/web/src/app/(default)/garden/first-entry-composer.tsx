@@ -199,6 +199,10 @@ export function FirstEntryComposer({
       ? (coverSelection.mediaAssetId ?? null)
       : null;
   const hasPhoto = storyImageIds.length > 0 || separateCoverId !== null;
+  // A failure names the photo's remedy only when there is a photo to fix.
+  const failedCopy = hasPhoto
+    ? atomicCopy.failed
+    : atomicCopy.failedWithoutPhoto;
   const dirty = Boolean(
     draft.plantName ||
     draft.title ||
@@ -293,6 +297,9 @@ export function FirstEntryComposer({
     if (event.target !== event.currentTarget) return;
     event.preventDefault();
     if (isComposerPersistenceFrozen()) return;
+    // Publish stays focusable while it works (DESIGN.md §4.4), so a second
+    // press lands here: the publish already on its way is the only one.
+    if (submitState === "publishing") return;
 
     beginLocaleMutation();
     try {
@@ -366,7 +373,7 @@ export function FirstEntryComposer({
           error instanceof LocalJournalComposerError &&
             error.code === "destination_unavailable"
             ? ""
-            : atomicCopy.failed,
+            : failedCopy,
         );
       }
     } finally {
@@ -640,7 +647,7 @@ export function FirstEntryComposer({
         copy={
           local.state.errorCode === "destination_unavailable"
             ? { ...atomicCopy, failed: DESTINATION_COPY[locale].unavailable }
-            : atomicCopy
+            : { ...atomicCopy, failed: failedCopy }
         }
         onCancelPublishing={local.cancelPublishing}
       />
@@ -1093,15 +1100,22 @@ export function FirstEntryComposer({
         {atomicCopy.publishMeaning}
       </p>
 
-      <div className="sticky above-bottom-chrome-gap z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
+      <div
+        data-bottom-sticky-row="true"
+        className="sticky above-bottom-chrome-gap z-sticky flex items-center gap-2 border border-border bg-surface p-3 shadow-xs sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none"
+      >
         <Button
           type="submit"
           data-auth-intent-control="save"
+          // Not disabled while publishing, though the rest of the form is
+          // frozen: a disabled button gives up focus, and a failed publish
+          // left the reader on the document's body (heard with Orca,
+          // `OVE-478`). It shows as loading instead.
           disabled={
-            submitState === "publishing" ||
-            local.readOnly ||
+            (local.readOnly && submitState !== "publishing") ||
             (requiresFirstPublicationDisclosure && !disclosureAccepted)
           }
+          loading={submitState === "publishing"}
           className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />

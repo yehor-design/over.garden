@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CaretRightIcon as ChevronRight } from "@/components/icons/CaretRight";
 
 import {
   gardenObjectSectionPath,
@@ -205,31 +206,34 @@ export function ObjectSubpageHeader({
       data-object-subpage-header={object.id}
       className="grid min-w-0 gap-2"
     >
-      <nav aria-label={passportCopy.ownerPassport}>
-        <ol className="flex list-none flex-wrap items-center gap-1 text-caption text-text-muted">
-          <li>
-            <Link href="/garden" className="underline-offset-4 hover:underline">
-              {passportCopy.myGarden}
-            </Link>
-          </li>
-          <li aria-hidden="true">›</li>
-          <li>
-            <Link
-              href={`/garden/spaces/${encodeURIComponent(space.id)}`}
-              className="underline-offset-4 hover:underline"
-            >
-              {space.displayName}
-            </Link>
-          </li>
-          <li aria-hidden="true">›</li>
-          <li>
-            <Link
-              href={gardenObjectSectionPath(object.id)}
-              className="underline-offset-4 hover:underline"
-            >
-              {object.displayName}
-            </Link>
-          </li>
+      {/* The passport's crumbs, drawn the passport's way: a Phosphor caret
+          inside each item after the first. The "›" text items this replaces
+          were a second icon family (DESIGN.md §2.8, `OVE-478`). */}
+      <nav aria-label={passportCopy.ownerPassport} className="min-w-0">
+        <ol className="flex min-w-0 list-none flex-wrap items-center gap-1.5 text-caption text-text-muted">
+          {[
+            { href: "/garden", label: passportCopy.myGarden },
+            {
+              href: `/garden/spaces/${encodeURIComponent(space.id)}`,
+              label: space.displayName,
+            },
+            {
+              href: gardenObjectSectionPath(object.id),
+              label: object.displayName,
+            },
+          ].map((crumb, index) => (
+            <li key={crumb.href} className="flex min-w-0 items-center gap-1.5">
+              {index > 0 ? (
+                <ChevronRight size={16} className="shrink-0" />
+              ) : null}
+              <Link
+                href={crumb.href}
+                className="max-w-52 truncate underline-offset-4 hover:underline"
+              >
+                {crumb.label}
+              </Link>
+            </li>
+          ))}
         </ol>
       </nav>
       <h2 className="text-h2 break-words text-text-heading">

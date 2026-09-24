@@ -49,9 +49,9 @@ The seven owner requirements have one committed production receipt:
 
 ## Where the project is heading
 
-**Accepted 2026-09-21: complete product redesign, not yet shipped.** The new
-program is OVE-474 (coordination), 32 executable tasks with OVE-475 first and
-OVE-478 integration/release last. Threads leads visual design; vc.ru supplies
+**Complete product redesign, shipped (accepted 2026-09-21; integrated and
+released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),
+32 executable tasks with OVE-475 first and OVE-478 integration/release last. Threads leads visual design; vc.ru supplies
 centered columns and content interactions; Airbnb informs progressive creation;
 Phosphor replaces mixed interface icons; Thiings illustrates relevant setup and
 empty states. The primary job is fast writing to any of many owned spaces or
@@ -60,6 +60,74 @@ implementation, PRs, green-CI merges and verification without repeated routine
 approval. The dated audit and execution program are in `docs/audits/2026-09-21-product-design/`
 and `docs/redesign/2026-09-21/`. The shell and page migrations ship as individual verified slices; accepted
 documents/prototypes do not imply that the full runtime migration is complete.
+
+**The redesign, integrated (OVE-478):** every page family was swept for guest,
+member and owner in Ukrainian, Bulgarian and Russian at 320 px, and the
+integration defects the sweep, a real screen reader and the closure ledger
+found were fixed rather than listed.
+- Every address no page serves is a real `404` decided in `proxy.ts` before
+  anything streams (ADR-0029 D3): a path below a section that none of its pages
+  matches (`SECTION_SUBPATHS`, held to the filesystem by its test) and an
+  answer's, guide's, note's or market's unknown name
+  (`server/authored-addresses.ts`). Twenty-odd of the first answered `200`
+  with `noindex`; the second answered `500`, on production too.
+- The raw `404`/`410` document is drawn as the shell is (logo, one heading,
+  one way on, the footer language control, Phosphor glyphs), and a removed
+  entry or passport leads to its author's other entries or plants and
+  animals. A request-time document's `lang` is the reader's language; the
+  erasure pages have their language control.
+- Words: "акаунт" for the account in UK and BG (a profile is the public one),
+  the operator's count labels in BG and RU, region names in the reader's
+  language on entries, organism cards and lineage pages, photographs on the
+  Following feed, saved entries and community cards described by their
+  captions.
+- Heard with Orca 46.1 on Chromium 141: the author prefix merged with the name
+  («АвторОлена»), the composer announced "not yet published" straight after
+  "published", and the object and edit pages were titled "Простір саду". A
+  publish lost to the network left focus on the page's body — Publish was
+  disabled while it worked — and told a text note to fix "the marked photo".
+  The garden's group headings read «Простори3»: Chromium drops a space that
+  React writes alone after text, and thirty-odd more lines had the same shape.
+  All fixed: Publish shows as loading and keeps focus (DESIGN.md §4.4), a
+  failure names a photograph only when there is one, and every space between
+  two words is inside its text (DESIGN.md §5.14; `jsx-word-spaces.test.ts`
+  and the sweep fail the shape). The transcript is in
+  `ove-478/screen-reader/`.
+- With a phone's keyboard up, Tab scrolled the next control under the
+  composer's sticky publish row, hidden whole (WCAG 2.4.11); below `sm`,
+  focus keeps a sticky row's height clear (`data-bottom-sticky-row`).
+- Every browser spec scans axe with WCAG 2.2 AA (`WCAG_AA_TAGS`; the
+  browser-spec gate fails one that spells its own tags). A tab strip clipped
+  the lowest pixel of its focus ring at 200 % zoom; its rule is drawn inside it
+  now.
+- New gate specs: `route-families.spec.ts` (every family, role and language;
+  the link crawl; the unserved addresses; the strips at 100 and 200 %; the
+  first `/journals` result at laptop heights; 200 % text, forced colours,
+  reduced motion and a phone held both ways) and `writing-journeys.spec.ts`
+  (the six FAST_ENTRY journeys with step counts, each publish read back from
+  the database). Creating a plant or an animal while writing is new in the
+  one composer.
+- Measured locally before and after, back to back on the production-weight
+  fixture: first paint 0.15–0.19 s later on three of four pages, because
+  `main`'s 58–90 icon console errors a page slowed the parser into an
+  earlier, emptier first frame that then shifted (CLS up to 0.30 on `main`,
+  at most 0.0004 on the candidate). `/journals`' LCP, an excerpt in that
+  first frame, moves with it (1.73 → 1.90 s); the photographs' LCP does not
+  move beyond run-to-run noise. The web font can still move a feed card
+  (0.113 in an earlier pair; the cause is `main`'s too; DESIGN.md §9 allows
+  0.02).
+- CI's S3 stand-in is moto's server, a pinned PyPI package: on 2026-09-24
+  MinIO's Quay images began to require a login, and every CI run failed
+  before a test (`TECH_STACK_DECISIONS.md`, CI runtime boundary). The local
+  `infra/` path and the restore drill still name MinIO images that no longer
+  pull anonymously; that is a follow-up.
+- Still open, each classified in the receipt: one screen reader was heard
+  (Orca), not VoiceOver or NVDA; the production LCP budget is known gap 11;
+  the feed's font shift; production was read after release, never written;
+  no research with gardeners was run, so there is no retention or conversion
+  claim.
+
+See `docs/redesign/2026-09-21/OVE-478-PROOF.md`.
 
 **One entry composer (OVE-486):** every "New entry" opens
 `components/garden/entry-composer.tsx` — the global Write at `/garden/new`
@@ -2237,8 +2305,9 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
    families not yet converted (ADR-0032 D8) still show only their chrome. A _successful_ sign-in was never
    walked through in a browser — only the refusal path — so the `next`
    round-trip and the ADR-0022 D6 cross-tab reload are asserted by tests rather
-   than observed. CI runs `tests/public-hydration.spec.ts` against a real
-   Chromium on every push; the other Playwright specs still run by hand.
+   than observed. Every Playwright spec runs in CI on every push, through
+   `scripts/run-browser-gate.ts` (`OVE-462`; `pnpm check:browser-specs` fails
+   a spec that nothing runs).
 4. **No denominator for reader-facing failures.** Vercel Web Analytics is not
    enabled for the project, and runtime logs are retained for about an hour, so
    there is no denominator for "how often does a reader hit a failure". Server

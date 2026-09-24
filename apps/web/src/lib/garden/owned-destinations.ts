@@ -52,6 +52,8 @@ export const DESTINATION_COPY = {
     change: "Змінити вибір",
     open: "Відкрити журнал",
     spaces: "Знайти свій простір",
+    createNew: "Нова рослина чи тварина",
+    createNamed: "Нова рослина чи тварина «{name}»",
   },
   bg: {
     unavailable:
@@ -77,6 +79,8 @@ export const DESTINATION_COPY = {
     change: "Променете избора",
     open: "Отворете дневника",
     spaces: "Намерете свое пространство",
+    createNew: "Ново растение или животно",
+    createNamed: "Ново растение или животно „{name}“",
   },
   ru: {
     unavailable:
@@ -102,6 +106,8 @@ export const DESTINATION_COPY = {
     change: "Изменить выбор",
     open: "Открыть журнал",
     spaces: "Найти своё пространство",
+    createNew: "Новое растение или животное",
+    createNamed: "Новое растение или животное «{name}»",
   },
 } satisfies Record<InterfaceLocale, Record<string, string>>;
 export function destinationDetail(

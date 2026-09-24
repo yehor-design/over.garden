@@ -57,7 +57,7 @@ const objectPassportPage = {
     catalogPublicSlug: "red-cherry-tomato-0000000101",
     catalogSpeciesSlug: null,
     catalogPath: "/variety/red-cherry-tomato-0000000101",
-    safeLocationLabel: "Region: Ukraine - Kyiv City",
+    safeRegionCode: "UA-30",
     publicEntryCount: 2,
     firstEntryDate: new Date("2026-07-01T12:00:00.000Z"),
     latestEntryDate: new Date("2026-07-04T12:00:00.000Z"),
@@ -133,7 +133,7 @@ const lineageGraphPage: PublicLineageGraphPage = {
     catalogCanonicalName: "Red Cherry tomato",
     catalogPublicSlug: "red-cherry-tomato-0000000101",
     catalogSpeciesSlug: null,
-    safeLocationLabel: "Region: Ukraine - Kyiv City",
+    safeRegionCode: "UA-30",
   },
   nodes: [
     {
@@ -146,7 +146,7 @@ const lineageGraphPage: PublicLineageGraphPage = {
       catalogCanonicalName: "Red Cherry tomato",
       catalogPublicSlug: "red-cherry-tomato-0000000101",
       catalogSpeciesSlug: null,
-      safeLocationLabel: "Region: Ukraine - Kyiv City",
+      safeRegionCode: "UA-30",
     },
     {
       plantObjectId: sourceObjectId,
@@ -158,7 +158,7 @@ const lineageGraphPage: PublicLineageGraphPage = {
       catalogCanonicalName: "Red Cherry tomato",
       catalogPublicSlug: "red-cherry-tomato-0000000101",
       catalogSpeciesSlug: null,
-      safeLocationLabel: null,
+      safeRegionCode: null,
     },
   ],
   edges: [
@@ -274,7 +274,9 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("Green Thumb");
     expect(html).toContain("@green_thumb");
     expect(html).toContain("Red Cherry");
-    expect(html).toContain("Регион: Ukraine - Kyiv City");
+    // In the reader's language, the region's name as well as the word.
+    expect(html).toContain("Регион: Украйна — град Киев");
+    expect(html).not.toContain("Ukraine - Kyiv City");
     expect(html).toContain("/journal/first-flowering");
     expect(html).toContain("/variety/red-cherry-tomato-0000000101");
     expect(html).not.toContain("/garden?source=public-object");

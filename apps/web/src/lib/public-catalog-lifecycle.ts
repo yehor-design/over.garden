@@ -36,6 +36,6 @@ export function renderNotFoundPublicCatalogHtml(
     title: copy.notFound,
     description: copy.notFoundDescription,
     actionHref: localizedPath(locale, CATALOG_BROWSE_PATH),
-    actionLabel: copy.browseObjects,
+    actionLabel: copy.browseCatalogue,
   });
 }

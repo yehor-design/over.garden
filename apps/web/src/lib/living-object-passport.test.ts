@@ -21,6 +21,24 @@ describe("living-object passport presentation contract", () => {
     },
   );
 
+  // OG-UX-026: an animal is never a "plant species", in any of the three.
+  // The Russian case was in the copy and in no test (OVE-478).
+  it.each([
+    ["bg", "plant", "Растение", "Сорт или вид", "Среда на отглеждане"],
+    ["bg", "animal", "Животно", "Вид или порода", "Среда на отглеждане"],
+    ["ru", "plant", "Растение", "Сорт или вид", "Условия выращивания"],
+    ["ru", "animal", "Животное", "Вид или порода", "Условия содержания"],
+  ] as const)(
+    "uses the %s domain labels for %s",
+    (locale, kind, kindLabel, identityLabel, contextLabel) => {
+      const domain = getLivingObjectPassportDomain(locale, kind);
+      expect(domain).toMatchObject({ kindLabel, identityLabel, contextLabel });
+      if (kind === "animal") {
+        expect(Object.values(domain).join(" ")).not.toMatch(/растени|сорт /iu);
+      }
+    },
+  );
+
   it("ships equivalent Bulgarian and Russian passport actions", () => {
     expect(getLivingObjectPassportCopy("bg")).toMatchObject({
       addUpdate: "Нов запис",

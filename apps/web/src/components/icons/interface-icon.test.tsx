@@ -12,7 +12,12 @@ describe("Phosphor interface icons", () => {
       const html = renderToStaticMarkup(<MagnifyingGlassIcon size={size} />);
       expect(html).toContain('aria-hidden="true"');
       expect(html).toContain('focusable="false"');
-      expect(html).toContain(`width="var(--size-icon-${token})"`);
+      // A pixel value every engine parses, and the token for the CSS
+      // (`globals.css`): `var()` in an SVG attribute is not parsed everywhere.
+      expect(html).toContain(`width="${size}"`);
+      expect(html).toContain(`height="${size}"`);
+      expect(html).toContain(`data-og-icon-size="${token}"`);
+      expect(html).not.toContain("var(--size-icon");
       expect(html).toContain('data-og-icon="phosphor"');
       expect(html).not.toContain("<title>");
     }

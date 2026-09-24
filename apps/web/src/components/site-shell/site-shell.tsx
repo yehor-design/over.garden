@@ -13,6 +13,7 @@ import {
   useOwnerScopeControl,
 } from "@/components/auth/owner-scope";
 import { SessionSignalBoundary } from "@/components/auth/session-signal-boundary";
+import { InterfaceLanguageControl } from "@/components/public/language-switcher";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -589,22 +590,38 @@ function UnframedSiteShell({
     // The native erasure page intentionally contains no garden payload or
     // authenticated navigation. It stays outside the session convergence
     // guard so a failed session recheck cannot trap a person in an account.
+    //
+    // It does carry the one language control every document has (DESIGN.md
+    // §6): a person asking to be erased in the wrong language must be able
+    // to read what they are asking for. It had none (`OVE-478`). The control
+    // on an unprefixed route writes the preference and navigates nowhere.
+    const safeExit = (
+      <div data-site-shell="safe-exit" data-site-shell-safe-exit="erasure">
+        {children}
+        <footer
+          data-site-shell-region="footer"
+          className="mt-12 border-t border-border px-4 py-6 sm:px-6"
+        >
+          <div className="mx-auto flex w-full max-w-content">
+            <InterfaceLanguageControl
+              locale={locale}
+              market={market}
+              pathname={pathname}
+              compact
+            />
+          </div>
+        </footer>
+      </div>
+    );
     return (
       <>
         <SessionSignalBoundary locale={locale} ownerUserId={ownerUserId} />
         {isAuthenticated ? (
           <OwnerScopeProvider locale={locale} ownerUserId={ownerUserId}>
-            <div
-              data-site-shell="safe-exit"
-              data-site-shell-safe-exit="erasure"
-            >
-              {children}
-            </div>
+            {safeExit}
           </OwnerScopeProvider>
         ) : (
-          <div data-site-shell="safe-exit" data-site-shell-safe-exit="erasure">
-            {children}
-          </div>
+          safeExit
         )}
       </>
     );

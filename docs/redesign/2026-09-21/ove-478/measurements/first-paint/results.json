@@ -1,0 +1,900 @@
+{
+  "question": "Why does first contentful paint under applied throttling move later on the listing pages, and what does the LCP difference on / mean?",
+  "measuredAt": "2026-09-24T13:10Z",
+  "builds": {
+    "before": "main at 1aa34d6f (next start -p 3178)",
+    "after": "the candidate at 09385428 (next start -p 3179). The changes made after it — focus clearing a sticky bottom row, Publish kept focusable while it publishes, a failure message that fits an entry without a photograph, and spaces written inside the text (one text node where React wrote two) — touch no icon; the icon attributes this experiment swaps are the same in the final tree"
+  },
+  "database": "the same local database for both builds (the production-weight fixture), steady state: every page requested before measuring",
+  "browser": "Chromium 141.0.7390.37 (Playwright 1.61.1 headless shell)",
+  "conditions": {
+    "cpuThrottling": 4,
+    "latencyMs": 562.5,
+    "downloadKbps": 1474.56,
+    "uploadKbps": 675,
+    "viewport": "412x823, device scale factor 1",
+    "note": "Lighthouse's applied (devtools) mobile throttling values, set over CDP; a fresh browser context per sample"
+  },
+  "variants": {
+    "before": "main's HTML as served",
+    "after": "the candidate's HTML as served",
+    "after+invalid": "the candidate's HTML with each Phosphor icon's width/height rewritten to main's var(--size-icon-md) values",
+    "before+valid": "main's HTML with each Phosphor icon's var(--size-icon-md) width/height rewritten to the candidate's 20"
+  },
+  "proxy": "every variant through the same local proxy: the HTML document buffered, rewritten or not, and gzipped the same way; every other request passed through untouched",
+  "order": "8 rounds; the four variants in turn, the order reversed every other round",
+  "samples": {
+    "/journals": {
+      "before": {
+        "fcpMs": [
+          1764,
+          1732,
+          1740,
+          1692,
+          1740,
+          1732,
+          1748,
+          1748
+        ],
+        "lcpMs": [
+          1948,
+          1732,
+          1740,
+          1692,
+          1908,
+          1732,
+          1748,
+          1748
+        ],
+        "consoleErrors": 90
+      },
+      "after": {
+        "fcpMs": [
+          2044,
+          2012,
+          1944,
+          1828,
+          1832,
+          1976,
+          1732,
+          1860
+        ],
+        "lcpMs": [
+          2044,
+          2012,
+          1944,
+          1828,
+          1832,
+          1976,
+          1732,
+          1860
+        ],
+        "consoleErrors": 0
+      },
+      "after+invalid": {
+        "fcpMs": [
+          1820,
+          1700,
+          1724,
+          1740,
+          1716,
+          1888,
+          1636,
+          1736
+        ],
+        "lcpMs": [
+          2544,
+          1700,
+          1876,
+          1740,
+          1716,
+          1888,
+          1736,
+          1736
+        ],
+        "consoleErrors": 90
+      },
+      "before+valid": {
+        "fcpMs": [
+          1872,
+          1856,
+          1988,
+          1748,
+          1780,
+          2000,
+          1992,
+          1944
+        ],
+        "lcpMs": [
+          1872,
+          1856,
+          1988,
+          1748,
+          1780,
+          2000,
+          1992,
+          1944
+        ],
+        "consoleErrors": 0
+      }
+    },
+    "/": {
+      "before": {
+        "fcpMs": [
+          1896,
+          1856,
+          1728,
+          1788,
+          1840,
+          1932,
+          1808,
+          1908
+        ],
+        "lcpMs": [
+          1896,
+          1856,
+          1728,
+          1788,
+          1840,
+          1932,
+          1808,
+          1908
+        ],
+        "consoleErrors": 80
+      },
+      "after": {
+        "fcpMs": [
+          1932,
+          1832,
+          1880,
+          1744,
+          1892,
+          1916,
+          1928,
+          1928
+        ],
+        "lcpMs": [
+          1932,
+          1832,
+          1880,
+          1744,
+          1892,
+          1916,
+          1928,
+          1928
+        ],
+        "consoleErrors": 0
+      },
+      "after+invalid": {
+        "fcpMs": [
+          1780,
+          1696,
+          1736,
+          1692,
+          1760,
+          1804,
+          1724,
+          1716
+        ],
+        "lcpMs": [
+          1780,
+          1696,
+          1736,
+          1904,
+          1944,
+          1804,
+          1724,
+          1716
+        ],
+        "consoleErrors": 80
+      },
+      "before+valid": {
+        "fcpMs": [
+          1840,
+          1904,
+          1908,
+          1900,
+          1836,
+          1808,
+          1912,
+          1924
+        ],
+        "lcpMs": [
+          1840,
+          1904,
+          1908,
+          1900,
+          1836,
+          1808,
+          1912,
+          1924
+        ],
+        "consoleErrors": 0
+      }
+    }
+  },
+  "consoleErrorText": "Error: <svg> attribute width: Expected length, \"var(--size-icon-md)\". (and the same for height), once per icon",
+  "firstFrame": {
+    "method": "requestAnimationFrame wrapped by an init script; the DOM counted after the last callback of each frame (this perturbs timing a little, the same way on both sides)",
+    "/journals": {
+      "before": [
+        {
+          "frames": [
+            "51 elements, no cards",
+            "51 elements, no cards",
+            "221 elements, fallbacks, no cards",
+            "424 elements, 7 cards"
+          ],
+          "fcpMs": 1708
+        },
+        {
+          "frames": [
+            "51 elements, no cards",
+            "51 elements, no cards",
+            "168 elements, fallbacks, no cards",
+            "386 elements, 6 cards"
+          ],
+          "fcpMs": 1720
+        },
+        {
+          "frames": [
+            "51 elements, no cards",
+            "51 elements, no cards",
+            "168 elements, fallbacks, no cards",
+            "283 elements, 2 cards"
+          ],
+          "fcpMs": 1692
+        }
+      ],
+      "after": [
+        {
+          "frames": [
+            "51 elements, no cards",
+            "357 elements, 5 cards",
+            "565 elements, 8 cards"
+          ],
+          "fcpMs": 1904
+        },
+        {
+          "frames": [
+            "51 elements, no cards",
+            "51 elements, no cards",
+            "400 elements, 7 cards",
+            "554 elements, 8 cards"
+          ],
+          "fcpMs": 1844
+        },
+        {
+          "frames": [
+            "51 elements, no cards",
+            "357 elements, 5 cards",
+            "566 elements, 8 cards"
+          ],
+          "fcpMs": 1864
+        }
+      ]
+    },
+    "traceFirstLayout": {
+      "method": "Chrome trace of the frame that paints first: the Layout event's layout objects and duration",
+      "/journals": {
+        "before": [
+          "113 objects, 89 ms",
+          "103 objects, 91 ms"
+        ],
+        "after": [
+          "267 objects, 213 ms",
+          "183 objects, 170 ms"
+        ]
+      }
+    }
+  },
+  "lighthouseApplied": {
+    "/@gardener_bb137151f4c2094a/post/1": {
+      "before": [
+        {
+          "report": "local-before-gardener-bb137151f4c2094a-post-1-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:38:56.102Z",
+          "fcpMs": 1744,
+          "lcpMs": 2834,
+          "lcpElement": "article.grid > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.2914,
+          "shifts": [
+            {
+              "score": 0.2911,
+              "element": "div.contents > div.flex > div.mx-auto > div.site-shell-content-safe-bottom",
+              "cause": []
+            },
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-before-gardener-bb137151f4c2094a-post-1-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:39:28.686Z",
+          "fcpMs": 1824,
+          "lcpMs": 2757,
+          "lcpElement": "article.grid > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.1485,
+          "shifts": [
+            {
+              "score": 0.1026,
+              "element": "div.contents > div.flex > div.mx-auto > div.site-shell-content-safe-bottom",
+              "cause": []
+            },
+            {
+              "score": 0.0456,
+              "element": "body.flex > div.contents > section.analytics-consent-banner",
+              "cause": []
+            },
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-before-gardener-bb137151f4c2094a-post-1-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:40:01.160Z",
+          "fcpMs": 1676,
+          "lcpMs": 2754,
+          "lcpElement": "article.grid > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.3009,
+          "shifts": [
+            {
+              "score": 0.2911,
+              "element": "div.contents > div.flex > div.mx-auto > div.site-shell-content-safe-bottom",
+              "cause": []
+            },
+            {
+              "score": 0.0095,
+              "element": "div.flex > div.mx-auto > header.sticky > a.flex",
+              "cause": []
+            },
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "report": "local-after-gardener-bb137151f4c2094a-post-1-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:50:41.913Z",
+          "fcpMs": 1942,
+          "lcpMs": 2763,
+          "lcpElement": "article.grid > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.0003,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-gardener-bb137151f4c2094a-post-1-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:51:14.699Z",
+          "fcpMs": 1938,
+          "lcpMs": 2781,
+          "lcpElement": "article.grid > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.0003,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-gardener-bb137151f4c2094a-post-1-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:51:47.757Z",
+          "fcpMs": 1915,
+          "lcpMs": 2764,
+          "lcpElement": "article.grid > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.0003,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "/": {
+      "before": [
+        {
+          "report": "local-before-home-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:36:19.212Z",
+          "fcpMs": 1697,
+          "lcpMs": 3428,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+          "cls": 0.0264,
+          "shifts": [
+            {
+              "score": 0.0264,
+              "element": "div.flex > div.mx-auto > header.sticky > a.flex",
+              "cause": []
+            },
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-before-home-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:36:55.385Z",
+          "fcpMs": 1788,
+          "lcpMs": 3559,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+          "cls": 0.0002,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-before-home-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:37:31.662Z",
+          "fcpMs": 1708,
+          "lcpMs": 3403,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+          "cls": 0.2013,
+          "shifts": [
+            {
+              "score": 0.2013,
+              "element": "div.contents > div.flex > div.mx-auto > div.site-shell-content-safe-bottom",
+              "cause": []
+            },
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "report": "local-after-home-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:48:04.378Z",
+          "fcpMs": 1901,
+          "lcpMs": 3499,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+          "cls": 0.0002,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-home-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:48:40.793Z",
+          "fcpMs": 1856,
+          "lcpMs": 3553,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+          "cls": 0.0002,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-home-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:49:17.354Z",
+          "fcpMs": 1830,
+          "lcpMs": 3585,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.relative > img.object-cover",
+          "cls": 0.0002,
+          "shifts": [
+            {
+              "score": 0.0002,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "/journals": {
+      "before": [
+        {
+          "report": "local-before-journals-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:43:45.789Z",
+          "fcpMs": 1917,
+          "lcpMs": 1917,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.grid > p.line-clamp-4",
+          "cls": 0.0004,
+          "shifts": [
+            {
+              "score": 0.0003,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-before-journals-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:44:21.616Z",
+          "fcpMs": 1704,
+          "lcpMs": 1704,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.grid > p.line-clamp-4",
+          "cls": 0.1581,
+          "shifts": [
+            {
+              "score": 0.1581,
+              "element": "div.contents > div.flex > div.mx-auto > div.site-shell-content-safe-bottom",
+              "cause": []
+            },
+            {
+              "score": 0.0003,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-before-journals-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:44:57.351Z",
+          "fcpMs": 1729,
+          "lcpMs": 1729,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.grid > p.line-clamp-4",
+          "cls": 0.1254,
+          "shifts": [
+            {
+              "score": 0.1254,
+              "element": "div.contents > div.flex > div.mx-auto > div.site-shell-content-safe-bottom",
+              "cause": []
+            },
+            {
+              "score": 0.0003,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ],
+      "after": [
+        {
+          "report": "local-after-journals-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:55:33.396Z",
+          "fcpMs": 1806,
+          "lcpMs": 1806,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.grid > p.line-clamp-4",
+          "cls": 0.0004,
+          "shifts": [
+            {
+              "score": 0.0003,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-journals-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:56:09.575Z",
+          "fcpMs": 1897,
+          "lcpMs": 1897,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.grid > p.line-clamp-4",
+          "cls": 0.0004,
+          "shifts": [
+            {
+              "score": 0.0003,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-journals-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:56:45.668Z",
+          "fcpMs": 1939,
+          "lcpMs": 1939,
+          "lcpElement": "li.min-w-0 > article.rounded-lg > div.grid > p.line-clamp-4",
+          "cls": 0.0004,
+          "shifts": [
+            {
+              "score": 0.0003,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            },
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "/species/ove469measure-solanum-lycopersicum-c370bb74": {
+      "before": [
+        {
+          "report": "local-before-species-ove469measure-solanum-lycopersicum-c370bb74-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:41:19.341Z",
+          "fcpMs": 2239,
+          "lcpMs": 2855,
+          "lcpElement": "article.rounded-lg > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0,
+          "shifts": []
+        },
+        {
+          "report": "local-before-species-ove469measure-solanum-lycopersicum-c370bb74-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:41:52.734Z",
+          "fcpMs": 2263,
+          "lcpMs": 2866,
+          "lcpElement": "article.rounded-lg > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0,
+          "shifts": []
+        },
+        {
+          "report": "local-before-species-ove469measure-solanum-lycopersicum-c370bb74-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:42:26.355Z",
+          "fcpMs": 2283,
+          "lcpMs": 2749,
+          "lcpElement": "article.rounded-lg > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0,
+          "shifts": []
+        }
+      ],
+      "after": [
+        {
+          "report": "local-after-species-ove469measure-solanum-lycopersicum-c370bb74-devtools-1.json.gz",
+          "fetchTime": "2026-09-24T17:53:06.809Z",
+          "fcpMs": 2236,
+          "lcpMs": 2854,
+          "lcpElement": "article.rounded-lg > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.0001,
+          "shifts": [
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded",
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-species-ove469measure-solanum-lycopersicum-c370bb74-devtools-2.json.gz",
+          "fetchTime": "2026-09-24T17:53:40.301Z",
+          "fcpMs": 2255,
+          "lcpMs": 2849,
+          "lcpElement": "article.rounded-lg > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.0,
+          "shifts": [
+            {
+              "score": 0.0,
+              "element": null,
+              "cause": [
+                "Web font loaded",
+                "Web font loaded"
+              ]
+            }
+          ]
+        },
+        {
+          "report": "local-after-species-ove469measure-solanum-lycopersicum-c370bb74-devtools-3.json.gz",
+          "fetchTime": "2026-09-24T17:54:13.450Z",
+          "fcpMs": 2271,
+          "lcpMs": 2864,
+          "lcpElement": "article.rounded-lg > figure.grid > div.overflow-hidden > img.object-cover",
+          "cls": 0.0001,
+          "shifts": [
+            {
+              "score": 0.0001,
+              "element": "div.contents > section.analytics-consent-banner > p#analytics-consent-message > a.rounded-sm",
+              "cause": [
+                "Web font loaded",
+                "Web font loaded"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "lighthouseAppliedNote": "the pair in ../lighthouse, measured back to back on one database state, each side in steady state with the same pages sending the fonts' preload header",
+  "medians": {
+    "/journals": {
+      "before": {
+        "fcpMs": 1740.0,
+        "lcpMs": 1744.0
+      },
+      "after": {
+        "fcpMs": 1902.0,
+        "lcpMs": 1902.0
+      },
+      "after+invalid": {
+        "fcpMs": 1730.0,
+        "lcpMs": 1738.0
+      },
+      "before+valid": {
+        "fcpMs": 1908.0,
+        "lcpMs": 1908.0
+      }
+    },
+    "/": {
+      "before": {
+        "fcpMs": 1848.0,
+        "lcpMs": 1848.0
+      },
+      "after": {
+        "fcpMs": 1904.0,
+        "lcpMs": 1904.0
+      },
+      "after+invalid": {
+        "fcpMs": 1730.0,
+        "lcpMs": 1758.0
+      },
+      "before+valid": {
+        "fcpMs": 1902.0,
+        "lcpMs": 1902.0
+      }
+    }
+  }
+}

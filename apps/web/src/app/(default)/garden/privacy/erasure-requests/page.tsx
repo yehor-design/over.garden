@@ -440,11 +440,11 @@ function ErasureRequestCard({
           )}
         </p>
         <p className="text-caption text-text-muted">
-          {copy.received}{" "}
+          {`${copy.received} `}
           <time dateTime={new Date(request.submittedAt).toISOString()}>
             {formatOperatorDate(locale, request.submittedAt)}
-          </time>{" "}
-          · {copy.requestReference}{" "}
+          </time>
+          {` · ${copy.requestReference} `}
           <span className="font-mono text-mono">{reference}</span>
         </p>
       </div>
@@ -744,8 +744,7 @@ function DryRunPreviewPanel({
           {copy.previewDescription}
         </p>
         <p className="text-caption text-text-muted">
-          {getOperatorCopy(locale).common.generated}{" "}
-          {formatOperatorDate(locale, preview.generatedAt)}
+          {`${getOperatorCopy(locale).common.generated} ${formatOperatorDate(locale, preview.generatedAt)}`}
         </p>
       </div>
 

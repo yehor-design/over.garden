@@ -79,8 +79,6 @@ describe("the chrome and the page agree about the session", () => {
     ).toBeNull();
     // And the account menu, which only a signed-in reader has, is not drawn
     // either: "unreachable" is neither of the two answers.
-    expect(
-      screen.queryByRole("button", { name: "Обліковий запис" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Акаунт" })).toBeNull();
   });
 });

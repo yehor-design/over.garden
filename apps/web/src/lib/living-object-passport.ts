@@ -192,7 +192,13 @@ export interface LivingObjectPassportCopy {
   provenanceRecords: string;
   passportRemoved: string;
   passportRemovedDescription: string;
-  browseObjects: string;
+  /**
+   * A missing passport's way on when its gardener's profile still answers:
+   * their other plants and animals (`OVE-478`). `{handle}` is their handle.
+   */
+  authorObjects: string;
+  /** The way on when it does not: the journals directory. */
+  browseJournals: string;
   passportNotFound: string;
   passportNotFoundDescription: string;
 }
@@ -248,7 +254,8 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     passportRemoved: "Паспорт видалено",
     passportRemovedDescription:
       "Цей публічний паспорт більше недоступний. Його записи прибрано з публічних поверхонь.",
-    browseObjects: "Переглянути живі об'єкти",
+    authorObjects: "Рослини й тварини @{handle}",
+    browseJournals: "Журнали",
     passportNotFound: "Паспорт не знайдено",
     passportNotFoundDescription:
       "Цей паспорт не опубліковано або він не існує.",
@@ -303,7 +310,8 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     passportRemoved: "Паспортът е премахнат",
     passportRemovedDescription:
       "Този публичен паспорт вече не е наличен. Записите му са премахнати от публичните раздели.",
-    browseObjects: "Разгледайте живите обекти",
+    authorObjects: "Растения и животни на @{handle}",
+    browseJournals: "Дневници",
     passportNotFound: "Паспортът не е намерен",
     passportNotFoundDescription:
       "Този паспорт не е публикуван или не съществува.",
@@ -358,7 +366,8 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     passportRemoved: "Паспорт удален",
     passportRemovedDescription:
       "Этот публичный паспорт больше недоступен. Его записи удалены из публичных разделов.",
-    browseObjects: "Смотреть живые объекты",
+    authorObjects: "Растения и животные @{handle}",
+    browseJournals: "Журналы",
     passportNotFound: "Паспорт не найден",
     passportNotFoundDescription:
       "Этот паспорт не опубликован или не существует.",

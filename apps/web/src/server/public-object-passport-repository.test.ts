@@ -18,7 +18,6 @@ import {
   buildPublicObjectPassportGalleryQuery,
   buildPublicObjectPassportRootQuery,
   buildPublicObjectPassportTimelineQuery,
-  publicObjectPassportLocationLabel,
   serializePublicObjectPassportPage,
   classifyPublicObjectPassportLifecycle,
 } from "./public-object-passport-repository";
@@ -239,33 +238,6 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.parameters.at(-1)).toBe(40);
   });
 
-  it("suppresses hidden or unsupported region labels", () => {
-    expect(
-      publicObjectPassportLocationLabel({
-        objectLocationVisibility: "region",
-        objectCoarseRegionCode: "UA-30",
-        spaceLocationVisibility: "region",
-        spaceCoarseRegionCode: "UA-32",
-      }),
-    ).toBe("Region: Ukraine - Kyiv City");
-    expect(
-      publicObjectPassportLocationLabel({
-        objectLocationVisibility: "hidden",
-        objectCoarseRegionCode: "UA-30",
-        spaceLocationVisibility: "region",
-        spaceCoarseRegionCode: "UA-32",
-      }),
-    ).toBeNull();
-    expect(
-      publicObjectPassportLocationLabel({
-        objectLocationVisibility: "region",
-        objectCoarseRegionCode: "Kyiv apartment balcony",
-        spaceLocationVisibility: "hidden",
-        spaceCoarseRegionCode: "UA-32",
-      }),
-    ).toBeNull();
-  });
-
   it("serializes only public paths, labels, profile handles, and media URLs", () => {
     const page = serializePublicObjectPassportPage(
       {
@@ -337,7 +309,8 @@ describe("public object passport repository query contracts", () => {
     // (ADR-0029 D9), and built from the registry handle rather than the
     // profile's.
     expect(page.object.publicPath).toBe("/@green_thumb/objects/balcony-tomato");
-    expect(page.object.safeLocationLabel).toBe("Region: Ukraine - Kyiv City");
+    // A code, never a label: the page words it for its reader.
+    expect(page.object.safeRegionCode).toBe("UA-30");
     expect(page.author).toMatchObject({
       handle: "green_thumb",
       mention: "@green_thumb",

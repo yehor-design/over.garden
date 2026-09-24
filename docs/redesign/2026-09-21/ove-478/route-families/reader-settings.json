@@ -1,0 +1,225 @@
+[
+  {
+    "setting": "text-200",
+    "address": "/",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/@gardener_fd72f6a1d88ee75c/post/1",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/journals",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/catalog",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/species/ove478-routes-organism-1-solanum-lycopersicum-3ec61735",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/@gardener_fd72f6a1d88ee75c",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/auth/sign-in",
+    "overflow": 0
+  },
+  {
+    "setting": "text-200",
+    "address": "/answers/ove478-no-such",
+    "overflow": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/",
+    "focused": "a",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/@gardener_fd72f6a1d88ee75c/post/1",
+    "focused": "a",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/journals",
+    "focused": "a",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/catalog",
+    "focused": "a",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/species/ove478-routes-organism-1-solanum-lycopersicum-3ec61735",
+    "focused": "a",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/@gardener_fd72f6a1d88ee75c",
+    "focused": "a",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/auth/sign-in",
+    "focused": "input",
+    "outline": "2px solid",
+    "currentUnderlined": true,
+    "moving": 0
+  },
+  {
+    "setting": "forced-colours+reduced-motion",
+    "address": "/answers/ove478-no-such",
+    "focused": "summary",
+    "outline": "2px solid",
+    "currentUnderlined": null,
+    "moving": 0
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/@gardener_fd72f6a1d88ee75c/post/1",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/journals",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/catalog",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/species/ove478-routes-organism-1-solanum-lycopersicum-3ec61735",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/@gardener_fd72f6a1d88ee75c",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/auth/sign-in",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-portrait",
+    "address": "/answers/ove478-no-such",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/@gardener_fd72f6a1d88ee75c/post/1",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/journals",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/catalog",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/species/ove478-routes-organism-1-solanum-lycopersicum-3ec61735",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/@gardener_fd72f6a1d88ee75c",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/auth/sign-in",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-landscape",
+    "address": "/answers/ove478-no-such",
+    "overflow": 0,
+    "hidden": []
+  },
+  {
+    "setting": "phone-keyboard-up",
+    "address": "/garden/new",
+    "reached": [
+      "input[combobox]:",
+      "button:Нова рослина чи тварина",
+      "input:",
+      "input:",
+      "input:",
+      "input:",
+      "div[textbox]:Вміст запису",
+      "button:Фото",
+      "button:Жирний",
+      "button:Курсив",
+      "button:Маркований список",
+      "button:Блок",
+      "summary:Більше деталей",
+      "input:",
+      "a:Що саме буде публічним",
+      "button:Опублікувати"
+    ],
+    "hidden": []
+  }
+]

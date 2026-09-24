@@ -456,6 +456,24 @@
   [role="button"]:not([aria-disabled="true"]) {
     cursor: pointer;
   }
+  /* An interface icon's size is a token (DESIGN.md §2.8). The glyph carries
+     the pixel value as its SVG attribute, which every engine parses, and names
+     the token here so it grows with the reader's text size; `:where()` keeps
+     this at zero specificity, so a sizing class on the icon still wins. A
+     `var()` inside the attribute itself is not parsed by every Chromium
+     (`OVE-478`). */
+  :where([data-og-icon-size="sm"]) {
+    width: var(--size-icon-sm);
+    height: var(--size-icon-sm);
+  }
+  :where([data-og-icon-size="md"]) {
+    width: var(--size-icon-md);
+    height: var(--size-icon-md);
+  }
+  :where([data-og-icon-size="lg"]) {
+    width: var(--size-icon-lg);
+    height: var(--size-icon-lg);
+  }
 }
 
 @layer components {
@@ -592,8 +610,9 @@
    number, `--bottom-chrome-height`, and three things keep clear of it:
 
    - focus. `scroll-padding-bottom` scrolls a control the keyboard reaches
-     above both (WCAG 2.4.11). There was none for the tab bar at all: at
-     320 px a focused link on /journals sat 44 px beneath it, answered or not;
+     above both (WCAG 2.4.11), and above a row that sticks to them. There was
+     none for the tab bar at all: at 320 px a focused link on /journals sat
+     44 px beneath it, answered or not;
    - a row that sticks to the bottom of the screen — the composer's publish
      row, a setup step's "Next" — which sits on top of them
      (`above-bottom-chrome`). A setup flow opened at 320 px with its "Next"
@@ -619,8 +638,25 @@ html {
   --bottom-chrome-height: calc(
     var(--bottom-bar-room) + var(--consent-notice-room)
   );
+  --sticky-row-room: 0px;
   /* Room for the focus ring as well: 2px of outline 2px off the control. */
-  scroll-padding-bottom: calc(var(--bottom-chrome-height) + 0.5rem);
+  scroll-padding-bottom: calc(
+    var(--bottom-chrome-height) + var(--sticky-row-room) + 0.5rem
+  );
+}
+
+/* A row that sticks to the bottom of a small screen — a composer's publish
+   row, a setup step's actions (`data-bottom-sticky-row`) — sits on top of the
+   chrome, and focus keeps clear of it as it does of the chrome: a control Tab
+   reached further down was scrolled to just above the chrome, under the row,
+   and hidden whole (WCAG 2.4.11; found with a phone's keyboard up in
+   `OVE-478`). Its room is the row's own height — a 2.75rem control, 0.75rem
+   of padding above and below, a 1px rule each side — and the publish row's
+   0.5rem gap above the chrome. From `sm` the rows are not sticky. */
+@media (width < 40rem) {
+  html:has([data-bottom-sticky-row]) {
+    --sticky-row-room: calc(2.75rem + 1.5rem + 2px + 0.5rem);
+  }
 }
 
 @media (width < 64rem) {
@@ -683,6 +719,14 @@ html:not([data-analytics-consent="undecided"]):has(
 
 @utility above-bottom-chrome {
   bottom: var(--bottom-chrome-height, 0px);
+}
+
+/* A tab strip's rule, drawn inside its padding box. A border is outside it,
+   and a strip that scrolls sideways clips at the padding box: the tab that
+   sits on a border rule lost the lowest pixel of its underline and of its
+   focus ring there (OG-UX-031, found at 200 % zoom in OVE-478). */
+@utility tab-strip-rule {
+  box-shadow: inset 0 -1px 0 var(--color-border);
 }
 
 @utility above-bottom-chrome-gap {

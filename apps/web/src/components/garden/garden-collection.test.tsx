@@ -1,4 +1,4 @@
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup, renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
@@ -94,6 +94,25 @@ describe("GardenCollection", () => {
     expect(html).toContain('<label for="garden-collection-search"');
     expect(html).toContain('name="q"');
     expect(html).toContain('role="status"');
+  });
+
+  it("keeps a group's count a word of its own in the heading's name", () => {
+    // `OVE-478`: Orca read "Простори3" — the count was a margin away, with no
+    // space in the name. A `{" "}` after the title is not enough: React
+    // writes it after a `<!-- -->`, and Chromium drops a space standing
+    // alone there. Rendered as the server streams it, separators included.
+    const html = renderToString(
+      <GardenCollection
+        locale="uk"
+        request={normalizeGardenCollectionRequest({})}
+        today={TODAY}
+        spaces={ready({ items: [space(1)], total: 3, owned: 3 })}
+        objects={ready({ items: [object(0)], total: 3, owned: 3 })}
+        simple={false}
+      />,
+    );
+    expect(html).toMatch(/>Простори <span[^>]*>3<\/span>/u);
+    expect(html).toMatch(/>Рослини й тварини <span[^>]*>3<\/span>/u);
   });
 
   it("tells two tomatoes apart by their space, and states recency as a fact", () => {

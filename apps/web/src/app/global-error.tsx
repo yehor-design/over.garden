@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { InterfaceLanguageControl } from "@/components/public/language-switcher";
+import { OverGardenLogo } from "@/components/site-shell/over-garden-logo";
 import {
   getInterfaceCopy,
   INTERFACE_CONTEXT_META_NAME,
@@ -96,70 +97,83 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
           dangerouslySetInnerHTML={{ __html: GLOBAL_ERROR_TYPOGRAPHY_CSS }}
         />
       </head>
-      <body className="flex min-h-dvh flex-col bg-background text-foreground">
-        <header className="flex min-h-14 items-center justify-between gap-3 border-b border-foreground/15 bg-foreground px-3 text-background sm:px-5">
+      {/* Drawn as the shell is (DESIGN.md §3.2, `OVE-478`): the logo on a
+          light header, the page's one heading, the retry as the primary
+          action, and the language control in the footer. It used to be the
+          pre-redesign chrome, a dark bar with a brand block.
+
+          It does not import `globals.css`. That import gave the bundler a
+          second entry for the app's stylesheet, and it merged the fonts'
+          stylesheet and the app's into one that every page then waited for:
+          first paint under applied throttling moved 0.2–0.35 s later on
+          every page measured. The class names resolve against the
+          stylesheet the failed layout already put in the document; a root
+          failure during the server render has only the typography above,
+          as before. */}
+      <body className="flex min-h-dvh flex-col bg-surface text-text">
+        <header className="flex min-h-14 items-center border-b border-border bg-surface px-2 sm:px-4">
           <a
             href={localizedPath(interfaceContext.locale, "/")}
-            className="inline-flex min-h-14 items-center bg-primary px-4 font-semibold text-primary-foreground"
+            className="flex min-h-11 items-center rounded-md px-2 py-1 text-action outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
           >
-            OverGarden
+            <OverGardenLogo className="h-7 w-auto shrink-0" />
+            <span className="sr-only">OverGarden</span>
           </a>
-          {/* Exactly one control, in either market. It used to render only
-              for Bulgaria, which left a reader whose market resolved to
-              Ukraine with no way to change the language on the one page they
-              most need to understand — and since 2026-09-17 every market
-              offers all three languages, so the gate was the old model
-              surviving in the last place anyone would look. */}
-          <div className="rounded-md bg-background text-foreground">
-            <InterfaceLanguageControl
-              locale={interfaceContext.locale}
-              market={interfaceContext.market}
-              compact
-            />
-          </div>
         </header>
         <main
           data-global-error="true"
-          className="mx-auto grid w-full max-w-3xl flex-1 content-center gap-5 px-5 py-12"
+          className="mx-auto grid w-full max-w-content flex-1 content-center gap-4 px-5 py-12"
         >
-          <p className="text-sm font-semibold text-primary uppercase">
+          <p className="text-overline text-text-muted uppercase">
             {copy.shell.errorEyebrow}
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h1 className="text-h1 text-balance text-text-heading">
             {copy.shell.errorTitle}
           </h1>
-          <p className="max-w-2xl leading-7 text-muted-foreground">
+          <p className="max-w-prose text-body text-text-muted">
             {copy.shell.errorDescription}
           </p>
           <div>
             <button
               type="button"
               onClick={reset}
-              className="inline-flex min-h-10 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              className="inline-flex min-h-11 items-center justify-center rounded-md bg-action px-4 py-2 text-body-sm font-medium text-text-on-fill hover:bg-action-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
             >
               {copy.shell.retry}
             </button>
           </div>
           <nav
             aria-label={choicesCopy.supportTitle}
-            className="flex flex-wrap gap-4"
+            className="flex flex-wrap gap-x-5 gap-y-1"
           >
             {/* A root failure must recover through a new document, independently of the failed router. */}
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/support"
-              className="text-link inline-flex min-h-11 items-center underline"
+              className="inline-flex min-h-11 items-center text-body-sm text-text-secondary underline underline-offset-4 hover:text-text"
             >
               {choicesCopy.supportTitle}
             </a>
             <a
               href={localizedPath(interfaceContext.locale, "/privacy")}
-              className="text-link inline-flex min-h-11 items-center underline"
+              className="inline-flex min-h-11 items-center text-body-sm text-text-secondary underline underline-offset-4 hover:text-text"
             >
               {choicesCopy.privacyTitle}
             </a>
           </nav>
         </main>
+        {/* Exactly one control, in either market, and in the footer where
+            the shell keeps it (DESIGN.md §6). It used to render only for
+            Bulgaria, which left a reader whose market resolved to Ukraine
+            with no way to change the language on the one page they most
+            need to understand. */}
+        <footer className="border-t border-border px-5 py-6">
+          <InterfaceLanguageControl
+            locale={interfaceContext.locale}
+            market={interfaceContext.market}
+            compact
+          />
+        </footer>
       </body>
     </html>
   );

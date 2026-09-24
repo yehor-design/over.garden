@@ -576,6 +576,13 @@ describe("the shell's server HTML", () => {
     expect(html).not.toContain('data-site-shell-region="header"');
     expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
     expect(html).not.toContain("data-sign-out-control");
+    // No garden, no navigation — and still the one language control every
+    // document carries (DESIGN.md §6, `OVE-478`).
+    expect(
+      html.match(
+        /data-interface-language-control="site-shell-interface-language-control"/g,
+      ),
+    ).toHaveLength(1);
   });
 
   it("keeps the server-authorized erasure owner review outside the local garden gate", () => {
@@ -598,6 +605,11 @@ describe("the shell's server HTML", () => {
     expect(html).toContain('data-site-shell="safe-exit"');
     expect(html).toContain("Erasure owner review");
     expect(html).not.toContain('data-site-shell-region="header"');
+    expect(
+      html.match(
+        /data-interface-language-control="site-shell-interface-language-control"/g,
+      ),
+    ).toHaveLength(1);
   });
 
   it("closes the mobile sheet before opening the shared sign-out flow", async () => {
@@ -777,7 +789,7 @@ describe("the sealed owner's links", () => {
       within(banner).queryByRole("link", { name: /Спільноти/ }),
     ).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Обліковий запис" }));
+    await user.click(screen.getByRole("button", { name: "Акаунт" }));
     // Scoped by marker, not by role: the language control in the footer is a
     // `role="menu"` disclosure that is always in the document, so the first
     // `menu` in the tree is not this one.
@@ -825,7 +837,7 @@ describe("the sealed owner's links", () => {
       </SiteShell>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Обліковий запис" }));
+    await user.click(screen.getByRole("button", { name: "Акаунт" }));
     const menu = await openAccountMenu();
 
     const personal = menu.querySelector<HTMLElement>(
@@ -881,7 +893,7 @@ describe("the sealed owner's links", () => {
       </SiteShell>,
     );
 
-    await user.click(screen.getByRole("button", { name: "Обліковий запис" }));
+    await user.click(screen.getByRole("button", { name: "Акаунт" }));
     const menu = await openAccountMenu();
 
     expect(

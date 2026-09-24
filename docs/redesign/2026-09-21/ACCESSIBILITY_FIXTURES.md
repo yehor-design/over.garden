@@ -51,8 +51,10 @@ New scans use `wcag2a`, `wcag2aa`, `wcag21aa`, **`wcag22aa`** with no rule exclu
 The installed axe-core is 4.12.1; `target-size` is the installed WCAG 2.2 AA rule.
 Each scan attaches runtime engine version, requested tags, supported 2.2 rules,
 violations and incomplete results. CI fails on violations; incomplete results need
-human review. Existing page-family suites retain their earlier 2.1 scans until
-migration; do not describe them as 2.2 coverage.
+human review. Since OVE-478 every browser spec scans with these tags: the list is
+`WCAG_AA_TAGS` in `tests/helpers/redesign-accessibility.ts`, and
+`pnpm check:browser-specs` fails a spec that spells its own (eighteen scanned
+with a WCAG 2.1 list until then, so `target-size` never ran on them).
 
 Axe does not certify focus not obscured, drag alternatives, complete keyboard
 workflows, meaningful reading order, comprehensible announcements, cognitive load
@@ -66,12 +68,12 @@ first-space value; filter dismissal is named Close. Setup/visibility assertions 
 before `test.fail`, so missing controls or broken authentication are not expected
 failures. Run with `REDESIGN_ENFORCE_BASELINES=1` to record ordinary failures.
 
-Until OVE-486 and OVE-483/486 correct their respective behavior, their annotated
-failures are intentionally visible in gate output. OVE-482 removed its annotation:
-the filter panel's dismissal is now asserted as Close with no expected failure. A correction
-producing an unexpected pass fails CI: remove the annotation and migrate the
-locator to the shipped control in that correction. Never replace the assertion
-with a snapshot of the old bug or skip it because the UI moved.
+All three corrections shipped (OVE-482, OVE-483, OVE-486), and the three
+baselines are ordinary passing tests with no `test.fail` (checked by OVE-478).
+The rule for any future baseline stands: a correction producing an unexpected
+pass fails CI, so remove the annotation and migrate the locator to the shipped
+control in that correction. Never replace the assertion with a snapshot of the
+old bug or skip it because the UI moved.
 
 ## Manual assistive-technology protocol
 
@@ -102,3 +104,22 @@ result is not a VoiceOver or NVDA result.
 
 Unperformed AT steps must remain marked unperformed in a task receipt. Never
 substitute an axe score or screenshot for listening to the actual announcement.
+
+**Performed so far (OVE-478, 2026-09-24):** one real pairing — Orca 46.1 with
+Chromium 141 on Linux (AT-SPI 2.52, speech-dispatcher 0.12 with espeak-ng
+1.51), at 1280 × 900, keys pressed through the X server, what Orca said read
+from its own log; the transcript is `ove-478/screen-reader/`. Step 1:
+landmarks, headings and links on the home page, a 404, the journals, an entry
+and the gardener's collection. Step 2: global Write by keyboard only — three
+same-named tomatoes, each announced with its space, one chosen by arrows;
+a plant created while writing and cancelled back to the picker; focus after
+the journals' filters and the sign-out confirmation close. Focus above the
+mobile action bar is checked in a real engine rather than heard
+(`tests/route-families.spec.ts`). Step 3: validation (the required
+first-publication box, and Publish unavailable until it is ticked) and an
+offline Publish — one announcement, the text kept, focus kept on Publish, and
+Enter publishes on retry; a slow request was not staged. Steps 4 and 5 are
+measured in a real engine by `tests/route-families.spec.ts`, which checks
+layout, not listening. Step 6 was not performed with real photographs.
+VoiceOver + Safari and NVDA + Firefox/Chrome were not run (no macOS or Windows
+machine), and remain unperformed.

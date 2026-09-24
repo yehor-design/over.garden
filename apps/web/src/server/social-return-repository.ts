@@ -104,6 +104,38 @@ export interface FollowedFeedItem {
   };
   reasons: FollowedFeedSource[];
   mediaUrl: string | null;
+  /**
+   * The gardener's own description of that photograph, when they wrote one:
+   * the card's `alt`. Without it the photograph is decorative (OG-UX-029).
+   */
+  mediaCaption: string | null;
+}
+
+/** The first public photograph of an entry, as a feed card draws it. */
+export interface FeedCardMedia {
+  url: string;
+  caption: string | null;
+}
+
+/** Each entry's first photograph, by entry id, from the public media rows. */
+export function feedCardMediaByEntry(
+  rows: readonly {
+    entryId: string;
+    derivativeKey: string;
+    caption?: string | null;
+  }[],
+  publicUrl: (derivativeKey: string) => string = getPublicDerivativeUrl,
+): Map<string, FeedCardMedia> {
+  const byEntry = new Map<string, FeedCardMedia>();
+  for (const media of rows) {
+    if (!byEntry.has(media.entryId)) {
+      byEntry.set(media.entryId, {
+        url: publicUrl(media.derivativeKey),
+        caption: media.caption?.trim() || null,
+      });
+    }
+  }
+  return byEntry;
 }
 
 export interface FollowedFeedPage {
@@ -323,15 +355,7 @@ export async function listFollowedFeedPage(
         rows.slice(0, pageSize).map((row) => row.entryId),
       ).execute()
     : [];
-  const mediaByEntry = new Map<string, string>();
-  for (const media of mediaRows) {
-    if (!mediaByEntry.has(media.entryId)) {
-      mediaByEntry.set(
-        media.entryId,
-        getPublicDerivativeUrl(media.derivativeKey),
-      );
-    }
-  }
+  const mediaByEntry = feedCardMediaByEntry(mediaRows);
 
   return serializeFollowedFeedPage(
     rows as FollowedFeedCandidateRow[],
@@ -455,7 +479,7 @@ export function serializeFollowedFeedPage(
   rows: FollowedFeedCandidateRow[],
   pageSize = FOLLOWED_FEED_PAGE_SIZE,
   locale: PublicLocale = "uk",
-  mediaByEntry: ReadonlyMap<string, string> = new Map(),
+  mediaByEntry: ReadonlyMap<string, FeedCardMedia> = new Map(),
 ): FollowedFeedPage {
   const boundedPageSize = normalizePageSize(pageSize, FOLLOWED_FEED_PAGE_SIZE);
   const visible = rows.slice(0, boundedPageSize).flatMap((row) => {
@@ -498,7 +522,7 @@ function mapFeedEntryRow(
     | "followedByLineage"
   > & { publicSlug: string; publishedAt: Date | string },
   locale: PublicLocale,
-  mediaByEntry: ReadonlyMap<string, string>,
+  mediaByEntry: ReadonlyMap<string, FeedCardMedia>,
   reasons: FollowedFeedSource[],
 ): FollowedFeedItem {
   return {
@@ -533,7 +557,8 @@ function mapFeedEntryRow(
       }),
     },
     reasons,
-    mediaUrl: mediaByEntry.get(row.entryId) ?? null,
+    mediaUrl: mediaByEntry.get(row.entryId)?.url ?? null,
+    mediaCaption: mediaByEntry.get(row.entryId)?.caption ?? null,
   };
 }
 
@@ -561,15 +586,7 @@ export async function listSavedEntryCards(
         rows.map((row) => row.entryId),
       ).execute()
     : [];
-  const mediaByEntry = new Map<string, string>();
-  for (const media of mediaRows) {
-    if (!mediaByEntry.has(media.entryId)) {
-      mediaByEntry.set(
-        media.entryId,
-        getPublicDerivativeUrl(media.derivativeKey),
-      );
-    }
-  }
+  const mediaByEntry = feedCardMediaByEntry(mediaRows);
   const cards = new Map<string, FollowedFeedItem>();
   for (const row of rows) {
     if (!row.publicSlug || !row.publishedAt) continue;
