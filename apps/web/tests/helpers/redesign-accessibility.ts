@@ -17,6 +17,16 @@ export async function scanAccessibility(
   testInfo: TestInfo,
   label: string,
 ) {
+  // The page's title before the page's rules. After a client navigation the
+  // next page's `<title>` streams in with its metadata, which can land after
+  // its content: a register was scanned 194 ms before its title arrived, and
+  // axe reported `document-title`. A page that never gets a title still
+  // fails, here and by name.
+  await expect
+    .poll(() => page.evaluate(() => document.title.trim()), {
+      message: `${label}: the document has no <title> to scan`,
+    })
+    .not.toBe("");
   await page.evaluate(
     readFileSync(
       path.join(process.cwd(), "node_modules/axe-core/axe.min.js"),
