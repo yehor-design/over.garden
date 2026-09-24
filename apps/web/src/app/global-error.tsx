@@ -17,7 +17,7 @@ import {
 import { INTERFACE_CONTEXT_ENDPOINT } from "@/lib/interface-route-policy";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
 import { getTrustClientCopy } from "@/lib/trust-client-copy";
-import { googleSansFaces } from "./fonts";
+import { googleSans } from "./fonts";
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -87,7 +87,7 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
   return (
     <html
       lang={interfaceContext.locale}
-      className={googleSansFaces}
+      className={googleSans.variable}
       suppressHydrationWarning
     >
       <head>
