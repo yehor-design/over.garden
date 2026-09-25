@@ -1,5 +1,12 @@
 # Accepted information architecture and delivery boundary
 
+> **Superseded in part on 2026-09-25 (SDD Slice 29, ADR-0034 and ADR-0035).** The Explore
+> («Огляд») hub and its catalogue, community and knowledge entries are gone: the desktop rail is
+> Стрічка, Мій сад, Події, New entry, «Рослини й тварини» and «Спільноти · Скоро»; the mobile tabs are
+> Стрічка · Новий запис · Мій сад · Події. Creation is a full-screen stepper, and the garden home has
+> no first-entry composer. `DESIGN.md` §3.2, §5.13 and §5.24 are the current rules; this page stands
+> where they do not change it.
+
 Decision date: 2026-09-21. Owner authorization: radical restructuring, end-to-end execution, no subagents. This document resolves implementation choices for OVE-475; it does not claim new routes or behavior are already in production. The 45-finding audit is observation; the target below is a product decision; flow efficiency beyond the specified action budgets is an unvalidated hypothesis.
 
 ## Core model

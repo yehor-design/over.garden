@@ -13,16 +13,27 @@ knowingly unfinished. Current decisions live in
 `docs/adr/ADR-0028-notion-shaped-composer.md`,
 `docs/adr/ADR-0029-address-law.md`,
 `docs/adr/ADR-0030-editorial-pipeline-in-overgarden.md`,
-`docs/adr/ADR-0031-design-system-and-redesign.md` and
-`docs/adr/ADR-0032-static-public-documents.md`; older ADRs and dated
-documents are history and never override them.
+`docs/adr/ADR-0031-design-system-and-redesign.md`,
+`docs/adr/ADR-0032-static-public-documents.md`, and the SDD Slice 29
+decisions of 2026-09-25:
+`docs/adr/ADR-0033-wishlist-retired.md`,
+`docs/adr/ADR-0034-hidden-catalogue-and-entries-only-species-pages.md`,
+`docs/adr/ADR-0035-creation-steppers-standard-species-base-and-shared-cultivars.md`,
+`docs/adr/ADR-0036-public-spaces.md`,
+`docs/adr/ADR-0037-gardeners-photos-in-the-catalogue.md`,
+`docs/adr/ADR-0038-terms-of-use-one-acceptance-and-complaints.md`,
+`docs/adr/ADR-0039-bulgarian-unprefixed-ukrainian-at-ua.md` and
+`docs/adr/ADR-0040-one-typeface-and-publication-day-dates.md`; older ADRs and
+dated documents are history and never override them.
 
 ## Product
 
 OverGarden is a public gardening journal for Ukraine and Bulgaria: a gardener
 keeps a narrative journal per plant or animal, every entry is public and
-indexable, and public variety, topic, profile, and community pages aggregate
-real first-hand experience. There are no private entries, no drafts, no
+indexable, and public species, topic, profile and space pages aggregate real
+first-hand experience. The organism catalogue is hidden from readers: a species
+is chosen only while a gardener creates or edits their own object (ADR-0034).
+The brand is spelled «Overgarden» in every user-facing string. There are no private entries, no drafts, no
 offline mode, and no separate admin panel. Speed and search discovery come
 before defensive refusal.
 
@@ -31,7 +42,7 @@ before defensive refusal.
 | Layer | Decision |
 | --- | --- |
 | App | Next.js App Router + TypeScript on Vercel (`fra1`), Cache Components for public pages |
-| UI | One design system: `DESIGN.md` is the canon (tokens, components, layout, patterns, accessibility). shadcn/ui primitives, Tailwind, `next/font/google` for Google Sans and Geist Mono |
+| UI | One design system: `DESIGN.md` is the canon (tokens, components, layout, patterns, accessibility). shadcn/ui primitives, Tailwind, `next/font/google` for Google Sans — the one typeface (ADR-0040; Geist Mono leaves the code with `OVE-534`) |
 | Auth | Better Auth with session cookie cache; one sealed `owner` role bootstrapped by CLI |
 | Data | DigitalOcean Managed Postgres, Kysely, SQL migrations under `apps/web/sql` are the schema truth, no ORM |
 | Journal | Lexical composer, `JournalDocumentV1` is the sole persisted document contract |
@@ -184,6 +195,37 @@ Every Linear task uses this shape and nothing more:
   and why nothing above a page may change by itself — what the chrome learns
   late lives in a store, never in a context value (D10). Its D8 is the recipe
   for converting a page family; `tests/static-documents.spec.ts` is the gate.
+  **SDD Slice 29 (2026-09-25), read before touching the catalogue, species
+  pages, creation, spaces, legal pages, fonts, dates or language addresses:**
+  `docs/adr/ADR-0033-wishlist-retired.md` — the wishlist is retired and
+  Bookmarks is the one shelf.
+  `docs/adr/ADR-0034-hidden-catalogue-and-entries-only-species-pages.md` —
+  nothing links to `/catalog`; «Рослини й тварини» at `/species` is the crawl
+  path; a species page is its name, a short text, a collage and its entries,
+  published from its first public entry; «Каталог видів» for the owner; the
+  navigation; communities deleted until after MVP («Спільноти · Скоро»); no
+  Knowledge section — Overgarden's publications are feed categories; system
+  topics and market landings deleted; «Показати ще» in every long list; the
+  spelling «Overgarden». Supersedes ADR-0026 D9/D10 and ADR-0029 D13.2.
+  `docs/adr/ADR-0035-creation-steppers-standard-species-base-and-shared-cultivars.md`
+  — full-screen steppers; only the gardener sets a species; the species comes
+  from the standard base with everyday uk/bg/ru names; the cultivar list is the
+  project's own, published at once and corrected by the owner afterwards;
+  background auto-linking of gardener objects is off. Reverses ADR-0026 D6 for
+  cultivars and breeds.
+  `docs/adr/ADR-0036-public-spaces.md` — a space has a photo, a public page at
+  `/@{handle}/spaces/{slug}` and comments, likes, bookmarks and follows.
+  `docs/adr/ADR-0037-gardeners-photos-in-the-catalogue.md` — the collage and
+  share image, from the catalogue's own copies (amends ADR-0022 D2).
+  `docs/adr/ADR-0038-terms-of-use-one-acceptance-and-complaints.md` — terms,
+  privacy and cookies accepted once up front, two separate cookie choices, and
+  a DSA complaint procedure anyone can use.
+  `docs/adr/ADR-0039-bulgarian-unprefixed-ukrainian-at-ua.md` — Bulgarian has
+  no prefix, Ukrainian is `/ua`, the language code stays `uk`.
+  `docs/adr/ADR-0040-one-typeface-and-publication-day-dates.md` — Google Sans
+  only, no Bulgarian letterforms, and an entry is dated by its publication day.
+  The execution order is the Linear project description of SDD Slice 29;
+  `OVE-510` holds the owner's full decision record.
   `DESIGN.md` — **read before changing any interface.** It is authoritative for
   tokens, components, layout, patterns, accessibility and content, and its §10
   rules are enforced in CI rather than reviewed.

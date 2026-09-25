@@ -1,6 +1,8 @@
 # OVE-184 Moderated Community Design
 
-Status: implementation contract
+Status: **superseded 2026-09-25** by ADR-0034 D9 — communities, this operator-curated one
+included, are deleted with their code and data until after MVP. Historical record only;
+never pick it up as work. Originally: implementation contract
 Date: 2026-07-13
 Issue: OVE-184
 
