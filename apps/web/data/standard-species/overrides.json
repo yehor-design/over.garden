@@ -1,0 +1,5117 @@
+{
+ "candidates": [
+  {
+   "latin": "Canis lupus familiaris",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Собака",
+    "bg": "Куче",
+    "ru": "Собака"
+   },
+   "search": {
+    "uk": [
+     "Пес",
+     "Песик",
+     "Цуценя"
+    ],
+    "bg": [
+     "Кученце"
+    ],
+    "ru": [
+     "Пёс",
+     "Щенок"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Felis catus",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Кіт",
+    "bg": "Котка",
+    "ru": "Кошка"
+   },
+   "search": {
+    "uk": [
+     "Кішка",
+     "Котик",
+     "Кошеня"
+    ],
+    "bg": [
+     "Коте",
+     "Котарак"
+    ],
+    "ru": [
+     "Кот",
+     "Котёнок"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Cavia porcellus",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Морська свинка",
+    "bg": "Морско свинче",
+    "ru": "Морская свинка"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Mesocricetus auratus",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Сирійський хом'як",
+    "bg": "Златист хамстер",
+    "ru": "Сирийский хомяк"
+   },
+   "search": {
+    "uk": [
+     "Хом'як"
+    ],
+    "bg": [
+     "Хамстер"
+    ],
+    "ru": [
+     "Хомяк"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Phodopus sungorus",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Джунгарський хом'ячок",
+    "ru": "Джунгарский хомячок"
+   },
+   "search": {
+    "uk": [
+     "Джунгарик",
+     "Хом'ячок"
+    ],
+    "ru": [
+     "Джунгарик"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Phodopus roborovskii",
+   "kind": "animal",
+   "group": "pets",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Meriones unguiculatus",
+   "kind": "animal",
+   "group": "pets",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Octodon degus",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Дегу",
+    "bg": "Дегу",
+    "ru": "Дегу"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Chinchilla lanigera",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Шиншила",
+    "ru": "Шиншилла"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Mustela furo",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Фретка",
+    "bg": "Фретка",
+    "ru": "Хорёк"
+   },
+   "search": {
+    "uk": [
+     "Тхір свійський"
+    ],
+    "ru": [
+     "Фретка",
+     "Домашний хорёк"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Atelerix albiventris",
+   "kind": "animal",
+   "group": "pets",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Mus musculus",
+   "kind": "animal",
+   "group": "pets",
+   "display": {
+    "uk": "Миша",
+    "bg": "Мишка",
+    "ru": "Мышь"
+   },
+   "search": {
+    "uk": [
+     "Декоративна миша"
+    ],
+    "ru": [
+     "Декоративная мышь"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Oryctolagus cuniculus domesticus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Кролик",
+    "bg": "Питомен заек",
+    "ru": "Кролик"
+   },
+   "search": {
+    "uk": [
+     "Декоративний кролик"
+    ],
+    "bg": [
+     "Заек"
+    ],
+    "ru": [
+     "Домашний кролик"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Melopsittacus undulatus",
+   "kind": "animal",
+   "group": "birds",
+   "display": {
+    "uk": "Хвилястий папужка",
+    "ru": "Волнистый попугайчик"
+   },
+   "search": {
+    "uk": [
+     "Папужка",
+     "Папуга"
+    ],
+    "bg": [
+     "Папагал"
+    ],
+    "ru": [
+     "Попугай"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Nymphicus hollandicus",
+   "kind": "animal",
+   "group": "birds",
+   "display": {
+    "uk": "Корела",
+    "bg": "Корела",
+    "ru": "Корелла"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Agapornis roseicollis",
+   "kind": "animal",
+   "group": "birds",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Psittacus erithacus",
+   "kind": "animal",
+   "group": "birds",
+   "display": {
+    "uk": "Жако",
+    "bg": "Жако",
+    "ru": "Жако"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Serinus canaria domestica",
+   "kind": "animal",
+   "group": "birds",
+   "display": {
+    "uk": "Канарка",
+    "bg": "Канарче",
+    "ru": "Канарейка"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Taeniopygia guttata",
+   "kind": "animal",
+   "group": "birds",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Trachemys scripta elegans",
+   "kind": "animal",
+   "group": "reptiles",
+   "display": {
+    "uk": "Червоновуха черепаха",
+    "ru": "Красноухая черепаха"
+   },
+   "search": {
+    "uk": [
+     "Черепаха"
+    ],
+    "bg": [
+     "Костенурка"
+    ],
+    "ru": [
+     "Черепаха"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Testudo horsfieldii",
+   "kind": "animal",
+   "group": "reptiles",
+   "display": {
+    "uk": "Середньоазійська черепаха",
+    "ru": "Среднеазиатская черепаха"
+   },
+   "search": {
+    "uk": [
+     "Сухопутна черепаха"
+    ],
+    "ru": [
+     "Сухопутная черепаха"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Testudo hermanni",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pogona vitticeps",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Eublepharis macularius",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pantherophis guttatus",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Python regius",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Iguana iguana",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Chamaeleo calyptratus",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Lissachatina fulica",
+   "kind": "animal",
+   "group": "other_animals",
+   "display": {
+    "uk": "Ахатина",
+    "bg": "Ахатина",
+    "ru": "Ахатина"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Helix pomatia",
+   "kind": "animal",
+   "group": "other_animals",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Bos taurus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Корова",
+    "bg": "Крава",
+    "ru": "Корова"
+   },
+   "search": {
+    "uk": [
+     "Бик",
+     "Теля",
+     "Велика рогата худоба"
+    ],
+    "bg": [
+     "Говедо",
+     "Бик",
+     "Теле"
+    ],
+    "ru": [
+     "Бык",
+     "Телёнок",
+     "Крупный рогатый скот"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Ovis aries",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Вівця",
+    "bg": "Овца",
+    "ru": "Овца"
+   },
+   "search": {
+    "uk": [
+     "Баран",
+     "Ягня"
+    ],
+    "bg": [
+     "Овен",
+     "Агне"
+    ],
+    "ru": [
+     "Баран",
+     "Ягнёнок"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Capra aegagrus hircus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Коза",
+    "bg": "Коза",
+    "ru": "Коза"
+   },
+   "search": {
+    "uk": [
+     "Козел",
+     "Козеня"
+    ],
+    "bg": [
+     "Козел",
+     "Яре"
+    ],
+    "ru": [
+     "Козёл",
+     "Козлёнок"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Sus scrofa domesticus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Свиня",
+    "bg": "Прасе",
+    "ru": "Свинья"
+   },
+   "search": {
+    "uk": [
+     "Порося",
+     "Кабан"
+    ],
+    "bg": [
+     "Свиня"
+    ],
+    "ru": [
+     "Поросёнок",
+     "Хряк"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Equus ferus caballus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Кінь",
+    "bg": "Кон",
+    "ru": "Лошадь"
+   },
+   "search": {
+    "uk": [
+     "Кобила",
+     "Лоша"
+    ],
+    "bg": [
+     "Кобила",
+     "Жребче"
+    ],
+    "ru": [
+     "Конь",
+     "Кобыла",
+     "Жеребёнок"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Equus africanus asinus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Віслюк",
+    "bg": "Магаре",
+    "ru": "Осёл"
+   },
+   "search": {
+    "uk": [
+     "Осел"
+    ],
+    "ru": [
+     "Ишак"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Bubalus bubalis",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Буйвіл",
+    "bg": "Бивол",
+    "ru": "Буйвол"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Lama glama",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Лама",
+    "bg": "Лама",
+    "ru": "Лама"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Vicugna pacos",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Альпака",
+    "bg": "Алпака",
+    "ru": "Альпака"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Myocastor coypus",
+   "kind": "animal",
+   "group": "livestock",
+   "display": {
+    "uk": "Нутрія",
+    "bg": "Нутрия",
+    "ru": "Нутрия"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Gallus gallus domesticus",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Курка",
+    "bg": "Кокошка",
+    "ru": "Курица"
+   },
+   "search": {
+    "uk": [
+     "Півень",
+     "Курча",
+     "Кури"
+    ],
+    "bg": [
+     "Петел",
+     "Пиле"
+    ],
+    "ru": [
+     "Петух",
+     "Цыплёнок",
+     "Куры"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Anas platyrhynchos",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Качка",
+    "bg": "Патица",
+    "ru": "Утка"
+   },
+   "search": {
+    "uk": [
+     "Каченя"
+    ],
+    "bg": [
+     "Паче"
+    ],
+    "ru": [
+     "Утёнок"
+    ]
+   },
+   "reason": "the domestic duck is a domesticated mallard; Wikidata's domestic-duck item carries no taxon, so the species node stands for it"
+  },
+  {
+   "latin": "Cairina moschata",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Мускусна качка",
+    "bg": "Мускусна патица",
+    "ru": "Мускусная утка"
+   },
+   "search": {
+    "uk": [
+     "Індоутка"
+    ],
+    "ru": [
+     "Индоутка"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Anser anser domesticus",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Гуска",
+    "bg": "Гъска",
+    "ru": "Гусь"
+   },
+   "search": {
+    "uk": [
+     "Гусак",
+     "Гусеня"
+    ],
+    "bg": [
+     "Гъсок"
+    ],
+    "ru": [
+     "Гусыня",
+     "Гусёнок"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Meleagris gallopavo domesticus",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Індик",
+    "bg": "Пуйка",
+    "ru": "Индейка"
+   },
+   "search": {
+    "uk": [
+     "Індичка"
+    ],
+    "bg": [
+     "Пуяк"
+    ],
+    "ru": [
+     "Индюк"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Numida meleagris",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Цесарка",
+    "bg": "Токачка",
+    "ru": "Цесарка"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Coturnix japonica",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Перепілка",
+    "bg": "Пъдпъдък",
+    "ru": "Перепел"
+   },
+   "search": {
+    "uk": [
+     "Японська перепілка"
+    ],
+    "ru": [
+     "Перепёлка"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Columba livia domestica",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Голуб",
+    "bg": "Гълъб",
+    "ru": "Голубь"
+   },
+   "search": {
+    "uk": [
+     "Свійський голуб"
+    ],
+    "ru": [
+     "Домашний голубь"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q204179"
+  },
+  {
+   "latin": "Phasianus colchicus",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Фазан",
+    "bg": "Фазан",
+    "ru": "Фазан"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pavo cristatus",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Павич",
+    "bg": "Паун",
+    "ru": "Павлин"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Struthio camelus",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Страус",
+    "bg": "Щраус",
+    "ru": "Страус"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Apis mellifera",
+   "kind": "animal",
+   "group": "bees",
+   "display": {
+    "uk": "Бджола",
+    "bg": "Пчела",
+    "ru": "Пчела"
+   },
+   "search": {
+    "uk": [
+     "Медоносна бджола"
+    ],
+    "bg": [
+     "Медоносна пчела"
+    ],
+    "ru": [
+     "Медоносная пчела"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Bombyx mori",
+   "kind": "animal",
+   "group": "other_animals",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Carassius auratus",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Золота рибка",
+    "bg": "Златна рибка",
+    "ru": "Золотая рыбка"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Poecilia reticulata",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Гупі",
+    "bg": "Гупа",
+    "ru": "Гуппи"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Poecilia sphenops",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Xiphophorus hellerii",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Xiphophorus maculatus",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Paracheirodon innesi",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Неон",
+    "ru": "Неон"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pterophyllum scalare",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Betta splendens",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Півник",
+    "ru": "Петушок"
+   },
+   "search": {
+    "uk": [
+     "Бійцівська рибка"
+    ],
+    "bg": [
+     "Сиамска бойна риба"
+    ],
+    "ru": [
+     "Бойцовая рыбка"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Danio rerio",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Astronotus ocellatus",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Puntigrus tetrazona",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Trichopodus trichopterus",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Cyprinus carpio",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Короп",
+    "bg": "Шаран",
+    "ru": "Карп"
+   },
+   "search": {
+    "ru": [
+     "Сазан"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Ctenopharyngodon idella",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Oncorhynchus mykiss",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Rosa",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Троянда",
+    "bg": "Роза",
+    "ru": "Роза"
+   },
+   "search": {
+    "uk": [
+     "Роза",
+     "Трояндочка"
+    ],
+    "ru": [
+     "Розочка"
+    ]
+   },
+   "allowGenus": true,
+   "reason": "garden roses have no species of their own; the genus is what gardeners name, and their register cultivars attach to it"
+  },
+  {
+   "latin": "Tulipa gesneriana",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Тюльпан",
+    "bg": "Лале",
+    "ru": "Тюльпан"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Paeonia lactiflora",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Півонія",
+    "bg": "Божур",
+    "ru": "Пион"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Dahlia pinnata",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Жоржина",
+    "bg": "Гергина",
+    "ru": "Георгин"
+   },
+   "search": {
+    "ru": [
+     "Георгина"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Chrysanthemum × morifolium",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Хризантема",
+    "bg": "Хризантема",
+    "ru": "Хризантема"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q15530181"
+  },
+  {
+   "latin": "Gladiolus × hortulanus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Гладіолус",
+    "bg": "Гладиола",
+    "ru": "Гладиолус"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q160431"
+  },
+  {
+   "latin": "Iris germanica",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Ірис",
+    "bg": "Перуника",
+    "ru": "Ирис"
+   },
+   "search": {
+    "uk": [
+     "Півники"
+    ],
+    "ru": [
+     "Касатик"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q161734"
+  },
+  {
+   "latin": "Lilium",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Лілія",
+    "bg": "Лилия",
+    "ru": "Лилия"
+   },
+   "allowGenus": true,
+   "reason": "garden lilies are hybrids named by genus"
+  },
+  {
+   "latin": "Petunia × atkinsiana",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Петунія",
+    "bg": "Петуния",
+    "ru": "Петуния"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q16861020"
+  },
+  {
+   "latin": "Tagetes patula",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Чорнобривці",
+    "bg": "Тагетис",
+    "ru": "Бархатцы"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Tagetes erecta",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Zinnia elegans",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Цинія",
+    "ru": "Цинния"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Cosmos bipinnatus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Космея",
+    "ru": "Космея"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Callistephus chinensis",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Айстра",
+    "bg": "Китайска астра",
+    "ru": "Астра"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Viola × wittrockiana",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Братки",
+    "bg": "Градинска теменуга",
+    "ru": "Анютины глазки"
+   },
+   "search": {
+    "uk": [
+     "Фіалка садова"
+    ],
+    "bg": [
+     "Теменуга"
+    ],
+    "ru": [
+     "Виола"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q12861234"
+  },
+  {
+   "latin": "Dianthus caryophyllus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Гвоздика",
+    "bg": "Карамфил",
+    "ru": "Гвоздика"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Dianthus barbatus",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Narcissus pseudonarcissus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Нарцис",
+    "bg": "Нарцис",
+    "ru": "Нарцисс"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Hyacinthus orientalis",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Гіацинт",
+    "bg": "Зюмбюл",
+    "ru": "Гиацинт"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Crocus vernus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Крокус",
+    "bg": "Минзухар",
+    "ru": "Крокус"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Galanthus nivalis",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Підсніжник",
+    "bg": "Кокиче",
+    "ru": "Подснежник"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Convallaria majalis",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Конвалія",
+    "bg": "Момина сълза",
+    "ru": "Ландыш"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Hydrangea macrophylla",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Гортензія",
+    "bg": "Хортензия",
+    "ru": "Гортензия"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Lathyrus odoratus",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Tropaeolum majus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Настурція",
+    "bg": "Латинка",
+    "ru": "Настурция"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Antirrhinum majus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Ротики",
+    "ru": "Львиный зев"
+   },
+   "search": {
+    "uk": [
+     "Левова паща"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Impatiens walleriana",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Salvia splendens",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Portulaca grandiflora",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Rudbeckia hirta",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Lupinus polyphyllus",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Люпин",
+    "bg": "Лупина",
+    "ru": "Люпин"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Delphinium elatum",
+   "kind": "plant",
+   "group": "flowers",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Clematis",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Клематис",
+    "bg": "Клематис",
+    "ru": "Клематис"
+   },
+   "allowGenus": true,
+   "reason": "garden clematis are hybrids named by genus"
+  },
+  {
+   "latin": "Hosta",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Хоста",
+    "bg": "Хоста",
+    "ru": "Хоста"
+   },
+   "allowGenus": true,
+   "reason": "garden hostas are hybrids named by genus"
+  },
+  {
+   "latin": "Calendula officinalis",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Календула",
+    "bg": "Невен",
+    "ru": "Календула"
+   },
+   "search": {
+    "uk": [
+     "Нагідки"
+    ],
+    "ru": [
+     "Ноготки"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Echinacea purpurea",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Ехінацея",
+    "bg": "Ехинацея",
+    "ru": "Эхинацея"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Phlox paniculata",
+   "kind": "plant",
+   "group": "flowers",
+   "display": {
+    "uk": "Флокс",
+    "ru": "Флокс"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Lavandula angustifolia",
+   "kind": "plant",
+   "group": "herbs",
+   "display": {
+    "uk": "Лаванда",
+    "ru": "Лаванда"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Syringa vulgaris",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Бузок",
+    "bg": "Люляк",
+    "ru": "Сирень"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Forsythia × intermedia",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Форзиція",
+    "ru": "Форзиция"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q5470682"
+  },
+  {
+   "latin": "Buxus sempervirens",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Самшит",
+    "bg": "Чемшир",
+    "ru": "Самшит"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Thuja occidentalis",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Туя",
+    "bg": "Туя",
+    "ru": "Туя"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Picea pungens",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Picea abies",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Ялина",
+    "bg": "Смърч",
+    "ru": "Ель"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Juniperus communis",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Ялівець",
+    "bg": "Хвойна",
+    "ru": "Можжевельник"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Hibiscus syriacus",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Taxus baccata",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Тис",
+    "bg": "Тис",
+    "ru": "Тис"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Prunus serrulata",
+   "kind": "plant",
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Сакура",
+    "ru": "Сакура"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Phalaenopsis",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Орхідея",
+    "bg": "Орхидея",
+    "ru": "Орхидея"
+   },
+   "search": {
+    "uk": [
+     "Фаленопсис"
+    ],
+    "bg": [
+     "Фаленопсис"
+    ],
+    "ru": [
+     "Фаленопсис"
+    ]
+   },
+   "allowGenus": true,
+   "reason": "the houseplant orchid is a Phalaenopsis hybrid, named by genus"
+  },
+  {
+   "latin": "Saintpaulia ionantha",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Узамбарська фіалка",
+    "bg": "Африканска теменужка",
+    "ru": "Фиалка узамбарская"
+   },
+   "search": {
+    "uk": [
+     "Фіалка",
+     "Сенполія"
+    ],
+    "bg": [
+     "Сенполия"
+    ],
+    "ru": [
+     "Фиалка",
+     "Сенполия"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Spathiphyllum wallisii",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Спатифілум",
+    "bg": "Спатифилум",
+    "ru": "Спатифиллум"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Chlorophytum comosum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Хлорофітум",
+    "bg": "Хлорофитум",
+    "ru": "Хлорофитум"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Dracaena trifasciata",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Сансев'єра",
+    "bg": "Сансевиерия",
+    "ru": "Сансевиерия"
+   },
+   "search": {
+    "uk": [
+     "Щучий хвіст",
+     "Тещин язик"
+    ],
+    "bg": [
+     "Тъщин език"
+    ],
+    "ru": [
+     "Щучий хвост",
+     "Тёщин язык"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Ficus elastica",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Фікус каучуконосний",
+    "ru": "Фикус каучуконосный"
+   },
+   "search": {
+    "uk": [
+     "Фікус"
+    ],
+    "bg": [
+     "Фикус"
+    ],
+    "ru": [
+     "Фикус"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Ficus benjamina",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Фікус Бенджаміна",
+    "bg": "Фикус бенджамин",
+    "ru": "Фикус Бенджамина"
+   },
+   "search": {
+    "uk": [
+     "Фікус"
+    ],
+    "bg": [
+     "Фикус"
+    ],
+    "ru": [
+     "Фикус"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Crassula ovata",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Товстянка",
+    "bg": "Дебелец",
+    "ru": "Толстянка"
+   },
+   "search": {
+    "uk": [
+     "Грошове дерево"
+    ],
+    "bg": [
+     "Паричко дърво"
+    ],
+    "ru": [
+     "Денежное дерево"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Anthurium andraeanum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Антуріум",
+    "bg": "Антуриум",
+    "ru": "Антуриум"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Schlumbergera truncata",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Декабрист",
+    "bg": "Коледен кактус",
+    "ru": "Декабрист"
+   },
+   "search": {
+    "uk": [
+     "Шлюмбергера"
+    ],
+    "ru": [
+     "Шлюмбергера"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Kalanchoe blossfeldiana",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Каланхое",
+    "bg": "Каланхое",
+    "ru": "Каланхоэ"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Dieffenbachia seguine",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Дифенбахія",
+    "bg": "Дифенбахия",
+    "ru": "Диффенбахия"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Dracaena marginata",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Драцена",
+    "bg": "Драцена",
+    "ru": "Драцена"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Yucca gigantea",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Юка",
+    "bg": "Юка",
+    "ru": "Юкка"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pelargonium × hortorum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Пеларгонія",
+    "bg": "Мушкато",
+    "ru": "Пеларгония"
+   },
+   "search": {
+    "uk": [
+     "Герань"
+    ],
+    "bg": [
+     "Здравец"
+    ],
+    "ru": [
+     "Герань"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)",
+   "wikidata": "Q6566235"
+  },
+  {
+   "latin": "Cyclamen persicum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Цикламен",
+    "bg": "Циклама",
+    "ru": "Цикламен"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Clivia miniata",
+   "kind": "plant",
+   "group": "houseplants",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Aspidistra elatior",
+   "kind": "plant",
+   "group": "houseplants",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Nephrolepis exaltata",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Нефролепіс",
+    "ru": "Нефролепис"
+   },
+   "search": {
+    "uk": [
+     "Папороть"
+    ],
+    "bg": [
+     "Папрат"
+    ],
+    "ru": [
+     "Папоротник"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Tradescantia zebrina",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Традесканція",
+    "ru": "Традесканция"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Syngonium podophyllum",
+   "kind": "plant",
+   "group": "houseplants",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Philodendron hederaceum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Філодендрон",
+    "bg": "Филодендрон",
+    "ru": "Филодендрон"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Codiaeum variegatum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Кротон",
+    "ru": "Кротон"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Chamaedorea elegans",
+   "kind": "plant",
+   "group": "houseplants",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Coffea arabica",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Кавове дерево",
+    "bg": "Арабско кафе",
+    "ru": "Кофе аравийский"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Euphorbia pulcherrima",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Пуансетія",
+    "bg": "Коледна звезда",
+    "ru": "Пуансеттия"
+   },
+   "search": {
+    "uk": [
+     "Різдвяна зірка"
+    ],
+    "ru": [
+     "Рождественская звезда"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Asparagus setaceus",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Аспарагус",
+    "ru": "Аспарагус"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Maranta leuconeura",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Маранта",
+    "ru": "Маранта"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Aloe vera",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Алое",
+    "bg": "Алое",
+    "ru": "Алоэ"
+   },
+   "search": {
+    "uk": [
+     "Алое вера",
+     "Столітник"
+    ],
+    "bg": [
+     "Алое вера"
+    ],
+    "ru": [
+     "Алоэ вера",
+     "Столетник"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Hoya carnosa",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Хойя",
+    "ru": "Хойя"
+   },
+   "search": {
+    "uk": [
+     "Восковий плющ"
+    ],
+    "ru": [
+     "Восковой плющ"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Epipremnum aureum",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Епіпремнум",
+    "ru": "Эпипремнум"
+   },
+   "search": {
+    "uk": [
+     "Сциндапсус",
+     "Потос"
+    ],
+    "bg": [
+     "Потос"
+    ],
+    "ru": [
+     "Сциндапсус"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Monstera deliciosa",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Монстера",
+    "bg": "Монстера",
+    "ru": "Монстера"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Zamioculcas zamiifolia",
+   "kind": "plant",
+   "group": "houseplants",
+   "display": {
+    "uk": "Заміокулькас",
+    "bg": "Замиокулкас",
+    "ru": "Замиокулькас"
+   },
+   "search": {
+    "uk": [
+     "Доларове дерево"
+    ],
+    "ru": [
+     "Долларовое дерево"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Citrus × limon",
+   "kind": "plant",
+   "group": "fruit",
+   "display": {
+    "uk": "Лимон",
+    "bg": "Лимон",
+    "ru": "Лимон"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Laurus nobilis",
+   "kind": "plant",
+   "group": "herbs",
+   "display": {
+    "uk": "Лавр",
+    "bg": "Дафинов лист",
+    "ru": "Лавр"
+   },
+   "search": {
+    "uk": [
+     "Лавровий лист"
+    ],
+    "bg": [
+     "Лавър"
+    ],
+    "ru": [
+     "Лавровый лист"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Thymus vulgaris",
+   "kind": "plant",
+   "group": "herbs",
+   "display": {
+    "uk": "Чебрець",
+    "bg": "Мащерка",
+    "ru": "Тимьян"
+   },
+   "search": {
+    "ru": [
+     "Чабрец"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Allium ampeloprasum",
+   "kind": "plant",
+   "group": "vegetables",
+   "display": {
+    "uk": "Цибуля-порей",
+    "bg": "Праз",
+    "ru": "Лук-порей"
+   },
+   "search": {
+    "uk": [
+     "Порей"
+    ],
+    "ru": [
+     "Порей"
+    ]
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pisum sativum",
+   "kind": "plant",
+   "group": "vegetables",
+   "display": {
+    "uk": "Горох",
+    "bg": "Грах",
+    "ru": "Горох"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Actinidia arguta",
+   "kind": "plant",
+   "group": "berries",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Rattus norvegicus f. domestica",
+   "kind": "animal",
+   "group": "pets",
+   "wikidata": "Q535498",
+   "display": {
+    "uk": "Декоративний щур",
+    "ru": "Декоративная крыса"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Tamias sibiricus",
+   "kind": "animal",
+   "group": "pets",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Agapornis fischeri",
+   "kind": "animal",
+   "group": "birds",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Psittacula krameri",
+   "kind": "animal",
+   "group": "birds",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Lonchura striata domestica",
+   "kind": "animal",
+   "group": "birds",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Testudo graeca",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Correlophus ciliatus",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Boa constrictor",
+   "kind": "animal",
+   "group": "reptiles",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Ambystoma mexicanum",
+   "kind": "animal",
+   "group": "other_animals",
+   "display": {
+    "uk": "Аксолотль",
+    "bg": "Аксолотъл",
+    "ru": "Аксолотль"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Xenopus laevis",
+   "kind": "animal",
+   "group": "other_animals",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Neocaridina davidi",
+   "kind": "animal",
+   "group": "other_animals",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Paracheirodon axelrodi",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Trigonostigma heteromorpha",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Macropodus opercularis",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Poecilia wingei",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Symphysodon aequifasciatus",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Mikrogeophagus ramirezi",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Pelvicachromis pulcher",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Epalzeorhynchos bicolor",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Gyrinocheilus aymonieri",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Tanichthys albonubes",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Chromobotia macracanthus",
+   "kind": "animal",
+   "group": "fish",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Ancistrus",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Анциструс",
+    "bg": "Анциструс",
+    "ru": "Анциструс"
+   },
+   "reason": "the aquarium catfish is kept by genus name",
+   "allowGenus": true
+  },
+  {
+   "latin": "Corydoras",
+   "kind": "animal",
+   "group": "fish",
+   "display": {
+    "uk": "Коридорас",
+    "bg": "Коридорас",
+    "ru": "Коридорас"
+   },
+   "reason": "the aquarium catfish is kept by genus name",
+   "allowGenus": true
+  },
+  {
+   "latin": "Alectoris chukar",
+   "kind": "animal",
+   "group": "poultry",
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Dromaius novaehollandiae",
+   "kind": "animal",
+   "group": "poultry",
+   "display": {
+    "uk": "Ему",
+    "ru": "Эму"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  },
+  {
+   "latin": "Bombus terrestris",
+   "kind": "animal",
+   "group": "bees",
+   "display": {
+    "uk": "Джміль",
+    "ru": "Шмель"
+   },
+   "reason": "kept in Ukraine and Bulgaria (executor's knowledge; names checked against the sources)"
+  }
+ ],
+ "exclude": [
+  {
+   "wikidata": "Q1569312",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q157853",
+   "reason": "weed"
+  },
+  {
+   "wikidata": "Q107592",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q213548",
+   "reason": "wild fern"
+  },
+  {
+   "wikidata": "Q155909",
+   "reason": "weed"
+  },
+  {
+   "wikidata": "Q157877",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q146400",
+   "reason": "weed"
+  },
+  {
+   "wikidata": "Q147707",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q210330",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q160092",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q2705473",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q158569",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q158515",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q157276",
+   "reason": "wild shrub"
+  },
+  {
+   "wikidata": "Q4238190",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q5413585",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q146967",
+   "reason": "wild berry"
+  },
+  {
+   "wikidata": "Q208032",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q255375",
+   "reason": "tree not grown in gardens"
+  },
+  {
+   "wikidata": "Q159188",
+   "reason": "wild shrub"
+  },
+  {
+   "wikidata": "Q129018",
+   "reason": "wild shrub"
+  },
+  {
+   "wikidata": "Q2117265",
+   "reason": "a cultivar, not a species"
+  },
+  {
+   "wikidata": "Q1136311",
+   "reason": "wild coastal plant"
+  },
+  {
+   "wikidata": "Q2030568",
+   "reason": "weed"
+  },
+  {
+   "wikidata": "Q158008",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q207848",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q25686",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q25408",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q1661525",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q1709343",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q158986",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q14677",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q45757",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q34007",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q81671",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q170662",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q33943",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q840615",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q42385",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q13187",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q159447",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q13182",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q166843",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q80235",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q156790",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q59420273",
+   "reason": "subtropical, not grown in the region"
+  },
+  {
+   "wikidata": "Q147096",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q109196",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q867776",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q80024",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q150064",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q68763",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q159812",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q333877",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q204148",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q370239",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q2724976",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q2878644",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q158468",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q43084",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q26736",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q42562",
+   "reason": "spice not grown in the region"
+  },
+  {
+   "wikidata": "Q960124",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q159546",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q257106",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q16528",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q227997",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q83124",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q49855",
+   "reason": "not grown in the region"
+  },
+  {
+   "wikidata": "Q156251",
+   "reason": "wild plant"
+  },
+  {
+   "wikidata": "Q38646266",
+   "reason": "tropical"
+  },
+  {
+   "wikidata": "Q833957",
+   "reason": "wild fish"
+  },
+  {
+   "wikidata": "Q826713",
+   "reason": "wild fish"
+  },
+  {
+   "wikidata": "Q10623625",
+   "reason": "invasive wild fish"
+  },
+  {
+   "wikidata": "Q192524",
+   "reason": "the wild canary; the kept one is Serinus canaria domestica"
+  },
+  {
+   "wikidata": "Q7406864",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q129775",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q484447",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q59340871",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159717",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q27835",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q163963",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159815",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159777",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q164857",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157285",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q21872049",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q177932",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q50839557",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q50839558",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q163958",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q26726",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1813529",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161735",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1760148",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q932258",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q6562414",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q164223",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q12358",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157922",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q4330826",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q162308",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q5445877",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q165092",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157885",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161791",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q10888671",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159702",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q15238331",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q11140924",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q163349",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157287",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q3744787",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q133481",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159962",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q162093",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q163796",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q3504701",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q87631666",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157883",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161722",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q29907",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161372",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q164148",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159751",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q14555008",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q158596",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q2152417",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q149473",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q15537423",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157933",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q2311780",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161426",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1466543",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q131584",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q654332",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q256508",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q147783",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q15284046",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159118",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q7254045",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q163641",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q18076984",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q2763698",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q93070235",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q2281662",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q7515561",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1267255",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q747719",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q15247778",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1633872",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159175",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159745",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q148675",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q2002717",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q618324",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q15329636",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q119160200",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159767",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157071",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q159752",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q259318",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1455929",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q67195198",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q160241",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q158273",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q4071669",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q156091",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q673334",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q26932",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q4797490",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q26663",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q152553",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q5264638",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157838",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q930849",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q158313",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q4179199",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157916",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q162544",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q27984",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q12837562",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157631",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q4236218",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q3338272",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161303",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q157154",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q21876280",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q15600185",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q18421053",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q161665",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q803769",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q147251",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q39095870",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q4740170",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q181095",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q3919027",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q34887",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q106094",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q774829",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q311361",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q148939",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q329046",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q3408661",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q148986",
+   "reason": "not grown or kept by households in the region, or a wild or medicinal-crop plant (reviewed 2026-09-26)"
+  },
+  {
+   "wikidata": "Q1271785",
+   "reason": "a wild coastal lily, protected in Bulgaria, not grown"
+  }
+ ],
+ "aliasOf": [
+  {
+   "wikidata": "Q137595061",
+   "target": "Q151964",
+   "reason": "sugar beet: the register's variety name for the same crop"
+  },
+  {
+   "wikidata": "Q15078705",
+   "target": "Q193498",
+   "reason": "shallot: the register's name for the same crop"
+  },
+  {
+   "wikidata": "Q1922680",
+   "target": "Q3384",
+   "reason": "turnip: the variety is the everyday crop"
+  },
+  {
+   "wikidata": "Q15546363",
+   "target": "Q146951",
+   "reason": "cherry plum: a synonym"
+  },
+  {
+   "wikidata": "Q15545507",
+   "target": "Q39918",
+   "reason": "almond: a synonym"
+  },
+  {
+   "wikidata": "Q1815126",
+   "target": "Q28298",
+   "reason": "celery: one crop to a gardener"
+  },
+  {
+   "wikidata": "Q575174",
+   "target": "Q28298",
+   "reason": "celery: one crop to a gardener"
+  },
+  {
+   "wikidata": "Q1176371",
+   "target": "Q28298",
+   "reason": "celery: one crop to a gardener"
+  },
+  {
+   "wikidata": "Q35051",
+   "target": "Q146212",
+   "reason": "white cabbage: the register files it under the species"
+  },
+  {
+   "wikidata": "Q7533",
+   "target": "Q3006739",
+   "reason": "zucchini is a courgette"
+  },
+  {
+   "wikidata": "Q30056",
+   "target": "Q11678009",
+   "reason": "carrot: the register names the wild species; the grown carrot is the subspecies"
+  },
+  {
+   "wikidata": "Q11095119",
+   "target": "Q332062",
+   "reason": "sorghum: one crop to a household"
+  },
+  {
+   "wikidata": "Q119167789",
+   "target": "Q332062",
+   "reason": "sorghum: a synonym"
+  },
+  {
+   "wikidata": "Q116961345",
+   "target": "Q332062",
+   "reason": "sweet sorghum is Sorghum bicolor"
+  },
+  {
+   "wikidata": "Q1186867",
+   "target": "Q161816",
+   "reason": "cockscomb is a form of Celosia argentea"
+  },
+  {
+   "wikidata": "Q50826118",
+   "target": "Q848074",
+   "reason": "a register hybrid of the hardy kiwi"
+  },
+  {
+   "wikidata": "Q164174",
+   "target": "Q131517",
+   "reason": "steppe cherry: a cherry to a gardener"
+  },
+  {
+   "wikidata": "Q3017539",
+   "target": "Q468695",
+   "reason": "blueberries: one crop to a gardener"
+  },
+  {
+   "wikidata": "Q21870138",
+   "target": "Q148995",
+   "reason": "leek: a synonym"
+  },
+  {
+   "wikidata": "Q159587",
+   "target": "Q7224565",
+   "reason": "black radish is the everyday radish (редька)"
+  },
+  {
+   "wikidata": "Q21369713",
+   "target": "Q158037",
+   "reason": "flowering quince: one shrub to a gardener"
+  },
+  {
+   "wikidata": "Q50827121",
+   "target": "Q28692",
+   "reason": "anise: a synonym"
+  },
+  {
+   "wikidata": "Q163812",
+   "target": "Q156884",
+   "reason": "wild rocket is sold and grown as rocket"
+  },
+  {
+   "wikidata": "Q25694275",
+   "target": "Q156884",
+   "reason": "rocket: the register's name for the same crop"
+  },
+  {
+   "wikidata": "Q3111708",
+   "target": "Q131342",
+   "reason": "broad bean: the variety is the everyday crop"
+  },
+  {
+   "wikidata": "Q1323455",
+   "target": "Q498940",
+   "reason": "yardlong bean is a cowpea"
+  },
+  {
+   "wikidata": "Q21876275",
+   "target": "Q25237",
+   "reason": "field pea: a pea to a household"
+  }
+ ],
+ "registerLinks": {
+  "Mentha × piperita": "Mentha ×piperita",
+  "Chrysanthemum × morifolium": "Chrysanthemum × morifolium",
+  "Chrysanthemum × hortorum": "Chrysanthemum × morifolium",
+  "Ziziphus jujube": "Ziziphus jujuba",
+  "Majorana hortensis": "Origanum majorana",
+  "Lastuca sativa": "Lactuca sativa",
+  "Vicia satva": "Vicia sativa",
+  "Desmodium canadence": "Desmodium canadense",
+  "Onobrychis vicifolia": "Onobrychis viciifolia",
+  "Medicago × varia": "Medicago sativa",
+  "Rumex tianscnanicus": "Rumex tianschanicus",
+  "Hemerocallis hybrida": "Hemerocallis fulva"
+ },
+ "rows": {
+  "Q23485": {
+   "display": {
+    "uk": "Цибуля",
+    "bg": "Кромид лук",
+    "ru": "Лук репчатый"
+   },
+   "search": {
+    "uk": [
+     "Цибуля ріпчаста"
+    ],
+    "bg": [
+     "Лук"
+    ],
+    "ru": [
+     "Лук"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q23400": {
+   "display": {
+    "uk": "Часник",
+    "bg": "Чесън",
+    "ru": "Чеснок"
+   },
+   "reason": "everyday names"
+  },
+  "Q23425": {
+   "display": {
+    "uk": "Огірок",
+    "bg": "Краставица",
+    "ru": "Огурец"
+   },
+   "reason": "everyday names"
+  },
+  "Q83193": {
+   "display": {
+    "uk": "Салат",
+    "bg": "Маруля",
+    "ru": "Салат"
+   },
+   "search": {
+    "uk": [
+     "Латук"
+    ],
+    "bg": [
+     "Салата"
+    ],
+    "ru": [
+     "Латук"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q1380": {
+   "display": {
+    "uk": "Перець",
+    "bg": "Пипер",
+    "ru": "Перец"
+   },
+   "search": {
+    "uk": [
+     "Болгарський перець",
+     "Солодкий перець",
+     "Гіркий перець",
+     "Чилі"
+    ],
+    "bg": [
+     "Чушка",
+     "Камба",
+     "Люта чушка"
+    ],
+    "ru": [
+     "Болгарский перец",
+     "Сладкий перец",
+     "Горький перец",
+     "Чили"
+    ]
+   },
+   "reason": "everyday names; the probe word «болгарський перець»"
+  },
+  "Q165191": {
+   "display": {
+    "uk": "Буряк",
+    "bg": "Цвекло",
+    "ru": "Свёкла"
+   },
+   "search": {
+    "uk": [
+     "Буряк столовий",
+     "Бурак"
+    ],
+    "bg": [
+     "Червено цвекло"
+    ],
+    "ru": [
+     "Свекла столовая",
+     "Бурак"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q50884896": {
+   "display": {
+    "uk": "Мангольд",
+    "bg": "Манголд",
+    "ru": "Мангольд"
+   },
+   "reason": "everyday names"
+  },
+  "Q146212": {
+   "display": {
+    "uk": "Капуста білоголова",
+    "bg": "Зеле",
+    "ru": "Капуста белокочанная"
+   },
+   "search": {
+    "uk": [
+     "Капуста"
+    ],
+    "bg": [
+     "Главесто зеле"
+    ],
+    "ru": [
+     "Капуста"
+    ]
+   },
+   "reason": "the register files white cabbage under the species"
+  },
+  "Q50902051": {
+   "display": {
+    "uk": "Капуста червоноголова",
+    "bg": "Червено зеле",
+    "ru": "Капуста краснокочанная"
+   },
+   "reason": "everyday names"
+  },
+  "Q61676627": {
+   "display": {
+    "uk": "Кале",
+    "bg": "Кейл",
+    "ru": "Капуста кале"
+   },
+   "search": {
+    "uk": [
+     "Капуста листкова"
+    ],
+    "ru": [
+     "Капуста кудрявая"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q154013": {
+   "display": {
+    "bg": "Савойско зеле"
+   },
+   "reason": "everyday names"
+  },
+  "Q7224757": {
+   "display": {
+    "uk": "Дайкон",
+    "bg": "Дайкон",
+    "ru": "Дайкон"
+   },
+   "reason": "everyday names"
+  },
+  "Q1057750": {
+   "display": {
+    "uk": "Редиска",
+    "bg": "Репичка",
+    "ru": "Редис"
+   },
+   "reason": "everyday names"
+  },
+  "Q7224565": {
+   "display": {
+    "uk": "Редька",
+    "bg": "Черна ряпа",
+    "ru": "Редька"
+   },
+   "reason": "everyday names",
+   "search": {
+    "uk": [
+     "Редька чорна"
+    ],
+    "ru": [
+     "Редька чёрная"
+    ]
+   }
+  },
+  "Q159587": {
+   "display": {
+    "bg": "Черна ряпа"
+   },
+   "reason": "everyday names"
+  },
+  "Q10998": {
+   "search": {
+    "uk": [
+     "Бараболя",
+     "Бульба"
+    ],
+    "ru": [
+     "Картошка"
+    ]
+   },
+   "reason": "colloquial words"
+  },
+  "Q23501": {
+   "search": {
+    "uk": [
+     "Томат"
+    ],
+    "bg": [
+     "Домати"
+    ],
+    "ru": [
+     "Помидор"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q7540": {
+   "search": {
+    "uk": [
+     "Синенькі"
+    ],
+    "ru": [
+     "Синенькие"
+    ]
+   },
+   "reason": "colloquial words"
+  },
+  "Q13158": {
+   "display": {
+    "uk": "Полуниця",
+    "bg": "Ягода",
+    "ru": "Клубника"
+   },
+   "search": {
+    "uk": [
+     "Полуниці",
+     "Суниця садова",
+     "Клубніка"
+    ],
+    "bg": [
+     "Градинска ягода"
+    ],
+    "ru": [
+     "Земляника садовая"
+    ]
+   },
+   "reason": "everyday names; the probe words «полуниця», «клубника»"
+  },
+  "Q12252383": {
+   "display": {
+    "uk": "Малина",
+    "bg": "Малина",
+    "ru": "Малина"
+   },
+   "reason": "everyday names"
+  },
+  "Q146604": {
+   "display": {
+    "uk": "Чорна смородина",
+    "bg": "Касис",
+    "ru": "Чёрная смородина"
+   },
+   "reason": "everyday names"
+  },
+  "Q146661": {
+   "display": {
+    "uk": "Порічки",
+    "bg": "Червено френско грозде",
+    "ru": "Красная смородина"
+   },
+   "search": {
+    "uk": [
+     "Червона смородина"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q41503": {
+   "display": {
+    "uk": "Аґрус",
+    "bg": "Цариградско грозде",
+    "ru": "Крыжовник"
+   },
+   "search": {
+    "uk": [
+     "Агрус"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q468695": {
+   "display": {
+    "uk": "Лохина",
+    "ru": "Голубика",
+    "bg": "Американска боровинка"
+   },
+   "search": {
+    "uk": [
+     "Чорниця садова"
+    ],
+    "ru": [
+     "Голубика садовая"
+    ]
+   },
+   "reason": "in gardens «лохина» is Vaccinium corymbosum",
+   "evidence": {
+    "bg": [
+     "https://www.agrogradina.bg/razsad-amerikanska-sinq-borovinka-goldtraube",
+     "https://sortovisemenabg.com/%D1%80%D0%B0%D0%B7%D1%81%D0%B0%D0%B4-%D0%B0%D0%BC%D0%B5%D1%80%D0%B8%D0%BA%D0%B0%D0%BD%D1%81%D0%BA%D0%B0-%D0%B1%D0%BE%D1%80%D0%BE%D0%B2%D0%B8%D0%BD%D0%BA%D0%B0-%D0%B1%D0%BB%D1%83%D0%BA%D1%80%D0%BE%D0%BF-vaccinium-corymbosum-bluecrop"
+    ]
+   }
+  },
+  "Q11678009": {
+   "display": {
+    "uk": "Морква",
+    "bg": "Морков",
+    "ru": "Морковь"
+   },
+   "reason": "everyday names"
+  },
+  "Q7229863": {
+   "display": {
+    "uk": "Гарбуз",
+    "bg": "Тиква",
+    "ru": "Тыква"
+   },
+   "reason": "everyday names"
+  },
+  "Q3006739": {
+   "display": {
+    "uk": "Кабачок",
+    "bg": "Тиквичка",
+    "ru": "Кабачок"
+   },
+   "search": {
+    "uk": [
+     "Цукіні"
+    ],
+    "bg": [
+     "Тиквички"
+    ],
+    "ru": [
+     "Цукини"
+    ]
+   },
+   "reason": "everyday names; the probe word «кабачок»"
+  },
+  "Q876892": {
+   "display": {
+    "uk": "Патисон",
+    "bg": "Патисон",
+    "ru": "Патиссон"
+   },
+   "reason": "everyday names"
+  },
+  "Q161180": {
+   "display": {
+    "uk": "Гарбуз великоплідний"
+   },
+   "reason": "everyday names"
+  },
+  "Q160571": {
+   "display": {
+    "uk": "Гарбуз мускатний"
+   },
+   "reason": "everyday names"
+  },
+  "Q42339": {
+   "display": {
+    "uk": "Квасоля",
+    "bg": "Фасул",
+    "ru": "Фасоль"
+   },
+   "search": {
+    "uk": [
+     "Стручкова квасоля"
+    ],
+    "ru": [
+     "Стручковая фасоль"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q25284": {
+   "display": {
+    "uk": "Петрушка",
+    "bg": "Магданоз",
+    "ru": "Петрушка"
+   },
+   "reason": "everyday names"
+  },
+  "Q81464": {
+   "display": {
+    "uk": "Шпинат",
+    "bg": "Спанак",
+    "ru": "Шпинат"
+   },
+   "reason": "everyday names"
+  },
+  "Q188614": {
+   "display": {
+    "uk": "Пастернак",
+    "bg": "Пащърнак",
+    "ru": "Пастернак"
+   },
+   "reason": "everyday names"
+  },
+  "Q26297": {
+   "display": {
+    "uk": "Щавель",
+    "bg": "Киселец",
+    "ru": "Щавель"
+   },
+   "reason": "everyday names"
+  },
+  "Q28367": {
+   "display": {
+    "uk": "Спаржа",
+    "bg": "Аспержа",
+    "ru": "Спаржа"
+   },
+   "reason": "everyday names"
+  },
+  "Q26545": {
+   "display": {
+    "uk": "Хрін",
+    "bg": "Хрян",
+    "ru": "Хрен"
+   },
+   "reason": "everyday names"
+  },
+  "Q41611": {
+   "display": {
+    "uk": "Коріандр",
+    "bg": "Кориандър",
+    "ru": "Кориандр"
+   },
+   "search": {
+    "uk": [
+     "Кінза"
+    ],
+    "ru": [
+     "Кинза"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q38859": {
+   "display": {
+    "uk": "Базилік",
+    "bg": "Босилек",
+    "ru": "Базилик"
+   },
+   "reason": "everyday names"
+  },
+  "Q134283": {
+   "display": {
+    "uk": "Материнка",
+    "bg": "Риган",
+    "ru": "Душица"
+   },
+   "search": {
+    "uk": [
+     "Орегано"
+    ],
+    "bg": [
+     "Ориганум"
+    ],
+    "ru": [
+     "Орегано"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q1111359": {
+   "display": {
+    "uk": "Шавлія",
+    "bg": "Градински чай",
+    "ru": "Шалфей"
+   },
+   "reason": "everyday names"
+  },
+  "Q148396": {
+   "display": {
+    "uk": "Меліса",
+    "bg": "Маточина",
+    "ru": "Мелисса"
+   },
+   "reason": "everyday names"
+  },
+  "Q156037": {
+   "display": {
+    "uk": "М'ята перцева",
+    "bg": "Мента",
+    "ru": "Мята перечная"
+   },
+   "search": {
+    "uk": [
+     "М'ята"
+    ],
+    "ru": [
+     "Мята"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q160114": {
+   "display": {
+    "uk": "М'ята кучерява",
+    "bg": "Джоджен",
+    "ru": "Мята колосистая"
+   },
+   "reason": "everyday names"
+  },
+  "Q43511": {
+   "display": {
+    "uk": "Фенхель",
+    "bg": "Резене",
+    "ru": "Фенхель"
+   },
+   "reason": "everyday names"
+  },
+  "Q27615": {
+   "display": {
+    "uk": "Любисток",
+    "bg": "Девесил",
+    "ru": "Любисток"
+   },
+   "reason": "everyday names"
+  },
+  "Q157283": {
+   "display": {
+    "uk": "Чабер",
+    "bg": "Чубрица",
+    "ru": "Чабер"
+   },
+   "reason": "everyday names"
+  },
+  "Q11181633": {
+   "display": {
+    "uk": "Унабі",
+    "bg": "Хинап",
+    "ru": "Унаби"
+   },
+   "search": {
+    "uk": [
+     "Зизифус"
+    ],
+    "ru": [
+     "Зизифус"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q158642": {
+   "display": {
+    "uk": "Кизил",
+    "bg": "Дрян",
+    "ru": "Кизил"
+   },
+   "reason": "everyday names"
+  },
+  "Q43300": {
+   "display": {
+    "uk": "Айва",
+    "bg": "Дюля",
+    "ru": "Айва"
+   },
+   "reason": "everyday names"
+  },
+  "Q18674606": {
+   "display": {
+    "uk": "Яблуня",
+    "bg": "Ябълка",
+    "ru": "Яблоня"
+   },
+   "search": {
+    "uk": [
+     "Яблуко"
+    ],
+    "ru": [
+     "Яблоко"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q146281": {
+   "display": {
+    "uk": "Груша",
+    "bg": "Круша",
+    "ru": "Груша"
+   },
+   "reason": "everyday names"
+  },
+  "Q131517": {
+   "display": {
+    "uk": "Вишня",
+    "bg": "Вишна",
+    "ru": "Вишня"
+   },
+   "reason": "everyday names"
+  },
+  "Q165137": {
+   "display": {
+    "uk": "Черешня",
+    "bg": "Череша",
+    "ru": "Черешня"
+   },
+   "reason": "everyday names"
+  },
+  "Q44120": {
+   "display": {
+    "uk": "Слива",
+    "bg": "Слива",
+    "ru": "Слива"
+   },
+   "reason": "everyday names"
+  },
+  "Q37453": {
+   "display": {
+    "uk": "Абрикос",
+    "bg": "Кайсия",
+    "ru": "Абрикос"
+   },
+   "search": {
+    "uk": [
+     "Абрикоса"
+    ],
+    "ru": [
+     "Урюк"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q46871": {
+   "display": {
+    "uk": "Волоський горіх",
+    "bg": "Орех",
+    "ru": "Грецкий орех"
+   },
+   "search": {
+    "uk": [
+     "Горіх"
+    ],
+    "ru": [
+     "Орех"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q124969": {
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Ліщина",
+    "bg": "Лешник",
+    "ru": "Лещина"
+   },
+   "search": {
+    "uk": [
+     "Фундук",
+     "Лісовий горіх"
+    ],
+    "ru": [
+     "Фундук",
+     "Лесной орех"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q1801446": {
+   "display": {
+    "uk": "Фундук",
+    "ru": "Фундук"
+   },
+   "reason": "the register's hazelnut"
+  },
+  "Q162774": {
+   "display": {
+    "uk": "Аронія",
+    "bg": "Арония",
+    "ru": "Арония"
+   },
+   "search": {
+    "uk": [
+     "Горобина чорноплідна"
+    ],
+    "ru": [
+     "Черноплодная рябина"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q165378": {
+   "display": {
+    "uk": "Обліпиха",
+    "bg": "Облепиха",
+    "ru": "Облепиха"
+   },
+   "reason": "everyday names"
+  },
+  "Q156928": {
+   "display": {
+    "uk": "Калина",
+    "bg": "Калина",
+    "ru": "Калина"
+   },
+   "reason": "everyday names"
+  },
+  "Q22701": {
+   "display": {
+    "uk": "Бузина",
+    "bg": "Черен бъз",
+    "ru": "Бузина"
+   },
+   "reason": "everyday names"
+  },
+  "Q157699": {
+   "display": {
+    "uk": "Жимолость",
+    "ru": "Жимолость"
+   },
+   "reason": "everyday names"
+  },
+  "Q157307": {
+   "display": {
+    "uk": "Шовковиця",
+    "bg": "Черница",
+    "ru": "Шелковица"
+   },
+   "search": {
+    "uk": [
+     "Тутовник"
+    ],
+    "ru": [
+     "Тутовник"
+    ]
+   },
+   "reason": "everyday names"
+  },
+  "Q146198": {
+   "group": "trees_shrubs",
+   "display": {
+    "uk": "Горобина",
+    "bg": "Офика",
+    "ru": "Рябина"
+   },
+   "reason": "everyday names"
+  },
+  "Q28298": {
+   "display": {
+    "uk": "Селера",
+    "bg": "Целина",
+    "ru": "Сельдерей"
+   },
+   "search": {
+    "uk": [
+     "Селера коренеплідна",
+     "Селера черешкова",
+     "Селера листкова"
+    ],
+    "ru": [
+     "Сельдерей корневой",
+     "Сельдерей черешковый"
+    ]
+   },
+   "reason": "one crop to a gardener"
+  },
+  "Q146190": {
+   "search": {
+    "uk": [
+     "Земляна груша"
+    ],
+    "ru": [
+     "Земляная груша"
+    ]
+   },
+   "reason": "colloquial words",
+   "display": {
+    "bg": "Земна ябълка"
+   }
+  },
+  "Q17507129": {
+   "search": {
+    "uk": [
+     "Кавун звичайний"
+    ]
+   },
+   "reason": "search words",
+   "group": "vegetables"
+  },
+  "Q81602": {
+   "search": {
+    "uk": [
+     "Дині"
+    ]
+   },
+   "reason": "search words",
+   "group": "vegetables"
+  },
+  "Q179729": {
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q34687": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q163522": {
+   "display": {
+    "uk": "Ківі",
+    "bg": "Киви",
+    "ru": "Киви"
+   },
+   "search": {
+    "uk": [
+     "Актинідія китайська"
+    ],
+    "ru": [
+     "Актинидия китайская"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q848074": {
+   "display": {
+    "uk": "Актинідія",
+    "ru": "Актинидия",
+    "bg": "Актинидия"
+   },
+   "search": {
+    "uk": [
+     "Ківі-ягода"
+    ],
+    "ru": [
+     "Киви-ягода"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%90%D0%BA%D1%82%D0%B8%D0%BD%D0%B8%D0%B4%D0%B8%D1%8F"
+    ]
+   }
+  },
+  "Q131342": {
+   "group": "vegetables",
+   "display": {
+    "uk": "Біб",
+    "bg": "Бакла",
+    "ru": "Бобы"
+   },
+   "search": {
+    "uk": [
+     "Боби",
+     "Кінські боби"
+    ],
+    "ru": [
+     "Конские бобы",
+     "Боб садовый"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q7218332": {
+   "display": {
+    "uk": "Ревінь",
+    "ru": "Ревень"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q2544599": {
+   "display": {
+    "uk": "Цикорій",
+    "ru": "Цикорий"
+   },
+   "search": {
+    "uk": [
+     "Петрові батоги"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q164010": {
+   "group": "herbs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q157561": {
+   "group": "herbs",
+   "display": {
+    "uk": "Живокіст",
+    "ru": "Окопник"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q161816": {
+   "group": "flowers",
+   "display": {
+    "uk": "Целозія",
+    "ru": "Целозия"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q147075": {
+   "group": "herbs",
+   "display": {
+    "uk": "Огірочник",
+    "ru": "Бурачник"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q3978815": {
+   "display": {
+    "uk": "Ромашка",
+    "bg": "Лайка",
+    "ru": "Ромашка"
+   },
+   "search": {
+    "uk": [
+     "Ромашка лікарська"
+    ],
+    "bg": [
+     "Медицинска лайка"
+    ],
+    "ru": [
+     "Ромашка аптечная"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1424440": {
+   "group": "flowers",
+   "display": {
+    "uk": "Лілійник",
+    "ru": "Лилейник"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q5914721": {
+   "group": "houseplants",
+   "display": {
+    "uk": "Азалія",
+    "ru": "Азалия",
+    "bg": "Азалия"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%90%D0%B7%D0%B0%D0%BB%D0%B8%D1%8F"
+    ]
+   }
+  },
+  "Q654064": {
+   "display": {
+    "uk": "Бальзамін",
+    "ru": "Бальзамин"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q163944": {
+   "display": {
+    "uk": "Запашний горошок",
+    "ru": "Душистый горошек"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q164246": {
+   "display": {
+    "uk": "Дельфініум",
+    "ru": "Дельфиниум"
+   },
+   "search": {
+    "uk": [
+     "Цар-зілля"
+    ],
+    "ru": [
+     "Живокость"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q161139": {
+   "display": {
+    "uk": "Котяча м'ята",
+    "ru": "Кошачья мята"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q104212": {
+   "group": "field_crops",
+   "display": {
+    "uk": "Хміль",
+    "ru": "Хмель"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q156843": {
+   "display": {
+    "bg": "Кученце"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q27498": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q163559": {
+   "group": "flowers",
+   "display": {
+    "uk": "Канна",
+    "ru": "Канна",
+    "bg": "Кана"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%9A%D0%B0%D0%BD%D0%B0"
+    ]
+   }
+  },
+  "Q149279": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q158338": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q2532820": {
+   "group": "flowers",
+   "display": {
+    "uk": "Рудбекія",
+    "ru": "Рудбекия"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q159547": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q759876": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q157555": {
+   "group": "flowers",
+   "display": {
+    "uk": "Наперстянка",
+    "ru": "Наперстянка",
+    "bg": "Напръстник"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%9D%D0%B0%D0%BF%D1%80%D1%8A%D1%81%D1%82%D0%BD%D0%B8%D0%BA"
+    ]
+   }
+  },
+  "Q37383": {
+   "group": "vegetables",
+   "display": {
+    "uk": "Арахіс",
+    "ru": "Арахис"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1165724": {
+   "group": "vegetables",
+   "display": {
+    "uk": "Чуфа",
+    "ru": "Чуфа"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q164728": {
+   "group": "vegetables",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q155867": {
+   "group": "flowers",
+   "display": {
+    "uk": "Рицина",
+    "ru": "Клещевина"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q139925": {
+   "group": "vegetables",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q81375": {
+   "group": "vegetables",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q131226": {
+   "group": "vegetables",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q11575": {
+   "group": "vegetables",
+   "search": {
+    "uk": [
+     "Кукурудза цукрова"
+    ],
+    "ru": [
+     "Сладкая кукуруза"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q171497": {
+   "group": "field_crops",
+   "display": {
+    "uk": "Соняшник",
+    "bg": "Слънчоглед",
+    "ru": "Подсолнечник"
+   },
+   "search": {
+    "ru": [
+     "Подсолнух"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q161098": {
+   "display": {
+    "uk": "Пшениця",
+    "bg": "Пшеница",
+    "ru": "Пшеница"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q11577": {
+   "display": {
+    "uk": "Ячмінь",
+    "bg": "Ечемик",
+    "ru": "Ячмень"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q12104": {
+   "display": {
+    "uk": "Овес",
+    "bg": "Овес",
+    "ru": "Овёс"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q132734": {
+   "display": {
+    "uk": "Гречка",
+    "bg": "Елда",
+    "ru": "Гречиха"
+   },
+   "search": {
+    "ru": [
+     "Гречка"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q165196": {
+   "display": {
+    "uk": "Просо",
+    "bg": "Просо",
+    "ru": "Просо"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q156106": {
+   "display": {
+    "uk": "Люцерна",
+    "bg": "Люцерна",
+    "ru": "Люцерна"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q156635": {
+   "display": {
+    "uk": "Конюшина",
+    "bg": "Червена детелина",
+    "ru": "Клевер"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q45108": {
+   "display": {
+    "uk": "Льон",
+    "bg": "Лен",
+    "ru": "Лён"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q332062": {
+   "display": {
+    "uk": "Сорго",
+    "ru": "Сорго"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q50865828": {
+   "display": {
+    "uk": "Сорго віникове",
+    "ru": "Сорго веничное"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q13188": {
+   "display": {
+    "uk": "Гранат",
+    "bg": "Нар",
+    "ru": "Гранат"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q37083": {
+   "display": {
+    "uk": "Маслина",
+    "bg": "Маслина",
+    "ru": "Олива"
+   },
+   "search": {
+    "uk": [
+     "Оливка"
+    ],
+    "ru": [
+     "Маслина"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q36071": {
+   "display": {
+    "uk": "Фісташка",
+    "ru": "Фисташка"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q158482": {
+   "display": {
+    "uk": "Хурма",
+    "bg": "Райска ябълка",
+    "ru": "Хурма"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q41505": {
+   "display": {
+    "uk": "Мушмула японська",
+    "ru": "Мушмула японская"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q22699": {
+   "display": {
+    "uk": "Каштан їстівний",
+    "bg": "Кестен",
+    "ru": "Каштан съедобный"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q158037": {
+   "display": {
+    "uk": "Хеномелес",
+    "bg": "Японска дюля",
+    "ru": "Хеномелес"
+   },
+   "search": {
+    "uk": [
+     "Японська айва"
+    ],
+    "ru": [
+     "Айва японская"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q900986": {
+   "display": {
+    "uk": "Лимонник",
+    "ru": "Лимонник"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q159030": {
+   "display": {
+    "uk": "Ірга",
+    "ru": "Ирга"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q165424": {
+   "display": {
+    "uk": "Черемха",
+    "ru": "Черёмуха"
+   },
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q157508": {
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q161920": {
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q12309066": {
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q165321": {
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q159558": {
+   "group": "trees_shrubs",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q193498": {
+   "display": {
+    "uk": "Шалот",
+    "ru": "Лук-шалот"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q27938": {
+   "display": {
+    "uk": "Цибуля-батун",
+    "ru": "Лук-батун"
+   },
+   "search": {
+    "uk": [
+     "Цибуля-татарка"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q51148": {
+   "display": {
+    "uk": "Шніт-цибуля",
+    "bg": "Сибирски лук",
+    "ru": "Шнитт-лук"
+   },
+   "search": {
+    "uk": [
+     "Цибуля-трибулька"
+    ],
+    "ru": [
+     "Лук-резанец"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q2672082": {
+   "display": {
+    "uk": "Цибуля-слизун",
+    "ru": "Лук-слизун"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q158464": {
+   "display": {
+    "uk": "Бруква",
+    "ru": "Брюква"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q504781": {
+   "display": {
+    "uk": "Гірчиця листова",
+    "ru": "Горчица листовая"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q165178": {
+   "display": {
+    "uk": "Бок-чой",
+    "ru": "Бок-чой"
+   },
+   "search": {
+    "uk": [
+     "Капуста китайська"
+    ],
+    "ru": [
+     "Пак-чой",
+     "Капуста китайская"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q50912348": {
+   "display": {
+    "uk": "Мізуна",
+    "ru": "Мизуна"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q6598": {
+   "display": {
+    "uk": "Гострий перець",
+    "ru": "Острый перец"
+   },
+   "search": {
+    "uk": [
+     "Перець чилі",
+     "Перець каєнський"
+    ],
+    "ru": [
+     "Перец чили",
+     "Кайенский перец"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q178547": {
+   "display": {
+    "uk": "Ендівій",
+    "ru": "Эндивий"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q27033": {
+   "display": {
+    "uk": "Крес-салат",
+    "bg": "Кресон",
+    "ru": "Кресс-салат"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q156884": {
+   "display": {
+    "uk": "Рукола",
+    "bg": "Рукола",
+    "ru": "Руккола"
+   },
+   "search": {
+    "uk": [
+     "Індау"
+    ],
+    "ru": [
+     "Эрука"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q11853965": {
+   "display": {
+    "uk": "Салат головчастий",
+    "ru": "Салат кочанный"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1762893": {
+   "display": {
+    "uk": "Салат ромен",
+    "ru": "Салат ромэн"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1277255": {
+   "display": {
+    "uk": "Лагенарія",
+    "bg": "Кратуна",
+    "ru": "Лагенария"
+   },
+   "search": {
+    "uk": [
+     "Горлянка"
+    ],
+    "ru": [
+     "Горлянка"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q428750": {
+   "display": {
+    "uk": "Момордика",
+    "ru": "Момордика",
+    "bg": "Момордика"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%9C%D0%BE%D0%BC%D0%BE%D1%80%D0%B4%D0%B8%D0%BA%D0%B0"
+    ]
+   }
+  },
+  "Q159753": {
+   "display": {
+    "uk": "Квасоля багатоквіткова",
+    "ru": "Фасоль многоцветковая"
+   },
+   "search": {
+    "uk": [
+     "Боби турецькі"
+    ],
+    "ru": [
+     "Фасоль огненно-красная"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q15532679": {
+   "display": {
+    "uk": "Фізаліс овочевий",
+    "ru": "Физалис овощной",
+    "bg": "Физалис"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%A4%D0%B8%D0%B7%D0%B0%D0%BB%D0%B8%D1%81"
+    ]
+   }
+  },
+  "Q293302": {
+   "display": {
+    "uk": "Фізаліс суничний",
+    "ru": "Физалис земляничный"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q186451": {
+   "display": {
+    "uk": "Гливи",
+    "bg": "Кладница",
+    "ru": "Вешенка"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q227690": {
+   "display": {
+    "uk": "Печериця",
+    "bg": "Печурка",
+    "ru": "Шампиньон"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q385259": {
+   "display": {
+    "uk": "Скорцонера",
+    "ru": "Скорцонера"
+   },
+   "search": {
+    "uk": [
+     "Солодкий корінь",
+     "Зміячка іспанська"
+    ],
+    "ru": [
+     "Козелец испанский",
+     "Чёрная морковь"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q158954": {
+   "display": {
+    "uk": "Валеріанела",
+    "ru": "Валерианелла"
+   },
+   "search": {
+    "uk": [
+     "Польовий салат"
+    ],
+    "ru": [
+     "Полевой салат",
+     "Корн-салат"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q498940": {
+   "display": {
+    "uk": "Вігна",
+    "ru": "Вигна"
+   },
+   "search": {
+    "uk": [
+     "Спаржева квасоля"
+    ],
+    "ru": [
+     "Спаржевая фасоль"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q3242205": {
+   "display": {
+    "uk": "Амарант",
+    "ru": "Амарант"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q80531": {
+   "display": {
+    "uk": "Бамія",
+    "ru": "Бамия"
+   },
+   "search": {
+    "uk": [
+     "Окра"
+    ],
+    "ru": [
+     "Окра"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q41318": {
+   "display": {
+    "uk": "Ківано",
+    "ru": "Кивано"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q37937": {
+   "display": {
+    "uk": "Батат",
+    "ru": "Батат"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q147202": {
+   "display": {
+    "bg": "Алабаш"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q155825": {
+   "display": {
+    "uk": "Венерина мухоловка"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1493": {
+   "group": "houseplants",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q148829": {
+   "display": {
+    "uk": "Молочай Міля",
+    "ru": "Молочай Миля"
+   },
+   "search": {
+    "uk": [
+     "Терновий вінець"
+    ],
+    "ru": [
+     "Терновый венец"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q159534": {
+   "display": {
+    "uk": "Китайська троянда",
+    "ru": "Китайская роза"
+   },
+   "search": {
+    "uk": [
+     "Гібіскус"
+    ],
+    "ru": [
+     "Гибискус"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q155833": {
+   "display": {
+    "uk": "Олеандр",
+    "ru": "Олеандр"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q161120": {
+   "display": {
+    "uk": "Пасифлора",
+    "ru": "Пассифлора"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q162878": {
+   "display": {
+    "uk": "Дюшенея",
+    "ru": "Дюшенея"
+   },
+   "search": {
+    "uk": [
+     "Суниця індійська"
+    ],
+    "ru": [
+     "Земляника индийская"
+    ]
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1271785": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q42729158": {
+   "group": "flowers",
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q26354": {
+   "group": "houseplants",
+   "display": {
+    "uk": "Плющ",
+    "ru": "Плющ"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q3239567": {
+   "display": {
+    "uk": "Аспідистра",
+    "ru": "Аспидистра"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q660200": {
+   "display": {
+    "uk": "Хамедорея",
+    "ru": "Хамедорея"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q149094": {
+   "display": {
+    "uk": "Кливія",
+    "ru": "Кливия",
+    "bg": "Кливия"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)",
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%9A%D0%BB%D0%B8%D0%B2%D0%B8%D1%8F"
+    ]
+   }
+  },
+  "Q13403357": {
+   "display": {
+    "uk": "Сингоніум",
+    "ru": "Сингониум"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q50841683": {
+   "display": {
+    "uk": "Калатея",
+    "ru": "Калатея"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1498748": {
+   "display": {
+    "uk": "Фікус ліровидний",
+    "ru": "Фикус лировидный"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q1399941": {
+   "display": {
+    "uk": "Аспарагус"
+   },
+   "reason": "everyday names and groups (reviewed 2026-09-26)"
+  },
+  "Q6754829": {
+   "reason": "Bulgarian name found on Bulgarian Wikipedia (one source; reviewed 2026-09-26)",
+   "display": {
+    "bg": "Маранта"
+   },
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%9C%D0%B0%D1%80%D0%B0%D0%BD%D1%82%D0%B0"
+    ]
+   }
+  },
+  "Q164553": {
+   "reason": "Bulgarian name found on Bulgarian Wikipedia (one source; reviewed 2026-09-26)",
+   "display": {
+    "bg": "Флокс"
+   },
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%A4%D0%BB%D0%BE%D0%BA%D1%81"
+    ]
+   }
+  },
+  "Q7213452": {
+   "reason": "Bulgarian name found on Bulgarian Wikipedia (one source; reviewed 2026-09-26)",
+   "display": {
+    "bg": "Стевия"
+   },
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%A1%D1%82%D0%B5%D0%B2%D0%B8%D1%8F"
+    ]
+   }
+  },
+  "Q1162971": {
+   "reason": "Bulgarian name found on Bulgarian Wikipedia (one source; reviewed 2026-09-26)",
+   "display": {
+    "bg": "Плати",
+    "uk": "Пецилія",
+    "ru": "Пецилия"
+   },
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%9F%D0%BB%D0%B0%D1%82%D0%B8"
+    ]
+   }
+  },
+  "Q28599883": {
+   "reason": "Bulgarian name found on Bulgarian Wikipedia (one source; reviewed 2026-09-26)",
+   "display": {
+    "bg": "Суматрански барбус",
+    "uk": "Суматранський барбус",
+    "ru": "Суматранский барбус"
+   },
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%A7%D0%B5%D1%82%D0%B8%D1%80%D0%B8%D0%BF%D0%BE%D1%8F%D1%81%D0%B5%D0%BD_%D0%B1%D0%B0%D1%80%D0%B1%D1%83%D1%81"
+    ]
+   }
+  },
+  "Q158942": {
+   "reason": "Bulgarian name found on Bulgarian Wikipedia (one source; reviewed 2026-09-26)",
+   "display": {
+    "bg": "Фацелия"
+   },
+   "evidence": {
+    "bg": [
+     "https://bg.wikipedia.org/wiki/%D0%A4%D0%B0%D1%86%D0%B5%D0%BB%D0%B8%D1%8F"
+    ]
+   }
+  },
+  "Q3442": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Астронотус",
+    "ru": "Астронотус"
+   }
+  },
+  "Q187808": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Акулячий балу",
+    "ru": "Акулий балу"
+   }
+  },
+  "Q632110": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Гіриноцейлус",
+    "ru": "Гиринохейлус"
+   }
+  },
+  "Q312296": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Пангасіус",
+    "ru": "Пангасиус"
+   }
+  },
+  "Q839683": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Пельвікахроміс",
+    "ru": "Пельвикахромис"
+   }
+  },
+  "Q1340577": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Гупі Ендлера",
+    "ru": "Гуппи Эндлера"
+   }
+  },
+  "Q3091839": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Дискус",
+    "ru": "Дискус"
+   }
+  },
+  "Q119167133": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Вишнева креветка",
+    "ru": "Вишнёвая креветка"
+   }
+  },
+  "Q649817": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Монгольська піщанка"
+   }
+  },
+  "Q24276246": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "ru": "Реснитчатый бананоед"
+   }
+  },
+  "Q149741": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "uk": "Мірабель"
+   }
+  },
+  "Q50846935": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "ru": "Лофант анисовый"
+   }
+  },
+  "Q104391095": {
+   "reason": "everyday names (executor's knowledge, flagged for review; 2026-09-26)",
+   "display": {
+    "ru": "Лук душистый"
+   }
+  }
+ }
+}

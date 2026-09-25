@@ -1,0 +1,66 @@
+register: 337 crops
+ukwiki Категорія:Кімнатні рослини: 247 articles
+ruwiki Категория:Комнатные растения: 982 articles
+bgwiki Категория:Стайни растения: 28 articles
+ruwiki Категория:Декоративные садовые растения: 349 articles
+ukwiki Категорія:Овочі: 266 articles
+ruwiki Категория:Овощи: 346 articles
+bgwiki Категория:Зеленчуци: 65 articles
+ukwiki Категорія:Плодові дерева: 413 articles
+ruwiki Категория:Плодовые деревья: 364 articles
+ukwiki Категорія:Ягоди: 234 articles
+ruwiki Категория:Ягоды: 117 articles
+ukwiki Категорія:Прянощі: 204 articles
+ruwiki Категория:Пряности: 274 articles
+ukwiki Категорія:Акваріумні риби: 276 articles
+ruwiki Категория:Аквариумные рыбы: 261 articles
+register: no Wikidata taxon for Hybrids between (Вишневий гібрид вишня звичайна х вишня сивувата (підщепа))
+register: no Wikidata taxon for Tragopogon porrifolium (Вівсяний корінь)
+register: no Wikidata taxon for Lavandula × hybrida (Лавандин)
+register: no Wikidata taxon for Lilium hybrida (Лілія гібридна)
+register: no Wikidata taxon for Malva pulchella (Мальва гібридна)
+register: no Wikidata taxon for Malva meluca (Мальва Мелюка)
+register: no Wikidata taxon for Monarda × hybrida (Монарда гібридна)
+register: no Wikidata taxon for Rubus subgenus (Ожина)
+register: no Wikidata taxon for Roegneria trachycaulon (Регнерія шорсткостеблова (пирій безкореневищний))
+register: no Wikidata taxon for Sorghum oryzoidum (Сориз)
+register: no Wikidata taxon for Chrysanthemum × hortorum (Хризантема садова)
+register: no Wikidata taxon for Chrysanthemum × morifolium (Хризантема шовковицелиста)
+bg: no Bulgarian name for plant:allium-odorum (Allium odorum)
+bg: no Bulgarian name for plant:miscanthus-sinensis (Miscanthus sinensis)
+bg: no Bulgarian name for plant:cyperus-esculentus (Cyperus esculentus)
+bg: no Bulgarian name for plant:lactuca-sativa-var-capitata (Lactuca sativa var. capitata)
+bg: no Bulgarian name for animal:neocaridina-davidi (Neocaridina davidi)
+bg: no Bulgarian name for plant:prunus-xcistena (Prunus ×cistena)
+bg: no Bulgarian name for plant:syngonium-podophyllum (Syngonium podophyllum)
+bg: no Bulgarian name for animal:poecilia-wingei (Poecilia wingei)
+bg: no Bulgarian name for plant:nephrolepis-exaltata (Nephrolepis exaltata)
+bg: no Bulgarian name for plant:asparagus-setaceus (Asparagus setaceus)
+bg: no Bulgarian name for plant:monarda-fistulosa (Monarda fistulosa)
+bg: no Bulgarian name for plant:zinnia-elegans (Zinnia elegans)
+bg: no Bulgarian name for plant:lonicera-caerulea (Lonicera caerulea)
+bg: no Bulgarian name for plant:valerianella-locusta (Valerianella locusta)
+bg: no Bulgarian name for plant:phaseolus-coccineus (Phaseolus coccineus)
+bg: no Bulgarian name for plant:amaranthus-caudatus (Amaranthus caudatus)
+bg: no Bulgarian name for plant:dracocephalum-moldavica (Dracocephalum moldavica)
+bg: no Bulgarian name for plant:brassica-rapa-subsp-chinensis (Brassica rapa subsp. chinensis)
+bg: no Bulgarian name for plant:lactuca-sativa-var-longifolia (Lactuca sativa var. longifolia)
+bg: no Bulgarian name for plant:cichorium-endivia (Cichorium endivia)
+bg: no Bulgarian name for plant:allium-ascalonicum (Allium ascalonicum)
+bg: no Bulgarian name for animal:mikrogeophagus-ramirezi (Mikrogeophagus ramirezi)
+bg: no Bulgarian name for plant:allium-nutans (Allium nutans)
+bg: no Bulgarian name for plant:allium-fistulosum (Allium fistulosum)
+bg: no Bulgarian name for plant:physalis-pubescens (Physalis pubescens)
+bg: no Bulgarian name for plant:amaranthus-tricolor (Amaranthus tricolor)
+bg: no Bulgarian name for animal:astronotus-ocellatus (Astronotus ocellatus)
+bg: no Bulgarian name for plant:agave-amica (Agave amica)
+bg: no Bulgarian name for plant:lophanthus-anisatus (Lophanthus anisatus)
+bg: no Bulgarian name for plant:sorghum-technicum (Sorghum technicum)
+bg: no Bulgarian name for plant:brassica-rapa-subsp-nipposinica (Brassica rapa subsp. nipposinica)
+bg: no Bulgarian name for animal:rattus-norvegicus-f-domestica (Rattus norvegicus f. domestica)
+bg: no Bulgarian name for plant:forsythia-xintermedia (Forsythia ×intermedia)
+bg: no Bulgarian name for animal:lonchura-striata-domestica (Lonchura striata domestica)
+bg: no Bulgarian name for animal:gyrinocheilus-aymonieri (Gyrinocheilus aymonieri)
+bg: no Bulgarian name for plant:impatiens-walleriana (Impatiens walleriana)
+bg: no Bulgarian name for plant:capsicum-annuum-var-acuminatum (Capsicum annuum var. acuminatum)
+bg: no Bulgarian name for plant:tagetes-erecta (Tagetes erecta)
