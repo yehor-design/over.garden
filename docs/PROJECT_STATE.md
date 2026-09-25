@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-21.
+Last reviewed: 2026-09-25.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -48,6 +48,32 @@ The seven owner requirements have one committed production receipt:
 `pnpm prove:owner-mvp-reset`.
 
 ## Where the project is heading
+
+**SDD Slice 29 — catalogue, object creation and the standard species base
+(decided 2026-09-25, executing).** In one review session the owner approved,
+piece by piece, a narrower product: the organism catalogue is hidden from
+readers and a species is chosen only while a gardener creates or edits their
+own object; a species page is its name, a short text, a collage of gardeners'
+photographs and its entries, published from its first public entry, and
+«Рослини й тварини» at `/species` is the list of them; creation is a
+full-screen stepper; the species comes from a standard base of the plants and
+animals people keep, named in everyday uk/bg/ru words, and cultivars are the
+project's own list, published at once and corrected by the owner afterwards;
+spaces get photos and public pages with comments and follows; terms of use are
+accepted once up front, with a complaint procedure anyone can use; the
+wishlist, communities (until after MVP), the Knowledge hub, the system topics
+and the market landings are removed; Overgarden's own publications become feed
+categories; Bulgarian takes the unprefixed addresses and Ukrainian moves to
+`/ua`; Google Sans is the one typeface; an entry is dated by its publication
+day; the brand is «Overgarden». The decisions are ADR-0033 to ADR-0040 and
+`DESIGN.md` (amended the same day); the owner's own record is Linear `OVE-510`,
+and the executable tasks are `OVE-511`–`OVE-536` in the order the Linear
+project states. Photo species identification (Pl@ntNet) was withdrawn from the
+MVP the same day (`OVE-527`, canceled). **Production is paused**: since about
+19:39 UTC on 2026-09-25 Vercel answers every address with `402
+DEPLOYMENT_DISABLED` (the Hobby plan's usage pause, known gap 12), so Slice 29
+merges build but are not served, and production proofs of served pages wait
+for it.
 
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),
@@ -2418,6 +2444,16 @@ Center. Each is a positive decision in ADR-0022 or ADR-0025, not an omission.
     that card: the workspace is at its free issue limit. So the decision is
     recorded here until the card exists. The proof, the model and the
     baseline are in `docs/redesign/2026-09-21/OVE-469-PROOF.md`.
+
+12. **Production is paused by Vercel's Hobby usage limit.** Since about
+    19:39 UTC on 2026-09-25 `over.garden` answers `HTTP 402` with
+    `x-vercel-error: DEPLOYMENT_DISABLED`; the latest production deployment is
+    `READY` and the project reports `live: false`. The team is on the Hobby
+    plan with a 10 GB monthly Fast Origin Transfer cap, reached on 2026-09-21,
+    and every production deploy flushes the edge cache and spends it again.
+    Unpausing, upgrading or waiting for the period to reset is the owner's
+    decision; until then no proof of served production behaviour can run, and
+    database-side production steps are recorded with their receipts as usual.
 
 ## How to check any of this yourself
 

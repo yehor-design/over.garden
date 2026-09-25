@@ -12,7 +12,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Web/app runtime         | Next.js App Router + TypeScript on Vercel                                                                                                                                                                                                                                                             |
 | UI                      | shadcn/ui only                                                                                                                                                                                                                                                                                        |
-| Typography              | Google Sans (text) and Geist Mono (code) via `next/font/google`: fetched at build time, self-hosted under `/_next/static`, preloaded, `display: swap`, `Arial` fallback by hand. Wired once in `apps/web/src/app/fonts.ts` and `globals.css`; no contract, verifier, or matrix (ADR-0022 D7).         |
+| Typography              | Google Sans, the one typeface (ADR-0040; Geist Mono leaves with `OVE-534`), via `next/font/google`: fetched at build time, self-hosted under `/_next/static`, preloaded, `display: swap`, `Arial` fallback by hand. Wired once in `apps/web/src/app/fonts.ts` and `globals.css`; no contract, verifier, or matrix (ADR-0022 D7).         |
 | Journal authoring       | Lexical 0.49.0 native node-tree editor behind one shared client-only composer; `JournalDocumentV1` v1 is the sole persistence/API/read contract; public and owner-read routes load no authoring engine. Under ADR-0019, unpublished composer state is local-only and non-durable before Publish. Since ADR-0028 the composer wears Notion's canvas and the document carries Notion's basic blocks, still at schema version 1. |
 | Auth                    | Better Auth                                                                                                                                                                                                                                                                                           |
 | Database                | DigitalOcean Managed Postgres in production; Apple Container-first local Postgres on supported Macs, with Docker only as fallback; local/CI default to the production major version, currently Postgres 18                                                                                            |
@@ -264,3 +264,51 @@ The DigitalOcean Linux worker/search droplet currently uses Docker Compose under
   measured with throttling applied, and the simulated figure is recorded beside
   it. Accepted 2026-09-20; delivered for the document, the shell, the home feed,
   the journal entry and the organism card; the remaining families follow D8.
+- ADR-0033 — The wishlist is retired (2026-09-25). Binding: the `/wishlist`
+  page, its button, menu item, panel, copy and repository are removed,
+  `/wishlist` in every language is a real 404, and migration `0080` drops
+  `wishlist_items` after the release that stops reading it. Bookmarks is the one
+  shelf. Supersedes `DESIGN.md` §5.23 as written for OVE-502.
+- ADR-0034 — The catalogue is hidden, a species page is its entries, and the
+  menu keeps only what gardeners use (2026-09-25). Binding: nothing links to
+  `/catalog`; «Рослини й тварини» at `/species` lists every published species
+  and is the crawl path (`/objects` → 308 → `/species`); a species page shows
+  its name, a short text, a collage and its entries, publishes from its first
+  public entry and shows nothing for Google only; «Каталог видів» is the owner's
+  page for descriptions and share images; the desktop rail and four mobile tabs;
+  communities deleted until after MVP; no Knowledge section, Overgarden's
+  publications are feed categories «Новини» · «Блог» · «Посібник»; system
+  topics and market landings deleted, gardeners' tags publish at once;
+  «Показати ще» in every long list; the spelling «Overgarden». Supersedes
+  ADR-0026 D9 and the card half of D10, ADR-0029 D13.2 and parts of its D9
+  table, and ADR-0031's Explore hub.
+- ADR-0035 — Creation is a stepper, the species comes from the standard base,
+  and cultivars are the project's own list (2026-09-25). Binding: full-screen
+  steppers for spaces and objects; only the gardener sets a species, changeable
+  any time; the standard species base with everyday uk/bg/ru names is the only
+  species list offered; a cultivar or breed a gardener types is a shared entry
+  published at once and corrected by the owner in «Сорти й породи»; the worker
+  no longer auto-links gardener objects. Reverses ADR-0026 D6 for cultivars and
+  breeds and amends D5, D7 and D14.
+- ADR-0036 — A space has a photo, a public page and the engagement an object
+  has (2026-09-25). Binding: `/@{handle}/spaces/{slug}` while the space has a
+  public entry; comments, likes, bookmarks and follows with target kind `space`;
+  the profile's «Записи · Простори · Об’єкти» tabs. Adds a row to ADR-0029 D9.
+- ADR-0037 — Gardeners' photographs illustrate species pages, as the
+  catalogue's own copies (2026-09-25). Binding: the collage, the share image,
+  byte copies that outlive the entry until an approved erasure request. Amends
+  ADR-0022 D2 (a server may copy, never re-encode) and ADR-0021's retention
+  promise for those copies.
+- ADR-0038 — Terms of use accepted once, up front, and a complaint procedure
+  anyone can use (2026-09-25). Binding: `/terms`, `/privacy`, `/cookies`; one
+  mandatory acceptance at sign-up or next sign-in; no first-publication
+  checkbox; analytics and marketing as two separate choices; DSA notices and
+  statements of reasons. Lawyer review pending until recorded.
+- ADR-0039 — Bulgarian is the unprefixed language, Ukrainian lives at `/ua`
+  (2026-09-25). Binding: `/bg/…` and `/uk/…` each answer one 308; the language
+  code stays `uk`; a no-signal reader starts in Bulgarian. Supersedes ADR-0029
+  D1, D3, D9 (profiles), D10, D11's default and D15, and ADR-0032 D1 and D3.
+- ADR-0040 — One typeface, and an entry is dated by the day it was published
+  (2026-09-25). Binding: Google Sans only, no monospace face, no Bulgarian
+  letterforms; no date field in any composer, `entry_date` is the publication
+  day in `Europe/Kyiv`. Amends ADR-0022 D7 and ADR-0028's composer header.

@@ -1,7 +1,22 @@
 # DESIGN.md — the OverGarden design system
 
-Status: **authoritative**, amended 2026-09-21 for the complete product redesign. Supersedes the stub that used to sit
-here. Decisions behind it: `docs/adr/ADR-0031-design-system-and-redesign.md`.
+Status: **authoritative**, amended 2026-09-21 for the complete product redesign
+and 2026-09-25 for SDD Slice 29. Supersedes the stub that used to sit here.
+Decisions behind it: `docs/adr/ADR-0031-design-system-and-redesign.md`, and for
+Slice 29 `ADR-0033` (the wishlist retired), `ADR-0034` (the hidden catalogue,
+species pages, navigation), `ADR-0035` (creation steppers, the standard species
+base, shared cultivars), `ADR-0036` (public spaces), `ADR-0037` (gardeners'
+photos in the catalogue), `ADR-0038` (terms and complaints), `ADR-0039`
+(language addresses) and `ADR-0040` (one typeface, publication-day dates).
+Where a Slice 29 rule below describes behaviour its task has not shipped yet,
+the rule is the target and the task named beside it delivers it.
+
+**The design directive (owner, 2026-09-25).** All design follows **Threads as
+the reference, 1:1 in design and styles**. Reference screens are found with
+the Mobbin MCP and cited in the pull request that uses them. The one named
+exception is the full-screen creation stepper (§5.24), which Threads does not
+have: it follows the pattern the owner named — Airbnb, Typeform — rendered in
+Threads' visual language.
 
 Read this page before changing any interface. It governs tokens, components,
 layout, patterns, accessibility and content. Where it disagrees with an older
@@ -235,10 +250,16 @@ nothing else.
 
 ### 2.6 Typography
 
-Google Sans (latin + cyrillic, normal + italic) and Geist Mono (latin +
-cyrillic), both through `next/font/google` in `apps/web/src/app/fonts.ts`. This
-is the only typography wiring (ADR-0022 D7). (`AGENTS.md` said `next/font/local`
-until 2026-09-17; the code has always been `next/font/google`, and the page was
+**One typeface: Google Sans** (latin + cyrillic, normal + italic), through
+`next/font/google` in `apps/web/src/app/fonts.ts` — the only typography wiring
+(ADR-0022 D7, amended by ADR-0040 D1). The system font is only its fallback
+while it loads, and the face of the proxy's standalone status documents. There
+is **no monospace face**: Geist Mono is removed (`OVE-534`), and what it set —
+codes and identifiers — is Google Sans with tabular figures where digits align.
+**Cyrillic never takes localized letterforms**: text marked `lang="bg"` looks
+exactly like Ukrainian and Russian (`font-feature-settings: "locl" 0`), and no
+`lang` attribute changes for it. (`AGENTS.md` said `next/font/local` until
+2026-09-17; the code has always been `next/font/google`, and the page was
 corrected rather than the code.)
 
 | Token             | Size / line-height | Weight                  | Use                                     |
@@ -253,7 +274,7 @@ corrected rather than the code.)
 | `--text-body-sm`  | 14 / 20            | 400                     | secondary, dense rows                   |
 | `--text-caption`  | 13 / 18            | 400                     | metadata, timestamps                    |
 | `--text-overline` | 12 / 16            | 600, +0.04em, uppercase | eyebrow labels                          |
-| `--text-mono`     | 14 / 22            | 400                     | codes, identifiers, EPPO/COL ids        |
+| `--text-mono`     | 14 / 22            | 400                     | codes and ids — Google Sans, tabular figures, after `OVE-534` |
 
 Below `md`, `display` is 30/36 and `h1` is 26/32. Nothing else changes.
 
@@ -505,19 +526,26 @@ its context track reserved so late page context cannot shift the reading column.
 The brand wordmark is 48 px high (`h-12`) from the desktop breakpoint
 (`lg`, 64rem), with proportional width; below it the wordmark stays 28 px high.
 
-Desktop primary destinations: Feed, Explore, My garden, Activity. New entry is
-one persistent action. Saved reading, wishlist, public profile, settings and
-sealed-owner tools belong to account utilities. Explore keeps Catalogue,
-Communities and Knowledge as understandable destinations, not extra permanent
-rail roots. `/catalog` remains a direct/crawlable destination; no URL move is
-required just to label its entrance Explore.
+**Navigation, as of 2026-09-25 (ADR-0034 D3; shipped by `OVE-521`).** It
+supersedes the Explore hub of the redesign and of
+`docs/redesign/2026-09-21/INFORMATION_ARCHITECTURE.md`.
 
-Mobile has Feed, Explore, New entry, My garden, Activity; account is in the
-header. New entry may use a named 44 px icon control while all navigation
+- **Desktop rail:** Стрічка, Мій сад, Події; New entry as the one persistent
+  action; then «Рослини й тварини», and «Спільноти» with a «Скоро» badge that
+  is not pressable (§5.21). There is no Explore («Огляд») item, and nothing
+  links to the catalogue (§5.17).
+- **Mobile bottom tabs, four:** Стрічка · Новий запис · Мій сад · Події.
+  «Рослини й тварини» and «Спільноти · Скоро» are in the phone's menu, never
+  in the bottom tabs. Account is in the header.
+- Bookmarks, the public profile, settings and sealed-owner tools belong to
+  account utilities.
+
+New entry may use a named 44 px icon control while all navigation
 items have short visible labels. A guest can navigate public destinations and
 gets a real sign-in intent for protected actions. Hide ordinary bottom nav only
-inside full-height composition, which supplies Close/Back and focus recovery.
-See the IA document for exact UK/BG/RU labels and active-route rules.
+inside full-height composition and the creation steppers (§5.24), which supply
+Close/Back and focus recovery. The IA document's UK/BG/RU labels and
+active-route rules stand where this list does not change them.
 
 The context rail may disappear when no useful context exists. A modal's frame
 never replaces its full-page direct-link fallback. The shell migration is
@@ -543,9 +571,11 @@ The `<main>` is the **page's**, never the shell's. The shell renders the region
 it goes in (`#main-content`, the skip link's target) and would otherwise give
 every page two.
 
-The footer carries the four links nothing else linked — the catalogue, `/privacy`,
-`/support`, `/first-publication-disclosure` — and the one language control of
-§6. It does **not** carry a `thiings.co` credit; §2.9 records why.
+The footer carries the links nothing else links — `/privacy` and `/support`,
+and after `OVE-526` `/terms`, `/cookies` and «Налаштування cookies» in place of
+`/first-publication-disclosure` — and the one language control of §6. It does
+**not** link the catalogue any more (§5.17). It does **not** carry a
+`thiings.co` credit; §2.9 records why.
 
 The skip link is the first focusable element and is visible on focus.
 
@@ -732,13 +762,14 @@ filtered result offers Clear filters, not a reset that erases the words typed.
 
 One `CommandPalette`, opened by `⌘K` / `Ctrl+K`, by the header control, and by
 `/` when focus is not in a text field. Grouped results, in this order: Journals,
-Organisms, Gardeners, Communities, Actions. Keyboard hints in the footer. Recent
-searches when the query is empty.
+Gardeners, Actions. Keyboard hints in the footer. Recent searches when the query
+is empty. (Until 2026-09-25 it also had Organisms and Communities; the
+catalogue is hidden and communities are deleted, ADR-0034 D1 and D9.)
 
-The palette is an enhancement. `/journals` and the catalogue remain full,
-crawlable, no-JavaScript search pages, and the rail keeps a plain link to each.
-A palette that replaced them would take 114,669 pages out of the index, which
-is the opposite of what the product is for (ADR-0022 D3).
+The palette is an enhancement. `/journals` and «Рослини й тварини» remain full,
+crawlable, no-JavaScript pages with plain links. A palette that replaced them
+would take the species pages out of the index, which is the opposite of what
+the product is for (ADR-0022 D3).
 
 Four rules that are the whole of it, each one a test:
 
@@ -934,6 +965,10 @@ action — the rest belong in a menu. A gardener without a display name is shown
 as their handle, one long word, so the name wraps anywhere rather than
 widening the page at 320 px.
 
+**Superseded in part (2026-09-25, ADR-0036 D4):** the profile gains a
+«Простори» tab and loses its counts; §5.30 is the rule, and the bullets below
+stand where it does not change them.
+
 - **Two views: Entries, then Objects.** Entries are every observation the
   gardener published, drawn with the feed's own card (`PublicFeedEntryCard`),
   not a card of the profile's own. Objects are the journals those entries make
@@ -1123,11 +1158,12 @@ and the consequences belong on the screen rather than in the reader's memory.
 - **One composer, one explicit destination.** A contextual Write opens in one
   activation with the exact object/space. A global launch with multiple choices
   opens the all-owned-destinations picker immediately; selection goes straight
-  to writing. Changing destination preserves in-memory text, media and date.
+  to writing. Changing destination preserves in-memory text and media.
   It is `components/garden/entry-composer.tsx`, at `/garden/new` for the
   global Write and inline on an object's page and a space's journal
-  (`OVE-486`). The date is the reader's own calendar date, not the server's UTC
-  day; a space entry asks which of the space's own objects it mentions, because
+  (`OVE-486`). **The composer has no date field** (ADR-0040 D3, `OVE-535`): an
+  entry's date is its publication day in `Europe/Kyiv`, set by the server, and
+  editing keeps it. A space entry asks which of the space's own objects it mentions, because
   the server requires one to twelve; and a publish refused for an ended session
   keeps the text and offers sign-in in a new tab rather than navigating away.
   While it publishes, Publish is loading, not disabled (§4.4): a disabled
@@ -1193,8 +1229,8 @@ and the consequences belong on the screen rather than in the reader's memory.
 **A plant or an animal can be created while writing (`OVE-478`; FAST_ENTRY.md "Creating during writing").**
 The picker offers "Нова рослина чи тварина «{name}»" beside its results; the
 composer then asks, in place, the kind and the space (the one in context,
-another existing one, or a new one by name), and keeps the text, the date and
-the photographs. Publishing creates the object and the entry in one
+another existing one, or a new one by name), and keeps the text and the
+photographs. Publishing creates the object and the entry in one
 transaction (`first_plant_entry` with the space's id or a new space's name)
 and lands on the new object's page. "Обрати наявну" returns to the picker
 with nothing lost.
@@ -1232,6 +1268,19 @@ and comment moderation — and the rules that make an hour bearable.
   `action="javascript:throw …"`; thirty-three owner controls across seventeen
   files silently did nothing until the bundle ran. Slice 28 converted them all
   and deleted the shape. A form that cannot be imported cannot be reached for.
+
+**Two owner pages join them in Slice 29**, each a list whose rows open one
+thing's settings, following the rules below:
+- **«Каталог видів»** (ADR-0034 D8) lists every published species page; a
+  species' settings hold its description in uk, bg and ru — all three required
+  to save — and its share image, defaulting to the newest photograph.
+- **«Сорти й породи»** (ADR-0035 D7) lists the shared cultivar and breed
+  entries gardeners added, newest first, each with confirm, correct the name,
+  merge and remove. Nothing on it gates publication: every entry is already
+  public.
+
+The queue loses its «прив'язати назву» items: nothing links gardener objects
+automatically any more (ADR-0035 D6). Merges stay.
 
 The catalogue's two pages are work queues (`OVE-506`, OG-UX-038/039/040):
 the queue is decisions, the sources page is diagnostics.
@@ -1284,10 +1333,12 @@ tomato unwritten for a fortnight was flagged as a problem.
 
 - **The actions first, by name, and each on its own route.** New entry
   (`/garden/new`), Add a plant or animal (`/garden/objects/new`), New space
-  (`/garden/spaces/new`). No editor lives on the home: the first-entry composer
-  appears only for a garden with no plant yet, or for a reader who came to
-  create (`?source=`, `?catalog=`, a resumed sign-in). Writing into a space
-  from its journal is the one composer with the space named.
+  (`/garden/spaces/new`) — the last two are the creation steppers (§5.24).
+  **No editor lives on the home** (ADR-0035 D1): the combined space + object +
+  first-entry form is deleted. An empty «Мій сад» shows two actions,
+  «Створити простір» and «Додати рослину чи тварину», and nothing is created
+  for the gardener. Writing into a space from its journal is the one composer
+  with the space named.
 - **One query, two groups, two reads.** Spaces and plants or animals are
   searched together and listed apart, and each group is its own settled read
   (ADR-0023). A failed group says so with its own retry and the other still
@@ -1331,10 +1382,10 @@ followed feed, the journals directory, a community, a profile (`OVE-492`):
 - **Who and when first.** The author's avatar and name, then the date, lead
   the card; an entry with no public author starts at the date — a card never
   invents a person, and an editorial item is not given one.
-- **The date is the observation.** A card is dated by the entry's own date,
-  the day the gardener chose. When it was published on another day, the card
-  says so — "Опубліковано 12 вер." — because the feed orders by publication
-  and a backdated entry must not look misplaced. One meaning in every list
+- **The date is the publication day** (ADR-0040 D3, `OVE-535`). An entry is
+  dated by the day it was published, in `Europe/Kyiv`, set by the server; a
+  gardener never chooses it. So a card carries one date and no second
+  "Опубліковано …" line. One meaning in every list
   (`lib/entry-card-dates.ts`).
 - **Where it belongs, then the words.** The object, its kind and a coarse
   region; then the title and an excerpt, and "Read more" only when the excerpt
@@ -1439,6 +1490,12 @@ they answer in that order: what the choice is, what it changes, where it
 stands — and only then who approved the text and which version it is
 (`OVE-505`, OG-UX-004/037/044).
 
+**Amended 2026-09-25 (ADR-0038, `OVE-526`).** A signed-in person accepts the
+terms, the privacy policy and the cookie rules once, up front (§5.31), and the
+first-publication checkbox goes. Analytics and marketing become two separate,
+unticked choices, in the banner too, changeable at any time. The bullets below
+stand where that does not change them.
+
 - **One consent question, on every page until answered** (ADR-0032 D7). It
   names who measures and which pages — only the tools this deployment runs —
   with two answers of one weight (both `secondary`, side by side at every
@@ -1475,251 +1532,125 @@ stands — and only then who approved the text and which version it is
   erasure pages draw no garden chrome at all (the safe exit), so a failed
   session recheck cannot trap a person in an account.
 
-### 5.17 The catalogue opens on a door, not on its register
+### 5.17 The catalogue is hidden; «Рослини й тварини» is the way to species
 
-`/catalog` used to open on page one of an A–Z register of 114,669 scientific
-names — "1001" and a run of numbered cultivars first, six-figure counts above
-them. A gardener with a tomato in their hand had nothing to hold on to
-(`OVE-496`, OG-UX-011/012/015). The catalogue's own address is now a **door**;
-any filter, letter, sort or search is the **register** behind it, which keeps
-every facet it had. The register has no unfiltered page one: removing its last
-filter is the door, whose "whole register" section is every kingdom and
-letter.
+**Rewritten 2026-09-25 (ADR-0034).** Until then `/catalog` was a door onto the
+register of 114,669 organisms, linked from the rail, the mobile tab, the
+footer, the palette and every card's breadcrumb (`OVE-496`). A gardener never
+needs to browse a botanical register: a species matters while they say what
+their own plant or animal is, and on the page that gathers what people wrote
+about it. The rules now:
 
-- **The door leads with a search whose scope is said out loud** — plants,
-  animals or everything, by common or scientific name. It is a real `GET` form
-  to the register, with plants chosen until the reader says otherwise, and the
-  results show the same choice as their mode, so a search widens where it
-  answered.
-- **A query is in the form every name is stored in.** It goes through
-  `normalizeCatalogName`, the mirror of `catalog_normalize_name`, so a
-  typographic apostrophe, ё or ґ finds what was stored the other way; `%` and
-  `_` never widen it into a wildcard.
-- **An exact name outranks the alphabet.** With a query: an exact name first,
-  then a species before its forms, then what gardeners here wrote about, then
-  the chosen sort. "м'ята колосиста" is the species, not its cultivars.
-- **A form names its species.** "1001" says nothing alone; "Сорт виду «м'ята
-  колосиста»" says which one the reader found. With no common name, the row is
-  the scientific name, never a blank.
-- **What gardeners here wrote about, and only that**, with how many there are.
-  The door claims no popularity and no evidence it does not have (ADR-0026
-  D9).
-- **Species, form and your own object, a sentence each** — a legend a reader
-  can skip, not a tutorial they must pass.
-- **"Add to my garden" is object setup, which offers what the reader already
-  keeps first**, so writing about the tomato they have never starts a second
-  one. Plants and animals only; nobody keeps a fungus or a virus.
-- **An empty search among plants says where it would find something**
-  ("search everywhere", with the count) rather than offering a reset.
-- **Every link into a view of the register is a document navigation**, from
-  the door and from one view to another: the letters, "search everywhere",
-  the chips and the clear links (`DocumentLink`; `FilterBar`'s
-  `documentLinks`). The register is the door's `/q` twin, and Next 16.2
-  predicts a route it has not received from the same path without its query:
-  the door. The shell links the door from every page, so its route is always
-  there to predict from, and its page needs no request. A client link then
-  changed only the URL — on a slow connection, every time. This is §5.1's
-  twin exception carried to plain links, and it costs the catalogue's chips
-  their announcement: the new count arrives with the new page.
-- **Every read is settled on its own.** A failed one hides its section and
-  says so; the search, which reads nothing, is always there.
-- **The door has no context rail.** Its kingdoms and register hubs are
-  sections of the page, and a rail repeating them offered one choice three
-  ways at once — a scope, a rail and a section (OG-UX-015).
-- **A catalogue read runs with JIT off** (`set local jit = off`). The planner
-  prices a name search far above what it costs, so Postgres compiled it, which
-  cost more than the read: in production a search for «томат» took 1,188 ms
-  with JIT and 189 ms without (read-only `EXPLAIN ANALYZE`, 114,669
-  catalogue rows). Reads without a name stay under the threshold and are
-  unchanged.
+- **Nothing links to `/catalog`.** Not the shell, not the footer, not the
+  palette (its «Організми» group goes), not a breadcrumb, not another page.
+  The address keeps answering and the owner's queue and sources keep reading
+  it; it is simply not a destination.
+- **Species are chosen in one place**: the «Вид» step of the object stepper
+  and the same field in an object's settings (§5.28).
+- **«Рослини й тварини» (`/species`) lists every published species**, one row
+  per species, cultivars and breeds counting toward it.
+  - The title, then one sentence: «Рослини й тварини, про які люди ведуть
+    журнали на Overgarden. Відкрийте, щоб прочитати їхні записи.» Nothing
+    else above the list.
+  - A row is the everyday name with the Latin name under it (`lang="la"`),
+    and nothing else: no count, author or photograph. It is one link to the
+    species page.
+  - `FilterBar` with «Усі · Рослини · Тварини», a «Пошук» field and a sort
+    «Найновіші» (default) · «Найпопулярніші» · «За абеткою». Filters and sort
+    are document links and search is a `GET` form (§5.1); every view renders
+    from the `/q` twin and answers `noindex, follow`, and only the base list is
+    indexed.
+  - «За абеткою» collates in the page's alphabet: «Ґ» after «Г», «Є» after
+    «Е».
+  - Portions of 20 with «Показати ще» (§5.26).
+  - An empty search says so in one short sentence; it is never a nought.
+- **The name is temporary** (the owner's "поки що тимчасово"), so the address
+  does not carry it.
+- The references are Threads' search and its list of results, and its filter
+  chips.
 
-### 5.18 An organism page leads with who it is and what gardeners wrote
+### 5.18 A species page is its name, a short text, a collage and its entries
 
-The tomato's card was one long document: identity, statistics, experiences,
-621 forms as chips and the source records, and a reader looking for practical
-experience had to tell the journal layer from reference inventory (`OVE-497`,
-OG-UX-013/032/033). The card now reads in ADR-0026 D9's order, as amended:
+**Rewritten 2026-09-25 (ADR-0034 D5–D7, ADR-0037).** The organism card read in
+ADR-0026 D9's order — facts, experience, relations, forms, sources — and the
+owner asked for none of it: "Має бути просто перелік записів про конкретний
+вид". From top to bottom, and nothing else:
 
-- **Who it is.** The crumbs: catalogue, then species and all forms for a form.
-  The kind in plain words: вид, сорт, порода, never "Публічний вид". The
-  heading in the reader's language, "Помідор їстівний", with the scientific
-  name beneath it as Latin. With no common name in the catalogue, the heading
-  is the accepted name, never a blank. Then the fact paragraph, and counts only
-  when there is something to count.
-- **What to do with it.** "Додати в мій сад" for a cultivar, a breed, a plant
-  or an animal: object setup, which offers the gardener's own objects of it
-  first (§5.17). Nothing for a pest, a disease or a fungus.
-- **What gardeners wrote, then the editors' note, labelled as the editors'.**
-  Then the relations: a dozen forms, the written-about first, with "Тут 12 з
-  621." and "Усі форми (621)" into the register view.
-- **Sources in words.**
-  - A source by its own name.
-  - A register by the name a reader would look up: "Держреєстр України".
-  - A number as a seed packet prints it: 08040055, not
-    RegisterVarietis:08040055.
-  - A status and a country in the reader's language: "зареєстровано
-    (Україна)".
-- **The register view holds every form of a species.**
-  - Cultivars or breeds, as the kingdom says.
-  - The registration where there is one, and "Не в цих реєстрах" where not.
-  - A `GET` search on a word of a name, and pages of a hundred. Both are in
-    the address, so Back from a cultivar returns to the same search and page.
-  - A search and a later page are `noindex, follow`. The first page of every
-    form is the canonical.
-- **Nothing about indexing is shown to a reader.** No reference photograph is
-  invented: the card shows gardeners' photographs in their entries, and an
-  illustration is never an identification photograph.
+1. **The name** in the reader's language — the standard base's everyday name
+   first (ADR-0035 D3) — with the Latin name beneath it, marked `lang="la"`.
+   With no common name, the heading is the Latin name.
+2. **A short text**: the owner's description, or the placeholder «Записи про
+   цю рослину від людей, які ведуть її журнал на Overgarden.» («…цю
+   тварину…»). The meta description is the same text.
+3. **The collage** of the species' latest photographs (§5.27).
+4. **A visible heading «Записи»**, then every public entry about the species
+   and its cultivars or breeds, newest first, drawn with the feed's own card,
+   in portions of 20 with «Показати ще».
 
-### 5.19 Knowledge says what it is about and what it rests on
+- **Nothing else.** No sections, counts, relations, forms, sources,
+  identifiers, rail, editors' note, «Додати в мій сад» or owner control — for
+  the owner too. The owner edits the text and the share image in «Каталог
+  видів» (§5.12).
+- **Nothing is for Google only.** JSON-LD names what the page shows and no
+  more; no `sameAs` to source identifiers.
+- **An unpublished species** (no public entry) answers 200 with the header and
+  an empty state, `noindex`.
+- **A cultivar or breed page** takes the same layout with that form's entries
+  and a link to its species; its placeholder says «…цей сорт…» / «…цю
+  породу…».
+- The reference is a Threads profile: a header, then posts.
 
-The tomato answer gave "the OverGarden approach" as its basis, counted zero
-gardeners' entries in every environment, and mixed two questions about the
-product into its gardening FAQ. The hub and every topic said which topics had
-"enough experience for indexing" (`OVE-498`, OG-UX-032/033). The rules:
+### 5.19 There is no Knowledge section
 
-- **The subject before the format.** Every guide and answer is gardening
-  advice or help with OverGarden (`PublicKnowledgeSubject`), and its eyebrow,
-  hub row and `about` say which first: "Садівництво · Відповідь", "Довідка
-  OverGarden · Посібник".
-- **Advice cites, and says what it is not.** A gardening claim ends with its
-  sources' numbers, `[1][2]` (`lib/knowledge-citations.ts`), each a link to
-  the source in "Про цей текст". That section lists:
-  - the author and what the text rests on;
-  - the sources, each with its own date and the date it was read;
-  - what the text is not ("Це не діагноз");
-  - whether a specialist reviewed it;
-  - the date it was updated.
+**Removed 2026-09-25 (ADR-0034 D10).** The Knowledge hub (`/knowledge`) and its
+three articles are gone. Overgarden's own publications appear in the main feed
+among gardeners' entries, in three categories — «Новини», «Блог»,
+«Посібник» — with the author «Overgarden» on their cards. Answers to
+questions are «Блог»; «Посібник» holds guides. `/knowledge` leads to the feed
+showing «Посібник», and `/blog` to the feed showing «Блог».
 
-  Help with the product cites no outside source and says so. A claim nothing
-  read supports is removed, not softened. The ledger is
-  `docs/redesign/2026-09-21/OVE-498-PROVENANCE.md`.
-- **Provenance is one step away, never a wall above the answer.** The byline
-  is the author, the date and "4 джерела й обмеження" pointing down. The
-  answer comes first.
-- **Product help stays out of advice.** Help with doing it in OverGarden is
-  its own labelled section after the advice, ending at the guide. It is never
-  a FAQ entry, so it is never in the `FAQPage`.
-- **Gardeners' entries are said for what they are.** They are headed by what
-  they are about ("Що садівники записали про томати"), each entry a heading.
-  Beside a text, the count carries "вони не підтверджують і не спростовують
-  текст вище". None is an empty state, never a nought.
-- **Counts are of what can be shown.** A topic counts only entries a listing
-  can render, those whose author has an address. The hub lists no topic
-  that holds none. A reader sees counts and the last entry's date, never
-  whether a crawler admits the page.
-- **One related section, labelled.** "Читайте також" lists answers, guides
-  and topics that hold entries. A topic lists the answers and guides that
-  draw on it. No rail repeats the results or the entries.
-- **Every heading is in the contents.** An article's contents, the rail
-  above `xl` and the article's foot below it, list every `h2` on the page, the
-  trailing sections too (`PublicArticle`'s `contentsAfter`).
-- **Search reads the words.** The hub matches a piece's own text, not only its
-  title. A topic searches its own entries through the journals' search
-  (`/journals?topic=…&q=…`), a real `GET` form.
-- **Partial failure stays partial.**
-  - Topics that cannot be read leave the answers and guides on the hub, with
-    a notice.
-  - Entries that cannot be read leave the text, with a retry of the same
-    page, never a detour to the hub.
+When those publications exist, an article page keeps what this section used to
+require of any advice: its sources, each with its date, what the text is not,
+and when it was updated. The feed card of a publication says its category
+where an entry card says its author's place.
 
-### 5.20 Notes, market pages and the source archive say what they are
+### 5.20 The source archive says what it is
 
-The notes' heading was the team's plan ("Корисні публічні сторінки перед
-тонкими…"). The market pages said "Що публічний discovery може безпечно
-використовувати зараз" and showed English cards on a Ukrainian page. The EPPO
-archive called its records "безпечні" and "не схвалена продуктова
-ідентичність", counted "Знайдено записів: 0", and claimed a second
-`#main-content` (`OVE-499`, OG-UX-034). The rules:
+**Market pages removed 2026-09-25 (ADR-0034 D12); the notes went with the
+Knowledge articles (D10).** What stays is the EPPO archive (`/sources/eppo`):
 
-- **Say what the reader finds, not what the team plans.** A heading promises
-  the reader something. Search engines, traffic, thin pages and the next
-  slice of work are never in the copy.
-- **A note is signed and dated.** The eyebrow names the format ("Нотатка"),
-  the byline carries "Редакція OverGarden" and the date, and the sections are
-  the contents. "Читайте також" is the one list after the text. A news
-  article, when it exists, passes no author at all (ADR-0027 D2); the byline
-  drops the row, never shows an empty one.
-- **A market page explains its purpose and links only what exists.**
-  - The country is the eyebrow.
-  - Then who it is for, what a gardener can do there today, and what is
-    true of OverGarden. The location wording is the privacy page's own.
-  - Then "З чого почати" into the journals, the catalogue, knowledge and
-    the guide, each in the page's language.
-  - No prices, no orders, no delivery, no place finer than a region.
 - **A reference is not a front door.**
-  - The archive says it is a source ("Довідкове джерело") and points a
-    gardener to the catalogue.
+  - The archive says it is a source ("Довідкове джерело").
   - Every record keeps its source's credit, its licence and the date it was
     received, in the page's language.
   - An empty archive, a search with no results, a search the archive cannot
     run and an unavailable archive are four different sentences, and none of
     them is a nought.
+- **Say what the reader finds, not what the team plans.** Search engines,
+  traffic, thin pages and the next slice of work are never in the copy.
 - **One skip-link target.** A page never sets `id="main-content"`: the shell
   owns it.
 - **Links into a query view stay plain.** A search, a later page or a retry
   of the archive is a plain link or a `GET` form (`public-query-twin.ts`).
 
-The contract the database-backed notes and news reuse is
-`docs/redesign/2026-09-21/OVE-499-ARTICLE-CONTRACT.md`.
+The article contract Overgarden's own publications reuse is
+`docs/redesign/2026-09-21/OVE-499-ARTICLE-CONTRACT.md`, with the author
+«Overgarden».
 
-### 5.21 A community is a place to read and to add to; moderating it is a task
+### 5.21 Communities are coming later
 
-A community's only way to take part was "Написати перший запис", and it went
-to a garden setup with no community in it (OG-UX-035). The rail offered
-generic knowledge (OG-UX-040). Every refusal read "Дію не виконано", and a
-member was offered a report and a block of their own entry. The owner's side
-was one hard-coded card, a "fail-closed panel", reasons printed as enum
-values, and a ban with no question before it (`OVE-500`). The rules:
+**Removed 2026-09-25 until after MVP (ADR-0034 D9).** Every community, its
+pages, its moderation pages and its data are deleted. The menu shows
+«Спільноти» with a «Скоро» badge, the same word in uk, bg and ru:
 
-- **Say what the community is and how to take part.**
-  - The header carries the topic, what members do there, and two actions:
-    join and "Додати запис".
-  - The card says the topic when it is not the name said twice, and whether
-    the community is open for new entries.
-- **Adding an entry is one step, the community's own** (`#community-contribute`):
-  - a guest signs in and comes back to the step, the next control focused;
-  - a signed-in reader who is not a member joins there, and comes back to the
-    same step;
-  - a member picks one of their published entries or writes one for this
-    community.
-- **Writing for a community is the one composer, with the community named.**
-  - It offers a plant or an animal only, the entries a community takes.
-  - After Publish it returns to the step with the new entry offered first.
-    Adding it is the member's own press: nothing is cross-posted silently,
-    and the entry keeps its one address.
-  - A writer with nothing to write about adds a plant or an animal first and
-    comes straight back, the community still named.
-- **A refusal names the rule that refused**: not a member, banned, closed,
-  not an entry a community takes, already there. "Unavailable" is left for
-  what is not a rule, and it offers a retry.
-- **Offer only what the server allows.** A reader's own entry has no report
-  and no block. A closed community has no step.
-- **The rail is this community's.** Its topic, the step, its rules, who
-  writes there, and other communities when there are some.
-- **A removed discussion is a page that says so**, with the community it
-  belonged to one press away. A discussion is titled after its entry, and its
-  canonical is its own address.
-- **Moderation is pages of the workspace, not a panel.**
-  - `/account/communities` lists every community the reader may moderate:
-    each one for the owner, the assigned ones for a moderator. Anyone else is
-    told they have no access.
-  - A community has two sections: its reports (open or resolved, a filter
-    with counts) and its one setting (accepting new entries). Comment reports
-    are the second queue.
-- **A report is read before it is decided.** It shows the entry's title and
-  opening, its author, what it is about, the reason in words, and where the
-  record stands now. It never shows who reported it.
-- **Each button says what it changes.** The two that take something from a
-  person, removal and a ban, ask first and name what they take. Cancel
-  changes nothing. While a press is on its way, a second press does nothing
-  (`SubmitButton`, `ConfirmSubmit`).
-- **The outcome is the record's, read back.** An action returns to the same
-  view and the same report:
-  - "Збережено" with the state now, in the report's card;
-  - above the list when the report has left the view;
-  - "Нічого не змінено" when somebody got there first;
-  - "Немає доступу", or a failure that changed nothing and is safe to retry.
-  One failed action is one card's notice, never a list that disappears.
+- it is **not pressable** — a `<span>` with the badge, never a link or a
+  disabled button, and it is not in the tab order;
+- it sits in the desktop rail and the phone's menu, **never in the bottom
+  tabs**;
+- `/communities` and every path below it are a real 404.
+
+Communities that gardeners create themselves return after MVP as their own
+decision; the rules this section used to hold are in git history.
 
 ### 5.22 Activity says what happened, to what, and what to do next
 
@@ -1765,39 +1696,180 @@ receipts, so its number never went down. The preferences sat inside the list
 - **A failed read is a failure with a retry of the same view**, never an empty
   list. An unreadable session is not "signed out".
 
-### 5.23 Saved reading and wanted organisms are two shelves, each with one name
+### 5.23 Bookmarks is the one shelf
 
-Bookmarks held saved reading and the wishlist held organisms to grow, but the
-wishlist had three names: «Список бажань» in the menu and the sign-in,
-«Хочу спробувати» on its own page, and «Спробувати пізніше» on every row. An
-empty shelf drew five filter chips that could only ever show nothing. A
-removal came back to the first page with no filter, and said «Прибрано» about
-nothing in particular. A saved entry its author withdrew vanished from the
-shelf, and with it the only way to remove it. A wishlist item the catalogue
-retired vanished too, and removing it had needed an item the catalogue still
-offered (`OG-UX-036`, `OG-UX-009`, `OVE-502`). The rules:
+**Rewritten 2026-09-25 (ADR-0033).** The wishlist is retired, so «Закладки»
+is the only shelf: saved reading, and since ADR-0036 saved spaces too. The
+rules OVE-502 wrote for it stand (`OG-UX-036`, `OG-UX-009`):
 
-- **One name per shelf, everywhere**: «Закладки» for saved reading, «Список
-  бажань» for wanted species, varieties and breeds. The account menu, the
-  title, the sign-in prompt and every notice say the same words in all three
-  languages. A wishlist row says what kind of organism it is.
+- **One name, everywhere**: «Закладки». The account menu, the title, the
+  sign-in prompt and every notice say the same word in all three languages.
 - **An empty shelf has one way out and nothing to filter.** The chips appear
   only when there is something to filter.
 - **A saved entry reads as a post**, drawn by the feed's own card. It opens
   with `?from=` the shelf view, so the entry's way back names Bookmarks and
-  lands on the same filter and page. Saved plants and animals, varieties and
+  lands on the same filter and page. Saved plants and animals, spaces and
   topics are reference rows.
 - **What is no longer public stays on the shelf and says why**: withdrawn by
-  its author, or retired from the catalogue. It can still be removed. Taking
-  one's own bookmark off never asks for a public target.
+  its author. It can still be removed. Taking one's own bookmark off never
+  asks for a public target.
 - **A removal comes back to the view it was pressed in**, names what it
   removed, and offers Undo while the item can be put back. A write the
   database refused is said beside its row, which is still there. An ended
   session goes to sign-in and back to the same view, and writes nothing.
 - **A failed read is a failure with a retry of the same view**, never "nothing
   saved".
+- Portions of 20 with «Показати ще» (§5.26).
 - The personal pages have no tab strip of their own; the shell's navigation
-  and account menu reach all four.
+  and account menu reach them.
+
+### 5.24 A creation stepper asks one question per screen
+
+**New 2026-09-25 (ADR-0035 D1).** Creating a space or a plant or animal is a
+full-screen stepper. The pattern is the owner's named exception to the Threads
+reference — Airbnb's listing flow and Typeform — drawn entirely in Threads'
+visual language (its type, spacing, controls and sheet chrome).
+
+- **One question per screen.** The question is the screen's `h1`; the answer
+  control is directly beneath it and takes focus when the step opens.
+- **The frame.** A progress bar with «Крок N з M» as text (never colour
+  alone), «Назад» and «Далі» at the bottom, and a close control at the top.
+  The last step's button names the result: «Створити» for a space, «Додати»
+  for a plant or animal.
+- **M counts the steps this run will show.** A skipped step (a space already
+  known, a cultivar after «Не знаю») is not counted, so the bar never jumps
+  backwards.
+- **Answering moves on.** A single choice advances on selection; a text step
+  advances on «Далі» or Enter.
+- **Every step is an address**, so Back, reload and a lost connection return
+  to the same question with the answers so far. Nothing is written to the
+  database before the last button (ADR-0022 D3), and closing before it asks
+  once, in the product's own dialog, if anything was answered.
+- **The shell's bottom navigation hides inside the stepper**; its frame
+  supplies close and focus recovery.
+- **Defaults are answers, never hints.** «Не знаю» is a real, preselected
+  option. A field carries no helper text; a search field may show a short
+  example («Наприклад, помідор»).
+- **Space:** «Як називається простір?» → photo (optional) → «Створити».
+  **Object:** «Простір» → «Рослина чи тварина?» → photo (optional) →
+  «Вкажіть ім'я рослини» / «…тварини» → «Вид» → «Сорт» / «Порода» → «Додати».
+- **«Додати простір» inside the object stepper** runs the space stepper and
+  returns to the object stepper with the new space selected.
+
+### 5.25 A photo step, with a crop and rotate editor
+
+**New 2026-09-25 (ADR-0035 D1, ADR-0036 D1).** A space and an object each have
+one optional photo, chosen in their stepper or later in their settings.
+
+- **Optional, and said so.** The step has «Пропустити» beside «Далі»; a later
+  settings page offers add, replace and remove.
+- **The editor is the browser's, before the WebP encode.** Crop to the
+  photo's frame and rotate by quarter turns; the result goes through the same
+  browser pipeline as every photo (ADR-0022 D2). No server sees the original.
+- **The frame is fixed per use** (the cover's aspect), shown as a mask over
+  the photo. Dragging moves the photo, not the frame. Every control has a
+  keyboard equivalent and a name: «Повернути», «Скинути», «Готово».
+- **Upload states are words**: «Завантажуємо фото…», then the photo itself.
+  A failure says what to do and keeps the step.
+- One component, used by the space and the object stepper and by both
+  settings pages.
+
+### 5.26 «Показати ще» ends every long list
+
+**New 2026-09-25 (ADR-0034 D13).**
+
+- Portions of 20. At the end of the list, a visible «Показати ще».
+- **It is a real link** to the next portion's address (`?page=N` or a cursor),
+  so it works without JavaScript and a crawler follows it (ADR-0024 D3,
+  ADR-0032).
+- **It loads by itself** when it scrolls into view, appending the next portion
+  in place; the link stays the fallback. Focus stays where the reader was, and
+  the new items are announced once in a polite live region.
+- **The footer stays reachable**: automatic loading stops after a few portions
+  in a row, and the button then waits for a press.
+- A later portion's own address answers `noindex, follow`; the first page is
+  the canonical. An address past the end is a real 404.
+- It applies to the feed, «Рослини й тварини», species pages, profiles, space
+  pages, topic pages and Bookmarks.
+
+### 5.27 A photo collage
+
+**New 2026-09-25 (ADR-0037).** A species page shows the latest photographs of
+the species as small photo cards, scattered and slightly overlapping.
+
+- Up to 6 on a phone and 10 on a desktop. The layout is deterministic per
+  photo set (no random rotation per render), so the page does not shift
+  between loads.
+- Each card carries «@автор» and is one link: to its entry, or to the
+  author's profile once the entry is gone. The link's name is the author and
+  what the photo shows (its caption), never "photo".
+- The collage never becomes a carousel or a gallery with its own controls.
+  With no photographs, it is absent — no placeholder.
+- It is not the LCP element and loads lazily below the text (§9).
+
+### 5.28 Pick, or add your own: the species and cultivar fields
+
+**New 2026-09-25 (ADR-0035 D3–D4).**
+
+- **«Вид»** is a search over the standard base by everyday names in uk, bg and
+  ru and by Latin names. The field shows «Наприклад, помідор» /
+  «Наприклад, курка». Rows are the everyday name with the Latin name under
+  it. «Не знаю» is the default and always the first option; «Ввести свій
+  варіант» is always the last.
+- **«Сорт» / «Порода»** lists what the project's objects of that species
+  already use and what gardeners added, filtered by the characters typed.
+  «Не знаю» is the default; «Немає в списку» turns the field into a text
+  input whose value becomes a shared entry at once.
+- **Enter selects only a highlighted row.** Arrow keys highlight; nothing is
+  picked by typing alone.
+- **A search that fails says so** («Пошук зараз недоступний») and keeps «Не
+  знаю» and «Ввести свій варіант» working.
+
+### 5.29 A space's public page reads like a profile
+
+**New 2026-09-25 (ADR-0036 D2–D3).** `/@{handle}/spaces/{slug}` is a header
+then posts, like a Threads profile:
+
+- The header: the space's name as `h1`, its photo as the cover, the region
+  only when the gardener chose to show it, and the gardener as a link.
+- Its plants and animals with public passports, each a link, as compact rows
+  (§5.30).
+- The engagement panel an object passport has: like, bookmark, follow and the
+  comment thread, each a form that works without JavaScript.
+- Its public entries, newest first, with «Показати ще».
+
+### 5.30 A profile has three tabs: Записи · Простори · Об’єкти
+
+**New 2026-09-25 (ADR-0036 D4).** It supersedes §5.7's "Two views: Entries,
+then Objects" and "Each tab says how many things are behind it".
+
+- **Threads' tab strip, with no counts.**
+- **Простори** are two-column cards like Pinterest boards: the space photo, or
+  a collage of its plants' and animals' photos when it has none, then its
+  name.
+- **Об’єкти** are rows like Greg's plant list: the photo, the name, the
+  species and cultivar in everyday words, then the space.
+- Newest-written first, «Показати ще» after 20.
+- **A guest never sees an empty tab**: a tab with nothing public is not drawn.
+
+### 5.31 One up-front acceptance, and a report anyone can send
+
+**New 2026-09-25 (ADR-0038).**
+
+- **The acceptance screen** comes once, before any workspace page: the three
+  documents as links, one required checkbox for the terms and the privacy
+  policy, and two separate, unticked switches «Аналітика» and «Маркетинг».
+  «Прийняти» is the one primary action; declining signs out. Nothing asks
+  again until a document changes.
+- **The report sheet** is a form, not a dialog-only control: a reason from a
+  short list, an explanation, a name and an email, and a good-faith
+  statement, with the address filled in. It works without JavaScript and
+  lands on a page that says what happens next.
+- **«Налаштування cookies»** is reachable from the footer, the phone menu and
+  account settings, and says the current choice in words.
+
+The references are Threads' and Instagram's terms and consent screens and
+Threads' «Report» flow.
 
 ---
 
@@ -1807,6 +1879,13 @@ The `docs/INTERFACE_LOCALE_CONTRACT.md` contract stands, in its current form:
 the interface language is the reader's on every address, **both markets offer
 all three languages**, and the market decides only which one a reader who has
 chosen nothing starts in.
+
+**Decided 2026-09-25 (ADR-0039), shipped by `OVE-536`:** Bulgarian is the
+unprefixed language, Ukrainian moves to `/ua` and Russian stays at `/ru`. The
+switcher's Ukrainian option reads «UA», and every `lang`, `hreflang` and
+`Content-Language` stays `uk`. A reader with no signal starts in Bulgarian,
+and Ukraine's readers in Ukrainian. `OVE-536` rewrites this section to match
+when it ships.
 
 **This section said the opposite until 2026-09-17** — Ukraine as a
 Ukrainian-only market with no language control — and described a production
@@ -2135,10 +2214,13 @@ nobody runs is not a proof**, and `pnpm check:browser-specs` fails on a spec in
 2. A new **component** needs two real call sites. One call site is a page-local
    component, not a system component.
 3. A new **pattern** needs an observed reference and an explicit transfer
-   rationale, or a labeled product hypothesis with a scenario proof. The owner
-   has accepted Threads/vc.ru/Airbnb; do not add unrelated references just to
-   satisfy an arbitrary example count. Canonical Mobbin links live in the
-   execution contract.
+   rationale, or a labeled product hypothesis with a scenario proof. Since
+   2026-09-25 the reference is **Threads, 1:1 in design and styles**, found
+   with the Mobbin MCP and cited in the pull request; the creation stepper
+   (§5.24) is the one named exception (Airbnb, Typeform, drawn in Threads'
+   visual language). Do not add unrelated references just to satisfy an
+   arbitrary example count. Canonical Mobbin links live in the execution
+   contract.
 4. A change that contradicts an ADR needs the ADR amended first.
 
 Research for this system was gathered through Mobbin. Patterns cited above come
