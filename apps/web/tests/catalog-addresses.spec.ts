@@ -111,9 +111,10 @@ test.describe("OVE-388 organism addresses", () => {
       expect(String(formTaxon["@id"])).toMatch(
         new RegExp(`/id/${fixture.formId}$`, "u"),
       );
+      // The species by the name its reader knows it (ADR-0035 D3).
       expect(
         (formTaxon.parentTaxon as { name: string; url: string }).name,
-      ).toMatch(/^Solanum lycopersicum/u);
+      ).toBe("Помідор");
       expect(
         (formTaxon.parentTaxon as { name: string; url: string }).url,
       ).toMatch(new RegExp(`${escapeRegExp(speciesPath)}$`, "u"));

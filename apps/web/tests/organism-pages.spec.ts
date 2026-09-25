@@ -368,7 +368,7 @@ test.describe("an organism's pages (OVE-497)", () => {
     const card = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
     expect(card).not.toContain("Публічний");
     expect(html).toMatch(
-      /<meta name="description" content="Solanum oveum — вид\. У каталозі 621 форма цього виду\./u,
+      /<meta name="description" content="Помідор ове — вид\. У каталозі 621 форма цього виду\./u,
     );
     // No counts of nothing: the paragraph already says nobody has written.
     expect(html).not.toMatch(/>0 записів</u);
