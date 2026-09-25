@@ -49,7 +49,6 @@ export interface InterfaceCopy {
     myGarden: string;
     followedFeed: string;
     bookmarks: string;
-    wishlist: string;
     lineageClaims: string;
     publicProfile: string;
     signIn: string;
@@ -159,7 +158,6 @@ const INTERFACE_COPY = {
       myGarden: "Мій сад",
       followedFeed: "Стрічка підписок",
       bookmarks: "Закладки",
-      wishlist: "Список бажань",
       lineageClaims: "Запити щодо походження",
       publicProfile: "Публічний профіль",
       signIn: "Увійти",
@@ -268,7 +266,6 @@ const INTERFACE_COPY = {
       myGarden: "Моята градина",
       followedFeed: "Следвани записи",
       bookmarks: "Отметки",
-      wishlist: "Списък с желания",
       lineageClaims: "Заявки за произход",
       publicProfile: "Публичен профил",
       signIn: "Вход",
@@ -377,7 +374,6 @@ const INTERFACE_COPY = {
       myGarden: "Мой сад",
       followedFeed: "Лента подписок",
       bookmarks: "Закладки",
-      wishlist: "Список желаний",
       lineageClaims: "Заявки о происхождении",
       publicProfile: "Публичный профиль",
       signIn: "Войти",

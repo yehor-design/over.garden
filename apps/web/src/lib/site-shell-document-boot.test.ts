@@ -60,7 +60,6 @@ describe("the current section, before React is there to say so (ADR-0032 D3)", (
       "/feed",
       "/notifications",
       "/bookmarks",
-      "/wishlist",
       "/garden",
       "/garden/lineage/claims",
       "/garden/profile",

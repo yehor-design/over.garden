@@ -66,7 +66,6 @@ export async function collectErasureDryRunCounts(
     mediaAssetsWithExplicitCover,
     profileFollows,
     profileBlocks,
-    wishlistItems,
     engagementComments,
     engagementBookmarks,
     notificationReceipts,
@@ -125,7 +124,6 @@ export async function collectErasureDryRunCounts(
     countExplicitJournalCovers(executor, requesterUserId),
     countProfileSocialEdges(executor, requesterUserId),
     countProfileBlocks(executor, requesterUserId),
-    countWishlistItems(executor, requesterUserId),
     countEngagementComments(executor, requesterUserId),
     countEngagementBookmarks(executor, requesterUserId),
     countNotificationReceipts(executor, requesterUserId),
@@ -187,7 +185,6 @@ export async function collectErasureDryRunCounts(
     mediaAssetsWithExplicitCover,
     profileFollows,
     profileBlocks,
-    wishlistItems,
     engagementComments,
     engagementBookmarks,
     notificationReceipts,
@@ -552,16 +549,6 @@ export function buildCountProfileBlocksQuery(
         eb("blocked_user_id", "=", requesterUserId),
       ]),
     );
-}
-
-export function buildCountWishlistItemsQuery(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  return executor
-    .selectFrom("wishlist_items")
-    .select(sql<number>`count(*)`.as("count"))
-    .where("owner_user_id", "=", requesterUserId);
 }
 
 export function buildCountEngagementCommentsQuery(
@@ -968,17 +955,6 @@ async function countProfileBlocks(
   requesterUserId: string,
 ) {
   const row = await buildCountProfileBlocksQuery(
-    executor,
-    requesterUserId,
-  ).executeTakeFirst();
-  return toCount(row?.count);
-}
-
-async function countWishlistItems(
-  executor: QueryExecutor,
-  requesterUserId: string,
-) {
-  const row = await buildCountWishlistItemsQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

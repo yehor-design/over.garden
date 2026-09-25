@@ -47,7 +47,6 @@ const PERSONAL_PAGES = [
   "/feed",
   "/notifications",
   "/bookmarks",
-  "/wishlist",
 ] as const;
 
 let pool: Pool;
@@ -108,11 +107,13 @@ test.describe("personal pages use primary navigation and account utilities", () 
       await page
         .locator("[data-site-shell-account-menu-trigger]:visible")
         .click();
-      for (const utility of ["/bookmarks", "/wishlist"]) {
-        await expect(
-          page.locator(`[data-site-shell-account-menu] a[href="${utility}"]`),
-        ).toBeVisible();
-      }
+      await expect(
+        page.locator(`[data-site-shell-account-menu] a[href="/bookmarks"]`),
+      ).toBeVisible();
+      // The wishlist is retired (ADR-0033): the menu has no link to it.
+      await expect(
+        page.locator(`[data-site-shell-account-menu] a[href="/wishlist"]`),
+      ).toHaveCount(0);
       await page.keyboard.press("Escape");
 
       // The half-width bar was a bordered `role="group"` of links. A link
@@ -158,9 +159,7 @@ test.describe("axe, empty and populated, at 375 px and 1440 px", () => {
   test("the populated shelves are clean at both widths", async ({ page }) => {
     await seedShelves();
     try {
-      for (const address of ["/bookmarks", "/wishlist"]) {
-        await scanBothWidths(page, address, `${address} (populated)`);
-      }
+      await scanBothWidths(page, "/bookmarks", "/bookmarks (populated)");
     } finally {
       await clearShelves();
     }
@@ -171,8 +170,9 @@ test.describe("removing something, and taking it back", () => {
   test("a removal offers Undo, and Undo puts it back", async ({ page }) => {
     await seedShelves();
     try {
-      await page.goto("/wishlist", { waitUntil: "load" });
-      await expect(page.getByText("Де Барао")).toBeVisible();
+      await page.goto("/bookmarks", { waitUntil: "load" });
+      const shelf = page.locator('[data-saved-shelf="bookmarks"]');
+      await expect(shelf.getByText("Де Барао").first()).toBeVisible();
 
       await page
         .locator('[data-shelf-remove="true"]')
@@ -182,20 +182,21 @@ test.describe("removing something, and taking it back", () => {
       const notice = page.locator('[data-shelf-notice="true"]');
       await expect(notice).toBeVisible();
       // The notice names what it removed (`OVE-502`).
-      await expect(notice).toContainText(
-        "«Де Барао» прибрано зі списку бажань",
-      );
+      await expect(notice).toContainText("«Де Барао» прибрано із закладок");
       await expect(
-        page.locator('[data-saved-shelf="wishlist"]').getByText("Де Барао"),
+        page.locator('[data-saved-shelf="bookmarks"]').getByText("Де Барао"),
       ).toHaveCount(0);
 
       await notice.getByRole("button", { name: "Повернути" }).click();
-      // The address it lands on, not "an address containing /wishlist": the
+      // The address it lands on, not "an address containing /bookmarks": the
       // page it is leaving already matches that, so the looser pattern
       // resolves before the navigation and asserts the old document.
-      await page.waitForURL(/\/wishlist\?outcome=restored/u);
+      await page.waitForURL(/\/bookmarks\?outcome=restored/u);
       await expect(
-        page.locator('[data-saved-shelf="wishlist"]').getByText("Де Барао"),
+        page
+          .locator('[data-saved-shelf="bookmarks"]')
+          .getByText("Де Барао")
+          .first(),
       ).toBeVisible();
     } finally {
       await clearShelves();
@@ -204,7 +205,7 @@ test.describe("removing something, and taking it back", () => {
 });
 
 test.describe("before the bundle runs", () => {
-  test("the wishlist removal and the erasure request post to a real endpoint", async ({
+  test("the bookmark removal and the erasure request post to a real endpoint", async ({
     browser,
     baseURL,
   }) => {
@@ -215,7 +216,7 @@ test.describe("before the bundle runs", () => {
       await signGardenerInto(context, baseURL);
       const page = await context.newPage();
 
-      for (const address of ["/wishlist", "/erasure"]) {
+      for (const address of ["/bookmarks", "/erasure"]) {
         const response = await page.goto(address, { waitUntil: "load" });
         expect(response?.status(), address).toBe(200);
         await expectRealPostEndpoints(page, address);
@@ -300,14 +301,8 @@ async function signGardenerInto(context: BrowserContext, baseURL: string) {
   ]);
 }
 
-/** One bookmark and one wishlist item, straight into the tables they live in. */
+/** One bookmark, straight into the table it lives in. */
 async function seedShelves() {
-  await pool.query(
-    `insert into wishlist_items (owner_user_id, catalog_item_id, source_surface)
-     values ($1::uuid, $2::uuid, 'public_variety')
-     on conflict (owner_user_id, catalog_item_id) do nothing`,
-    [gardener.id, fixture.formId],
-  );
   await pool.query(
     `insert into engagement_bookmarks (owner_user_id, target_kind, target_ref, bookmark_state)
      values ($1::uuid, 'variety', $2::text, 'active')
@@ -318,10 +313,6 @@ async function seedShelves() {
 }
 
 async function clearShelves() {
-  await pool.query(
-    `delete from wishlist_items where owner_user_id = $1::uuid`,
-    [gardener.id],
-  );
   await pool.query(
     `delete from engagement_bookmarks where owner_user_id = $1::uuid`,
     [gardener.id],

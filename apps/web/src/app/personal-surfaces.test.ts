@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
  * Both halves are asserted here because they are decided in two different
  * places and had drifted apart: the robots directive is the page's own
  * metadata, and the cache header is the proxy's — where `/notifications`,
- * `/bookmarks`, `/wishlist` and `/feed` were simply absent from the list, so a
+ * `/bookmarks` and `/feed` were simply absent from the list, so a
  * page whose body is one person's data was leaving its cache header to
  * whatever Next chose.
  */
@@ -18,7 +18,6 @@ vi.mock("@/server/interface-localization", () => ({
 const LOCALE_SURFACES = [
   ["/notifications", () => import("./[locale]/notifications/page")],
   ["/bookmarks", () => import("./[locale]/bookmarks/page")],
-  ["/wishlist", () => import("./[locale]/wishlist/page")],
   ["/feed", () => import("./[locale]/feed/page")],
 ] as const;
 
@@ -57,14 +56,13 @@ describe("the reader's own pages", () => {
     for (const path of [
       "/notifications",
       "/bookmarks",
-      "/wishlist",
       "/feed",
       "/erasure",
       "/account/communities",
       "/account/communities/observation-and-care",
       "/garden/privacy/erasure-requests",
       "/bg/notifications",
-      "/ru/wishlist",
+      "/ru/bookmarks",
     ]) {
       expect(isNoStoreAppRoute(path), path).toBe(true);
     }

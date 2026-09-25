@@ -7,7 +7,6 @@ import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimpl
 import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
 import { UserCircleIcon as CircleUserRound } from "@/components/icons/UserCircle";
 import { GitBranchIcon as GitBranch } from "@/components/icons/GitBranch";
-import { HeartIcon as Heart } from "@/components/icons/Heart";
 import { SquaresFourIcon as LayoutDashboard } from "@/components/icons/SquaresFour";
 import { FunnelIcon as ListFilter } from "@/components/icons/Funnel";
 import { SignInIcon as LogIn } from "@/components/icons/SignIn";
@@ -38,7 +37,6 @@ const NAVIGATION_ICONS: Record<SiteShellNavigationKey, InterfaceIcon> = {
   "followed-feed": ListFilter,
   notifications: Bell,
   bookmarks: Bookmark,
-  wishlist: Heart,
   "lineage-claims": GitBranch,
   profile: UserRound,
   you: CircleUserRound,

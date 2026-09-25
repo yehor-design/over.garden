@@ -80,7 +80,6 @@ export interface ErasureDryRunCounts {
   mediaAssetsWithExplicitCover: number;
   profileFollows: number;
   profileBlocks: number;
-  wishlistItems: number;
   engagementComments: number;
   engagementBookmarks: number;
   notificationReceipts: number;
@@ -184,11 +183,10 @@ function buildErasureDryRunDataClasses(
       key: "social_engagement",
       label: "Social and engagement rows",
       description:
-        "Profile follows/blocks, wishlist, comments, bookmarks, and notification receipts owned by or targeting the requester. Anonymous likes are classified not-account-linkable and are not counted here.",
+        "Profile follows/blocks, comments, bookmarks, and notification receipts owned by or targeting the requester. Anonymous likes are classified not-account-linkable and are not counted here.",
       counts: {
         profile_follows: counts.profileFollows,
         profile_blocks: counts.profileBlocks,
-        wishlist_items: counts.wishlistItems,
         comments: counts.engagementComments,
         bookmarks: counts.engagementBookmarks,
         notification_receipts: counts.notificationReceipts,

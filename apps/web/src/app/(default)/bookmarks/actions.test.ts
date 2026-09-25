@@ -205,7 +205,7 @@ describe("the bookmark shelf's removal and Undo (OVE-502)", () => {
     "https://evil.example/bookmarks",
     "//evil.example/bookmarks",
     "/bookmarks/../garden",
-    "/wishlist?kind=species",
+    "/notifications?kind=species",
     "/garden",
   ])(
     "comes back to the shelf itself from the return path %s",

@@ -178,8 +178,8 @@ export interface TabLinkModel {
 /**
  * The same strip, for a family of pages rather than a family of panels.
  *
- * A personal surface is four addresses — the feed, notifications, bookmarks and
- * the wishlist — and a reader who presses one goes to it. That makes these
+ * A personal surface is three addresses — the feed, notifications and
+ * bookmarks — and a reader who presses one goes to it. That makes these
  * links, and links are what this renders: a `tablist` whose "tabs" navigate is
  * a lie to a screen reader, which announces a tab and gets a page. `Tabs` keeps
  * `role="tab"` for panels that are already in the document and this keeps

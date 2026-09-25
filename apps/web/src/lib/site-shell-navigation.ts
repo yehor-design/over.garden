@@ -18,7 +18,6 @@ export type SiteShellNavigationKey =
   | "followed-feed"
   | "notifications"
   | "bookmarks"
-  | "wishlist"
   | "lineage-claims"
   | "profile"
   | "you"
@@ -193,12 +192,6 @@ export function getSiteShellNavigation(
           "bookmarks",
           copy.navigation.bookmarks,
           localizedPath(locale, "/bookmarks"),
-          "utility",
-        ),
-        item(
-          "wishlist",
-          copy.navigation.wishlist,
-          localizedPath(locale, "/wishlist"),
           "utility",
         ),
         item(

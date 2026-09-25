@@ -114,7 +114,7 @@ describe("the way back to the journals", () => {
       "//evil.example/bookmarks",
       "/bookmarks#saved-topic-tomaty",
       "/bookmarks?kind=topic#shelf-outcome",
-      "/wishlist",
+      "/notifications",
       "/uk/bookmarks",
       "/de/bookmarks",
       "/bookmarks/extra",

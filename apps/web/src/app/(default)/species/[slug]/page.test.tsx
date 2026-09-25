@@ -46,9 +46,6 @@ vi.mock("@/server/engagement-repository", () => ({
 vi.mock("@/app/engagement/engagement-viewer", () => ({
   readViewerLikeState: vi.fn(async () => null),
 }));
-vi.mock("@/app/(default)/wishlist/actions", () => ({
-  addCatalogPublicSlugToWishlistAction: vi.fn(),
-}));
 vi.mock("@/app/(default)/variety/[slug]/source-credits", () => ({
   PublicVarietySourceCredits: () => (
     <footer data-organism-section="attribution">Source credits</footer>

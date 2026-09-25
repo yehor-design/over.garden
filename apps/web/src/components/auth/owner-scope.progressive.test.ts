@@ -21,7 +21,6 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const PROGRESSIVE_SURFACES = [
   "app/(default)/garden/catalog/queue/page.tsx",
   "app/(default)/garden/catalog/sources/page.tsx",
-  "app/catalog-evidence-route.tsx",
   "app/catalog-owner-card-controls.tsx",
   // `OVE-450`: the public profile's follow, unfollow, report and block, and
   // the lineage passport's follow and question. Thirty-three call sites across
@@ -34,19 +33,17 @@ const PROGRESSIVE_SURFACES = [
   // `OVE-454`: join, leave, contribute, report and block on a community.
   "components/public/public-community.tsx",
   // `OVE-456`: the reader's own pages and the erasure family. Removing a
-  // bookmark or a wishlist item, asking for erasure, and every control on the
-  // two moderation surfaces.
+  // bookmark, asking for erasure, and every control on the two moderation
+  // surfaces.
   "app/[locale]/bookmarks/page.tsx",
-  "app/[locale]/wishlist/page.tsx",
   "app/(default)/erasure/page.tsx",
   // Since `OVE-500` a community's report decisions live in its moderation
   // parts, and its one setting on a page of its own.
   "app/(default)/account/communities/[slug]/moderation-parts.tsx",
   "app/(default)/account/communities/[slug]/settings/page.tsx",
   "app/(default)/garden/privacy/erasure-requests/page.tsx",
-  // `OVE-457`: the workspace. The garden home's wishlist intent, both lineage
-  // inboxes, the living object's passport and its two controls, and the
-  // profile with its editor.
+  // `OVE-457`: the workspace. Both lineage inboxes, the living object's
+  // passport and its two controls, and the profile with its editor.
   "app/(default)/garden/lineage/claims/page.tsx",
   "app/(default)/garden/lineage/invitations/claim/page.tsx",
   // Since `OVE-491` the passport's provenance forms live on its own page.
@@ -86,7 +83,6 @@ const PROGRESSIVE_ACTIONS = [
   "app/[locale]/lineage/objects/[objectId]/actions.ts",
   "app/[locale]/communities/[slug]/actions.ts",
   "app/(default)/bookmarks/actions.ts",
-  "app/(default)/wishlist/actions.ts",
   "app/(default)/erasure/actions.ts",
   "app/(default)/account/communities/[slug]/actions.ts",
   "app/(default)/garden/privacy/erasure-requests/actions.ts",

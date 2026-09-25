@@ -8,7 +8,7 @@ import {
 } from "./shelf-view";
 
 const ENTRY = "10000000-0000-4000-8000-0000000000e1";
-const CATALOG_ITEM = "c0ffee00-0000-4000-8000-000000000101";
+const OBJECT = "c0ffee00-0000-4000-8000-000000000101";
 
 /** The query of an address, as a page's `searchParams` would hold it. */
 function queryOf(href: string) {
@@ -20,9 +20,6 @@ describe("the view a shelf action comes back to (OVE-502)", () => {
     ["bookmarks", "uk", "/bookmarks?kind=journal_entry&page=2"],
     ["bookmarks", "bg", "/bg/bookmarks?kind=variety"],
     ["bookmarks", "ru", "/ru/bookmarks?page=3"],
-    ["wishlist", "uk", "/wishlist?kind=species&page=2"],
-    ["wishlist", "bg", "/bg/wishlist?kind=breed"],
-    ["wishlist", "ru", "/ru/wishlist"],
   ] as const)(
     "keeps the %s view it was pressed in, in %s",
     (shelf, locale, view) => {
@@ -40,8 +37,8 @@ describe("the view a shelf action comes back to (OVE-502)", () => {
         "uk",
       ),
     ).toBe("/bookmarks?kind=topic&page=2");
-    expect(shelfViewPath("wishlist", "/bg/wishlist?token=opaque", "bg")).toBe(
-      "/bg/wishlist",
+    expect(shelfViewPath("bookmarks", "/bg/bookmarks?token=opaque", "bg")).toBe(
+      "/bg/bookmarks",
     );
   });
 
@@ -50,8 +47,8 @@ describe("the view a shelf action comes back to (OVE-502)", () => {
       shelfViewPath("bookmarks", "/bookmarks?kind=%3Cscript%3E&page=2", "uk"),
     ).toBe("/bookmarks?page=2");
     expect(
-      shelfViewPath("wishlist", "/wishlist?kind=species&page=1%200", "uk"),
-    ).toBe("/wishlist?kind=species");
+      shelfViewPath("bookmarks", "/bookmarks?kind=topic&page=1%200", "uk"),
+    ).toBe("/bookmarks?kind=topic");
     expect(
       shelfViewPath("bookmarks", `/bookmarks?kind=${"a".repeat(41)}`, "uk"),
     ).toBe("/bookmarks");
@@ -71,6 +68,7 @@ describe("the view a shelf action comes back to (OVE-502)", () => {
     "//evil.example/bookmarks",
     "/\\evil.example/bookmarks",
     "/%2fevil.example/bookmarks",
+    // The retired wishlist's address (ADR-0033) is somewhere else.
     "/wishlist?kind=species",
     "/garden?kind=variety",
     "/bookmarks/extra",
@@ -84,15 +82,12 @@ describe("the view a shelf action comes back to (OVE-502)", () => {
 
   it("falls back from a form field that is a file, not a path", () => {
     expect(
-      shelfViewPath("wishlist", new File(["/wishlist"], "view.txt"), "ru"),
-    ).toBe("/ru/wishlist");
+      shelfViewPath("bookmarks", new File(["/bookmarks"], "view.txt"), "ru"),
+    ).toBe("/ru/bookmarks");
   });
 
-  it("never lands one shelf's answer on the other shelf", () => {
-    expect(shelfViewPath("wishlist", "/bookmarks?kind=topic", "uk")).toBe(
-      "/wishlist",
-    );
-    expect(shelfViewPath("bookmarks", "/ru/wishlist?page=2", "ru")).toBe(
+  it("never lands an answer on another page's address", () => {
+    expect(shelfViewPath("bookmarks", "/ru/notifications?page=2", "ru")).toBe(
       "/ru/bookmarks",
     );
   });
@@ -111,12 +106,14 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
     );
     // Not even a fragment the view carried: it named a row that is gone.
     expect(
-      shelfOutcomeHref(`/wishlist#saved-${CATALOG_ITEM}`, {
+      shelfOutcomeHref(`/bookmarks#saved-lineage_object-${OBJECT}`, {
         outcome: "removed",
         action: "remove",
-        target: CATALOG_ITEM,
+        target: `lineage_object:${OBJECT}`,
       }),
-    ).toBe(`/wishlist?outcome=removed&action=remove&target=${CATALOG_ITEM}`);
+    ).toBe(
+      `/bookmarks?outcome=removed&action=remove&target=lineage_object%3A${OBJECT}`,
+    );
   });
 
   it("lands a refused Undo on the notice above the list, because its row is not there", () => {
@@ -130,13 +127,13 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
       "/bookmarks?kind=variety&outcome=failed&action=restore&target=variety%3Apomidor-cheri-0000000101#shelf-outcome",
     );
     expect(
-      shelfOutcomeHref("/ru/wishlist", {
+      shelfOutcomeHref("/ru/bookmarks", {
         outcome: "failed",
         action: "restore",
-        target: CATALOG_ITEM,
+        target: `lineage_object:${OBJECT}`,
       }),
     ).toBe(
-      `/ru/wishlist?outcome=failed&action=restore&target=${CATALOG_ITEM}#shelf-outcome`,
+      `/ru/bookmarks?outcome=failed&action=restore&target=lineage_object%3A${OBJECT}#shelf-outcome`,
     );
   });
 
@@ -151,26 +148,26 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
       "/bookmarks?kind=variety&outcome=restored&action=restore&target=variety%3Apomidor-cheri-0000000101#saved-variety-pomidor-cheri-0000000101",
     );
     expect(
-      shelfOutcomeHref("/ru/wishlist?page=2", {
+      shelfOutcomeHref("/ru/bookmarks?page=2", {
         outcome: "failed",
         action: "remove",
-        target: CATALOG_ITEM,
+        target: `lineage_object:${OBJECT}`,
       }),
     ).toBe(
-      `/ru/wishlist?page=2&outcome=failed&action=remove&target=${CATALOG_ITEM}#saved-${CATALOG_ITEM}`,
+      `/ru/bookmarks?page=2&outcome=failed&action=remove&target=lineage_object%3A${OBJECT}#saved-lineage_object-${OBJECT}`,
     );
   });
 
   it("replaces an outcome the view already carried rather than adding a second", () => {
     const href = shelfOutcomeHref(
-      "/wishlist?outcome=removed&action=remove&target=stale",
-      { outcome: "restored", action: "restore", target: CATALOG_ITEM },
+      "/bookmarks?outcome=removed&action=remove&target=stale",
+      { outcome: "restored", action: "restore", target: `topic:${OBJECT}` },
     );
     const query = new URL(href, "https://over.garden").searchParams;
 
     expect(query.getAll("outcome")).toEqual(["restored"]);
     expect(query.getAll("action")).toEqual(["restore"]);
-    expect(query.getAll("target")).toEqual([CATALOG_ITEM]);
+    expect(query.getAll("target")).toEqual([`topic:${OBJECT}`]);
   });
 
   it("names a row by the same target an outcome names", () => {
@@ -180,7 +177,6 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
     expect(shelfRowAnchor("variety:pomidor-cheri-0000000101")).toBe(
       "saved-variety-pomidor-cheri-0000000101",
     );
-    expect(shelfRowAnchor(CATALOG_ITEM)).toBe(`saved-${CATALOG_ITEM}`);
     // Whatever arrives, the id is one a fragment can name.
     expect(shelfRowAnchor('a.b c/d"<x>')).toMatch(/^saved-[A-Za-z0-9_-]+$/u);
   });
@@ -190,7 +186,6 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
     ["restored", "restore", "variety:pomidor-cheri-0000000101"],
     ["failed", "restore", "topic:tomaty"],
     ["failed", "remove", `lineage_object:${ENTRY}`],
-    ["removed", "remove", CATALOG_ITEM],
   ] as const)(
     "reads back the %s outcome of %s it wrote",
     (outcome, action, target) => {
@@ -213,16 +208,20 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
       readShelfOutcome({
         outcome: ["restored", "failed"],
         action: ["restore", "remove"],
-        target: [CATALOG_ITEM, "variety:other"],
+        target: [`topic:${OBJECT}`, "variety:other"],
       }),
-    ).toEqual({ outcome: "restored", action: "restore", target: CATALOG_ITEM });
+    ).toEqual({
+      outcome: "restored",
+      action: "restore",
+      target: `topic:${OBJECT}`,
+    });
   });
 
   it.each([
     [{}],
     [{ outcome: "removed", action: "remove" }],
-    [{ outcome: "deleted", action: "remove", target: CATALOG_ITEM }],
-    [{ outcome: "removed", action: "toggle", target: CATALOG_ITEM }],
+    [{ outcome: "deleted", action: "remove", target: `topic:${OBJECT}` }],
+    [{ outcome: "removed", action: "toggle", target: `topic:${OBJECT}` }],
     [{ outcome: "removed", action: "remove", target: "" }],
     [
       {
@@ -249,7 +248,8 @@ describe("what a shelf action says when it gets back (OVE-502)", () => {
         target: `variety:${"a".repeat(129)}`,
       },
     ],
-    [{ outcome: "removed", action: "remove", target: `${CATALOG_ITEM}0` }],
+    // A bare catalogue id was the retired wishlist's target (ADR-0033).
+    [{ outcome: "removed", action: "remove", target: OBJECT }],
     // The addresses the shelves used before OVE-502 say nothing any more.
     [{ undoKind: "variety", undoRef: "pomidor-cheri-0000000101" }],
     [{ undoSlug: "pomidor-cheri-0000000101" }],

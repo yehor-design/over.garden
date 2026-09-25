@@ -73,7 +73,6 @@ const QUERY_KEYS = new Set([
   "unread",
   "view",
   "entry",
-  "wishlist",
   "saveProgress",
 ]);
 const ROUTE_PATTERNS = [
@@ -89,7 +88,7 @@ const ROUTE_PATTERNS = [
   // Unprefixed too: since ADR-0029 and OVE-460 the unprefixed address is the
   // canonical one and renders in the reader's language, and a held action
   // pressed on `/journals` was refused as "invalid" (`OVE-504`).
-  /^\/(?:(?:uk|bg|ru)\/)?(?:objects|journals|knowledge|feed|notifications|bookmarks|wishlist)$/,
+  /^\/(?:(?:uk|bg|ru)\/)?(?:objects|journals|knowledge|feed|notifications|bookmarks)$/,
   /^\/garden$/,
   /^\/garden\/objects\/[0-9a-f-]{36}$/,
   /^\/garden\/(?:profile|lineage\/claims|lineage\/invitations\/claim)$/,

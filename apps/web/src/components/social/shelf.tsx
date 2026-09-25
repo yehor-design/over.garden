@@ -9,13 +9,9 @@ import { Toast, ToastRegion } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
 /**
- * The shelf: what bookmarks and the wishlist are both made of (`OVE-456`).
- *
- * They were two lists with two row shapes, two removal affordances and two
- * ideas of what a saved thing looks like — one an `<li>` of flex boxes with a
- * toggle borrowed from the public page, the other an `<li>` of flex boxes with
- * a bare submit button. A reader has one mental model of "things I saved", so
- * there is one row and one way to take a thing off it.
+ * The shelf Bookmarks is made of (`OVE-456`): one row shape and one way to
+ * take a thing off it, because a reader has one mental model of "things I
+ * saved".
  */
 export function ShelfRow({
   kindLabel,

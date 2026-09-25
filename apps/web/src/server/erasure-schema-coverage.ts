@@ -264,16 +264,6 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
-    id: "wishlist_items.owner_user_id",
-    table: "wishlist_items",
-    columnOrPath: "owner_user_id",
-    kind: "fk",
-    disposition: "delete",
-    rationale: "ON DELETE CASCADE.",
-    dryRunOwned: true,
-    executionOwned: true,
-  },
-  {
     id: "engagement_comments.author_user_id",
     table: "engagement_comments",
     columnOrPath: "author_user_id",

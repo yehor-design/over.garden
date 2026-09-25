@@ -211,8 +211,8 @@ describe("/{locale}/bookmarks", () => {
     expect(html).toContain(`href="/variety/${VARIETY}"`);
     expect(html).toContain(`aria-label="Відкрити: Pomidor Cheri"`);
     expect(html).toContain('aria-pressed="true"');
-    // `OVE-456` AC4: bookmarks and the wishlist share one row and one removal
-    // affordance, and the affordance names what it removes.
+    // `OVE-456` AC4: a saved thing has one row and one removal affordance,
+    // and the affordance names what it removes.
     expect(html).toContain('data-shelf-row="true"');
     expect(html).toContain('data-shelf-remove="true"');
     expect(html).toContain('aria-label="Прибрати із закладок: Pomidor Cheri"');

@@ -109,8 +109,7 @@ interface ShelfOutcomeNotice {
 }
 
 /**
- * Bookmarks: saved reading, as distinct from the wishlist's wanted organisms
- * (`OVE-502`).
+ * Bookmarks: saved reading (`OVE-502`).
  *
  * A saved entry is drawn as the feed draws it — author, date, what it is
  * about, the gardener's words — and opens with the way back to this view. A
