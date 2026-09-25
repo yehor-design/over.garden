@@ -460,12 +460,6 @@ function guestRows(): Row[] {
       address: localized("/bookmarks"),
     },
     {
-      family: "Wishlist · guest",
-      owner: "OVE-502",
-      role: "guest",
-      address: localized("/wishlist"),
-    },
-    {
       family: "Erasure request · guest",
       owner: "OVE-505",
       role: "guest",
@@ -600,12 +594,6 @@ function memberRowsFor(): Row[] {
       owner: "OVE-502",
       role: "member",
       address: localized("/bookmarks"),
-    },
-    {
-      family: "Wishlist",
-      owner: "OVE-502",
-      role: "member",
-      address: localized("/wishlist"),
     },
     {
       family: "Erasure request",
@@ -1126,7 +1114,6 @@ test("every address no page serves answers a real 404, in the reader's language,
     "topics",
     "variety",
     "wikidata",
-    "wishlist",
   ];
   const addresses: Array<{ path: string; lang: Locale }> = [
     ...CATCH_ALLS.map((family) => ({

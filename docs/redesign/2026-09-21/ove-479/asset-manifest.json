@@ -56,24 +56,6 @@
       ]
     },
     {
-      "key": "empty-wishlist",
-      "name": "Wishlist",
-      "itemUrl": "https://www.thiings.co/things/wishlist",
-      "sourceUrl": "https://lftz25oez4aqbxpq.public.blob.vercel-storage.com/image-gam4qLogSyQtwgpQfwte8x3pjvW5wg.png",
-      "sourceDownloadedAt": "2026-09-21T14:41:51.120Z",
-      "sourceSha256": "ab3e6f3f5bdd9f38862e0510be8b2b739bc71fecd740855b8d234b22cc9cbf98",
-      "filename": "apps/web/public/illustrations/empty-wishlist.webp",
-      "width": 360,
-      "height": 360,
-      "bytes": 23876,
-      "sha256": "a8a2e7ea4062607b2714b804af9a24619f6ff1f2473f395df6276fd3cb3f64f3",
-      "artifactOrigin": "Retained from commit 7d2a1691 (2026-09-17); historical download time was not recorded. Source re-downloaded and visually revalidated today.",
-      "requiredSourceAttribution": "Thiings free-tier terms require attribution; owner decision omits in-product attribution. See EXECUTION_CONTRACT.md. No commercial-license receipt claimed.",
-      "roles": [
-        "empty-wishlist"
-      ]
-    },
-    {
       "key": "empty-notifications",
       "name": "Mailbox",
       "itemUrl": "https://www.thiings.co/things/mailbox",

@@ -163,6 +163,8 @@ number in `apps/web/sql` when these were taken.
 
 | `0079` | `OVE-476` | Account-scoped, versioned publication disclosure receipts, backfilled from surviving historical entry receipts without changing their versions; cascade on account erasure. Apply before deploying the version-aware publication reader. |
 
+| `0080` | `OVE-512` | `drop table wishlist_items` — the wishlist is retired (ADR-0033, owner decision 2026-09-25). Destructive, with the owner's explicit sign-off; apply **after** the release that no longer reads the table. |
+
 `OVE-419` through `OVE-423`, `OVE-427` and `OVE-430` through `OVE-434` need no
 SQL and therefore hold no allocation; under rule 3 none of them may inherit a
 number from this block. The same holds for `OVE-463` and `OVE-466` of phase 5. `OVE-432` grows `JournalDocumentV1` additively at schema

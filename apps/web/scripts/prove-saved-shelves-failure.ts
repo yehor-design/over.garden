@@ -10,15 +10,16 @@ import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity
 import { removeSyntheticGardener } from "../tests/helpers/synthetic-gardener";
 
 /**
- * OVE-502: Bookmarks and the wishlist when their read fails.
+ * OVE-502: Bookmarks when its read fails (the wishlist, the second shelf,
+ * is retired: ADR-0033).
  *
  *   pnpm build && pnpm exec next start -p 3179   # against a LOCAL database
  *   pnpm prove:saved-shelves-failure \
  *     --base-url http://localhost:3179 [--out <dir>]
  *
  * The fault is real, not a mock: a second connection holds an ACCESS
- * EXCLUSIVE lock on the table a shelf reads — `engagement_bookmarks` for
- * Bookmarks, `wishlist_items` for the wishlist. Each page is a **hard load**,
+ * EXCLUSIVE lock on the table the shelf reads, `engagement_bookmarks`. The
+ * page is a **hard load**,
  * the case a postponed boundary can leave on its skeleton for ever
  * (ADR-0023). The proof is that it answers 200 with its frame and title, a
  * failure it names and a retry of the same view — its filter kept — no
@@ -158,31 +159,18 @@ async function main() {
        values ($1::uuid, $2::text, 'credential', $2::uuid, $3::text, now(), now())`,
       [randomUUID(), id, await hashPassword(PASSWORD)],
     );
-    // One saved thing on each shelf: a topic and an offered catalogue item.
+    // One saved thing on the shelf: a topic.
     const topic = await pool.query<{ slug: string }>(
       `select slug from journal_topics where trust_state = 'curated'
         order by slug limit 1`,
     );
-    const catalog = await pool.query<{ id: string }>(
-      `select id::text from catalog_items
-        where identity_state = 'active' and created_by_user_id is null
-          and public_slug is not null
-        order by id limit 1`,
-    );
-    if (!topic.rows[0] || !catalog.rows[0]) {
-      throw new Error(
-        "the local database has no curated topic or catalogue item",
-      );
+    if (!topic.rows[0]) {
+      throw new Error("the local database has no curated topic");
     }
     await pool.query(
       `insert into engagement_bookmarks (owner_user_id, target_kind, target_ref)
        values ($1::uuid, 'topic', $2)`,
       [id, topic.rows[0].slug],
-    );
-    await pool.query(
-      `insert into wishlist_items (owner_user_id, catalog_item_id, source_surface)
-       values ($1::uuid, $2::uuid, 'catalog_item')`,
-      [id, catalog.rows[0].id],
     );
 
     const context = await browser.newContext({
@@ -210,14 +198,6 @@ async function main() {
         "/bookmarks?kind=topic",
         "engagement_bookmarks",
         '[data-saved-shelf="bookmarks"]',
-      ),
-      await prove(
-        page,
-        pool,
-        baseUrl,
-        "/wishlist",
-        "wishlist_items",
-        '[data-saved-shelf="wishlist"]',
       ),
     ];
     await page.goto(`${baseUrl}/bookmarks?kind=topic`);
@@ -252,9 +232,10 @@ async function main() {
   } finally {
     await browser.close();
     if (created) {
-      for (const table of ["engagement_bookmarks", "wishlist_items"]) {
-        await pool.query(`delete from ${table} where owner_user_id = $1`, [id]);
-      }
+      await pool.query(
+        `delete from engagement_bookmarks where owner_user_id = $1`,
+        [id],
+      );
       await removeSyntheticGardener(pool, id);
     }
     await pool.end();

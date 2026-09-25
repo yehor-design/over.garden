@@ -847,7 +847,6 @@ describe("the sealed owner's links", () => {
     expect(hrefsOf(personal!)).toEqual([
       "/garden/profile",
       "/bookmarks",
-      "/wishlist",
       "/garden/lineage/claims",
     ]);
 

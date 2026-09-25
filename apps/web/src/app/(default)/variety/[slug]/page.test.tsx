@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   readPublicCatalogAddress: vi.fn(),
   readPublicVarietyPageByCatalogItemId: vi.fn(),
   getEngagementSummary: vi.fn(),
-  addCatalogPublicSlugToWishlistAction: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   getSiteShellSessionState: vi.fn(),
 }));
@@ -23,11 +22,6 @@ vi.mock("@/server/public-cache", async (importOriginal) => ({
 
 vi.mock("@/server/engagement-repository", () => ({
   getEngagementSummary: mocks.getEngagementSummary,
-}));
-
-vi.mock("@/app/(default)/wishlist/actions", () => ({
-  addCatalogPublicSlugToWishlistAction:
-    mocks.addCatalogPublicSlugToWishlistAction,
 }));
 
 vi.mock("@/server/interface-localization", () => ({
@@ -153,7 +147,7 @@ describe("/variety/[slug]", () => {
     expect(html).not.toContain(">active<");
   });
 
-  it("renders a wishlist action without gating public variety reading", async () => {
+  it("renders its actions without gating public variety reading", async () => {
     const { default: PublicVarietyRoute } = await import("./page");
     const html = renderToStaticMarkup(
       await PublicVarietyRoute({
@@ -161,49 +155,20 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Зберегти до списку бажань");
+    // The wishlist is retired (ADR-0033): no shelf of wanted organisms.
+    expect(html).not.toContain("списку бажань");
     expect(html).toContain('aria-pressed="false"');
     expect(html).toContain("/auth/intent/start");
     expect(html).toContain('name="action" value="bookmark"');
     expect(html).toContain('name="action" value="comment"');
     expect(html).not.toContain("/api/engagement");
-    expect(html).toContain('name="catalogPublicSlug"');
-    expect(html).toContain('value="pomidor-cheri-0000000101"');
+    expect(html).not.toContain('name="catalogPublicSlug"');
     // Adding the variety goes through object setup, which offers the
     // gardener's own objects of it first (OVE-485).
     expect(html).toContain(
       "/garden/objects/new?catalog=pomidor-cheri-0000000101",
     );
     expect(html).toContain("First ripe cluster");
-  });
-
-  it("renders the saved wishlist receipt from a region of its own, never from the card", async () => {
-    // The receipt is what a redirect leaves in the address, so it is request
-    // data — and the card is a static document (ADR-0032 D2): it renders the
-    // same bytes whatever the query string says.
-    const { default: PublicVarietyRoute } = await import("./page");
-    const card = renderToStaticMarkup(
-      await PublicVarietyRoute({
-        params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
-        searchParams: new Promise(() => undefined),
-      }),
-    );
-    expect(card).not.toContain("Збережено до вашого списку бажань.");
-
-    const { WishlistSavedReceipt } =
-      await import("@/app/catalog-evidence-route");
-    const label = "Збережено до вашого списку бажань.";
-    const saved = await WishlistSavedReceipt({
-      searchParams: Promise.resolve({ wishlist: "saved" }),
-      label,
-    });
-    expect(renderToStaticMarkup(saved)).toContain(label);
-    expect(
-      await WishlistSavedReceipt({
-        searchParams: Promise.resolve({}),
-        label,
-      }),
-    ).toBeNull();
   });
 
   it("indexes thin public variety metadata", async () => {

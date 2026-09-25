@@ -101,7 +101,7 @@ const UK_COPY = {
     social_engagement: {
       label: "Соціальні та engagement-рядки",
       description:
-        "Підписки/блоки профілів, wishlist, коментарі, закладки та сповіщення. Анонімні likes не обліковуються як прив'язка до акаунта.",
+        "Підписки/блоки профілів, коментарі, закладки та сповіщення. Анонімні likes не обліковуються як прив'язка до акаунта.",
     },
     community: {
       label: "Спільнота та модераційні посилання",
@@ -167,7 +167,6 @@ const UK_COPY = {
     explicit_cover_refs: "явні обкладинки",
     profile_follows: "підписки профілів",
     profile_blocks: "блоки профілів",
-    wishlist_items: "wishlist",
     comments: "коментарі",
     bookmarks: "закладки",
     notification_receipts: "сповіщення",
@@ -297,7 +296,7 @@ const BG_COPY: OperatorErasureCopy = {
     social_engagement: {
       label: "Социални и engagement редове",
       description:
-        "Профилни follows/blocks, wishlist, коментари, отметки и известия. Анонимните likes не се броят като връзка към акаунт.",
+        "Профилни follows/blocks, коментари, отметки и известия. Анонимните likes не се броят като връзка към акаунт.",
     },
     community: {
       label: "Общност и модераторски референции",
@@ -362,7 +361,6 @@ const BG_COPY: OperatorErasureCopy = {
     explicit_cover_refs: "явни корици",
     profile_follows: "последвания на профили",
     profile_blocks: "блокирания на профили",
-    wishlist_items: "списък с желания",
     comments: "коментари",
     bookmarks: "отметки",
     notification_receipts: "известия",
@@ -490,7 +488,7 @@ const RU_COPY: OperatorErasureCopy = {
     social_engagement: {
       label: "Социальные и engagement-строки",
       description:
-        "Подписки/блоки профилей, wishlist, комментарии, закладки и уведомления. Анонимные likes не считаются привязкой к аккаунту.",
+        "Подписки/блоки профилей, комментарии, закладки и уведомления. Анонимные likes не считаются привязкой к аккаунту.",
     },
     community: {
       label: "Сообщество и модераторские ссылки",
@@ -555,7 +553,6 @@ const RU_COPY: OperatorErasureCopy = {
     explicit_cover_refs: "явные обложки",
     profile_follows: "подписки профилей",
     profile_blocks: "блокировки профилей",
-    wishlist_items: "список желаний",
     comments: "комментарии",
     bookmarks: "закладки",
     notification_receipts: "уведомления",

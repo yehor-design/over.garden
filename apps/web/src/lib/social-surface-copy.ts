@@ -6,7 +6,6 @@ export interface SocialSurfaceCopy {
     feed: string;
     notifications: string;
     bookmarks: string;
-    wishlist: string;
   };
   feed: {
     title: string;
@@ -137,29 +136,6 @@ export interface SocialSurfaceCopy {
       topic: string;
     };
   };
-  wishlist: {
-    title: string;
-    description: string;
-    signIn: string;
-    empty: string;
-    emptyTitle: string;
-    emptyAction: string;
-    all: string;
-    plants: string;
-    species: string;
-    breeds: string;
-    /** What one row is: "Сорт рослини", "Вид", "Порода". */
-    kinds: { plant_variety: string; species: string; breed: string };
-    start: string;
-    filtersLabel: string;
-    removedNotice: string;
-    removedNoticeUnnamed: string;
-    restoredNotice: string;
-    restoredNoticeUnnamed: string;
-    removeLabel: string;
-    failed: { remove: string; restore: string };
-    unavailable: string;
-  };
   common: {
     saved: string;
     remove: string;
@@ -187,7 +163,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       feed: "Стрічка",
       notifications: "Події",
       bookmarks: "Закладки",
-      wishlist: "Список бажань",
     },
     feed: {
       title: "Стрічка підписок",
@@ -332,33 +307,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       topics: "Теми",
       filtersLabel: "Тип закладок",
     },
-    wishlist: {
-      removedNotice: "«{name}» прибрано зі списку бажань",
-      removedNoticeUnnamed: "Прибрано зі списку бажань",
-      restoredNotice: "«{name}» повернуто до списку бажань",
-      restoredNoticeUnnamed: "Повернуто до списку бажань",
-      removeLabel: "Прибрати зі списку бажань: {name}",
-      failed: {
-        remove:
-          "Не вдалося прибрати, запис у списку лишився. Спробуйте ще раз.",
-        restore: "Не вдалося повернути до списку бажань. Спробуйте ще раз.",
-      },
-      unavailable: "Цього більше немає в каталозі.",
-      emptyTitle: "Список бажань порожній",
-      emptyAction: "Відкрити каталог",
-      title: "Список бажань",
-      description: "Види, сорти й породи, які ви хочете виростити чи завести.",
-      signIn: "Увійдіть, щоб відкрити свій список бажань.",
-      empty:
-        "Додайте вид, сорт чи породу з каталогу, не додаючи їх у свій сад.",
-      all: "Усі",
-      plants: "Сорти рослин",
-      species: "Види",
-      breeds: "Породи",
-      kinds: { plant_variety: "Сорт рослини", species: "Вид", breed: "Порода" },
-      start: "Почати вести журнал",
-      filtersLabel: "Тип списку бажань",
-    },
     common: {
       pagePlace: (page, pageCount) => `Сторінка ${page} з ${pageCount}`,
       noResultsTitle: "Нічого не збіглося",
@@ -390,7 +338,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       feed: "Емисия",
       notifications: "Известия",
       bookmarks: "Отметки",
-      wishlist: "Списък с желания",
     },
     feed: {
       title: "Емисия от следвани",
@@ -536,37 +483,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       topics: "Теми",
       filtersLabel: "Тип отметки",
     },
-    wishlist: {
-      removedNotice: "„{name}“ е премахнато от списъка с желания",
-      removedNoticeUnnamed: "Премахнато от списъка с желания",
-      restoredNotice: "„{name}“ е върнато в списъка с желания",
-      restoredNoticeUnnamed: "Върнато в списъка с желания",
-      removeLabel: "Премахни от списъка с желания: {name}",
-      failed: {
-        remove:
-          "Премахването не успя, записът в списъка остава. Опитайте отново.",
-        restore: "Връщането в списъка с желания не успя. Опитайте отново.",
-      },
-      unavailable: "Това вече го няма в каталога.",
-      emptyTitle: "Списъкът с желания е празен",
-      emptyAction: "Отвори каталога",
-      title: "Списък с желания",
-      description: "Видове, сортове и породи, които искате да отгледате.",
-      signIn: "Влезте, за да отворите списъка си с желания.",
-      empty:
-        "Добавете вид, сорт или порода от каталога, без да ги добавяте в градината си.",
-      all: "Всички",
-      plants: "Растителни сортове",
-      species: "Видове",
-      breeds: "Породи",
-      kinds: {
-        plant_variety: "Растителен сорт",
-        species: "Вид",
-        breed: "Порода",
-      },
-      start: "Започни дневник",
-      filtersLabel: "Тип списък с желания",
-    },
     common: {
       pagePlace: (page, pageCount) => `Страница ${page} от ${pageCount}`,
       noResultsTitle: "Нищо не съвпадна",
@@ -596,7 +512,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       feed: "Лента",
       notifications: "События",
       bookmarks: "Закладки",
-      wishlist: "Список желаний",
     },
     feed: {
       title: "Лента подписок",
@@ -741,38 +656,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       varieties: "Сорта",
       topics: "Темы",
       filtersLabel: "Тип закладок",
-    },
-    wishlist: {
-      removedNotice: "«{name}» убрано из списка желаний",
-      removedNoticeUnnamed: "Убрано из списка желаний",
-      restoredNotice: "«{name}» возвращено в список желаний",
-      restoredNoticeUnnamed: "Возвращено в список желаний",
-      removeLabel: "Убрать из списка желаний: {name}",
-      failed: {
-        remove:
-          "Не удалось убрать, запись в списке осталась. Попробуйте ещё раз.",
-        restore: "Не удалось вернуть в список желаний. Попробуйте ещё раз.",
-      },
-      unavailable: "Этого больше нет в каталоге.",
-      emptyTitle: "Список желаний пуст",
-      emptyAction: "Открыть каталог",
-      title: "Список желаний",
-      description:
-        "Виды, сорта и породы, которые вы хотите вырастить или завести.",
-      signIn: "Войдите, чтобы открыть свой список желаний.",
-      empty:
-        "Добавьте вид, сорт или породу из каталога, не добавляя их в свой сад.",
-      all: "Все",
-      plants: "Сорта растений",
-      species: "Виды",
-      breeds: "Породы",
-      kinds: {
-        plant_variety: "Сорт растения",
-        species: "Вид",
-        breed: "Порода",
-      },
-      start: "Начать журнал",
-      filtersLabel: "Тип списка желаний",
     },
     common: {
       pagePlace: (page, pageCount) => `Страница ${page} из ${pageCount}`,

@@ -2,15 +2,12 @@ import type { Metadata } from "next";
 import NextLink from "next/link";
 import { notFound, permanentRedirect, unstable_rethrow } from "next/navigation";
 import { cache, Suspense } from "react";
-import { BookmarkSimpleIcon as Bookmark } from "@/components/icons/BookmarkSimple";
 import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
 import { CaretRightIcon as ChevronRight } from "@/components/icons/CaretRight";
 import { PlusIcon as Plus } from "@/components/icons/Plus";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { PublicVarietySourceCredits } from "@/app/(default)/variety/[slug]/source-credits";
-import { addCatalogPublicSlugToWishlistAction } from "@/app/(default)/wishlist/actions";
-import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
 import {
   catalogFactValue,
@@ -105,7 +102,6 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { HiddenField } from "@/components/ui/hidden-field";
 
 export interface PublicCatalogEvidenceRouteProps {
   params: Promise<{ slug: string; form?: string; locale?: string }>;
@@ -517,36 +513,6 @@ async function renderCatalogEvidenceCard(
               <Plus aria-hidden="true" />
               {getPublicCatalogBrowseCopy(routeLocale).addToGarden}
             </NextLink>
-          ) : null}
-          {isPlantVariety ? (
-            <OwnerScopedProgressiveForm
-              action={addCatalogPublicSlugToWishlistAction}
-            >
-              <HiddenField
-                name="catalogPublicSlug"
-                value={page.catalog.publicSlug}
-              />
-              <HiddenField name="locale" value={locale} />
-              <HiddenField name="returnTo" value={publicPath} />
-              <button
-                type="submit"
-                className={buttonVariants({
-                  variant: "secondary",
-                  className: "self-start",
-                })}
-              >
-                <Bookmark aria-hidden="true" />
-                {publicCopy.variety.saveToWishlist}
-              </button>
-            </OwnerScopedProgressiveForm>
-          ) : null}
-          {isPlantVariety ? (
-            <Suspense fallback={null}>
-              <WishlistSavedReceipt
-                searchParams={props.searchParams}
-                label={publicCopy.variety.savedToWishlist}
-              />
-            </Suspense>
           ) : null}
         </div>
       </header>
@@ -1135,24 +1101,6 @@ function organismFactParagraph(
   });
 }
 
-/** "Saved to your wishlist" — a receipt the redirect leaves in the address. */
-export async function WishlistSavedReceipt({
-  searchParams,
-  label,
-}: {
-  searchParams: PublicCatalogEvidenceRouteProps["searchParams"];
-  label: string;
-}) {
-  const query = (await searchParams) ?? EMPTY_SEARCH_PARAMS;
-  if (firstParam(query.wishlist) !== "saved") return null;
-
-  return (
-    <p className="text-body-sm text-text-muted" role="status">
-      {label}
-    </p>
-  );
-}
-
 /** The panel for this reader: their like state and their held action. */
 async function ViewerCardEngagementPanel({
   locale,
@@ -1339,11 +1287,6 @@ function formatDate(value: Date | string, locale: InterfaceLocale) {
     month: "short",
     day: "numeric",
   });
-}
-
-function firstParam(value: string | string[] | undefined) {
-  if (Array.isArray(value)) return value[0];
-  return value;
 }
 
 /**

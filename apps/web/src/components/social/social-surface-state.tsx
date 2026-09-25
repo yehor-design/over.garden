@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
 
-export type SocialSurface = "feed" | "notifications" | "bookmarks" | "wishlist";
+export type SocialSurface = "feed" | "notifications" | "bookmarks";
 
 export function SocialSurfaceLoading({ surface }: { surface: SocialSurface }) {
   return (

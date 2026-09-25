@@ -33,21 +33,22 @@ import {
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
 
 /**
- * Bookmarks and the wishlist (`OVE-502`).
+ * Bookmarks (`OVE-502`), the one shelf since the wishlist was retired
+ * (ADR-0033).
  *
  *   pnpm build && pnpm exec tsx scripts/run-browser-gate.ts \
  *     --spec=saved-shelves.spec.ts
  *
  * One ordinary member has saved thirteen of another gardener's entries, that
- * gardener's tomato passport, and one entry its author has since withdrawn.
- * They want one catalogue variety and one the catalogue has since retired. A
+ * gardener's tomato passport, and one entry its author has since withdrawn. A
  * second member has saved nothing. What this proves, against a production
  * build and the local database:
  *
  * - **Nothing saved is one way out, and no filters.** The chips that could
  *   only ever show nothing are gone from an empty shelf.
- * - **The two shelves have one name each**, the same in the account menu, the
- *   page title and the sign-in prompt, in UK, BG and RU.
+ * - **The shelf has one name**, the same in the account menu, the page title
+ *   and the sign-in prompt, in UK, BG and RU; the retired wishlist's address
+ *   is a real 404.
  * - **A saved entry reads as a post** and opens with the way back: the entry's
  *   return link names Bookmarks and lands on the same filter and page.
  * - **A removal the database refuses stays on the shelf** and says so beside
@@ -91,7 +92,6 @@ let emptyCookies: Awaited<ReturnType<BrowserContext["cookies"]>> = [];
 let entries: Array<{ id: string; title: string }> = [];
 let goneEntryId: string;
 let passportId: string;
-let retiredCatalogId: string;
 let failTrigger: string | null = null;
 
 test.beforeAll(async ({ browser, baseURL }) => {
@@ -120,13 +120,9 @@ test.beforeAll(async ({ browser, baseURL }) => {
 
 test.afterAll(async () => {
   if (failTrigger) await dropFailingWrites().catch(() => undefined);
-  await pool
-    .query(`delete from catalog_items where id = $1::uuid`, [retiredCatalogId])
-    .catch(() => undefined);
   for (const id of accounts) {
     for (const [table, column] of [
       ["engagement_bookmarks", "owner_user_id"],
-      ["wishlist_items", "owner_user_id"],
       ["journal_entries", "owner_user_id"],
       ["plant_objects", "owner_user_id"],
       ["spaces", "owner_user_id"],
@@ -152,37 +148,39 @@ test("an empty shelf has one way out and no filter chips", async ({
   );
   try {
     const page = await context.newPage();
-    for (const [shelf, action] of [
-      ["/bookmarks", "Знайти журнали"],
-      ["/wishlist", "Відкрити каталог"],
-    ] as const) {
-      await page.goto(shelf, { waitUntil: "load" });
-      const surface = visibleSurface(page);
-      await expect(surface.locator('[data-slot="empty-state"]')).toBeVisible();
-      await expect(
-        surface.locator("[data-bookmark-filters], [data-wishlist-filters]"),
-      ).toHaveCount(0);
-      await expect(surface.getByRole("link", { name: action })).toHaveCount(1);
-      await expectReflow(page);
-      await scanAccessibility(page, testInfo, `${shelf.slice(1)}-empty-375`);
-      await page.screenshot({
-        path: path.join(SCREENSHOTS, `${shelf.slice(1)}-empty-uk-375.png`),
-        fullPage: true,
-      });
+    await page.goto("/bookmarks", { waitUntil: "load" });
+    const surface = visibleSurface(page);
+    await expect(surface.locator('[data-slot="empty-state"]')).toBeVisible();
+    await expect(surface.locator("[data-bookmark-filters]")).toHaveCount(0);
+    await expect(
+      surface.getByRole("link", { name: "Знайти журнали" }),
+    ).toHaveCount(1);
+    await expectReflow(page);
+    await scanAccessibility(page, testInfo, "bookmarks-empty-375");
+    await page.screenshot({
+      path: path.join(SCREENSHOTS, "bookmarks-empty-uk-375.png"),
+      fullPage: true,
+    });
+
+    // The wishlist is retired (ADR-0033): its address is a real 404 in every
+    // language, decided before anything streams.
+    for (const address of ["/wishlist", "/bg/wishlist", "/ru/wishlist"]) {
+      const response = await page.request.get(address, { maxRedirects: 0 });
+      expect(response.status(), address).toBe(404);
     }
   } finally {
     await context.close();
   }
 });
 
-test("each shelf has one name: the menu, the title and the sign-in say it alike, in three languages", async ({
+test("the shelf has one name: the menu, the title and the sign-in say it alike, in three languages", async ({
   browser,
   baseURL,
 }) => {
-  for (const [locale, names] of [
-    ["uk", { bookmarks: "Закладки", wishlist: "Список бажань" }],
-    ["bg", { bookmarks: "Отметки", wishlist: "Списък с желания" }],
-    ["ru", { bookmarks: "Закладки", wishlist: "Список желаний" }],
+  for (const [locale, name] of [
+    ["uk", "Закладки"],
+    ["bg", "Отметки"],
+    ["ru", "Закладки"],
   ] as const) {
     const prefix = locale === "uk" ? "" : `/${locale}`;
     const signedIn = await signedContext(
@@ -195,46 +193,32 @@ test("each shelf has one name: the menu, the title and the sign-in say it alike,
     const guest = await localeContext(browser, baseURL!, locale, DESKTOP);
     try {
       const page = await signedIn.newPage();
-      for (const shelf of ["bookmarks", "wishlist"] as const) {
-        await page.goto(`${prefix}/${shelf}`, { waitUntil: "load" });
-        await expect(visibleSurface(page).locator("h1")).toHaveText(
-          names[shelf],
-        );
-      }
+      await page.goto(`${prefix}/bookmarks`, { waitUntil: "load" });
+      await expect(visibleSurface(page).locator("h1")).toHaveText(name);
       await page
         .locator("[data-site-shell-account-menu-trigger]:visible")
         .click();
       const menu = page.locator('[data-site-shell-account-menu="true"]');
-      for (const shelf of ["bookmarks", "wishlist"] as const) {
-        await expect(menu.locator(`a[href="${prefix}/${shelf}"]`)).toHaveText(
-          names[shelf],
-        );
-      }
+      await expect(menu.locator(`a[href="${prefix}/bookmarks"]`)).toHaveText(
+        name,
+      );
+      await expect(menu.locator(`a[href="${prefix}/wishlist"]`)).toHaveCount(0);
 
       const visitor = await guest.newPage();
-      for (const shelf of ["bookmarks", "wishlist"] as const) {
-        await visitor.goto(
-          `${prefix}/${shelf}?kind=${shelf === "bookmarks" ? "journal_entry" : "species"}`,
-          {
-            waitUntil: "load",
-          },
-        );
-        const prompt = visitor.locator("[data-sign-in-prompt]:visible");
-        await expect(prompt).toContainText(
-          new RegExp(names[shelf].toLowerCase().split(" ")[0]!, "iu"),
-        );
-        // The guest's way in keeps the view they asked for.
-        const next = new URL(
-          (await prompt
-            .locator('a[href^="/auth/sign-in"]')
-            .first()
-            .getAttribute("href"))!,
-          baseURL,
-        ).searchParams.get("next");
-        expect(next).toBe(
-          `${prefix}/${shelf}?kind=${shelf === "bookmarks" ? "journal_entry" : "species"}`,
-        );
-      }
+      await visitor.goto(`${prefix}/bookmarks?kind=journal_entry`, {
+        waitUntil: "load",
+      });
+      const prompt = visitor.locator("[data-sign-in-prompt]:visible");
+      await expect(prompt).toContainText(new RegExp(name, "iu"));
+      // The guest's way in keeps the view they asked for.
+      const next = new URL(
+        (await prompt
+          .locator('a[href^="/auth/sign-in"]')
+          .first()
+          .getAttribute("href"))!,
+        baseURL,
+      ).searchParams.get("next");
+      expect(next).toBe(`${prefix}/bookmarks?kind=journal_entry`);
     } finally {
       await signedIn.close();
       await guest.close();
@@ -426,37 +410,6 @@ test("what is no longer public stays on the shelf, says why, and can still be re
       goneNotice.getByRole("button", { name: "Повернути" }),
     ).toHaveCount(0);
     expect(await bookmarkState(goneEntryId)).toBe("removed");
-
-    await page.goto("/wishlist", { waitUntil: "load" });
-    const retired = page.locator(`#saved-${retiredCatalogId}`);
-    await expect(retired).toHaveAttribute("data-saved-available", "false");
-    await expect(retired).toContainText("Цього більше немає в каталозі.");
-    await expect(page.locator(`#saved-${fixture.formId}`)).toContainText(
-      "Сорт рослини",
-    );
-    await page.screenshot({
-      path: path.join(SCREENSHOTS, "wishlist-uk-1440.png"),
-      fullPage: true,
-    });
-    const removeRetired = retired.getByRole("button", {
-      name: "Прибрати зі списку бажань: Забутий сорт",
-    });
-    await waitForHydration(removeRetired);
-    await removeRetired.click();
-    await page.waitForURL(/outcome=removed/u);
-    const notice = page.locator('[data-shelf-notice="true"]');
-    await expect(notice).toContainText(
-      "«Забутий сорт» прибрано зі списку бажань",
-    );
-    // The catalogue no longer offers it: nothing to put back.
-    await expect(notice.getByRole("button", { name: "Повернути" })).toHaveCount(
-      0,
-    );
-    const left = await pool.query(
-      `select 1 from wishlist_items where owner_user_id = $1::uuid and catalog_item_id = $2::uuid`,
-      [member.id, retiredCatalogId],
-    );
-    expect(left.rowCount).toBe(0);
   } finally {
     await context.close();
   }
@@ -465,7 +418,7 @@ test("what is no longer public stays on the shelf, says why, and can still be re
 test("before the bundle runs, every shelf form posts to a real endpoint", async ({
   browser,
   baseURL,
-}, testInfo) => {
+}) => {
   const context = await signedContext(
     browser,
     baseURL!,
@@ -478,7 +431,7 @@ test("before the bundle runs, every shelf form posts to a real endpoint", async 
   );
   try {
     const page = await context.newPage();
-    for (const address of ["/bookmarks", "/wishlist"]) {
+    for (const address of ["/bookmarks"]) {
       await page.goto(address, { waitUntil: "load" });
       const forms = await page.evaluate(() =>
         // Every form: with scripts off the shelf is still in the streamed,
@@ -500,23 +453,6 @@ test("before the bundle runs, every shelf form posts to a real endpoint", async 
   } finally {
     await context.close();
   }
-
-  const wide = await signedContext(
-    browser,
-    baseURL!,
-    memberCookies,
-    "uk",
-    PHONE,
-  );
-  try {
-    const page = await wide.newPage();
-    await page.goto("/wishlist", { waitUntil: "load" });
-    await expect(page.locator('[data-saved-shelf="wishlist"]')).toBeVisible();
-    await expectReflow(page);
-    await scanAccessibility(page, testInfo, "wishlist-375");
-  } finally {
-    await wide.close();
-  }
 });
 
 test("an ended session sends a removal to sign-in and back to the shelf, and writes nothing", async ({
@@ -532,27 +468,25 @@ test("an ended session sends a removal to sign-in and back to the shelf, and wri
   );
   try {
     const page = await context.newPage();
-    await page.goto("/wishlist", { waitUntil: "load" });
-    const remove = page
-      .locator(`#saved-${fixture.formId}`)
-      .getByRole("button", { name: "Прибрати зі списку бажань: Де Барао" });
+    const saved = entries[1]!;
+    await page.goto("/bookmarks", { waitUntil: "load" });
+    const row = page.locator(`#saved-journal_entry-${saved.id}`);
+    const remove = row.getByRole("button", {
+      name: `Прибрати із закладок: ${saved.title}`,
+    });
     await waitForHydration(remove);
     await expireSyntheticSession(pool, context, member.id);
 
     await remove.click();
     await page.waitForURL(/\/auth\/sign-in/u);
-    expect(new URL(page.url()).searchParams.get("next")).toBe("/wishlist");
-    const kept = await pool.query(
-      `select 1 from wishlist_items where owner_user_id = $1::uuid and catalog_item_id = $2::uuid`,
-      [member.id, fixture.formId],
-    );
-    expect(kept.rowCount).toBe(1);
+    expect(new URL(page.url()).searchParams.get("next")).toBe("/bookmarks");
+    expect(await bookmarkState(saved.id)).toBe("active");
 
     await signInOnScreen(page, member);
-    await page.waitForURL((target) => target.pathname === "/wishlist", {
+    await page.waitForURL((target) => target.pathname === "/bookmarks", {
       timeout: 30_000,
     });
-    await expect(page.locator(`#saved-${fixture.formId}`)).toBeVisible();
+    await expect(row).toBeVisible();
   } finally {
     await context.close();
   }
@@ -652,32 +586,6 @@ async function seedShelves() {
     [gone.id],
   );
   entries = created.slice(1).reverse();
-
-  retiredCatalogId = randomUUID();
-  await pool.query(
-    `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
-       source_id, locale, node_kind, kingdom, identity_state, search_weight)
-     values ($1::uuid, 'Забутий сорт', catalog_normalize_name('Забутий сорт'), $2,
-             'ua_state_register', $3, 'uk', 'cultivar', 'Plantae', 'retired', 5)`,
-    [
-      retiredCatalogId,
-      `${PREFIX}-retired-${retiredCatalogId.slice(0, 8)}`,
-      `ua_state_register:${PREFIX}:${retiredCatalogId}`,
-    ],
-  );
-  for (const [catalogId, minutes] of [
-    [fixture.formId, 10],
-    [retiredCatalogId, 20],
-  ] as const) {
-    await pool.query(
-      `insert into wishlist_items (owner_user_id, catalog_item_id, source_surface,
-         created_at, updated_at)
-       values ($1::uuid, $2::uuid, 'public_variety',
-               now() - make_interval(mins => $3::int),
-               now() - make_interval(mins => $3::int))`,
-      [member.id, catalogId, minutes],
-    );
-  }
 }
 
 async function bookmarkState(entryId: string) {

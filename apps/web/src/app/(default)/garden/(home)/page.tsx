@@ -3,12 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BookOpenTextIcon as BookOpenText } from "@/components/icons/BookOpenText";
-import { PlusCircleIcon as CirclePlus } from "@/components/icons/PlusCircle";
 import { CompassIcon as Compass } from "@/components/icons/Compass";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
-import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
 import { buttonVariants } from "@/components/ui/button";
 import { Section } from "@/components/ui/section";
 import {
@@ -28,23 +26,16 @@ import {
 } from "@/lib/garden/garden-collection";
 import { getGardenCollectionCopy } from "@/lib/garden-collection-copy";
 import { pickerKindForCatalogKind } from "@/lib/garden/catalog-object-kind";
-import {
-  gardenFirstEntryPreselectionPath,
-  publicCatalogEvidencePath,
-} from "@/lib/garden/public-paths";
+import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  formatGardenWorkspaceTemplate,
-  getGardenWorkspaceCopy,
-} from "@/lib/garden-workspace-copy";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { localizedPath } from "@/lib/public-localization";
 import {
-  formatTrustTemplate,
   getLocalizedOAuthErrorMessage,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
@@ -70,11 +61,9 @@ import {
   GardenHomeSectionsSkeleton,
   GardenHomeShell,
 } from "./garden-home-shell";
-import { addCatalogPublicSlugToWishlistAction } from "../../wishlist/actions";
 import { FirstEntryComposer } from "../first-entry-composer";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { GardenWorkspaceServiceState } from "../garden-workspace-service-state";
-import { HiddenField } from "@/components/ui/hidden-field";
 
 type GardenSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
@@ -174,7 +163,6 @@ async function GardenHomeSections({
     context,
     priorPublicationDisclosure,
     initialCatalogItem,
-    pendingWishlistItem,
   ] = await Promise.all([
     settleSection(() => listGardenSpaces(scope, request), {
       deadlineMs: groupDeadlineMs,
@@ -195,7 +183,6 @@ async function GardenHomeSections({
     }),
     settledOrNull(() => hasPriorPublicationDisclosure(scope)),
     settledOrNull(() => resolveInitialCatalogSelection(params)),
-    settledOrNull(() => resolvePendingWishlistSelection(params)),
   ]);
 
   const spacesValue = spaces.status === "ready" ? spaces.value : null;
@@ -278,12 +265,6 @@ async function GardenHomeSections({
         }
         showPublicationNotice={showComposer}
       />
-      {pendingWishlistItem ? (
-        <PendingWishlistIntentPanel
-          item={pendingWishlistItem}
-          locale={locale}
-        />
-      ) : null}
 
       {setup ? (
         <>
@@ -356,24 +337,12 @@ async function GuestGardenEntrySection({
   engagementAuthMessage: string | null;
   engagementPostAuthPath: string | null;
 }) {
-  const pendingWishlistItem = await settledOrNull(() =>
-    resolvePendingWishlistSelection(params),
-  );
   const oauthMessage = getLocalizedOAuthErrorMessage(locale, params.error);
 
   return (
     <GuestGardenEntry
       locale={locale}
-      initialMessage={
-        oauthMessage ??
-        engagementAuthMessage ??
-        (pendingWishlistItem
-          ? formatTrustTemplate(
-              getTrustSurfaceCopy(locale).gardenGuest.wishlistPrompt,
-              { catalogName: pendingWishlistItem.canonicalName },
-            )
-          : null)
-      }
+      initialMessage={oauthMessage ?? engagementAuthMessage}
       postAuthPath={engagementPostAuthPath}
     />
   );
@@ -559,58 +528,6 @@ async function resolveInitialCatalogSelection(
         }
       : {}),
   };
-}
-
-async function resolvePendingWishlistSelection(
-  searchParams: GardenSearchParams,
-) {
-  const publicSlug = firstParam(searchParams.wishlist);
-  if (!publicSlug) return null;
-  const item = await findSelectableCatalogItemByPublicSlug(publicSlug);
-  return item?.publicSlug ? item : null;
-}
-
-function PendingWishlistIntentPanel({
-  item,
-  locale,
-}: {
-  item: Awaited<ReturnType<typeof resolvePendingWishlistSelection>>;
-  locale: InterfaceLocale;
-}) {
-  if (!item?.publicSlug) return null;
-  const copy = getGardenWorkspaceCopy(locale).page.pendingWishlist;
-  return (
-    <section className="border-y border-border py-5">
-      <h2 className="text-h3 text-text-heading">{copy.title}</h2>
-      <p className="mt-1 text-body-sm text-text-muted">
-        {formatGardenWorkspaceTemplate(copy.description, {
-          name: item.canonicalName,
-        })}
-      </p>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <OwnerScopedProgressiveForm
-          action={addCatalogPublicSlugToWishlistAction}
-        >
-          <HiddenField name="catalogPublicSlug" value={item.publicSlug} />
-          <HiddenField name="locale" value={locale} />
-          <HiddenField
-            name="returnTo"
-            value={localizedPath(locale, "/wishlist")}
-          />
-          <button type="submit" className={buttonVariants()}>
-            {copy.save}
-          </button>
-        </OwnerScopedProgressiveForm>
-        <Link
-          href={gardenFirstEntryPreselectionPath(item.publicSlug)}
-          className={buttonVariants({ variant: "secondary" })}
-        >
-          <CirclePlus aria-hidden="true" />
-          {copy.startFirstEntry}
-        </Link>
-      </div>
-    </section>
-  );
 }
 
 function engagementAuthPrompt(

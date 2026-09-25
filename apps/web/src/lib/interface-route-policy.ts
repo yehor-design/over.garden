@@ -88,12 +88,6 @@ const PUBLIC_BOOKMARK_KINDS = new Set([
   "variety",
   "topic",
 ]);
-const PUBLIC_WISHLIST_KINDS = new Set([
-  "all",
-  "plant_variety",
-  "species",
-  "breed",
-]);
 const PUBLIC_FEED_SOURCES = new Set(["all", "people", "objects", "topics"]);
 const PUBLIC_JOURNAL_SEASONS = new Set([
   "all",
@@ -220,7 +214,7 @@ export const INTERFACE_ROUTE_POLICIES = [
   {
     id: "public-social-directories",
     mode: "localized-link",
-    exactPaths: ["/bookmarks", "/wishlist"],
+    exactPaths: ["/bookmarks"],
     safeQueryKeys: ["kind", "page", "engagement"],
     preserveClientFragment: true,
   },
@@ -572,11 +566,7 @@ function sanitizeInterfaceRouteQueryValue(
     case "kind": {
       const basePath = normalizeBasePath(pathname);
       const allowedKinds =
-        basePath === "/bookmarks"
-          ? PUBLIC_BOOKMARK_KINDS
-          : basePath === "/wishlist"
-            ? PUBLIC_WISHLIST_KINDS
-            : PUBLIC_OBJECT_KINDS;
+        basePath === "/bookmarks" ? PUBLIC_BOOKMARK_KINDS : PUBLIC_OBJECT_KINDS;
       return allowedKinds.has(value) ? value : null;
     }
     case "source":

@@ -754,7 +754,6 @@ html[data-shell-section="followed-feed"]
 html[data-shell-section="notifications"]
   [data-site-shell-nav-item="notifications"],
 html[data-shell-section="bookmarks"] [data-site-shell-nav-item="bookmarks"],
-html[data-shell-section="wishlist"] [data-site-shell-nav-item="wishlist"],
 html[data-shell-section="lineage-claims"]
   [data-site-shell-nav-item="lineage-claims"] {
   background-color: var(--color-action-subtle);

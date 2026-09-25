@@ -190,6 +190,12 @@ describe("app route cache guardrail", () => {
       "/ru/health",
       "/bg/health/anything",
       "/%68ealth",
+      // ADR-0033: the wishlist is retired, in every language.
+      "/wishlist",
+      "/wishlist/",
+      "/bg/wishlist",
+      "/ru/wishlist",
+      "/wishlist/anything",
     ];
 
     for (const path of retiredPaths) {
@@ -467,7 +473,6 @@ describe("app route cache guardrail", () => {
     // is indexable, and none of them was on this list before.
     "/notifications",
     "/bookmarks",
-    "/wishlist",
     "/feed",
     "/bg/bookmarks",
     "/ru/notifications",

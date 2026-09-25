@@ -84,10 +84,6 @@ vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: () => false,
 }));
 
-vi.mock("../../wishlist/actions", () => ({
-  addCatalogPublicSlugToWishlistAction: vi.fn(),
-}));
-
 vi.mock("../first-entry-composer", () => ({
   FirstEntryComposer: (props: {
     initialSpace?: { id: string; displayName: string } | null;
@@ -329,8 +325,8 @@ describe("/garden, the collection home (OVE-489)", () => {
     );
   });
 
-  it("does not treat a wishlist return as a request to create", async () => {
-    const html = await renderGarden({ source: "wishlist" });
+  it("does not treat an unrecognised return source as a request to create", async () => {
+    const html = await renderGarden({ source: "unknown" });
 
     expect(html).not.toContain("First entry composer");
   });

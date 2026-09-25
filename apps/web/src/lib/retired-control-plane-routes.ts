@@ -15,6 +15,9 @@ const RETIRED_PATH_PREFIXES = [
   // path reaches `[locale]/[handle]` and streams a profile not-found shell at
   // HTTP 200.
   "/health",
+  // The wishlist (ADR-0033), for the same reason: `/bg/wishlist` would reach
+  // `[locale]/[handle]` and stream a not-found shell at HTTP 200.
+  "/wishlist",
 ] as const;
 
 /**

@@ -50,7 +50,6 @@ export const ROOT_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "topics",
   "variety",
   "wikidata",
-  "wishlist",
 ]);
 
 /**
@@ -157,7 +156,6 @@ export const LOCALE_ROUTE_SEGMENTS: ReadonlySet<string> = new Set([
   "topics",
   "variety",
   "wikidata",
-  "wishlist",
 ]);
 
 /**
@@ -239,7 +237,6 @@ export const SECTION_SUBPATHS: Readonly<Record<string, readonly string[]>> = {
   sources: ["eppo", "eppo/[code]"],
   support: [],
   wikidata: ["[qid]"],
-  wishlist: [],
 };
 
 /** The path's segments after an optional `bg`/`ru`/`uk` prefix. */

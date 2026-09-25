@@ -168,8 +168,6 @@ interface PublicSurfaceCopy {
     title: string;
     metadataSuffix: string;
     collectionPageSuffix: string;
-    saveToWishlist: string;
-    savedToWishlist: string;
     growingNote: string;
     openSourceEntry: string;
   };
@@ -427,8 +425,6 @@ const COPY = {
       title: "Публічний сорт",
       metadataSuffix: "сорт",
       collectionPageSuffix: "публічні записи саду",
-      saveToWishlist: "Зберегти до списку бажань",
-      savedToWishlist: "Збережено до вашого списку бажань.",
       growingNote: "Нотатка про вирощування",
       openSourceEntry: "Відкрити вихідний запис",
     },
@@ -695,8 +691,6 @@ const COPY = {
       title: "Публичен сорт",
       metadataSuffix: "сорт",
       collectionPageSuffix: "публични записи в градината",
-      saveToWishlist: "Запазете в списъка с желания",
-      savedToWishlist: "Запазено в списъка ви с желания.",
       growingNote: "Бележка за отглеждане",
       openSourceEntry: "Отворете изходния запис",
     },
@@ -962,8 +956,6 @@ const COPY = {
       title: "Публичный сорт",
       metadataSuffix: "сорт",
       collectionPageSuffix: "Публичные записи сада",
-      saveToWishlist: "Сохранить в список желаний",
-      savedToWishlist: "Сохранено в ваш список желаний.",
       growingNote: "Заметка о выращивании",
       openSourceEntry: "Открыть исходную запись",
     },

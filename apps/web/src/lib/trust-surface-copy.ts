@@ -146,7 +146,6 @@ const UK_COPY = {
     knowledge: "Знання",
     commentPrompt: "Увійдіть, щоб прокоментувати ту публічну сторінку.",
     bookmarkPrompt: "Увійдіть, щоб додати ту публічну сторінку до закладок.",
-    wishlistPrompt: "Увійдіть, щоб зберегти {catalogName} у списку бажань.",
   },
   signOut: TRUST_CLIENT.uk.signOut,
   authHelp: {
@@ -575,7 +574,6 @@ const BG_COPY = {
     commentPrompt: "Влезте, за да коментирате тази публична страница.",
     bookmarkPrompt:
       "Влезте, за да добавите тази публична страница в отметките.",
-    wishlistPrompt: "Влезте, за да запазите {catalogName} в списъка с желани.",
   },
   signOut: TRUST_CLIENT.bg.signOut,
   authHelp: {
@@ -996,7 +994,6 @@ const RU_COPY = {
     knowledge: "Знания",
     commentPrompt: "Войдите, чтобы прокомментировать ту публичную страницу.",
     bookmarkPrompt: "Войдите, чтобы добавить ту публичную страницу в закладки.",
-    wishlistPrompt: "Войдите, чтобы сохранить {catalogName} в списке желаний.",
   },
   signOut: TRUST_CLIENT.ru.signOut,
   authHelp: {

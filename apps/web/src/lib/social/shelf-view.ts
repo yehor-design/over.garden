@@ -15,15 +15,14 @@ import {
  * exactly that view — the filter and the page, nothing else — with the
  * outcome, the action and the target it concerns.
  */
-export type ShelfName = "bookmarks" | "wishlist";
+export type ShelfName = "bookmarks";
 export type ShelfOutcome = "removed" | "restored" | "failed";
 export type ShelfAction = "remove" | "restore";
 
 const VIEW_KEYS = ["kind", "page"] as const;
 const SAFE_VALUE = /^[A-Za-z0-9_-]{1,40}$/u;
-/** `{kind}:{ref}` for a bookmark, a catalogue item's id for the wishlist. */
-const SAFE_TARGET =
-  /^[a-z_]{1,32}:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$|^[0-9a-f-]{36}$/u;
+/** `{kind}:{ref}`, the one shape a bookmark's target takes. */
+const SAFE_TARGET = /^[a-z_]{1,32}:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 
 /** The shelf view a form was pressed in, or the shelf itself. */
 export function shelfViewPath(

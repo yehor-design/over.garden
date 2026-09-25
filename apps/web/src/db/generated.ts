@@ -1110,15 +1110,6 @@ export interface Verification {
   value: string;
 }
 
-export interface WishlistItems {
-  catalog_item_id: string;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  owner_user_id: string;
-  source_surface: Generated<string>;
-  updated_at: Generated<Timestamp>;
-}
-
 export interface DB {
   account: Account;
   admin_role_audit_log: AdminRoleAuditLog;
@@ -1201,5 +1192,4 @@ export interface DB {
   user_public_profiles: UserPublicProfiles;
   variety_seed_proofs: VarietySeedProofs;
   verification: Verification;
-  wishlist_items: WishlistItems;
 }

@@ -32,7 +32,6 @@ import type {
  */
 const ACCOUNT_MENU_PERSONAL_KEYS = new Set<SiteShellNavigationKey>([
   "bookmarks",
-  "wishlist",
   "lineage-claims",
 ]);
 

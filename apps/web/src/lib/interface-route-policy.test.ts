@@ -392,15 +392,6 @@ describe("interface route policy", () => {
     ).toBe("?kind=journal_entry&page=2");
     expect(
       sanitizeInterfaceRouteSearch(
-        "/bg/wishlist",
-        "?kind=plant_variety&page=3",
-      ),
-    ).toBe("?kind=plant_variety&page=3");
-    expect(
-      sanitizeInterfaceRouteSearch("/bg/wishlist", "?kind=journal_entry"),
-    ).toBe("");
-    expect(
-      sanitizeInterfaceRouteSearch(
         "/journals",
         "?catalog=00000000-0000-4000-8000-000000000123&topic=private-note",
       ),

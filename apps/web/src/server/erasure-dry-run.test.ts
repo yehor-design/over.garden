@@ -93,7 +93,6 @@ describe("erasure dry-run preview assembly", () => {
         mediaAssetsWithExplicitCover: 1,
         profileFollows: 2,
         profileBlocks: 1,
-        wishlistItems: 1,
         engagementComments: 2,
         engagementBookmarks: 1,
         notificationReceipts: 1,

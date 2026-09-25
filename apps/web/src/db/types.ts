@@ -59,7 +59,6 @@ import type {
   UserHandleRegistry as UserHandleRegistryTable,
   UserPublicProfiles as UserPublicProfilesTable,
   VarietySeedProofs as VarietySeedProofsTable,
-  WishlistItems as WishlistItemsTable,
 } from "./generated";
 
 export type Database = DB;
@@ -237,7 +236,6 @@ export type LineagePendingSourceInviteState =
   | "anonymized";
 export type LineageFollowState = "active" | "anonymized";
 export type LineageQuestionState = "delivered" | "anonymized";
-export type WishlistSourceSurface = "catalog_item" | "public_variety";
 export type EngagementTargetKind =
   | "journal_entry"
   | "lineage_object"
@@ -447,8 +445,6 @@ export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
 export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
 export type UserHandleRegistryEntry = Selectable<UserHandleRegistryTable>;
 export type NewUserHandleRegistryEntry = Insertable<UserHandleRegistryTable>;
-export type WishlistItem = Selectable<WishlistItemsTable>;
-export type NewWishlistItem = Insertable<WishlistItemsTable>;
 export type EngagementBookmark = Selectable<EngagementBookmarksTable>;
 export type NewEngagementBookmark = Insertable<EngagementBookmarksTable>;
 export type EngagementComment = Selectable<EngagementCommentsTable>;
