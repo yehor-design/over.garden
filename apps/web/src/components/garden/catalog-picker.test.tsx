@@ -3,10 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
-import type {
-  CatalogFullCatalogueRow,
-  CatalogPickerSelection,
-} from "@/lib/garden/catalog-typeahead-contract";
+import type { CatalogPickerSelection } from "@/lib/garden/catalog-typeahead-contract";
 
 import {
   CATALOG_PICKER_DEBOUNCE_MS,
@@ -106,9 +103,10 @@ describe("CatalogPicker behaviour", () => {
       "own_name",
     ]);
     expect(comboboxOf(renderer).props["aria-expanded"]).toBe(true);
-    expect(options[1]!.props.children.props.children[1].props.children).toBe(
-      "Сорт · Помідор",
-    );
+    // Threads' result row: a round glyph, the name, one muted line beneath.
+    const [glyph, text] = options[1]!.props.children;
+    expect(glyph.props["aria-hidden"]).toBe("true");
+    expect(text.props.children[1].props.children).toBe("Сорт · Помідор");
 
     await press(renderer, "ArrowDown");
     expect(comboboxOf(renderer).props["aria-activedescendant"]).toBe(
@@ -146,7 +144,7 @@ describe("CatalogPicker behaviour", () => {
       (node) =>
         node.type === "li" && node.props["data-catalog-option"] === "own_name",
     );
-    expect(ownName.props.children.props.children).toBe(
+    expect(ownName.props.children[1].props.children).toBe(
       "Додати як мою назву: «Де Барао»",
     );
     await act(async () => ownName.props.onClick());
@@ -198,10 +196,6 @@ async function renderPicker(input: {
   fetchRows: () => Promise<CatalogPickerFetchResult>;
   onSelectionChange: (selection: CatalogPickerSelection | null) => void;
   onSearchMiss?: (miss: CatalogSearchMiss) => void;
-  fetchFullCatalogue?: () => Promise<CatalogFullCatalogueRow[]>;
-  materializeFromCatalogue?: (
-    colId: string,
-  ) => Promise<CatalogPickerFetchResult["rows"][number] | null>;
 }) {
   let renderer: ReactTestRenderer;
   await act(async () => {
@@ -217,8 +211,6 @@ async function renderPicker(input: {
         onSelectionChange={input.onSelectionChange}
         onSearchMiss={input.onSearchMiss}
         fetchRows={input.fetchRows}
-        fetchFullCatalogue={input.fetchFullCatalogue}
-        materializeFromCatalogue={input.materializeFromCatalogue}
       />,
     );
   });
@@ -378,88 +370,20 @@ describe("CatalogPicker secondary path (ADR-0026 D7)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("offers the full checklist when the primary list is thin, and picking one creates the node", async () => {
-    const selections: Array<CatalogPickerSelection | null> = [];
-    const asked: string[] = [];
-    const renderer = await renderPicker({
-      fetchRows: async () => ({ rows: [], availability: "empty" }),
-      onSelectionChange: (selection) => selections.push(selection),
-      fetchFullCatalogue: async () => [
-        {
-          colId: "6MK7J",
-          displayName: "Hydrochoerus hydrochaeris",
-          scientificName: "Hydrochoerus hydrochaeris (Linnaeus, 1766)",
-          rank: "species",
-          acceptedName: null,
-        },
-      ],
-      materializeFromCatalogue: async (colId) => {
-        asked.push(colId);
-        return {
-          id: "00000000-0000-4000-8000-0000000001ff",
-          displayName: "Hydrochoerus hydrochaeris",
-          kind: "species",
-          publicPath: "/species/hydrochoerus-hydrochaeris",
-        };
-      },
-    });
-
-    await type(renderer, "капібара");
-    const offer = renderer.root.find(
-      (node) => node.props["data-catalog-full-catalogue"] === "offer",
-    );
-    expect(offer.props.children[0]).toBe(copy.fullCatalogue);
-
-    await act(async () => {
-      offer.props.onClick();
-    });
-
-    const checklist = renderer.root.findAll(
-      (node) =>
-        node.type === "li" &&
-        node.props["data-catalog-option"] === "full_catalogue",
-    );
-    expect(checklist).toHaveLength(1);
-    expect(checklist[0]!.props["data-catalog-col-id"]).toBe("6MK7J");
-
-    await act(async () => {
-      checklist[0]!.props.onClick();
-    });
-
-    // The pick creates the node and the picker holds an ordinary selection.
-    expect(asked).toEqual(["6MK7J"]);
-    expect(selections.at(-1)).toEqual({
-      kind: "item",
-      row: {
-        id: "00000000-0000-4000-8000-0000000001ff",
-        displayName: "Hydrochoerus hydrochaeris",
-        kind: "species",
-        publicPath: "/species/hydrochoerus-hydrochaeris",
-      },
-    });
-  });
-
-  it("says so when the checklist has nothing either, and keeps the own-name outcome", async () => {
+  // A species comes from the standard base only (ADR-0035 D3): an empty list
+  // leaves the gardener's own name, never a search of the whole checklist.
+  it("offers no search beyond the standard base when the list is empty", async () => {
     const renderer = await renderPicker({
       fetchRows: async () => ({ rows: [], availability: "empty" }),
       onSelectionChange: () => undefined,
-      fetchFullCatalogue: async () => [],
-      materializeFromCatalogue: async () => null,
     });
 
-    await type(renderer, "щось своє");
-    const offer = renderer.root.find(
-      (node) => node.props["data-catalog-full-catalogue"] === "offer",
-    );
-    await act(async () => {
-      offer.props.onClick();
-    });
-
+    await type(renderer, "капібара");
     expect(
-      renderer.root.find(
-        (node) => node.props["data-catalog-full-catalogue"] === "empty",
-      ).props.children,
-    ).toBe(copy.fullCatalogueEmpty);
+      renderer.root.findAll(
+        (node) => node.props["data-catalog-full-catalogue"] !== undefined,
+      ),
+    ).toHaveLength(0);
     expect(
       renderer.root.findAll(
         (node) =>
@@ -467,19 +391,5 @@ describe("CatalogPicker secondary path (ADR-0026 D7)", () => {
           node.props["data-catalog-option"] === "own_name",
       ),
     ).toHaveLength(1);
-  });
-
-  it("does not offer the checklist without a way to create the node", async () => {
-    const renderer = await renderPicker({
-      fetchRows: async () => ({ rows: [], availability: "empty" }),
-      onSelectionChange: () => undefined,
-    });
-
-    await type(renderer, "томат");
-    expect(
-      renderer.root.findAll(
-        (node) => node.props["data-catalog-full-catalogue"] === "offer",
-      ),
-    ).toHaveLength(0);
   });
 });

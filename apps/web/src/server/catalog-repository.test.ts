@@ -56,6 +56,7 @@ function sqlRow(overrides: Record<string, unknown> = {}) {
     matched_name: "томат",
     parent_display_name: null,
     match_class: 1,
+    base_popularity: 0,
     market: false,
     similarity: 0.63,
     ...overrides,
@@ -98,16 +99,23 @@ describe("catalog picker query", () => {
       "when s.node_kind = 'taxon' then coalesce(vernacular.display_name, s.canonical_name)",
     );
     expect(compiled.sql).toMatch(
-      /order by s\.match_class,\s+s\.market desc,\s+s\.search_weight desc,\s+s\.has_registered_forms desc,\s+s\.is_host desc,\s+s\.similarity desc/u,
+      /order by s\.match_class,\s+s\.base_popularity desc,\s+s\.market desc,\s+s\.search_weight desc,\s+s\.has_registered_forms desc,\s+s\.is_host desc,\s+s\.similarity desc/u,
     );
     expect(compiled.sql).toContain("limit 8");
-    // The kind filter lives in SQL: a taxon by kingdom, a cultivar for plants,
-    // a breed for animals.
+    // The kind filter lives in SQL: a species only from the standard base,
+    // for the kind the base records (ADR-0035 D3), a cultivar for plants, a
+    // breed for animals. The rest of the catalogue is not offered.
     expect(compiled.sql).toContain("ci.node_kind = 'breed'");
-    expect(compiled.sql).toContain("ci.kingdom = 'Animalia'");
-    expect(compiled.sql).toContain(
-      "ci.kingdom not in ('Animalia', 'Bacteria', 'Viruses', 'Archaea')",
-    );
+    expect(compiled.sql).toContain("(ci.node_kind = 'taxon' and base.object_kind = $");
+    expect(
+      compiled.sql.match(
+        /left join catalog_standard_species as base on base\.catalog_item_id = ci\.id/gu,
+      )?.length,
+    ).toBe(2);
+    expect(compiled.sql).not.toContain("ci.kingdom");
+    // The base's popularity ranks right after the match class, on both sides.
+    expect(compiled.sql).toContain("coalesce(base.popularity, 0) as base_popularity");
+    expect(compiled.sql).toMatch(/r\.match_class,\s+coalesce\(base\.popularity, 0\) desc,/u);
     // The prefix pattern escapes LIKE metacharacters; the raw query feeds the
     // trigram side and the class tests.
     expect(compiled.parameters).toContain("помі\\_дор%");
@@ -132,6 +140,8 @@ describe("catalog picker query", () => {
     // Short queries take their fuzzy candidates from the intarray index over
     // the stored sets, with the same threshold; longer ones from pg_trgm.
     expect(compiled.sql).toContain("(select trigram_count from q) <= 6");
+    // A typo is forgiven in the reader's language and in Latin only.
+    expect(compiled.sql.match(/and n\.locale in \(\$\d+, 'la'\)/gu)?.length).toBe(2);
     expect(compiled.sql).toContain("n.search_trigrams @@ (");
     expect(compiled.sql).toContain("catalog_trigram_query(trigrams, (3 * trigram_count + 9) / 10)");
     expect(compiled.sql).toContain("(select trigram_count from q) > 6");

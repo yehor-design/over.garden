@@ -127,7 +127,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
       "attribution",
     ]);
     expect(html).toContain(
-      "Solanum lycopersicum — вид. У каталозі 1 форма цього виду. Публічні журнали ведуть 2 садівники у 1 області.",
+      "Помідор їстівний — вид. У каталозі 1 форма цього виду. Публічні журнали ведуть 2 садівники у 1 області.",
     );
     expect(html).toContain("Київська");
     expect(html).toContain('href="/species/solanum-lycopersicum/de-barao"');
@@ -164,10 +164,14 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     expect(html).toContain(`/id/${ITEM_ID}`);
     expect(html).toContain("https://gd.eppo.int/taxon/LYPES");
     expect(html).toMatch(/"@type":\s*"BreadcrumbList"/u);
+    // The everyday name leads the title and the JSON-LD name (ADR-0035 D3);
+    // the Latin name is the Taxon's `scientificName`.
     expect(metadata).toMatchObject({
-      title: "Solanum lycopersicum · вид | OverGarden",
+      title: "Помідор їстівний · вид | OverGarden",
       alternates: { canonical: "https://over.garden/species/solanum-lycopersicum" },
     });
+    expect(html).toMatch(/"@type":\s*"Taxon",[^{}]*"name":\s*"Помідор їстівний"/u);
+    expect(html).toMatch(/"scientificName":\s*"Solanum lycopersicum/u);
     expect(mocks.permanentRedirect).not.toHaveBeenCalled();
   });
 

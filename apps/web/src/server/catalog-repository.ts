@@ -93,6 +93,11 @@ export interface SelectableCatalogItem {
   catalogKind: CatalogKind;
   locale: string;
   source: string;
+  /**
+   * Whether the standard base (ADR-0035 D3) holds this species as a plant or
+   * an animal; null for a form and for a species outside the base.
+   */
+  standardKind: PlantObjectKind | null;
 }
 
 export type CatalogTypeaheadState = "ready" | "empty";
@@ -111,7 +116,15 @@ export interface CatalogTypeaheadSearchResult {
 }
 
 export interface FindSelectableCatalogItemOptions {
+  /**
+   * The kind of the object the selection is for. A gardener choosing an
+   * object's identity picks a species from the standard base only, as the
+   * picker offers it (ADR-0035 D3), so with this set a species outside the
+   * base, or held there for the other kind, is not selectable.
+   */
   expectedObjectKind?: PlantObjectKind;
+  /** A species must be in the standard base, for either kind. */
+  standardBaseOnly?: boolean;
 }
 
 export interface CatalogSearchMissInput {
@@ -136,6 +149,7 @@ interface CatalogTypeaheadSqlRow {
   matched_name: string;
   parent_display_name: string | null;
   match_class: number;
+  base_popularity: number;
   market: boolean;
   similarity: number;
 }
@@ -155,12 +169,14 @@ interface CatalogTypeaheadSearchDeps {
  * from the TypeScript normalizer the shared fixture holds to the SQL one. Each
  * organism keeps its best name, then the organisms are ordered by match class
  * (exact vernacular in the reader's locale, prefix vernacular in it, exact
- * scientific, any prefix, fuzzy), the reader's market, gardener usage, the
- * crop prior (registered forms, host relations) and similarity; two active
- * rows with one name and one kind collapse to the better-ranked one until the
- * reconciliation task merges them. The object kind is applied to the node: a
- * taxon by kingdom, a cultivar for plants, a breed for animals. Retired,
- * merged and gardener-created rows never leave the database.
+ * scientific, any prefix, fuzzy), the standard base's popularity, the
+ * reader's market, gardener usage, the crop prior (registered forms, host
+ * relations) and similarity; two active rows with one name and one kind
+ * collapse to the better-ranked one until the reconciliation task merges
+ * them. The object kind is applied to the node: a taxon only when the
+ * standard base holds it for that kind (ADR-0035 D3), a cultivar for plants,
+ * a breed for animals. Retired, merged and gardener-created rows never leave
+ * the database.
  *
  * Three things about its shape were decided by measuring it against
  * production on 2026-09-07, when every prefix of соняшник answered 503:
@@ -201,24 +217,25 @@ export function buildCatalogTypeaheadStatement(input: {
   const limitLiteral = sql.lit(limit);
 
   // What the picker may offer: an active canonical node nobody created by
-  // hand, of the kind the object is. Written once, read by both sides.
+  // hand, of the kind the object is. A species is offered only from the
+  // standard base (ADR-0035 D3), which says itself whether it is a plant or an
+  // animal; the rest of the catalogue stays in the database and is not
+  // offered. `base` is the node's membership row, left-joined by both sides.
+  // Written once, read by both sides.
   const offerable = sql`
       ci.identity_state = 'active'
         and ci.created_by_user_id is null
         and (
-          (${objectKind} = 'plant'
-            and (ci.node_kind = 'cultivar'
-                 or (ci.node_kind = 'taxon'
-                     and (ci.kingdom is null
-                          or ci.kingdom not in ('Animalia', 'Bacteria', 'Viruses', 'Archaea')))))
-          or (${objectKind} = 'animal'
-            and (ci.node_kind = 'breed'
-                 or (ci.node_kind = 'taxon'
-                     and (ci.kingdom is null or ci.kingdom = 'Animalia'))))
+          (ci.node_kind = 'taxon' and base.object_kind = ${objectKind})
+          or (${objectKind} = 'plant' and ci.node_kind = 'cultivar')
+          or (${objectKind} = 'animal' and ci.node_kind = 'breed')
         )`;
+  const baseJoin = sql`
+      left join catalog_standard_species as base on base.catalog_item_id = ci.id`;
   // The organism's ranking key, shared by the duplicate window and the final
-  // ordering: match class, the reader's market, gardener usage, the crop
-  // prior, similarity, then the identity.
+  // ordering: match class, how many people keep it (the base's popularity,
+  // zero for a form), the reader's market, gardener usage, the crop prior,
+  // similarity, then the identity.
   const market = sql`case when ${locale} = 'uk' then ci.registered_ua else ci.registered_eu end`;
   // Two active rows with one name and one kind are the merge backlog of the
   // reconciliation task, not two organisms: the picker shows the better-ranked
@@ -238,12 +255,14 @@ export function buildCatalogTypeaheadStatement(input: {
              ci.is_host,
              r.matched_name,
              r.match_class,
+             coalesce(base.popularity, 0) as base_popularity,
              ${market} as market,
              r.similarity`;
   const scoreOrder = sql`
       order by ci.node_kind collate "C",
                ci.normalized_name collate "C",
                r.match_class,
+               coalesce(base.popularity, 0) desc,
                (${market}) desc,
                ci.search_weight desc,
                ci.has_registered_forms desc,
@@ -261,6 +280,10 @@ export function buildCatalogTypeaheadStatement(input: {
   const fuzzyCtes = fuzzy
     ? sql`,
     fuzzy_hits as materialized (
+      -- A typo is forgiven in the reader's language and in Latin only: «курка»
+      -- is not a misspelt Bulgarian «костенурка» (a turtle), and a list that
+      -- says so reads as noise (OVE-530). Exact and prefix names match in
+      -- every language.
       -- A fuzzy row ranks last by class, so it can only be offered when fewer
       -- organisms than requested matched by prefix. Postgres evaluates that
       -- once and skips both scans when it is false. Which scan runs depends
@@ -282,6 +305,7 @@ export function buildCatalogTypeaheadStatement(input: {
         )
         and ${storedSimilarity} >= ${threshold}
         and n.normalized_name not like ${prefixPattern}
+        and n.locale in (${locale}, 'la')
       union all
       select n.catalog_item_id,
              n.id as name_id,
@@ -293,6 +317,7 @@ export function buildCatalogTypeaheadStatement(input: {
         and n.normalized_name % ${query}
         and similarity(n.normalized_name, ${query}) >= ${threshold}
         and n.normalized_name not like ${prefixPattern}
+        and n.locale in (${locale}, 'la')
     ),
     fuzzy_ranked as (
       select distinct on (h.catalog_item_id)
@@ -306,7 +331,7 @@ export function buildCatalogTypeaheadStatement(input: {
     fuzzy_scored as (
       ${scoreSelect}
       from fuzzy_ranked as r
-      join catalog_items as ci on ci.id = r.catalog_item_id
+      join catalog_items as ci on ci.id = r.catalog_item_id${baseJoin}
       where ${offerable}
       ${scoreOrder}
     )`
@@ -316,7 +341,7 @@ export function buildCatalogTypeaheadStatement(input: {
       union all
       select f.id, f.node_kind, f.public_slug, f.canonical_name, f.search_weight,
              f.has_registered_forms, f.is_host, f.matched_name, f.match_class,
-             f.market, f.similarity
+             f.base_popularity, f.market, f.similarity
       from fuzzy_scored as f
       -- An organism a prefix name already found keeps that name, and a
       -- cluster a prefix organism already represents is represented by it.
@@ -374,7 +399,7 @@ export function buildCatalogTypeaheadStatement(input: {
     prefix_scored as materialized (
       ${scoreSelect}
       from prefix_ranked as r
-      join catalog_items as ci on ci.id = r.catalog_item_id
+      join catalog_items as ci on ci.id = r.catalog_item_id${baseJoin}
       where ${offerable}
       ${scoreOrder}
     )${fuzzyCtes},
@@ -386,10 +411,11 @@ export function buildCatalogTypeaheadStatement(input: {
       from (
         select p.id, p.node_kind, p.public_slug, p.canonical_name, p.search_weight,
                p.has_registered_forms, p.is_host, p.matched_name, p.match_class,
-               p.market, p.similarity
+               p.base_popularity, p.market, p.similarity
         from prefix_scored as p${fuzzyCandidates}
       ) as candidates
       order by match_class,
+               base_popularity desc,
                market desc,
                search_weight desc,
                has_registered_forms desc,
@@ -415,6 +441,7 @@ export function buildCatalogTypeaheadStatement(input: {
            end as parent_display_name,
            case when parent.node_kind = 'taxon' then parent.public_slug else null end as species_slug,
            s.match_class,
+           s.base_popularity,
            s.market,
            s.similarity
     from shortlist as s
@@ -448,6 +475,7 @@ export function buildCatalogTypeaheadStatement(input: {
       limit 1
     ) as parent_vernacular on true
     order by s.match_class,
+             s.base_popularity desc,
              s.market desc,
              s.search_weight desc,
              s.has_registered_forms desc,
@@ -628,22 +656,7 @@ export async function findSelectableCatalogItem(
 
   if (!row) return null;
 
-  if (
-    options.expectedObjectKind &&
-    !matchesCatalogKindObjectKind(row.catalogKind, options.expectedObjectKind)
-  ) {
-    return null;
-  }
-
-  return {
-    id: row.id,
-    canonicalName: row.canonicalName,
-    publicSlug: row.publicSlug,
-    speciesSlug: row.speciesSlug,
-    catalogKind: row.catalogKind as CatalogKind,
-    locale: row.locale,
-    source: row.source,
-  };
+  return toSelectableCatalogItem(row, options);
 }
 
 export async function findSelectableCatalogItemByPublicSlug(
@@ -661,11 +674,33 @@ export async function findSelectableCatalogItemByPublicSlug(
 
   if (!row) return null;
 
+  return toSelectableCatalogItem(row, options);
+}
+
+function toSelectableCatalogItem(
+  row: {
+    id: string;
+    canonicalName: string;
+    publicSlug: string | null;
+    speciesSlug: string | null;
+    catalogKind: CatalogKind | string;
+    locale: string;
+    source: string;
+    standardKind: string | null;
+  },
+  options: FindSelectableCatalogItemOptions,
+): SelectableCatalogItem | null {
   if (
     options.expectedObjectKind &&
     !matchesCatalogKindObjectKind(row.catalogKind, options.expectedObjectKind)
   ) {
     return null;
+  }
+  const standardKind =
+    row.standardKind === "plant" || row.standardKind === "animal" ? row.standardKind : null;
+  if (row.catalogKind === "species") {
+    if (options.expectedObjectKind && standardKind !== options.expectedObjectKind) return null;
+    if (options.standardBaseOnly && !standardKind) return null;
   }
 
   return {
@@ -676,7 +711,17 @@ export async function findSelectableCatalogItemByPublicSlug(
     catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
     source: row.source,
+    standardKind,
   };
+}
+
+/** The kind the standard base holds a node for, or null outside it. */
+function standardKindSql(itemRef: string) {
+  return sql<string | null>`(
+    select base.object_kind
+    from catalog_standard_species as base
+    where base.catalog_item_id = ${sql.ref(`${itemRef}.id`)}
+  )`;
 }
 
 export function buildFindSelectableCatalogItemQuery(
@@ -693,6 +738,7 @@ export function buildFindSelectableCatalogItemQuery(
       catalogKindSql("catalog_items").as("catalogKind"),
       "locale",
       "source",
+      standardKindSql("catalog_items").as("standardKind"),
     ])
     .where("id", "=", itemId)
     .where("identity_state", "=", "active")
@@ -713,6 +759,7 @@ export function buildFindSelectableCatalogItemByPublicSlugQuery(
       catalogKindSql("catalog_items").as("catalogKind"),
       "locale",
       "source",
+      standardKindSql("catalog_items").as("standardKind"),
     ])
     .where("public_slug", "=", publicSlug)
     .where("public_slug", "is not", null)

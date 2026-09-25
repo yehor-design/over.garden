@@ -26,7 +26,6 @@ import {
   getOwnerObjectCopy,
 } from "@/lib/owner-object-copy";
 
-import { materializeCatalogNodeAction } from "../../catalog-full-catalogue-actions";
 import { recordCatalogPickEventAction } from "../../catalog-pick-event-actions";
 import { recordCatalogSearchMissAction } from "../../catalog-search-miss-actions";
 import { HiddenField } from "@/components/ui/hidden-field";
@@ -119,7 +118,6 @@ export function CatalogResolveControl({
           onSelectionChange={setSelection}
           onSearchMiss={reportSearchMiss}
           onPickOutcome={reportPickOutcome}
-          materializeFromCatalogue={materializeCatalogNodeAction}
         />
 
         {/* The change is named before it is saved: what the object will

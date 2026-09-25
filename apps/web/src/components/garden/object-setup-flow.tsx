@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircleIcon as CheckCircle } from "@/components/icons/CheckCircle";
 
-import { materializeCatalogNodeAction } from "@/app/(default)/garden/catalog-full-catalogue-actions";
 import { CatalogPicker } from "@/components/garden/catalog-picker";
 import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
 import {
@@ -472,7 +471,6 @@ export function ObjectSetupFlow({
               }}
               selection={selection}
               onSelectionChange={updateSelection}
-              materializeFromCatalogue={materializeCatalogNodeAction}
             />
             {errors.name ? (
               <p

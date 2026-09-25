@@ -125,6 +125,15 @@ the owner afterwards ("не перед публікацією … я потім 
   Latin name is secondary.
 - Missing species nodes are created from Catalogue of Life (garden strawberry,
   roses), and orphan cultivars are attached to them.
+- **As built (`OVE-530`, 2026-09-26).** Membership is a table of its own
+  (`catalog_standard_species`, migration `0081`) and the everyday names are the
+  organism's primary vernaculars, so every surface that already names an
+  organism in the reader's language shows the base's word. The save path
+  refuses a species outside the base, not only the list. A typo is forgiven in
+  the reader's language and in Latin; exact and prefix names match in all
+  three languages. A genus a gardener chooses like a species (roses, lilies)
+  gets an address too, `rosa-spp` when a cultivar holds `rosa`. Receipt:
+  `docs/STANDARD_SPECIES_BASE_PROOF_2026-09.md`.
 
 ### D4. The cultivar and breed list is the project's own
 

@@ -61,16 +61,23 @@ export function buildPublicVarietySurfaceMetadata(
         ),
       )
     : null;
+  // The name a gardener knows it by (ADR-0035 D3): a species reads by its
+  // everyday name in the reader's language — the standard base's — and the
+  // Latin name is the `scientificName` beneath it. A form keeps its own name.
+  const name = organismReaderName(page, locale);
+  const speciesName = species
+    ? capitalizeFirst(species.displayName, locale)
+    : null;
   return buildPublicSurfaceMetadata({
     discovery,
     locale,
     contentLocale: null,
-    title: `${page.catalog.canonicalName} · ${suffix} | OverGarden`,
-    description: `${suffix}: ${page.catalog.canonicalName}.`,
+    title: `${name} · ${suffix} | OverGarden`,
+    description: `${suffix}: ${name}.`,
     visibleFacts: {
       type: "Taxon",
-      name: page.catalog.canonicalName,
-      description: `${suffix}: ${page.catalog.canonicalName}.`,
+      name,
+      description: `${suffix}: ${name}.`,
       dateModified: toIsoDate(page.catalog.contentUpdatedAt),
       // A node reaches a public page only while its identity is active, so
       // this says what publication already guarantees rather than echoing a
@@ -84,7 +91,7 @@ export function buildPublicVarietySurfaceMetadata(
           rank: page.catalog.rank,
         }),
         ...(species && speciesUrl
-          ? { parentTaxon: { name: species.canonicalName, url: speciesUrl } }
+          ? { parentTaxon: { name: speciesName ?? species.canonicalName, url: speciesUrl } }
           : {}),
         sameAs: page.catalog.identifiers.flatMap((identifier) => {
           const url = catalogIdentifierUrl(identifier.scheme, identifier.value);
@@ -105,10 +112,10 @@ export function buildPublicVarietySurfaceMetadata(
           url: absolutePublicUrl(localizedPath(routeLocale, "/")),
         },
         ...(species && speciesUrl
-          ? [{ name: species.canonicalName, url: speciesUrl }]
+          ? [{ name: speciesName ?? species.canonicalName, url: speciesUrl }]
           : []),
         {
-          name: page.catalog.canonicalName,
+          name,
           url: absolutePublicUrl(
             localizedPath(routeLocale, page.catalog.canonicalPath),
           ),
@@ -124,6 +131,22 @@ export function buildPublicVarietyJsonLd(
   routeLocale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ) {
   return buildPublicVarietySurfaceMetadata(page, locale, { routeLocale }).jsonLd;
+}
+
+/**
+ * An organism's name for a reader: a species' own name in the reader's
+ * language when the catalogue holds one, its accepted name otherwise; a
+ * cultivar's or a breed's registered name as it is.
+ */
+export function organismReaderName(page: PublicVarietyPage, locale: InterfaceLocale) {
+  return page.catalog.catalogKind === "species" && page.catalog.vernacularName
+    ? capitalizeFirst(page.catalog.vernacularName, locale)
+    : page.catalog.canonicalName;
+}
+
+function capitalizeFirst(value: string, locale: InterfaceLocale) {
+  const [first, ...rest] = Array.from(value);
+  return first ? `${first.toLocaleUpperCase(locale)}${rest.join("")}` : value;
 }
 
 function toIsoDate(value: Date | string | null | undefined) {

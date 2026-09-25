@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-13; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21. Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -1216,3 +1216,37 @@ release remains compatible. Code rollback retains the table and evidence.
 
 Post-apply production inventory returned `status: applied`, `absent: []` for
 0079. No historical migrations were replayed by this change.
+
+## `0080`, the wishlist table — not yet applied
+
+`0080_retire_wishlist.sql` drops `wishlist_items` (`OVE-512`). The inventory of
+2026-09-26 reports it `missing` with the table still present and holding 0
+rows. It is applied after a deployment of `main` serves the code that no
+longer reads the table; until Vercel lifts the account pause, the deployed
+build still links to `/wishlist`.
+
+## `0081`, the standard species base — applied 2026-09-26
+
+`0081_ove530_standard_species_base.sql` was applied through
+`scripts/apply-reviewed-migration.ts` with the current Vercel production
+configuration: one transaction, `digitalocean_managed`, `defaultdb`, six
+statements, 352 ms. SQL SHA-256:
+`f0c7e5142b86846eb754c150206d371a7c8699544efa22826441f6578b3279f7`.
+
+Two additive tables: `catalog_standard_species` (membership, group, base
+version, popularity; FK to `catalog_items` `ON DELETE CASCADE`) and
+`catalog_standard_species_names` (which name rows the base wrote or changed,
+and what they were). Neither holds personal data. The data was then written by
+`scripts/load-standard-species.ts --apply` (413 members, 3,727 names written,
+719 changed, 70 nodes created, 20 materialized from the Catalogue of Life, 674
+identifiers, 7 addresses); a re-run writes nothing. Receipt:
+`docs/STANDARD_SPECIES_BASE_PROOF_2026-09.md`.
+
+Rollback `sql/rollback/0081_….down.sql` takes back every name change the base
+made — deleting the rows it wrote, restoring the flag, weight and spelling of
+the rows it changed — and then drops the two tables. The nodes it created and
+the addresses it gave stay: an address once public is never taken back.
+
+Post-apply production inventory returned `status: applied`, `absent: []` for
+0081. No historical migrations were replayed by this change.
+

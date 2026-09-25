@@ -56,6 +56,10 @@ const TRIGRAM_SETS_FILES = [
   "0065_ove387_picker_trigram_sets.sql",
   "0066_ove387_picker_trigram_set_index.sql",
 ];
+// Since 0081 (OVE-530, ADR-0035 D3) the picker offers a species only from the
+// standard base, so the schema carries the base's table and the two taxa the
+// fixed set expects are its members; nothing 0055's rollback drops is in it.
+const STANDARD_BASE_FILE = "0081_ove530_standard_species_base.sql";
 
 type Queryable = Pool | PoolClient;
 
@@ -540,7 +544,8 @@ async function assertPicker(kdb: Kysely<Database>, seed: Seed) {
   await firstIs("Мар’я", "uk", "plant", seed.apostropheId, "the Мар’яна cultivar");
   await firstIs("мар'я", "uk", "plant", seed.apostropheId, "the Мар’яна cultivar");
 
-  // The kind filter: a taxon by kingdom, a breed for animals.
+  // The kind filter: a taxon by the kind the standard base holds it for, a
+  // breed for animals.
   const bees = await firstIs("бджола", "uk", "animal", seed.animalTaxonId, "Apis mellifera");
   if (!bees.some((row) => row.id === seed.breedId)) throw new Error("picker: the breed is missing for an animal");
   if ((await search("бджола", "uk", "plant")).suggestions.some((row) => row.id === seed.animalTaxonId || row.id === seed.breedId)) {
@@ -699,6 +704,15 @@ export async function runDisposableProof() {
     await pool.query(migrationSql());
     await pool.query(trigramSetsSql());
     await assertTrigramSets(pool, seed);
+    await pool.query(readFileSync(path.join(process.cwd(), "sql", STANDARD_BASE_FILE), "utf8"));
+    await pool.query(
+      `insert into catalog_standard_species (
+         catalog_item_id, base_key, object_kind, base_group, latin_name, base_version
+       )
+       values ($1, 'plant:solanum-lycopersicum', 'plant', 'vegetables', 'Solanum lycopersicum', '2026-09-26'),
+              ($2, 'animal:apis-mellifera', 'animal', 'bees', 'Apis mellifera', '2026-09-26')`,
+      [seed.speciesId, seed.animalTaxonId],
+    );
     const after = await structure(pool);
     if (!after.functionPresent || !after.indexPresent) throw new Error("after: 0055 objects missing");
     await assertLabels(pool, seed, "after");

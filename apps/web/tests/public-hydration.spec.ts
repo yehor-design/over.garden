@@ -140,8 +140,9 @@ test.describe("public pages hydrate below the shell", () => {
     try {
       fixture = await seedOrganismFixture(pool, "ove389");
       await probeHydration(page, `/species/${fixture.speciesSlug}`);
+      // The everyday name opens the fact line (ADR-0035 D3).
       await expect(page.locator("[data-organism-fact]")).toContainText(
-        "Solanum lycopersicum",
+        "Помідор",
       );
       // "Names and sources" shipped closed until `OVE-452`. It is a real
       // section now: a collapsed section is invisible to a crawler even

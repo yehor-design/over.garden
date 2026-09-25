@@ -165,6 +165,8 @@ number in `apps/web/sql` when these were taken.
 
 | `0080` | `OVE-512` | `drop table wishlist_items` — the wishlist is retired (ADR-0033, owner decision 2026-09-25). Destructive, with the owner's explicit sign-off; apply **after** the release that no longer reads the table. |
 
+| `0081` | `OVE-530` | The standard species base: `catalog_standard_species` (membership, group, version) and `catalog_standard_species_names` (which name rows the base wrote or promoted, and what they were). Additive; the data is written by `scripts/load-standard-species.ts`. |
+
 `OVE-419` through `OVE-423`, `OVE-427` and `OVE-430` through `OVE-434` need no
 SQL and therefore hold no allocation; under rule 3 none of them may inherit a
 number from this block. The same holds for `OVE-463` and `OVE-466` of phase 5. `OVE-432` grows `JournalDocumentV1` additively at schema

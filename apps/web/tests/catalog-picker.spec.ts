@@ -604,6 +604,31 @@ async function seedFixture(pool: Pool): Promise<Fixture> {
       ],
     );
   }
+  // The picker offers a species only from the standard base (ADR-0035 D3).
+  for (const [id, key, kind, group, latin] of [
+    [
+      speciesId,
+      `plant:ove387-${suffix}-tomato`,
+      "plant",
+      "vegetables",
+      "Solanum lycopersicum",
+    ],
+    [
+      animalTaxonId,
+      `animal:ove387-${suffix}-honey-bee`,
+      "animal",
+      "bees",
+      "Apis mellifera",
+    ],
+  ] as const) {
+    await pool.query(
+      `insert into catalog_standard_species (
+         catalog_item_id, base_key, object_kind, base_group, latin_name, base_version
+       )
+       values ($1, $2, $3, $4, $5, '2026-09-26')`,
+      [id, key, kind, group, latin],
+    );
+  }
   const names: Array<[string, string, string, boolean, string]> = [
     [speciesId, "Solanum lycopersicum", "la", true, "scientific_accepted"],
     [speciesId, "Lycopersicon esculentum", "la", false, "scientific_synonym"],

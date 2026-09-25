@@ -51,7 +51,10 @@ import {
   resolvePublicSurfacePayload,
   resolveUnresolvedPublicSurfaceDiscovery,
 } from "@/server/public-surface-discovery";
-import { buildPublicVarietySurfaceMetadata } from "@/server/public-variety-metadata";
+import {
+  buildPublicVarietySurfaceMetadata,
+  organismReaderName,
+} from "@/server/public-variety-metadata";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import {
   formatOrganismDate,
@@ -221,7 +224,8 @@ export async function generatePublicCatalogEvidenceMetadata(
   });
   return {
     ...surface.metadata,
-    title: `${page.catalog.canonicalName} · ${routeCopy.metadataSuffix} | OverGarden`,
+    // The everyday name leads the title too (ADR-0035 D3); Latin is beneath.
+    title: `${organismReaderName(page, locale)} · ${routeCopy.metadataSuffix} | OverGarden`,
     // The fact paragraph, which says what the organism is and whether anyone
     // here wrote about it, rather than "Публічний вид: …" (`OVE-497`).
     description: organismFactParagraph(page, locale),
@@ -1081,7 +1085,9 @@ function organismFactParagraph(
 ) {
   const species = page.catalog.species;
   return formatOrganismFactParagraph(locale, {
-    canonicalName: page.catalog.canonicalName,
+    // The name a reader knows it by opens the sentence (ADR-0035 D3); the
+    // Latin name is beneath the heading, not the subject of the first line.
+    canonicalName: organismReaderName(page, locale),
     catalogKind: page.catalog.catalogKind,
     // A form's species as its reader knows it, quoted the way the language
     // quotes a name — "сорт виду «помідор їстівний»" — and its accepted name
