@@ -31,14 +31,18 @@ export interface PublicSurfaceVisibleFacts {
   image?: string;
   questions?: readonly { question: string; answer: string }[];
   itemNames?: readonly string[];
-  /** `Taxon` (ADR-0026 D9): the organism's structured facts. */
+  /**
+   * `Taxon`: a species page's organism by the names the page shows
+   * (`OVE-519`), and nothing the page does not — no rank, no `sameAs` to a
+   * source's identifier.
+   */
   taxon?: {
     /** The permalink URL: the `@id` that survives renames and merges. */
     id: string;
-    scientificName: string;
-    taxonRank: string;
+    /** The Latin name under the heading, when the heading is not it. */
+    scientificName?: string;
+    /** A form's species, which its page links to. */
     parentTaxon?: { name: string; url: string };
-    sameAs: readonly string[];
   };
   /** Home → species → form, as absolute URLs; two or three items. */
   breadcrumbs?: readonly { name: string; url: string }[];
@@ -289,8 +293,9 @@ function buildVisibleFactNode(
       "@id": facts.taxon.id,
       url: pageUrl,
       name: facts.name,
-      scientificName: facts.taxon.scientificName,
-      taxonRank: facts.taxon.taxonRank,
+      ...(facts.taxon.scientificName
+        ? { scientificName: facts.taxon.scientificName }
+        : {}),
       ...(facts.description ? { description: facts.description } : {}),
       ...(facts.taxon.parentTaxon
         ? {
@@ -301,10 +306,9 @@ function buildVisibleFactNode(
             },
           }
         : {}),
-      ...(facts.taxon.sameAs.length > 0 ? { sameAs: facts.taxon.sameAs } : {}),
       ...(facts.dateModified ? { dateModified: facts.dateModified } : {}),
-      // The other half of an entry's `about`: what gardeners have written
-      // about this organism, by the `@id` those entries claim for themselves.
+      // The other half of an entry's `about`: the entries the page lists, by
+      // the `@id` those entries claim for themselves.
       ...(facts.subjectOf && facts.subjectOf.length > 0
         ? {
             subjectOf: facts.subjectOf.map((entry) => ({

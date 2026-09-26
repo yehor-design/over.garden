@@ -2,12 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
-import {
-  buildPublicVarietyDiscoverySource,
-  type PublicVarietyPage,
-} from "@/server/public-variety-repository";
-import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
-import { resolvePublicSurfaceDiscoveryForRequest } from "@/server/public-surface-discovery";
+import type { SpeciesPage } from "@/server/species-page";
 import type { JournalEntrySearchContractRow } from "@/server/search/documents";
 
 import { POISON } from "./poison";
@@ -206,84 +201,73 @@ export function markupJournalEntryPage(): PublicJournalEntryPage {
   };
 }
 
-export function publicVarietyPage(
-  overrides: {
-    entryCount?: number;
-    aggregateBodyLength?: number;
-    poisonVisibleText?: boolean;
-  } = {},
-): PublicVarietyPage {
-  const entryCount = overrides.entryCount ?? 4;
-  const aggregateBodyLength = overrides.aggregateBodyLength ?? 1200;
-
-  const page = {
+/**
+ * The species page the journey's entry surfaces on (`OVE-519`): the entry is
+ * drawn with the feed's card, so its excerpt is on the page — and must never
+ * reach the page's JSON-LD, which names entries by `@id` alone.
+ */
+export function publicSpeciesPage(
+  overrides: { poisonVisibleText?: boolean } = {},
+): SpeciesPage {
+  return {
     catalog: {
       catalogItemId: JOURNEY.catalogItemId,
       catalogKind: "plant_variety",
       nodeKind: "cultivar",
       rank: null,
-      kingdom: null,
+      kingdom: "Plantae",
       canonicalName: JOURNEY.catalogCanonicalName,
       vernacularName: null,
       scientificName: JOURNEY.catalogCanonicalName,
       publicSlug: JOURNEY.catalogPublicSlug,
-      speciesSlug: null,
       species: null,
       canonicalPath: `/variety/${JOURNEY.catalogPublicSlug}`,
       permalinkPath: `/id/${JOURNEY.catalogItemId}`,
-      contentUpdatedAt: JOURNEY.publishedAt,
-      identifiers: [],
-      source: "ua_state_register",
-      locale: "uk",
     },
-    entryCount,
-    photoCount: 2,
-    aggregateBodyLength,
-    latestMeaningfulAt: JOURNEY.publishedAt,
-    qualityClass: "verified",
-    seedProof: null,
-    sourceCredits: [],
+    published: true,
     entries: [
       {
         id: JOURNEY.entryId,
         title: JOURNEY.safeTitle,
-        body: overrides.poisonVisibleText
+        excerpt: overrides.poisonVisibleText
           ? `${POISON.streetAddress} ${POISON.preciseCoordinates}`
-          : aggregateBodyLength < 120
-            ? "short"
-            : Array.from({ length: 10 }, () => JOURNEY.safeBody).join(" "),
+          : JOURNEY.safeBody,
         sourceLanguage: "uk",
         entryDate: JOURNEY.entryDate,
-        publicPath: `/journal/${JOURNEY.publicSlug}`,
-        plantObjectDisplayName: JOURNEY.plantDisplayName,
-        varietyText: overrides.poisonVisibleText
-          ? POISON.email
-          : JOURNEY.catalogCanonicalName,
-        safeRegionCode: overrides.poisonVisibleText
-          ? POISON.exifGps
-          : JOURNEY.regionCode,
-        media: {
-          id: JOURNEY.mediaId,
-          derivativeKey: POISON.quarantineKey,
-          publicUrl: JOURNEY.derivativePublicUrl,
-          intrinsicWidth: 1200,
-          intrinsicHeight: 800,
-          placeholderDataUri: null,
-          variantLongEdges: [],
+        publishedAt: JOURNEY.publishedAt,
+        publicPath: `/@gardener/post/1`,
+        object: {
+          id: JOURNEY.plantObjectId,
+          displayName: JOURNEY.plantDisplayName,
+          kind: "plant",
+          publicPath: `/@gardener/objects/cherry-tomato`,
+          safeRegionCode: overrides.poisonVisibleText
+            ? POISON.exifGps
+            : JOURNEY.regionCode,
         },
+        author: {
+          handle: "gardener",
+          displayName: "Gardener",
+          avatarUrl: null,
+          profilePath: "/@gardener",
+        },
+        media: [
+          {
+            id: JOURNEY.mediaId,
+            publicUrl: JOURNEY.derivativePublicUrl,
+            focalX: 0.5,
+            focalY: 0.5,
+            intrinsicWidth: 1200,
+            intrinsicHeight: 800,
+            placeholderDataUri: null,
+            variantLongEdges: [],
+          },
+        ],
+        topics: [],
       },
     ],
-    card: emptyPublicOrganismCard({
-      firstHandContentAt: JOURNEY.publishedAt,
-      hasFirstHandContent: true,
-      gardenerCount: 1,
-    }),
-  } satisfies Omit<PublicVarietyPage, "indexState">;
-  return {
-    ...page,
-    indexState: resolvePublicSurfaceDiscoveryForRequest(
-      buildPublicVarietyDiscoverySource(page, "public_variety_repository"),
-    ).decision,
+    nextCursor: null,
+    shareImage: null,
   };
 }
 

@@ -61,6 +61,7 @@ import {
 } from "@/server/mutation-scope";
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
 import { announcePublicUrlsToIndexNow } from "@/server/indexnow-announcer";
+import { announceSpeciesPagesOfObject } from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 
 export async function PATCH(
@@ -480,6 +481,9 @@ async function convergeAndRevalidate(entry: {
       announcePublicUrlsToIndexNow([canonical]);
     }
   }
+  // The species pages the entry is on, which it may have just published
+  // (`OVE-519`).
+  announceSpeciesPagesOfObject(entry.plant_object_id);
   await convergePublicProjectionsNow([entry.id]).catch(() => undefined);
 }
 

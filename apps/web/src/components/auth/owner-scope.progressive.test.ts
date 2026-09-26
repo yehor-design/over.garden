@@ -21,7 +21,6 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const PROGRESSIVE_SURFACES = [
   "app/(default)/garden/catalog/queue/page.tsx",
   "app/(default)/garden/catalog/sources/page.tsx",
-  "app/catalog-owner-card-controls.tsx",
   // `OVE-450`: the public profile's follow, unfollow, report and block, and
   // the lineage passport's follow and question. Thirty-three call sites across
   // seventeen files still used the closure form when Slice 28 began; these are
@@ -80,7 +79,6 @@ const STATEFUL_OWNER_FORMS = [
 const PROGRESSIVE_ACTIONS = [
   "app/(default)/garden/catalog/queue/actions.ts",
   "app/(default)/garden/catalog/sources/actions.ts",
-  "app/catalog-owner-card-actions.ts",
   "app/[locale]/[profileHandle]/actions.ts",
   "app/[locale]/lineage/objects/[objectId]/actions.ts",
   "app/[locale]/communities/[slug]/actions.ts",

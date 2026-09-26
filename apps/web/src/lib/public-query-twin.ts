@@ -1,3 +1,4 @@
+import { matchPublicCatalogAddressPath } from "./catalog/addresses";
 import { matchPublicProfilePath } from "./public-profile-lifecycle";
 import { stripLocalePrefix } from "./public-localization";
 
@@ -83,6 +84,28 @@ export const PUBLIC_QUERY_TWIN_PATTERNS: ReadonlyArray<{
     matches: (basePath) => matchPublicProfilePath(basePath) !== null,
     keys: ["tab", "page"],
   },
+  // A species page's later portions of «Записи» (`OVE-519`), at each of the
+  // shapes an organism's canonical address takes: the species, a form under
+  // it, and a cultivar or breed that has no species. A register hub under a
+  // species is not an organism's address and keeps its own query.
+  ...(
+    [
+      ["species/[slug]", "species", false],
+      ["species/[slug]/[form]", "species", true],
+      ["variety/[slug]", "plant_variety", false],
+      ["breed/[slug]", "breed", false],
+    ] as const
+  ).map(([route, family, form]) => ({
+    route,
+    matches: (basePath: string) => {
+      const address = matchPublicCatalogAddressPath(basePath);
+      if (!address) return false;
+      return address.kind === "species"
+        ? family === "species" && (address.formSlug !== null) === form
+        : address.catalogKind === family;
+    },
+    keys: ["cursor"],
+  })),
   {
     // The community's own facets and its paging position; a membership
     // result or a resumed sign-in intent is read by the page's request-time

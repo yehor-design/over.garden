@@ -48,13 +48,6 @@ export interface ObjectSetupCopy {
     create: string;
     creating: string;
   };
-  matches: {
-    title: (name: string) => string;
-    body: string;
-    write: string;
-    inSpace: (space: string) => string;
-    addAnother: string;
-  };
   duplicate: {
     title: (name: string, space: string) => string;
     body: string;
@@ -139,13 +132,6 @@ const uk: ObjectSetupCopy = {
       "Додавання нічого не публікує. Перший запис про неї ви опублікуєте окремо.",
     create: "Додати",
     creating: "Додаємо…",
-  },
-  matches: {
-    title: (name) => `У вас уже є «${name}»`,
-    body: "Можна написати про наявну — або додати ще одну.",
-    write: "Написати",
-    inSpace: (space) => `у просторі «${space}»`,
-    addAnother: "Додати ще одну",
   },
   duplicate: {
     title: (name, space) => `У просторі «${space}» уже є «${name}»`,
@@ -235,13 +221,6 @@ const bg: ObjectSetupCopy = {
       "Добавянето не публикува нищо. Първия запис за него ще публикувате отделно.",
     create: "Добави",
     creating: "Добавяме…",
-  },
-  matches: {
-    title: (name) => `Вече имате „${name}“`,
-    body: "Можете да пишете за него — или да добавите още едно.",
-    write: "Пиши",
-    inSpace: (space) => `в пространството „${space}“`,
-    addAnother: "Добави още едно",
   },
   duplicate: {
     title: (name, space) => `В пространството „${space}“ вече има „${name}“`,
@@ -334,13 +313,6 @@ const ru: ObjectSetupCopy = {
       "Добавление ничего не публикует. Первую запись о нём вы опубликуете отдельно.",
     create: "Добавить",
     creating: "Добавляем…",
-  },
-  matches: {
-    title: (name) => `У вас уже есть «${name}»`,
-    body: "Можно написать о нём — или добавить ещё одно.",
-    write: "Написать",
-    inSpace: (space) => `в пространстве «${space}»`,
-    addAnother: "Добавить ещё одно",
   },
   duplicate: {
     title: (name, space) => `В пространстве «${space}» уже есть «${name}»`,

@@ -1,6 +1,5 @@
 import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
-import { PlusIcon as Plus } from "@/components/icons/Plus";
 
 import {
   SiteShellContextRailModules,
@@ -8,7 +7,7 @@ import {
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { Field } from "@/components/ui/field";
@@ -36,7 +35,6 @@ import {
 import type { PublicCatalogBrowseCopy } from "@/lib/public-catalog-browse-copy";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { publicCatalogRegisterHubPath } from "@/lib/catalog/addresses";
-import { gardenObjectSetupPreselectionPath } from "@/lib/garden/public-paths";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
 import { cn } from "@/lib/utils";
@@ -430,7 +428,6 @@ export function CatalogResultRow({
     card.speciesName && card.rank !== "species" && rankLabel
       ? copy.speciesOf(rankLabel, card.speciesName)
       : null;
-  const keepable = card.kingdom === "Plantae" || card.kingdom === "Animalia";
 
   return (
     <ListRow
@@ -454,22 +451,6 @@ export function CatalogResultRow({
               <span data-catalog-card-species="true">{species}</span>
             ) : null}
           </>
-        ) : null
-      }
-      actions={
-        keepable ? (
-          <a
-            href={gardenObjectSetupPreselectionPath(card.publicSlug)}
-            data-catalog-add-to-garden="true"
-            // Into a private workspace route: sixty per page are nothing a
-            // crawler should spend itself on.
-            rel="nofollow"
-            aria-label={copy.addToGardenLabel(card.name)}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-          >
-            <Plus aria-hidden="true" />
-            {copy.addToGarden}
-          </a>
         ) : null
       }
       meta={

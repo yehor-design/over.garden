@@ -174,6 +174,12 @@ describe("owned object actions (OVE-491)", () => {
           path === `/garden/objects/${TOMATO}` && type === "layout",
       ),
     ).toHaveLength(2);
-    expect(mocks.revalidatePublicCacheTags).toHaveBeenCalledTimes(2);
+    expect(mocks.revalidatePublicCacheTags).toHaveBeenCalledTimes(3);
+    // A species change moves the object's entries between species pages
+    // (`OVE-519`): every species page and the sitemap are expired.
+    expect(mocks.revalidatePublicCacheTags).toHaveBeenLastCalledWith(
+      ["catalog", "sitemap"],
+      "expire",
+    );
   });
 });

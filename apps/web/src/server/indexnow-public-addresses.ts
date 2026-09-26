@@ -12,6 +12,7 @@ import {
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { getPublicAuthorHandle } from "@/server/author-handle-repository";
+import { isCatalogItemPublished } from "@/server/catalog-publication";
 import {
   afterResponse,
   announcePublicUrlsToIndexNow,
@@ -58,44 +59,89 @@ export function announceJournalEntry(input: {
 }
 
 /**
- * An organism card, but only once it is indexable.
+ * A species page, but only while it is published (`OVE-519`).
  *
- * ADR-0026 D9 keeps a card built only from sources `noindex` — a hundred
- * thousand pages reading "*Bactrocera dorsalis* — вид" is thin content — so
- * announcing every card revalidation would ask two search engines to fetch a
- * page that tells them not to index it. The card becomes announceable the day
- * a gardener publishes on it (`first_hand_content_at`) or the owner marks it
- * indexable, which is exactly the condition the indexing policy reads.
+ * An unpublished page is `noindex` — the catalogue has a hundred thousand of
+ * them — so announcing every revalidation would ask two search engines to
+ * fetch a page that tells them not to index it. A page is announceable while
+ * the publication rule holds for it (`catalog-publication.ts`), which is
+ * exactly what its `robots` reads.
  */
 export function announceCatalogCard(
   catalogItemId: string,
   executor: QueryExecutor = db,
 ): void {
   afterResponse(async () => {
-    const row = await executor
-      .selectFrom("catalog_items")
-      .select([
-        "catalog_items.public_slug as publicSlug",
-        "catalog_items.first_hand_content_at as firstHandContentAt",
-        "catalog_items.indexable_override as indexableOverride",
-        catalogKindSql("catalog_items").as("catalogKind"),
-        catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      ])
-      .where("catalog_items.id", "=", catalogItemId)
-      .where("catalog_items.merged_into_catalog_item_id", "is", null)
-      .executeTakeFirst();
-    if (!row?.publicSlug) return;
-    const indexable =
-      row.firstHandContentAt !== null || row.indexableOverride === true;
-    if (!indexable) return;
+    const path = await publishedSpeciesPagePath(catalogItemId, executor);
+    if (path) announcePublicUrlsToIndexNow([path]);
+  });
+}
 
-    announcePublicUrlsToIndexNow([
-      publicCatalogEvidencePath({
-        catalogKind: row.catalogKind ?? "plant_variety",
-        publicSlug: row.publicSlug,
-        speciesSlug: row.speciesSlug,
-      }),
-    ]);
+/**
+ * The species pages a published entry is on: its object's species or form,
+ * and a form's species (`OVE-519`). The first public entry is what publishes
+ * a page, and a published page whose list just changed is a page announced.
+ */
+export function announceSpeciesPagesOfObject(
+  plantObjectId: string | null | undefined,
+  executor: QueryExecutor = db,
+): void {
+  if (!plantObjectId) return;
+  afterResponse(async () => {
+    const items = await executor
+      .selectFrom("plant_objects")
+      .leftJoin("catalog_item_relations as object_form", (join) =>
+        join
+          .onRef(
+            "object_form.from_catalog_item_id",
+            "=",
+            "plant_objects.catalog_item_id",
+          )
+          .on("object_form.relation_type", "=", "form_of"),
+      )
+      .select([
+        "plant_objects.catalog_item_id as itemId",
+        "object_form.to_catalog_item_id as speciesId",
+      ])
+      .where("plant_objects.id", "=", plantObjectId)
+      .where("plant_objects.variety_state", "=", "selected")
+      .execute();
+    const ids = [
+      ...new Set(
+        items.flatMap((row) =>
+          [row.itemId, row.speciesId].filter(
+            (id): id is string => typeof id === "string",
+          ),
+        ),
+      ),
+    ];
+    const paths = (
+      await Promise.all(ids.map((id) => publishedSpeciesPagePath(id, executor)))
+    ).filter((path): path is string => path !== null);
+    if (paths.length > 0) announcePublicUrlsToIndexNow(paths);
+  });
+}
+
+async function publishedSpeciesPagePath(
+  catalogItemId: string,
+  executor: QueryExecutor,
+): Promise<string | null> {
+  const row = await executor
+    .selectFrom("catalog_items")
+    .select([
+      "catalog_items.public_slug as publicSlug",
+      catalogKindSql("catalog_items").as("catalogKind"),
+      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
+    ])
+    .where("catalog_items.id", "=", catalogItemId)
+    .where("catalog_items.merged_into_catalog_item_id", "is", null)
+    .executeTakeFirst();
+  if (!row?.publicSlug) return null;
+  if (!(await isCatalogItemPublished(catalogItemId, executor))) return null;
+  return publicCatalogEvidencePath({
+    catalogKind: row.catalogKind ?? "plant_variety",
+    publicSlug: row.publicSlug,
+    speciesSlug: row.speciesSlug,
   });
 }
 

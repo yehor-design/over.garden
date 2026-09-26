@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081`, `0082` and `0083` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081`, `0082`, `0083` and `0084` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -1299,3 +1299,29 @@ read them.
 
 Post-apply production inventory returned `status: applied`, `absent: []` for
 0083. No historical migrations were replayed by this change.
+
+## `0084`, content reports and moderation messages — applied 2026-09-26
+
+`0084_ove526_content_reports.sql` was applied through
+`scripts/apply-reviewed-migration.ts` with the current Vercel production
+configuration: one transaction, `digitalocean_managed`, `defaultdb`, sixteen
+statements, 288 ms. SQL SHA-256:
+`68fcfcd60cf154a62b205e6d4cf336279d1ddcf3e42986cd8f3bc61818589a33`.
+
+`content_reports` holds a report of a public page: its target kind, id,
+owner and address, the reason and the reporter's explanation, the reporter's
+name and email (what a notice must carry), a keyed fingerprint for the rate
+limit, the good-faith confirmation, and the owner's decision with its ground
+and facts. `moderation_messages` is the outbox of receipts, decisions and
+statements of reasons, drained by the moderation cron. Both tables are new and
+empty; the release production runs until a deployment of `main` is live never
+reads them.
+
+Rollback `sql/rollback/0084_….down.sql` keeps both tables: a report and its
+decision are the record the DSA asks for, and older code does not read them.
+A release without the purge cron no longer ages decided reports out after a
+year, so a rollback that lasts deletes them by hand, as the file says.
+
+Post-apply production inventory (read-only, 2026-09-26) returned
+`status: applied`, `absent: []` for 0084. No historical migrations were
+replayed by this change.

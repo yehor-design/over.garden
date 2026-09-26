@@ -1,20 +1,16 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { emptyPublicOrganismCard } from "@/server/public-organism-card-query";
+import type { PublicFeedEntry } from "@/server/public-feed-repository";
+import type { SpeciesPage } from "@/server/species-page";
 
 const ITEM_ID = "11111111-1111-4111-8111-111111111111";
 
 const mocks = vi.hoisted(() => ({
   readPublicCatalogAddress: vi.fn(),
-  readPublicVarietyPageByCatalogItemId: vi.fn(),
-  getEngagementSummary: vi.fn(async () => ({
-    target: { kind: "variety", ref: "de-barao" },
-    activeLikeCount: 0,
-    comments: [],
-  })),
+  readSpeciesPage: vi.fn(),
+  readSpeciesEntries: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  getSiteShellSessionState: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
@@ -31,25 +27,11 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/server/public-cache", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/public-cache")>()),
   readPublicCatalogAddress: mocks.readPublicCatalogAddress,
-  readPublicVarietyPageByCatalogItemId:
-    mocks.readPublicVarietyPageByCatalogItemId,
+  readSpeciesPage: mocks.readSpeciesPage,
+  readSpeciesEntries: mocks.readSpeciesEntries,
 }));
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
-vi.mock("@/server/site-shell-session", () => ({
-  getSiteShellSessionState: mocks.getSiteShellSessionState,
-}));
-vi.mock("@/server/engagement-repository", () => ({
-  getEngagementSummary: mocks.getEngagementSummary,
-}));
-vi.mock("@/app/engagement/engagement-viewer", () => ({
-  readViewerLikeState: vi.fn(async () => null),
-}));
-vi.mock("@/app/(default)/variety/[slug]/source-credits", () => ({
-  PublicVarietySourceCredits: () => (
-    <footer data-organism-section="attribution">Source credits</footer>
-  ),
 }));
 
 // A database is configured. Without one a static page defers its render to
@@ -62,25 +44,170 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("organism addresses (ADR-0026 D8, D9)", () => {
+describe("a species page (OVE-519)", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.getSiteShellSessionState.mockResolvedValue({
-      isAuthenticated: false,
-    });
     mocks.readPublicCatalogAddress.mockImplementation(async (request) => ({
       status: "canonical",
       catalogItemId: ITEM_ID,
       canonicalPath: canonicalPathFor(request),
     }));
-    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
-      page("species", "solanum-lycopersicum"),
+    mocks.readSpeciesPage.mockImplementation(async () => species());
+  });
+
+  it("is the name, the Latin name under it, the text, «Записи» and the entries — and nothing else", async () => {
+    const { default: SpeciesRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await SpeciesRoute({
+        params: Promise.resolve({ slug: "solanum-lycopersicum" }),
+      }),
+    );
+
+    expect(mocks.readPublicCatalogAddress).toHaveBeenCalledWith({
+      kind: "species",
+      speciesSlug: "solanum-lycopersicum",
+      formSlug: null,
+    });
+    expect(mocks.readSpeciesPage).toHaveBeenCalledWith(ITEM_ID, "uk");
+    expect(html).toContain(">Помідор їстівний</h1>");
+    expect(html).toMatch(
+      /<p lang="la" data-species-latin="true"[^>]*>Solanum lycopersicum<\/p>/u,
+    );
+    expect(html).toContain(
+      ">Записи про цю рослину від людей, які ведуть її журнал на Overgarden.</p>",
+    );
+    expect(html).toMatch(/<h2[^>]*>Записи<\/h2>/u);
+    expect(html).toContain("Перші плоди");
+    expect(html).toContain('href="/@olena/post/3"');
+
+    // The five parts, in order, read out of the document.
+    const order = [
+      "<h1",
+      "data-species-latin",
+      "data-species-text",
+      ">Записи</h2>",
+      "Перші плоди",
+    ].map((marker) => html.indexOf(marker));
+    expect(order.every((index) => index >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+
+    // Nothing else (DESIGN.md §5.18): no section, count, source, rail,
+    // «Додати в мій сад» or owner control — for anybody.
+    expect(html).not.toContain("Додати в мій сад");
+    expect(html).not.toContain("data-organism-section");
+    expect(html).not.toContain("/garden/objects/new");
+    expect(html).not.toContain("Catalogue of Life");
+    expect(html).not.toMatch(/\d+ (запис|фото|садівник)/u);
+    expect(html.match(/<h2/gu)).toHaveLength(1);
+  });
+
+  it("says what it shows in its metadata: the two names, the visible text, the newest photo", async () => {
+    const { generateMetadata } = await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "solanum-lycopersicum" }),
+    });
+
+    expect(metadata).toMatchObject({
+      title: "Помідор їстівний · Solanum lycopersicum | OverGarden",
+      description:
+        "Записи про цю рослину від людей, які ведуть її журнал на Overgarden.",
+      robots: { index: true, follow: true },
+      alternates: {
+        canonical: "https://over.garden/species/solanum-lycopersicum",
+        languages: {
+          uk: "https://over.garden/species/solanum-lycopersicum",
+          bg: "https://over.garden/bg/species/solanum-lycopersicum",
+          ru: "https://over.garden/ru/species/solanum-lycopersicum",
+        },
+      },
+      openGraph: { images: ["https://media.over.garden/tomato.webp"] },
+    });
+  });
+
+  it("names in its JSON-LD only what is on the page: the organism by its two names and the listed entries", async () => {
+    const { default: SpeciesRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await SpeciesRoute({
+        params: Promise.resolve({ slug: "solanum-lycopersicum" }),
+      }),
+    );
+    const graph = jsonLdGraph(html);
+    const taxon = graph.find((node) => node["@type"] === "Taxon");
+
+    expect(taxon).toEqual({
+      "@type": "Taxon",
+      "@id": `https://over.garden/id/${ITEM_ID}`,
+      url: "https://over.garden/species/solanum-lycopersicum",
+      name: "Помідор їстівний",
+      scientificName: "Solanum lycopersicum",
+      description:
+        "Записи про цю рослину від людей, які ведуть її журнал на Overgarden.",
+      subjectOf: [
+        {
+          "@type": "Article",
+          "@id": "https://over.garden/@olena/post/3#article",
+          url: "https://over.garden/@olena/post/3",
+        },
+      ],
+    });
+    expect(graph.some((node) => node["@type"] === "BreadcrumbList")).toBe(
+      false,
     );
   });
 
-  it("renders a species at its hierarchical address with Taxon JSON-LD and canonical metadata", async () => {
+  it("links a later portion with «Показати ще» at its own `?cursor=` address", async () => {
+    mocks.readSpeciesPage.mockImplementation(async () =>
+      species({ nextCursor: "next-portion" }),
+    );
+    const { default: SpeciesRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await SpeciesRoute({
+        params: Promise.resolve({ slug: "solanum-lycopersicum" }),
+      }),
+    );
+
+    expect(html).toContain(
+      'href="/species/solanum-lycopersicum?cursor=next-portion"',
+    );
+    expect(html).toContain("Показати ще");
+  });
+
+  it("renders a later portion from the `/q` twin, under the same header and canonical", async () => {
+    mocks.readSpeciesEntries.mockResolvedValue({
+      entries: [entry({ id: "e2", title: "Зав'язь", number: 2 })],
+      nextCursor: null,
+    });
+    const { default: PortionRoute, generateMetadata } =
+      await import("../../../[locale]/q/species/[slug]/page");
+    const props = {
+      params: Promise.resolve({ locale: "uk", slug: "solanum-lycopersicum" }),
+      searchParams: Promise.resolve({ cursor: "second" }),
+    };
+    const html = renderToStaticMarkup(await PortionRoute(props));
+
+    expect(mocks.readSpeciesEntries).toHaveBeenCalledWith(
+      ITEM_ID,
+      "second",
+      "uk",
+    );
+    expect(html).toContain(">Помідор їстівний</h1>");
+    expect(html).toContain("Зав&#x27;язь");
+    expect(html).not.toContain("Перші плоди");
+    // A later portion's first photograph is never the page's priority image.
+    expect(html).not.toContain('fetchPriority="high"');
+    await expect(generateMetadata(props)).resolves.toMatchObject({
+      alternates: {
+        canonical: "https://over.garden/species/solanum-lycopersicum",
+      },
+    });
+  });
+
+  it("keeps an unpublished page reachable, noindex, with its header and an empty state", async () => {
+    mocks.readSpeciesPage.mockImplementation(async () =>
+      species({ published: false, entries: [], shareImage: null }),
+    );
     const { default: SpeciesRoute, generateMetadata } = await import("./page");
     const props = {
       params: Promise.resolve({ slug: "solanum-lycopersicum" }),
@@ -88,273 +215,128 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     const html = renderToStaticMarkup(await SpeciesRoute(props));
     const metadata = await generateMetadata(props);
 
-    expect(mocks.readPublicCatalogAddress).toHaveBeenCalledWith({
-      kind: "species",
-      speciesSlug: "solanum-lycopersicum",
-      formSlug: null,
-    });
-    expect(mocks.readPublicVarietyPageByCatalogItemId).toHaveBeenCalledWith(
-      ITEM_ID,
-      "uk",
-    );
-    // `OVE-497`: the heading is the name a gardener knows it by, the
-    // scientific name beneath it and marked as Latin, the eyebrow the kind
-    // in plain words — never "Публічний вид".
+    expect(html).toContain('data-species-published="false"');
     expect(html).toContain(">Помідор їстівний</h1>");
-    expect(html).toMatch(
-      /<p lang="la" data-organism-scientific-name="true"[^>]*>Solanum lycopersicum<\/p>/u,
-    );
-    expect(html).toContain(">вид</p>");
-    expect(html).not.toContain("Публічний");
-    expect(html).toContain("Додати в мій сад");
-    // The catalogue has one door since `OVE-451`, and the card links to it.
-    expect(html).toContain('href="/catalog"');
-    expect(html).not.toContain("списку бажань");
-
-    // ADR-0026 D9's section order, read out of the document rather than
-    // eyeballed. It looks like a styling choice and is not: the fact-only
-    // first paragraph is what makes this page usable as an answer, and
-    // reordering it silently undoes an earlier slice's work.
-    const order = [
-      ...html.matchAll(/data-organism-section="([a-z-]+)"/gu),
-    ].map((match) => match[1]);
-    expect(order).toEqual([
-      "facts",
-      "experience",
-      "relations",
-      "presence",
-      "names-and-sources",
-      "attribution",
-    ]);
-    expect(html).toContain(
-      "Помідор їстівний — вид. У каталозі 1 форма цього виду. Публічні журнали ведуть 2 садівники у 1 області.",
-    );
-    expect(html).toContain("Київська");
-    expect(html).toContain('href="/species/solanum-lycopersicum/de-barao"');
-    expect(html).toContain("Tuta absoluta");
-    expect(html).toContain("основний живитель");
-    // ADR-0026 D9 wrote this section as "collapsed". It is a real section
-    // now (`OVE-452` criterion 6): a collapsed section is invisible to a
-    // crawler even though it is in the DOM, and everything in it — the
-    // identifiers `sameAs` is built from, the source behind each fact, the
-    // licence attribution — is a fact that matters for indexing.
-    expect(html).not.toMatch(
-      /<details[^>]*data-organism-section="names-and-sources"/u,
-    );
-    expect(html).toMatch(
-      /<section[^>]*data-organism-section="names-and-sources"/u,
-    );
-    expect(html).toContain("Джерела розходяться щодо прийнятої назви:");
-
-    // The identifiers, visible and linking out, in the monospace the design
-    // system reserves for a string a reader copies. `sameAs` is unchanged.
-    expect(html).toContain('data-organism-identifiers="true"');
-    expect(html).toContain('data-organism-identifier="eppo"');
-    expect(html).toMatch(
-      /class="[^"]*font-mono[^"]*"[^>]*(?:rel|target|href)[^>]*>LYPES|href="https:\/\/gd\.eppo\.int\/taxon\/LYPES"/u,
-    );
-    expect(html).toContain('href="https://gd.eppo.int/taxon/LYPES"');
-
-    // A name is written in a language and the markup says which (WCAG 3.1.2);
-    // a fact or an identifier is not a name and carries no `lang` — claiming
-    // one would be the same error in the other direction.
-    expect(html).toMatch(/<span lang="la"[^>]*>Solanum lycopersicum L\./u);
-    expect(html).not.toMatch(/<span lang="[a-z]{2}"[^>]*>LYPES/u);
-    expect(html).toMatch(/"@type":\s*"Taxon"/u);
-    expect(html).toContain(`/id/${ITEM_ID}`);
-    expect(html).toContain("https://gd.eppo.int/taxon/LYPES");
-    expect(html).toMatch(/"@type":\s*"BreadcrumbList"/u);
-    // The everyday name leads the title and the JSON-LD name (ADR-0035 D3);
-    // the Latin name is the Taxon's `scientificName`.
+    expect(html).toMatch(/<h2[^>]*>Записи<\/h2>/u);
+    expect(html).toContain("Публічних записів ще немає.");
+    expect(html).not.toContain("application/ld+json");
     expect(metadata).toMatchObject({
-      title: "Помідор їстівний · вид | OverGarden",
-      alternates: { canonical: "https://over.garden/species/solanum-lycopersicum" },
-    });
-    expect(html).toMatch(/"@type":\s*"Taxon",[^{}]*"name":\s*"Помідор їстівний"/u);
-    expect(html).toMatch(/"scientificName":\s*"Solanum lycopersicum/u);
-    expect(mocks.permanentRedirect).not.toHaveBeenCalled();
-  });
-
-  it("asks for the first gardener photograph at once and leaves the rest lazy", async () => {
-    // On production on 2026-09-20 the first gardener photograph was the card's
-    // LCP element and `loading="lazy"`: 2.9 s passed before it was requested
-    // (`OVE-470`). "The first entry" is not the rule either — this one is
-    // words only, and the photograph under it is what a reader sees first.
-    const base = page("species", "solanum-lycopersicum");
-    const photograph = (id: string) => ({
-      id,
-      derivativeKey: `derivatives/${id}/1.webp`,
-      publicUrl: `https://media.over.garden/derivatives/${id}/1.webp`,
-      intrinsicWidth: 2560,
-      intrinsicHeight: 1440,
-      placeholderDataUri: null,
-      variantLongEdges: [1280, 480],
-    });
-    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () => ({
-      ...base,
-      entryCount: 3,
-      entries: [
-        base.entries[0],
-        {
-          ...base.entries[0],
-          id: "entry-2",
-          title: "Second public note",
-          media: photograph("photo-2"),
-        },
-        {
-          ...base.entries[0],
-          id: "entry-3",
-          title: "Third public note",
-          media: photograph("photo-3"),
-        },
-      ],
-    }));
-    const { default: SpeciesRoute } = await import("./page");
-    const html = renderToStaticMarkup(
-      await SpeciesRoute({
-        params: Promise.resolve({ slug: "solanum-lycopersicum" }),
-      }),
-    );
-
-    const images = [...html.matchAll(/<img\b[^>]*>/gu)].map((match) => match[0]);
-    const second = images.find((tag) => tag.includes("photo-2"));
-    const third = images.find((tag) => tag.includes("photo-3"));
-    expect(second).toMatch(/loading="eager"/u);
-    expect(second).toMatch(/fetchPriority="high"/iu);
-    expect(third).toMatch(/loading="lazy"/u);
-    expect(third).not.toMatch(/fetchPriority=/iu);
-  });
-
-  it("shows presence for Ukraine and Bulgaria and the EPPO attribution with its date", async () => {
-    const { default: SpeciesRoute } = await import("./page");
-    const html = renderToStaticMarkup(
-      await SpeciesRoute({
-        params: Promise.resolve({ slug: "solanum-lycopersicum" }),
-      }),
-    );
-
-    expect(html).toContain('data-organism-section="presence"');
-    expect(html).toContain('data-organism-presence="UA"');
-    expect(html).toContain('data-organism-presence-status="present"');
-    expect(html).toContain('data-organism-presence="BG"');
-    expect(html).toContain('data-organism-presence-status="absent"');
-    expect(html).toContain("Україна");
-    expect(html).toContain("присутній");
-    // The badge never claims more than EPPO wrote: the verbatim status and the
-    // day it was observed sit beside the word (ADR-0026 D11).
-    expect(html).toContain("Present, restricted distribution");
-    expect(html).toContain('data-organism-attribution="eppo"');
-    expect(html).toContain("EPPO Global Database, EPPO Open Data Licence");
-    expect(html).toContain("Завантажено");
-  });
-
-  it("renders a form under its species from the [form] page, with the species as parentTaxon", async () => {
-    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
-      page("plant_variety", "de-barao"),
-    );
-    const { default: FormRoute, generateMetadata } =
-      await import("./[form]/page");
-    const props = {
-      params: Promise.resolve({
-        slug: "solanum-lycopersicum",
-        form: "de-barao",
-      }),
-    };
-    const html = renderToStaticMarkup(await FormRoute(props));
-    const metadata = await generateMetadata(props);
-
-    expect(mocks.readPublicCatalogAddress).toHaveBeenCalledWith({
-      kind: "species",
-      speciesSlug: "solanum-lycopersicum",
-      formSlug: "de-barao",
-    });
-    expect(html).toContain("Де Барао");
-    expect(html).toMatch(/"parentTaxon":\s*\{/u);
-    expect(html).toContain("/species/solanum-lycopersicum/de-barao");
-    expect(mocks.getEngagementSummary).toHaveBeenCalledTimes(1);
-    expect(metadata).toMatchObject({
-      alternates: { canonical: "https://over.garden/species/solanum-lycopersicum/de-barao" },
-    });
-  });
-
-  it("renders a source-only form reachable but noindex, with no JSON-LD and no engagement panel, and survives a refused panel", async () => {
-    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () => ({
-      ...page("plant_variety", "de-barao"),
-      entryCount: 0,
-      entries: [],
-      card: emptyPublicOrganismCard(),
-    }));
-    const { default: FormRoute, generateMetadata } =
-      await import("./[form]/page");
-    const props = {
-      params: Promise.resolve({
-        slug: "solanum-lycopersicum",
-        form: "de-barao",
-      }),
-    };
-    const html = renderToStaticMarkup(await FormRoute(props));
-
-    expect(html).toContain("Де Барао");
-    expect(html).toContain("Публічних записів садівників ще немає.");
-    expect(html).not.toMatch(/"@type":\s*"Taxon"/u);
-    expect(html).not.toContain('data-organism-section="experience"');
-    expect(html).not.toContain('data-organism-section="relations"');
-    expect(mocks.getEngagementSummary).not.toHaveBeenCalled();
-    await expect(generateMetadata(props)).resolves.toMatchObject({
       robots: { index: false, follow: false },
+      description:
+        "Записи про цю рослину від людей, які ведуть її журнал на Overgarden.",
     });
-
-    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
-      page("plant_variety", "de-barao"),
-    );
-    mocks.getEngagementSummary.mockRejectedValue(
-      new Error("Engagement target is not public."),
-    );
-    // A card without its panel is a degraded card, and a degraded card is not
-    // prerendered (ADR-0032 D4): the shell keeps the skeleton and a hole…
-    const deferred = (await FormRoute(props)) as React.ReactElement<{
-      children: React.ReactElement;
-    }>;
-    expect(renderToStaticMarkup(deferred)).toContain(
-      'data-site-shell-state="loading"',
-    );
-    // …and the reader's own request draws the card, without the panel.
-    const hole = deferred.props.children;
-    const atRequest = await (
-      hole.type as (props: unknown) => Promise<React.ReactNode>
-    )(hole.props);
-    const degraded = renderToStaticMarkup(atRequest);
-    expect(degraded).toContain("Де Барао");
-    expect(degraded).toMatch(/"@type":\s*"Taxon"/u);
-    expect(degraded).not.toContain("data-public-engagement-panel");
-    mocks.getEngagementSummary.mockReset();
+    expect(metadata).not.toHaveProperty("alternates");
   });
 
-  it("renders a bee breed at its legacy address in the route family's locale, not the reader's", async () => {
-    // The cookie says Bulgarian; the unprefixed family is the default locale's
-    // and stays Ukrainian (ADR-0029 D10). Its CDN copy is shared.
-    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    mocks.readPublicVarietyPageByCatalogItemId.mockImplementation(async () =>
-      page("breed", "carpathian-bee"),
+  it("uses the animal placeholder for an animal and the Latin heading when there is no common name", async () => {
+    mocks.readSpeciesPage.mockImplementation(async () =>
+      species({
+        kingdom: "Animalia",
+        vernacularName: null,
+        canonicalName: "Apis mellifera",
+        scientificName: "Apis mellifera",
+      }),
     );
-    const { default: BreedRoute, generateMetadata } =
-      await import("../../breed/[slug]/page");
-    const props = { params: Promise.resolve({ slug: "carpathian-bee" }) };
-    const html = renderToStaticMarkup(await BreedRoute(props));
-    const metadata = await generateMetadata(props);
+    const { default: SpeciesRoute, generateMetadata } = await import("./page");
+    const props = { params: Promise.resolve({ slug: "apis-mellifera" }) };
+    const html = renderToStaticMarkup(await SpeciesRoute(props));
+
+    expect(html).toContain('<h1 lang="la"');
+    expect(html).toContain(">Apis mellifera</h1>");
+    expect(html).not.toContain("data-species-latin");
+    expect(html).toContain(
+      "Записи про цю тварину від людей, які ведуть її журнал на Overgarden.",
+    );
+    await expect(generateMetadata(props)).resolves.toMatchObject({
+      title: "Apis mellifera | OverGarden",
+    });
+  });
+
+  it("renders a cultivar under its species with that form's placeholder and a link to the species", async () => {
+    mocks.readSpeciesPage.mockImplementation(async () =>
+      species({
+        catalogKind: "plant_variety",
+        nodeKind: "cultivar",
+        canonicalName: "Де Барао",
+        vernacularName: null,
+        scientificName: "Де Барао",
+        publicSlug: "de-barao",
+        canonicalPath: "/species/solanum-lycopersicum/de-barao",
+        species: {
+          scientificName: "Solanum lycopersicum",
+          displayName: "помідор їстівний",
+          publicSlug: "solanum-lycopersicum",
+        },
+      }),
+    );
+    const { default: FormRoute, generateMetadata } =
+      await import("./[form]/page");
+    const props = {
+      params: Promise.resolve({
+        slug: "solanum-lycopersicum",
+        form: "de-barao",
+      }),
+    };
+    const html = renderToStaticMarkup(await FormRoute(props));
+
+    expect(html).toContain(">Де Барао</h1>");
+    expect(html).toMatch(
+      /<a[^>]*href="\/species\/solanum-lycopersicum"[^>]*>Помідор їстівний <span lang="la" class="italic">Solanum lycopersicum<\/span><\/a>/u,
+    );
+    expect(html).toContain(
+      "Записи про цей сорт від людей, які ведуть його журнал на Overgarden.",
+    );
+    const taxon = jsonLdGraph(html).find((node) => node["@type"] === "Taxon");
+    expect(taxon).toMatchObject({
+      name: "Де Барао",
+      parentTaxon: {
+        "@type": "Taxon",
+        name: "Помідор їстівний",
+        url: "https://over.garden/species/solanum-lycopersicum",
+      },
+    });
+    expect(taxon).not.toHaveProperty("scientificName");
+    await expect(generateMetadata(props)).resolves.toMatchObject({
+      title: "Де Барао · Solanum lycopersicum | OverGarden",
+    });
+  });
+
+  it("renders a breed at its legacy address in the route family's language, fully translated", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    mocks.readSpeciesPage.mockImplementation(async () =>
+      species({
+        catalogKind: "breed",
+        nodeKind: "breed",
+        kingdom: "Animalia",
+        canonicalName: "Карпатська бджола",
+        vernacularName: null,
+        scientificName: "Карпатська бджола",
+        publicSlug: "carpathian-bee",
+        canonicalPath: "/breed/carpathian-bee",
+        entries: [],
+        published: false,
+      }),
+    );
+    const { default: BreedRoute } =
+      await import("../../../[locale]/breed/[slug]/page");
+    const html = renderToStaticMarkup(
+      await BreedRoute({
+        params: Promise.resolve({ locale: "bg", slug: "carpathian-bee" }),
+      }),
+    );
 
     expect(mocks.readPublicCatalogAddress).toHaveBeenCalledWith({
       kind: "legacy",
       catalogKind: "breed",
       slug: "carpathian-bee",
     });
-    expect(html).toContain(">порода або лінія</p>");
-    expect(html).toContain(">Карпатська бджола</h1>");
-    expect(html).toContain("Додати в мій сад");
-    expect(html).not.toContain("списъка с желания");
-    expect(metadata).toMatchObject({
-      alternates: { canonical: "https://over.garden/breed/carpathian-bee" },
-    });
+    expect(mocks.readSpeciesPage).toHaveBeenCalledWith(ITEM_ID, "bg");
+    expect(html).toContain('lang="bg"');
+    expect(html).toContain(
+      "Записи за тази порода от хора, които водят дневника ѝ в Overgarden.",
+    );
+    expect(html).toContain("Още няма публични записи.");
+    expect(html).not.toMatch(/[іїєґ]/u);
   });
 
   it("redirects a historical address to the canonical path on client navigation, localized", async () => {
@@ -372,7 +354,6 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
 
     const { default: LocalizedSpeciesRoute, generateMetadata } =
       await import("../../../[locale]/species/[slug]/page");
-    mocks.getRequestInterfaceLocale.mockClear();
     await expect(
       LocalizedSpeciesRoute({
         params: Promise.resolve({
@@ -381,7 +362,6 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
         }),
       }),
     ).rejects.toThrow("NEXT_REDIRECT:/bg/species/solanum-lycopersicum");
-    expect(mocks.getRequestInterfaceLocale).not.toHaveBeenCalled();
     await expect(
       generateMetadata({
         params: Promise.resolve({
@@ -390,7 +370,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
         }),
       }),
     ).resolves.toMatchObject({ robots: { index: false, follow: false } });
-    expect(mocks.readPublicVarietyPageByCatalogItemId).not.toHaveBeenCalled();
+    expect(mocks.readSpeciesPage).not.toHaveBeenCalled();
   });
 
   it("answers not found for an unknown slug, an unknown locale and a page the repository cannot provide", async () => {
@@ -408,10 +388,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
       generateMetadata({
         params: Promise.resolve({ slug: "no-such-organism" }),
       }),
-    ).resolves.toMatchObject({
-      title: "Публічний вид | OverGarden",
-      robots: { index: false, follow: false },
-    });
+    ).resolves.toMatchObject({ robots: { index: false, follow: false } });
 
     const { default: LocalizedSpeciesRoute } =
       await import("../../../[locale]/species/[slug]/page");
@@ -423,7 +400,7 @@ describe("organism addresses (ADR-0026 D8, D9)", () => {
     ).rejects.toThrow("NEXT_NOT_FOUND");
     expect(mocks.readPublicCatalogAddress).not.toHaveBeenCalled();
 
-    mocks.readPublicVarietyPageByCatalogItemId.mockResolvedValueOnce(null);
+    mocks.readSpeciesPage.mockResolvedValueOnce(null);
     await expect(
       SpeciesRoute({
         params: Promise.resolve({ slug: "solanum-lycopersicum" }),
@@ -447,203 +424,83 @@ function canonicalPathFor(request: {
   return `/${request.catalogKind === "breed" ? "breed" : "variety"}/${request.slug}`;
 }
 
-function page(kind: "species" | "breed" | "plant_variety", slug: string) {
-  const species =
-    kind === "plant_variety"
-      ? {
-          canonicalName: "Solanum lycopersicum",
-          displayName: "помідор їстівний",
-          publicSlug: "solanum-lycopersicum",
-        }
-      : null;
-  const canonicalName =
-    kind === "species"
-      ? "Solanum lycopersicum"
-      : kind === "breed"
-        ? "Карпатська бджола"
-        : "Де Барао";
+function jsonLdGraph(html: string) {
+  const match = html.match(
+    /<script type="application\/ld\+json">([^<]*)<\/script>/u,
+  );
+  expect(match).not.toBeNull();
+  return JSON.parse(match![1]!)["@graph"] as Array<Record<string, unknown>>;
+}
+
+function entry(input: { id: string; title: string; number: number }) {
+  return {
+    id: input.id,
+    title: input.title,
+    excerpt: "Перші червоні помідори на балконі.",
+    excerptTruncated: false,
+    sourceLanguage: "uk",
+    entryDate: "2026-08-01",
+    publishedAt: "2026-08-02T10:00:00.000Z",
+    publicPath: `/@olena/post/${input.number}`,
+    object: {
+      id: "22222222-2222-4222-8222-222222222222",
+      displayName: "Помідори на балконі",
+      kind: "plant",
+      publicPath: "/@olena/objects/pomidory",
+      safeRegionCode: null,
+    },
+    author: {
+      handle: "olena",
+      displayName: "Олена",
+      avatarUrl: null,
+      profilePath: "/@olena",
+    },
+    media: [
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        publicUrl: "https://media.over.garden/tomato.webp",
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: 1200,
+        intrinsicHeight: 900,
+        placeholderDataUri: null,
+        variantLongEdges: [],
+      },
+    ],
+    topics: [],
+  } satisfies PublicFeedEntry;
+}
+
+function species(
+  overrides: Partial<SpeciesPage["catalog"]> & {
+    published?: boolean;
+    entries?: PublicFeedEntry[];
+    nextCursor?: string | null;
+    shareImage?: SpeciesPage["shareImage"];
+  } = {},
+): SpeciesPage {
+  const { published, entries, nextCursor, shareImage, ...catalog } = overrides;
+  const listed = entries ?? [entry({ id: "e3", title: "Перші плоди", number: 3 })];
   return {
     catalog: {
       catalogItemId: ITEM_ID,
-      catalogKind: kind,
-      nodeKind:
-        kind === "species" ? "taxon" : kind === "breed" ? "breed" : "cultivar",
-      rank: kind === "species" ? "species" : null,
-      kingdom: kind === "breed" ? "Animalia" : "Plantae",
-      canonicalName,
-      vernacularName: kind === "species" ? "помідор їстівний" : null,
-      scientificName: canonicalName,
-      publicSlug: slug,
-      speciesSlug: species?.publicSlug ?? null,
-      species,
-      canonicalPath:
-        kind === "species"
-          ? `/species/${slug}`
-          : kind === "breed"
-            ? `/breed/${slug}`
-            : `/species/solanum-lycopersicum/${slug}`,
+      catalogKind: "species",
+      nodeKind: "taxon",
+      rank: "species",
+      kingdom: "Plantae",
+      canonicalName: "Solanum lycopersicum",
+      vernacularName: "помідор їстівний",
+      scientificName: "Solanum lycopersicum",
+      publicSlug: "solanum-lycopersicum",
+      species: null,
+      canonicalPath: "/species/solanum-lycopersicum",
       permalinkPath: `/id/${ITEM_ID}`,
-      contentUpdatedAt: new Date("2026-07-10T10:00:00.000Z"),
-      identifiers: [{ scheme: "eppo", value: "LYPES" }],
-      source:
-        kind === "species"
-          ? "species_backbone"
-          : kind === "breed"
-            ? "ua_official_bee_breed"
-            : "ua_state_register",
-      locale: "uk",
+      ...catalog,
     },
-    entryCount: 1,
-    photoCount: 0,
-    aggregateBodyLength: 200,
-    qualityClass: "verified",
-    latestMeaningfulAt: "2026-07-10T10:00:00.000Z",
-    indexState: {
-      value: "noindex",
-      isIndexable: false,
-      sitemapEligible: false,
-      robots: { index: false, follow: false },
-      reasons: ["entry_count_below_threshold"],
-      threshold: {
-        minPublicEntryCount: 3,
-        minAggregateBodyLength: 600,
-      },
-    },
-    seedProof: null,
-    sourceCredits: [
-      {
-        sourceSlug: "eppo",
-        sourceName: "EPPO Global Database",
-        sourceVersion: "2026-09",
-        sourceUrl: "https://gd.eppo.int/",
-        license: "EPPO",
-        licenseUrl: null,
-        attributionRequired: true,
-        attributionText: null,
-        fetchedAt: "2026-09-02T00:00:00.000Z",
-        lastObservedAt: "2026-09-03T00:00:00.000Z",
-      },
-    ],
-    card: emptyPublicOrganismCard({
-      firstHandContentAt: "2026-07-10T10:00:00.000Z",
-      hasFirstHandContent: true,
-      formCount: kind === "species" ? 1 : 0,
-      gardenerCount: 2,
-      regions: [
-        {
-          code: "UA-32",
-          label: "Київська область",
-          objectCount: 3,
-          gardenerCount: 2,
-        },
-      ],
-      forms:
-        kind === "species"
-          ? [
-              {
-                catalogItemId: "f1",
-                canonicalName: "Де Барао",
-                catalogKind: "plant_variety",
-                publicPath: "/species/solanum-lycopersicum/de-barao",
-                hostClass: null,
-              },
-            ]
-          : [],
-      pests:
-        kind === "species"
-          ? [
-              {
-                catalogItemId: "p1",
-                canonicalName: "Tuta absoluta",
-                catalogKind: "species",
-                publicPath: "/species/tuta-absoluta",
-                hostClass: "major_host",
-              },
-            ]
-          : [],
-      sourceGroups: [
-        {
-          sourceSlug: "col",
-          sourceName: "Catalogue of Life",
-          sourceVersion: "2026-08",
-          observedAt: "2026-09-01T00:00:00.000Z",
-          lines: [
-            {
-              kind: "name",
-              label: "scientific_accepted",
-              value: "Solanum lycopersicum L.",
-              qualifier: "la",
-              observedAt: "2026-09-01T00:00:00.000Z",
-            },
-          ],
-        },
-        {
-          sourceSlug: "eppo",
-          sourceName: "EPPO Global Database",
-          sourceVersion: "2026-09",
-          observedAt: "2026-09-03T00:00:00.000Z",
-          lines: [
-            {
-              kind: "name",
-              label: "scientific_accepted",
-              value: "Lycopersicon esculentum Mill.",
-              qualifier: "la",
-              observedAt: "2026-09-02T00:00:00.000Z",
-            },
-            {
-              kind: "identifier",
-              label: "eppo",
-              value: "LYPES",
-              qualifier: null,
-              observedAt: "2026-09-02T00:00:00.000Z",
-            },
-          ],
-        },
-      ],
-      acceptedNameClaims: [
-        { sourceName: "Catalogue of Life", name: "Solanum lycopersicum" },
-        { sourceName: "EPPO Global Database", name: "Lycopersicon esculentum" },
-      ],
-      presence:
-        kind === "species"
-          ? [
-              {
-                regionCode: "UA",
-                status: "present" as const,
-                verbatim: "Present, restricted distribution",
-                sourceName: "EPPO Global Database",
-                observedAt: "2026-09-03T00:00:00.000Z",
-              },
-              {
-                regionCode: "BG",
-                status: "absent" as const,
-                verbatim: "Absent, confirmed by survey",
-                sourceName: "EPPO Global Database",
-                observedAt: "2026-09-03T00:00:00.000Z",
-              },
-            ]
-          : [],
-      attributions: [
-        {
-          sourceSlug: "eppo",
-          sourceName: "EPPO Global Database",
-          text: "EPPO Global Database, EPPO Open Data Licence",
-          downloadedAt: "2026-09-03T00:00:00.000Z",
-        },
-      ],
-    }),
-    entries: [
-      {
-        id: "entry-1",
-        title: "First public note",
-        body: "A public note with no private fixture values.",
-        entryDate: "2026-07-10",
-        publicPath: "/journal/first-public-note",
-        plantObjectDisplayName: "Balcony organism",
-        varietyText: canonicalName,
-        safeRegionCode: "UA-30",
-        media: null,
-      },
-    ],
+    published: published ?? true,
+    entries: listed,
+    nextCursor: nextCursor ?? null,
+    shareImage:
+      shareImage === undefined ? (listed[0]?.media[0] ?? null) : shareImage,
   };
 }

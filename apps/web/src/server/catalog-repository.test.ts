@@ -15,12 +15,10 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import {
   buildCatalogTypeaheadStatement,
-  buildFindSelectableCatalogItemByPublicSlugQuery,
   buildFindSelectableCatalogItemQuery,
   buildUpsertCatalogSearchMissQuery,
   CATALOG_TYPEAHEAD_DEADLINE_MS,
   normalizeCatalogLabel,
-  normalizeCatalogPublicSlug,
   normalizeCatalogQuery,
   recordCatalogSearchMiss,
   searchCatalogSuggestionsForTypeaheadResult,
@@ -379,29 +377,6 @@ describe("catalog labels and selectable items", () => {
     expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000000101",      "active",
-    ]);
-  });
-
-  it("normalizes bounded public slugs for activation preselection", () => {
-    expect(normalizeCatalogPublicSlug("  pomidor-cheri-0000000101 ")).toBe(
-      "pomidor-cheri-0000000101",
-    );
-    expect(normalizeCatalogPublicSlug("Pomidor Cheri")).toBeNull();
-    expect(normalizeCatalogPublicSlug("a".repeat(97))).toBeNull();
-  });
-
-  it("validates public slug preselection against active global selectable rows", () => {
-    const compiled = buildFindSelectableCatalogItemByPublicSlugQuery(
-      testDb,
-      "pomidor-cheri-0000000101",
-    ).compile();
-
-    expect(compiled.sql).toContain('"public_slug" = $1');
-    expect(compiled.sql).toContain('"public_slug" is not null');
-    expect(compiled.sql).toContain('"identity_state" = ');
-    expect(compiled.sql).toContain('"created_by_user_id" is null');
-    expect(compiled.parameters).toEqual([
-      "pomidor-cheri-0000000101",      "active",
     ]);
   });
 });

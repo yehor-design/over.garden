@@ -1607,6 +1607,27 @@ export async function proxy(request: NextRequest) {
         localization,
       );
     }
+    // A later portion of the page's «Записи» (`OVE-519`), bounded as the
+    // home feed's is: a cursor that is not one, or one with nothing after
+    // it, is a 404 before anything streams.
+    const cursor = requestedListingCursor(request.nextUrl.searchParams);
+    if (lookup?.status === "canonical" && cursor !== null) {
+      const { isSpeciesCursorBeyondTheEnd } =
+        await import("@/server/species-page");
+      const beyond = await isSpeciesCursorBeyondTheEnd(
+        lookup.catalogItemId,
+        cursor,
+      ).catch(() => false);
+      if (beyond) {
+        return withAppRouteContract(
+          notFoundDocument(
+            renderNotFoundPublicCatalogHtml(locale, lifecycleLocation),
+          ),
+          request,
+          localization,
+        );
+      }
+    }
   }
 
   // Only now is an unprefixed `/@` address rewritten into the `[locale]`

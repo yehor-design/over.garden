@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   listProfileUrls: vi.fn(),
   listCommunityUrls: vi.fn(),
   listAuthored: vi.fn(),
-  listVariety: vi.fn(),
+  listSpecies: vi.fn(),
   listTopics: vi.fn(),
   getTopicPage: vi.fn(),
 }));
@@ -33,8 +33,8 @@ vi.mock("@/server/public-localized-content", () => ({
   listIndexableLocalizedAuthoredSitemapEntries: mocks.listAuthored,
 }));
 
-vi.mock("@/server/public-variety-repository", () => ({
-  listIndexablePublicVarietySitemapEntries: mocks.listVariety,
+vi.mock("@/server/species-page", () => ({
+  listPublishedSpeciesSitemapEntries: mocks.listSpecies,
 }));
 
 vi.mock("@/server/public-topic-repository", () => ({
@@ -136,7 +136,7 @@ describe("public sitemap", () => {
     mocks.listAuthored.mockReturnValue([
       { path: "/bg/guides/start", lastModified: "2026-07-03T00:00:00.000Z" },
     ]);
-    mocks.listVariety.mockResolvedValue([]);
+    mocks.listSpecies.mockResolvedValue([]);
 
     await expect(buildPublicSitemapChunk("authored")).resolves.toEqual([
       {
@@ -148,7 +148,7 @@ describe("public sitemap", () => {
   });
 
   it("emits canonical hierarchical organism addresses only, never a 308 target (ADR-0026 D8)", async () => {
-    mocks.listVariety.mockResolvedValue([
+    mocks.listSpecies.mockResolvedValue([
       {
         catalogKind: "species",
         publicSlug: "solanum-lycopersicum",

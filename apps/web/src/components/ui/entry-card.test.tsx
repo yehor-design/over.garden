@@ -225,6 +225,27 @@ describe("EntryCard", () => {
     expect(screen.getByRole("link", { name: "Обговорення" })).toBeTruthy();
   });
 
+  it("keeps who and when on one line: the name truncates, the date never moves", () => {
+    const { container } = render(
+      <EntryCard
+        {...base}
+        author={{
+          displayName: "@gardener_efc09b9391afd495",
+          href: "/@gardener_efc09b9391afd495",
+        }}
+      />,
+    );
+    const byline = container.querySelector('[data-entry-card-byline="true"]')!;
+
+    // A wrapping row pushed the date onto a second line when the typeface
+    // arrived, and moved everything below it (`OVE-519`).
+    const row = byline.querySelector("div")!;
+    expect(row.className).not.toMatch(/flex-wrap/u);
+    expect(row.querySelector("a span.truncate")).not.toBeNull();
+    expect(byline.querySelector("time")?.className).toMatch(/shrink-0/u);
+    expect(byline.querySelector("time")?.className).toMatch(/whitespace-nowrap/u);
+  });
+
   it("takes its heading level from the page it sits in", () => {
     render(<EntryCard {...base} headingLevel={3} />);
 

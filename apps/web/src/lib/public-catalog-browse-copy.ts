@@ -75,8 +75,6 @@ export interface PublicCatalogBrowseCopy {
   readonly allDescription: (total: number) => string;
   /** "Сорт виду «томат»": a form named by the species it belongs to. */
   readonly speciesOf: (rank: string, species: string) => string;
-  readonly addToGarden: string;
-  readonly addToGardenLabel: (name: string) => string;
   /** The same search across every kingdom, when the chosen one has none. */
   readonly searchEverywhere: (total: number) => string;
   readonly doorPartial: string;
@@ -170,8 +168,6 @@ const UK: PublicCatalogBrowseCopy = {
   allDescription: (total) =>
     `${total.toLocaleString("uk-UA")} організмів — за царствами й за першою літерою латинської назви.`,
   speciesOf: (rank, species) => `${rank} виду «${species}»`,
-  addToGarden: "Додати в мій сад",
-  addToGardenLabel: (name) => `Додати в мій сад: ${name}`,
   searchEverywhere: (total) =>
     `Шукати в усьому каталозі (${total.toLocaleString("uk-UA")})`,
   doorPartial: "Частину каталогу зараз не вдалося показати. Пошук працює.",
@@ -275,8 +271,6 @@ const BG: PublicCatalogBrowseCopy = {
   allDescription: (total) =>
     `${total.toLocaleString("bg-BG")} организма — по царства и по първа буква на латинското име.`,
   speciesOf: (rank, species) => `${rank} на вида „${species}“`,
-  addToGarden: "Добавяне в моята градина",
-  addToGardenLabel: (name) => `Добавяне в моята градина: ${name}`,
   searchEverywhere: (total) =>
     `Търсене в целия каталог (${total.toLocaleString("bg-BG")})`,
   doorPartial: "Част от каталога не можа да се покаже сега. Търсенето работи.",
@@ -381,8 +375,6 @@ const RU: PublicCatalogBrowseCopy = {
   allDescription: (total) =>
     `${total.toLocaleString("ru-RU")} организмов — по царствам и по первой букве латинского названия.`,
   speciesOf: (rank, species) => `${rank} вида «${species}»`,
-  addToGarden: "Добавить в мой сад",
-  addToGardenLabel: (name) => `Добавить в мой сад: ${name}`,
   searchEverywhere: (total) =>
     `Искать во всём каталоге (${total.toLocaleString("ru-RU")})`,
   doorPartial: "Часть каталога сейчас не удалось показать. Поиск работает.",

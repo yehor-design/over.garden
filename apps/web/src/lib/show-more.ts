@@ -72,3 +72,12 @@ const COPY: Record<InterfaceLocale, ShowMoreCopy> = {
 export function getShowMoreCopy(locale: InterfaceLocale): ShowMoreCopy {
   return COPY[locale];
 }
+
+/**
+ * A later portion's own address on a list read by cursor: the list's page and
+ * `?cursor=`. The proxy renders it from the page's `/q` twin, answers
+ * `noindex, follow` for it, and 404 for a cursor with nothing after it.
+ */
+export function cursorPortionHref(path: string, cursor: string): string {
+  return `${path}?cursor=${encodeURIComponent(cursor)}`;
+}

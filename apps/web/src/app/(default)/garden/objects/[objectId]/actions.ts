@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { publicCacheTag } from "@/lib/public-cache-tags";
+import { PUBLIC_CACHE_TAGS, publicCacheTag } from "@/lib/public-cache-tags";
 
 import type { MutationScopeActionState } from "@/lib/auth/owner-scope-contract";
 import {
@@ -48,6 +48,13 @@ export async function resolvePlantObjectCatalogAction(
 
   revalidateObject(result.plantObject.id);
   revalidatePublicEntries(result);
+  // An object that changes species moves its entries between species pages,
+  // and can publish one page and unpublish another (`OVE-519`): every species
+  // page, its forms' pages and the sitemap read under these two tags.
+  revalidatePublicCacheTags(
+    [PUBLIC_CACHE_TAGS.catalog, PUBLIC_CACHE_TAGS.sitemap],
+    "expire",
+  );
 }
 
 export async function updatePlantObjectLocationAction(

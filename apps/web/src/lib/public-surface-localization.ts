@@ -164,13 +164,6 @@ interface PublicSurfaceCopy {
     lineageQuestionPlaceholder: string;
     sendQuestion: string;
   };
-  variety: {
-    title: string;
-    metadataSuffix: string;
-    collectionPageSuffix: string;
-    growingNote: string;
-    openSourceEntry: string;
-  };
   profile: {
     title: string;
     metadataSuffix: string;
@@ -183,12 +176,6 @@ interface PublicSurfaceCopy {
     publicJournalEntry: string;
     avatarSuffix: string;
   };
-  sourceCredits: {
-    versionLabel: string;
-    dataSources: string;
-    title: string;
-    attributionRequired: string;
-  };
   notFound: {
     title: string;
     home: string;
@@ -198,78 +185,6 @@ interface PublicSurfaceCopy {
     notFoundDescription: string;
     /** An organism's 404 leads to the catalogue, which is what it is part of. */
     browseCatalogue: string;
-    /** Names the card's crumbs: the catalogue, the species, its forms (`OVE-497`). */
-    crumbsLabel: string;
-    /** Fact paragraph templates (ADR-0026 D9): structured fields only. */
-    fact: {
-      identity: string;
-      identityWithSpecies: string;
-      forms: string;
-      /** The verb agrees with the count: "веде 1 садівник", "ведуть 2 садівники". */
-      gardeners: Record<"one" | "other", string>;
-      gardenersWithRegions: Record<"one" | "other", string>;
-      noGardeners: string;
-      kind: Record<"species" | "plant_variety" | "breed", string>;
-      /** ADR-0026 D11: what an organism with hosts is called on its card. */
-      role: Record<"pest" | "disease", string>;
-    };
-    sections: {
-      experience: string;
-      spread: string;
-      relations: string;
-      forms: string;
-      pests: string;
-      hosts: string;
-      /** ADR-0026 D11: country-level presence, for Ukraine and Bulgaria. */
-      presence: string;
-      /** ADR-0026 D13: what gardeners wrote, which no source has. */
-      mentions: string;
-      mentionsHint: string;
-      mentionWeeks: string;
-      namesAndSources: string;
-      namesAndSourcesHint: string;
-      disagreement: string;
-      lastUpdated: string;
-      downloadedOn: string;
-      observedOn: string;
-      identifier: string;
-      /** The heading over the outbound identifiers (`OVE-452`). */
-      identifiers: string;
-      /** The contents rail's own name, above `xl` (`OVE-452`). */
-      onThisPage: string;
-      /** The way to every form, from the dozen the card names (`OVE-497`). */
-      allForms: string;
-      /** "{shown} of {total}", when the card names fewer than there are. */
-      formsShown: string;
-      /** Says an editorial note is the editors', not a gardener's journal. */
-      editorial: string;
-    };
-    /** The four words a presence badge may say, and nothing else (D11). */
-    presence: Record<"present" | "absent" | "transient" | "unknown", string>;
-    /** The two countries OverGarden serves, named for a badge. */
-    presenceRegion: Record<"UA" | "BG", string>;
-    hostClass: Record<
-      | "major_host"
-      | "host"
-      | "wild_weed_host"
-      | "incidental"
-      | "experimental"
-      | "artificial"
-      | "unknown",
-      string
-    >;
-    nameType: Record<
-      | "scientific_accepted"
-      | "scientific_synonym"
-      | "vernacular"
-      | "denomination"
-      | "trade_designation",
-      string
-    >;
-    predicate: Record<
-      "distribution_status" | "categorization" | "registration_status",
-      string
-    >;
   };
 }
 
@@ -421,13 +336,6 @@ const COPY = {
       lineageQuestionPlaceholder: "Що варто знати про цю лінію?",
       sendQuestion: "Надіслати запитання",
     },
-    variety: {
-      title: "Публічний сорт",
-      metadataSuffix: "сорт",
-      collectionPageSuffix: "публічні записи саду",
-      growingNote: "Нотатка про вирощування",
-      openSourceEntry: "Відкрити вихідний запис",
-    },
     profile: {
       title: "Публічний профіль садівника",
       metadataSuffix: "публічний профіль",
@@ -442,12 +350,6 @@ const COPY = {
       publicJournalEntry: "Публічний запис журналу",
       avatarSuffix: "аватар",
     },
-    sourceCredits: {
-      versionLabel: "Версія",
-      dataSources: "Джерела даних",
-      title: "Джерела та визнання",
-      attributionRequired: "Потрібне зазначення джерела",
-    },
     notFound: {
       title: "Сторінку не знайдено",
       home: "До OverGarden",
@@ -457,84 +359,6 @@ const COPY = {
       notFoundDescription:
         "За цією адресою немає виду, сорту чи породи. Адреси змінюються лише з постійним перенаправленням, тому посилання, ймовірно, було введено з помилкою.",
       browseCatalogue: "Відкрити каталог",
-      crumbsLabel: "Шлях у каталозі",
-      fact: {
-        identity: "{name} — {kind}.",
-        identityWithSpecies: "{name} — {kind} виду {species}.",
-        forms: "У каталозі {forms} цього виду.",
-        gardeners: {
-          one: "Публічні журнали веде {gardeners}.",
-          other: "Публічні журнали ведуть {gardeners}.",
-        },
-        gardenersWithRegions: {
-          one: "Публічні журнали веде {gardeners} у {regions}.",
-          other: "Публічні журнали ведуть {gardeners} у {regions}.",
-        },
-        noGardeners: "Публічних записів садівників ще немає.",
-        kind: {
-          species: "вид",
-          plant_variety: "сорт",
-          breed: "порода або лінія",
-        },
-        role: { pest: "шкідник", disease: "хвороба" },
-      },
-      sections: {
-        experience: "Досвід садівників",
-        spread: "Де вирощують",
-        relations: "Зв'язки",
-        forms: "Форми цього виду",
-        pests: "Шкідники та хвороби",
-        hosts: "Живителі",
-        presence: "Присутність за даними EPPO",
-        mentions: "Про що пишуть садівники",
-        mentionsHint:
-          "Згадки у публічних записах за останні дванадцять тижнів. Це єдине, чого немає в жодному довіднику.",
-        mentionWeeks: "За тижнями",
-        namesAndSources: "Назви та джерела",
-        namesAndSourcesHint:
-          "Що стверджує кожне джерело, з версією та датою спостереження.",
-        disagreement: "Джерела розходяться щодо прийнятої назви:",
-        lastUpdated: "Оновлено",
-        downloadedOn: "Завантажено",
-        observedOn: "Спостережено",
-        identifier: "Ідентифікатор",
-        identifiers: "Ідентифікатори у джерелах",
-        onThisPage: "На цій сторінці",
-        allForms: "Усі форми",
-        formsShown: "Тут {shown} з {total}.",
-        editorial: "Від редакції OverGarden",
-      },
-      hostClass: {
-        major_host: "основний живитель",
-        host: "живитель",
-        wild_weed_host: "дикий або бур'яновий живитель",
-        incidental: "випадковий живитель",
-        experimental: "експериментальний живитель",
-        artificial: "штучне зараження",
-        unknown: "клас живителя невідомий",
-      },
-      presence: {
-        present: "присутній",
-        absent: "відсутній",
-        transient: "тимчасово присутній",
-        unknown: "статус невідомий",
-      },
-      presenceRegion: {
-        UA: "Україна",
-        BG: "Болгарія",
-      },
-      nameType: {
-        scientific_accepted: "Прийнята наукова назва",
-        scientific_synonym: "Науковий синонім",
-        vernacular: "Народна назва",
-        denomination: "Реєстрова назва",
-        trade_designation: "Торгова назва",
-      },
-      predicate: {
-        distribution_status: "Поширення",
-        categorization: "Категорія",
-        registration_status: "Реєстрація",
-      },
     },
   },
   bg: {
@@ -687,13 +511,6 @@ const COPY = {
       lineageQuestionPlaceholder: "Какво трябва да знам за тази линия?",
       sendQuestion: "Изпратете въпроса",
     },
-    variety: {
-      title: "Публичен сорт",
-      metadataSuffix: "сорт",
-      collectionPageSuffix: "публични записи в градината",
-      growingNote: "Бележка за отглеждане",
-      openSourceEntry: "Отворете изходния запис",
-    },
     profile: {
       title: "Публичен профил на градинар",
       metadataSuffix: "публичен профил",
@@ -708,12 +525,6 @@ const COPY = {
       publicJournalEntry: "Публичен запис в дневника",
       avatarSuffix: "аватар",
     },
-    sourceCredits: {
-      versionLabel: "Версия",
-      dataSources: "Източници на данни",
-      title: "Източници и признание",
-      attributionRequired: "Посочването на източника е задължително",
-    },
     notFound: {
       title: "Страницата не е намерена",
       home: "Към OverGarden",
@@ -723,84 +534,6 @@ const COPY = {
       notFoundDescription:
         "На този адрес няма вид, сорт или порода. Адресите се променят само с постоянно пренасочване, така че връзката вероятно е въведена грешно.",
       browseCatalogue: "Към каталога",
-      crumbsLabel: "Път в каталога",
-      fact: {
-        identity: "{name} — {kind}.",
-        identityWithSpecies: "{name} — {kind} от вида {species}.",
-        forms: "В каталога има {forms} на този вид.",
-        gardeners: {
-          one: "Публични дневници води {gardeners}.",
-          other: "Публични дневници водят {gardeners}.",
-        },
-        gardenersWithRegions: {
-          one: "Публични дневници води {gardeners} в {regions}.",
-          other: "Публични дневници водят {gardeners} в {regions}.",
-        },
-        noGardeners: "Все още няма публични записи от градинари.",
-        kind: {
-          species: "вид",
-          plant_variety: "сорт",
-          breed: "порода или линия",
-        },
-        role: { pest: "вредител", disease: "болест" },
-      },
-      sections: {
-        experience: "Опит на градинарите",
-        spread: "Къде се отглежда",
-        relations: "Връзки",
-        forms: "Форми на този вид",
-        pests: "Вредители и болести",
-        hosts: "Гостоприемници",
-        presence: "Присъствие според EPPO",
-        mentions: "За какво пишат градинарите",
-        mentionsHint:
-          "Споменавания в публични записи през последните дванадесет седмици. Това е единственото, което няма в нито един справочник.",
-        mentionWeeks: "По седмици",
-        namesAndSources: "Имена и източници",
-        namesAndSourcesHint:
-          "Какво твърди всеки източник, с версия и дата на наблюдение.",
-        disagreement: "Източниците се разминават относно приетото име:",
-        lastUpdated: "Обновено",
-        downloadedOn: "Изтеглено",
-        observedOn: "Наблюдавано",
-        identifier: "Идентификатор",
-        identifiers: "Идентификатори в източниците",
-        onThisPage: "На тази страница",
-        allForms: "Всички форми",
-        formsShown: "Тук са {shown} от {total}.",
-        editorial: "От редакцията на OverGarden",
-      },
-      hostClass: {
-        major_host: "основен гостоприемник",
-        host: "гостоприемник",
-        wild_weed_host: "див или плевелен гостоприемник",
-        incidental: "случаен гостоприемник",
-        experimental: "експериментален гостоприемник",
-        artificial: "изкуствено заразяване",
-        unknown: "неизвестен клас гостоприемник",
-      },
-      presence: {
-        present: "присъства",
-        absent: "отсъства",
-        transient: "временно присъства",
-        unknown: "статусът е неизвестен",
-      },
-      presenceRegion: {
-        UA: "Украйна",
-        BG: "България",
-      },
-      nameType: {
-        scientific_accepted: "Прието научно име",
-        scientific_synonym: "Научен синоним",
-        vernacular: "Народно име",
-        denomination: "Регистрово име",
-        trade_designation: "Търговско име",
-      },
-      predicate: {
-        distribution_status: "Разпространение",
-        categorization: "Категория",
-        registration_status: "Регистрация",
-      },
     },
   },
   ru: {
@@ -952,13 +685,6 @@ const COPY = {
       lineageQuestionPlaceholder: "Что мне стоит знать об этой линии?",
       sendQuestion: "Отправить вопрос",
     },
-    variety: {
-      title: "Публичный сорт",
-      metadataSuffix: "сорт",
-      collectionPageSuffix: "Публичные записи сада",
-      growingNote: "Заметка о выращивании",
-      openSourceEntry: "Открыть исходную запись",
-    },
     profile: {
       title: "Публичный профиль садовода",
       metadataSuffix: "публичный профиль",
@@ -973,12 +699,6 @@ const COPY = {
       publicJournalEntry: "Публичная запись журнала",
       avatarSuffix: "аватар",
     },
-    sourceCredits: {
-      versionLabel: "Версия",
-      dataSources: "Источники данных",
-      title: "Источники и указание авторства",
-      attributionRequired: "Требуется указание источника",
-    },
     notFound: {
       title: "Страница не найдена",
       home: "К OverGarden",
@@ -988,84 +708,6 @@ const COPY = {
       notFoundDescription:
         "По этому адресу нет вида, сорта или породы. Адреса меняются только с постоянным перенаправлением, поэтому ссылка, вероятно, введена с ошибкой.",
       browseCatalogue: "Открыть каталог",
-      crumbsLabel: "Путь в каталоге",
-      fact: {
-        identity: "{name} — {kind}.",
-        identityWithSpecies: "{name} — {kind} вида {species}.",
-        forms: "В каталоге {forms} этого вида.",
-        gardeners: {
-          one: "Публичные журналы ведёт {gardeners}.",
-          other: "Публичные журналы ведут {gardeners}.",
-        },
-        gardenersWithRegions: {
-          one: "Публичные журналы ведёт {gardeners} в {regions}.",
-          other: "Публичные журналы ведут {gardeners} в {regions}.",
-        },
-        noGardeners: "Публичных записей садоводов пока нет.",
-        kind: {
-          species: "вид",
-          plant_variety: "сорт",
-          breed: "порода или линия",
-        },
-        role: { pest: "вредитель", disease: "болезнь" },
-      },
-      sections: {
-        experience: "Опыт садоводов",
-        spread: "Где выращивают",
-        relations: "Связи",
-        forms: "Формы этого вида",
-        pests: "Вредители и болезни",
-        hosts: "Растения-хозяева",
-        presence: "Присутствие по данным EPPO",
-        mentions: "О чём пишут садоводы",
-        mentionsHint:
-          "Упоминания в публичных записях за последние двенадцать недель. Это единственное, чего нет ни в одном справочнике.",
-        mentionWeeks: "По неделям",
-        namesAndSources: "Названия и источники",
-        namesAndSourcesHint:
-          "Что утверждает каждый источник, с версией и датой наблюдения.",
-        disagreement: "Источники расходятся в принятом названии:",
-        lastUpdated: "Обновлено",
-        downloadedOn: "Загружено",
-        observedOn: "Наблюдалось",
-        identifier: "Идентификатор",
-        identifiers: "Идентификаторы в источниках",
-        onThisPage: "На этой странице",
-        allForms: "Все формы",
-        formsShown: "Здесь {shown} из {total}.",
-        editorial: "От редакции OverGarden",
-      },
-      hostClass: {
-        major_host: "основной хозяин",
-        host: "хозяин",
-        wild_weed_host: "дикий или сорный хозяин",
-        incidental: "случайный хозяин",
-        experimental: "экспериментальный хозяин",
-        artificial: "искусственное заражение",
-        unknown: "класс хозяина неизвестен",
-      },
-      presence: {
-        present: "присутствует",
-        absent: "отсутствует",
-        transient: "временно присутствует",
-        unknown: "статус неизвестен",
-      },
-      presenceRegion: {
-        UA: "Украина",
-        BG: "Болгария",
-      },
-      nameType: {
-        scientific_accepted: "Принятое научное название",
-        scientific_synonym: "Научный синоним",
-        vernacular: "Народное название",
-        denomination: "Реестровое название",
-        trade_designation: "Торговое название",
-      },
-      predicate: {
-        distribution_status: "Распространение",
-        categorization: "Категория",
-        registration_status: "Регистрация",
-      },
     },
   },
 } satisfies Record<InterfaceLocale, PublicSurfaceCopy>;

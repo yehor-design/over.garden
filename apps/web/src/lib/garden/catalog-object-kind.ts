@@ -8,14 +8,6 @@ export function catalogKindForPickerKind(kind: CatalogPickerKind): CatalogKind {
   return "species";
 }
 
-export function pickerKindForCatalogKind(
-  catalogKind: CatalogKind | string | null | undefined,
-): CatalogPickerKind {
-  if (catalogKind === "plant_variety") return "cultivar";
-  if (catalogKind === "breed") return "breed";
-  return "species";
-}
-
 export function defaultObjectKindForCatalogSelection(
   catalogKind: CatalogKind | string | null | undefined,
   source: string | null | undefined,

@@ -67,7 +67,7 @@ async function readCases(): Promise<ReadCase[]> {
     profile,
     topic,
     catalogAddress,
-    variety,
+    speciesPage,
     objectCatalog,
     directory,
     feed,
@@ -88,7 +88,7 @@ async function readCases(): Promise<ReadCase[]> {
     import("../src/server/public-profile-repository"),
     import("../src/server/public-topic-repository"),
     import("../src/server/public-catalog-address-repository"),
-    import("../src/server/public-variety-repository"),
+    import("../src/server/species-page"),
     import("../src/server/public-object-catalog-repository"),
     import("../src/server/public-journal-directory-query"),
     import("../src/server/public-feed-repository"),
@@ -384,8 +384,8 @@ async function readCases(): Promise<ReadCase[]> {
         ),
     },
     {
-      name: "indexable variety sitemap entries",
-      run: (db) => variety.listIndexablePublicVarietySitemapEntries(db),
+      name: "published species sitemap entries",
+      run: (db) => speciesPage.listPublishedSpeciesSitemapEntries(db),
     },
     {
       name: "public object catalog groups",
@@ -407,8 +407,13 @@ async function readCases(): Promise<ReadCase[]> {
         ),
     },
     {
-      name: "variety evidence page",
-      run: (db) => variety.getPublicVarietyPage(ABSENT_SLUG, undefined, db),
+      name: "species page",
+      run: (db) => speciesPage.getSpeciesPage(ABSENT_UUID, "uk", db),
+    },
+    {
+      name: "species page later portion",
+      run: (db) =>
+        speciesPage.isSpeciesCursorBeyondTheEnd(ABSENT_UUID, "not-a-cursor", db),
     },
     {
       name: "journal entry page",

@@ -20,8 +20,9 @@ import {
 import { scanAccessibility } from "./helpers/redesign-accessibility";
 
 /**
- * `OVE-497`: an organism's page leads with who it is and what gardeners
- * wrote, and its forms live in their own register view.
+ * `OVE-497`, as `OVE-519` left it: an organism's page is its names, a short
+ * text and what gardeners wrote, and its forms live in their own register
+ * view, which the page no longer lists or links.
  *
  *   pnpm build && pnpm exec tsx scripts/run-browser-gate.ts \
  *     --spec=organism-pages.spec.ts
@@ -57,7 +58,7 @@ const snapshotId = randomUUID();
 const assertionId = randomUUID();
 const organismIds: string[] = [];
 const contexts: BrowserContext[] = [];
-/** A species and a cultivar gardeners here wrote about, with the editors' note. */
+/** A species and a cultivar gardeners here wrote about, with an editors' note no page shows. */
 let evidence: OrganismFixture;
 
 interface Organism {
@@ -137,11 +138,6 @@ test.beforeAll(async () => {
     names: [],
     formOf: organisms.tomato.id,
   });
-  // Somebody here wrote about this one: it comes first among the dozen.
-  await pool.query(
-    `update catalog_items set first_hand_content_at = now() where id = $1::uuid`,
-    [organisms.written.id],
-  );
   // And 619 more, for 621 in all.
   const bulk = await pool.query<{ id: string }>(
     `insert into catalog_items (id, canonical_name, normalized_name, public_slug, source,
@@ -345,7 +341,7 @@ const formsPath = (organism: Organism, locale: Locale = "uk") =>
   `${speciesPath(organism, locale)}/register`;
 
 test.describe("an organism's pages (OVE-497)", () => {
-  test("a species with 621 forms leads with who it is, and names a dozen of them", async ({
+  test("a species with 621 forms is its names, its text and «Записи» — not a list of forms", async ({
     request,
     baseURL,
   }) => {
@@ -356,51 +352,27 @@ test.describe("an organism's pages (OVE-497)", () => {
     expect(response.status()).toBe(200);
     const html = await response.text();
 
-    // The name a gardener knows it by, the scientific name beneath it as
-    // Latin, the kind in plain words.
+    // The name a gardener knows it by, the Latin name beneath it as Latin.
     expect(html).toMatch(/<h1[^>]*>Помідор ове<\/h1>/u);
     expect(html).toMatch(
-      /<p lang="la" data-organism-scientific-name="true"[^>]*>Solanum oveum<\/p>/u,
+      /<p lang="la" data-species-latin="true"[^>]*>Solanum oveum<\/p>/u,
     );
-    expect(html).toContain(">вид</p>");
-    // Not "Публічний вид": the card says what the organism is. (The site's
-    // own footer, outside the card, says what the site is.)
-    const card = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
-    expect(card).not.toContain("Публічний");
-    expect(html).toMatch(
-      /<meta name="description" content="Помідор ове — вид\. У каталозі 621 форма цього виду\./u,
-    );
-    // No counts of nothing: the paragraph already says nobody has written.
-    expect(html).not.toMatch(/>0 записів</u);
-    expect(html).toContain("Публічних записів садівників ще немає.");
-    // What a gardener can do with it, and where it is in the catalogue.
-    expect(html).toContain(
-      `href="/garden/objects/new?catalog=${organisms.tomato.slug}"`,
-    );
-    expect(html).toContain('data-organism-crumb="catalogue"');
-
-    // A dozen forms, the one written about first — not 621 chips.
-    const forms = html.slice(
-      html.indexOf('data-organism-relations="forms"'),
-      html.indexOf("</ul>", html.indexOf('data-organism-relations="forms"')),
-    );
-    const named = [...forms.matchAll(/<li>/gu)].length;
-    expect(named).toBe(12);
-    expect(forms.indexOf("Яблучко ове")).toBeGreaterThan(-1);
-    expect(forms.indexOf("Яблучко ове")).toBeLessThan(
-      forms.indexOf("Сорт ове"),
-    );
-    expect(html).toContain(">Тут 12 з 621.</p>");
-    expect(html).toMatch(
-      new RegExp(
-        `href="${formsPath(organisms.tomato)}"[^>]*data-organism-register-hub="true"|data-organism-register-hub="true"[^>]*href="${formsPath(organisms.tomato)}"`,
-        "u",
-      ),
-    );
-    expect(html).toContain("Усі форми (621)");
-    // The editors' note and the sources never pass as a gardener's journal:
-    // nobody wrote, so there is no experience section at all.
-    expect(html).not.toContain('data-organism-section="experience"');
+    // The text under the names is the meta description, word for word.
+    const text =
+      "Записи про цю рослину від людей, які ведуть її журнал на Overgarden.";
+    expect(html).toContain(`>${text}</p>`);
+    expect(html).toContain(`<meta name="description" content="${text}"/>`);
+    // Nobody wrote about it: noindex, and the empty state under «Записи».
+    expect(html).toContain('data-species-published="false"');
+    expect(html).toMatch(/name="robots" content="noindex, nofollow"/u);
+    expect(html).toContain("Публічних записів ще немає.");
+    // Nothing else: no forms, no counts, no crumbs, no way into the garden.
+    const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+    expect(main).not.toContain("Сорт ове");
+    expect(main).not.toContain("621");
+    expect(main).not.toContain(formsPath(organisms.tomato));
+    expect(main).not.toContain("/garden/objects/new");
+    expect(main).not.toContain("Публічний");
   });
 
   test("the forms live in their register — searched, paged — and Back returns to the same view", async ({
@@ -409,16 +381,7 @@ test.describe("an organism's pages (OVE-497)", () => {
   }, testInfo) => {
     const context = await readerContext(browser, baseURL!);
     const page = await context.newPage();
-    await page.goto(speciesPath(organisms.tomato), { waitUntil: "load" });
-    await page.screenshot({
-      path: path.join(SCREENSHOTS, "species-621-1280.png"),
-      fullPage: true,
-    });
-
-    const allForms = page.locator('[data-organism-register-hub="true"]');
-    await waitForHydration(allForms);
-    await allForms.click();
-    await page.waitForURL(`**${formsPath(organisms.tomato)}`);
+    await page.goto(formsPath(organisms.tomato), { waitUntil: "load" });
     const hub = page.locator('main[data-public-catalog-register="true"]');
     await expect(hub.locator("h1")).toHaveText("Сорти виду «помідор ове»");
     await expect(hub.locator('[data-register-count="true"]')).toHaveText(
@@ -435,6 +398,7 @@ test.describe("an organism's pages (OVE-497)", () => {
     const field = hub.locator(
       'form[data-register-search="true"] input[name="q"]',
     );
+    await waitForHydration(field);
     await field.focus();
     await expect(field).toBeFocused();
     await page.keyboard.type("барао");
@@ -448,33 +412,26 @@ test.describe("an organism's pages (OVE-497)", () => {
     // The number a seed packet quotes, not the ingest's identifier.
     await expect(row).toContainText(`Держреєстр України: 9497${digits}`);
 
-    // Into the form, and its crumbs lead back up.
+    // Into the form: its name, and its species as a link back up (`OVE-519`).
     await row.getByRole("link", { name: "Де Барао ове" }).click();
     await page.waitForURL(
       `**/species/${organisms.tomato.slug}/${organisms.barao.slug}`,
     );
-    const card = page.locator('main[data-public-organism-card="true"]');
-    await expect(card.locator("h1")).toHaveText("Де Барао ове");
-    // Its species as the reader knows it, quoted.
-    await expect(card.locator("[data-organism-fact]")).toContainText(
-      "сорт виду «помідор ове»",
-    );
-    await expect(card.locator('[data-organism-crumb="species"]')).toHaveText(
-      "Помідор ове",
-    );
-    await expect(card.locator('[data-organism-crumb="forms"]')).toHaveAttribute(
+    const form = page.locator("main[data-species-page]");
+    await expect(form.locator("h1")).toHaveText("Де Барао ове");
+    await expect(form.locator("[data-species-parent]")).toHaveAttribute(
       "href",
-      formsPath(organisms.tomato),
+      speciesPath(organisms.tomato),
     );
-    // The source's facts in words: the register by its name, the status and
-    // the country in the reader's language, the number as printed.
-    const sources = card.locator('[data-organism-section="names-and-sources"]');
-    await expect(sources).toContainText("Держреєстр України");
-    await expect(sources).toContainText(`9497${digits}`);
-    await expect(sources).not.toContainText("RegisterVarietis:");
-    await expect(sources).toContainText("зареєстровано");
-    await expect(sources).toContainText("(Україна)");
-    await expect(sources).not.toContainText("ua_state_register");
+    await expect(form.locator("[data-species-parent]")).toHaveText(
+      "Помідор ове Solanum oveum",
+    );
+    await expect(form.locator("[data-species-text]")).toHaveText(
+      "Записи про цей сорт від людей, які ведуть його журнал на Overgarden.",
+    );
+    // The register's facts stay in the register: the page shows no source.
+    await expect(form).not.toContainText("Держреєстр України");
+    await expect(form).not.toContainText(`9497${digits}`);
     await page.screenshot({
       path: path.join(SCREENSHOTS, "form-1280.png"),
       fullPage: true,
@@ -536,7 +493,7 @@ test.describe("an organism's pages (OVE-497)", () => {
     expect((await get(formsPath(organisms.fungus))).status()).toBe(404);
   });
 
-  test("one form is named without a count to apologise for; a fungus with no name is its Latin name", async ({
+  test("a species with one form names none; a fungus with no name is its Latin name", async ({
     request,
     baseURL,
   }) => {
@@ -550,22 +507,21 @@ test.describe("an organism's pages (OVE-497)", () => {
 
     const mint = await get(speciesPath(organisms.mint));
     expect(mint).toMatch(/<h1[^>]*>М&#x27;ята ове<\/h1>/u);
-    expect(mint).toContain("Мароко ове");
-    expect(mint).toContain("Усі форми (1)");
-    expect(mint).not.toContain("data-organism-forms-shown");
+    expect(mint).not.toContain("Мароко ове");
+    expect(mint).not.toContain("Усі форми");
 
     const fungus = await get(speciesPath(organisms.fungus));
     // No common name in the catalogue: the heading is the accepted name,
-    // marked as Latin, and nothing is left blank.
+    // marked as Latin, and nothing is left blank or said twice.
     expect(fungus).toMatch(/<h1 lang="la"[^>]*>Boletus oveus<\/h1>/u);
-    expect(fungus).not.toContain("data-organism-scientific-name");
-    expect(fungus).not.toContain('data-organism-relations="forms"');
-    expect(fungus).not.toContain("data-organism-register-hub");
-    // Nobody keeps a fungus.
-    expect(fungus).not.toContain("data-organism-add-to-garden");
+    expect(fungus).not.toContain("data-species-latin");
+    // Neither a plant nor an animal: the page says «вид».
+    expect(fungus).toContain(
+      "Записи про цей вид від людей, які ведуть його журнал на Overgarden.",
+    );
   });
 
-  test("an animal's forms are its breeds, in Bulgarian and Russian too", async ({
+  test("an animal's forms are its breeds in its register, in Bulgarian and Russian too", async ({
     request,
     baseURL,
   }) => {
@@ -586,53 +542,58 @@ test.describe("an organism's pages (OVE-497)", () => {
     expect(ruHtml).toContain("Сорта вида «помидор ове»");
     expect(ruHtml).toContain("Страница 1 из 7");
 
+    // The bee's own page, fully in Bulgarian, lists no breed.
     const card = await request.get(
       `${baseURL}${speciesPath(organisms.bee, "bg")}`,
       { headers: { cookie: `${LOCALE_COOKIE}=bg` } },
     );
     const cardHtml = await card.text();
-    expect(cardHtml).toContain("Карпатка ове");
-    expect(cardHtml).toContain("Всички форми (1)");
+    expect(cardHtml).toContain(
+      "Записи за това животно от хора, които водят дневника му в Overgarden.",
+    );
+    expect(cardHtml).toContain("Още няма публични записи.");
+    expect(cardHtml).not.toContain("Карпатка ове");
   });
 
-  test("gardeners' journals, the editors' note and the sources are three things, each said for what it is", async ({
+  test("a cultivar's entry is on its page and on its species', and nothing but entries is", async ({
     request,
     baseURL,
   }) => {
-    const response = await request.get(
-      `${baseURL}/species/${evidence.speciesSlug}/${evidence.formSlug}`,
-      { headers: { cookie: `${LOCALE_COOKIE}=uk` } },
+    const get = async (url: string) => {
+      const response = await request.get(`${baseURL}${url}`, {
+        headers: { cookie: `${LOCALE_COOKIE}=uk` },
+      });
+      expect(response.status(), url).toBe(200);
+      return response.text();
+    };
+    const entries = (html: string) =>
+      [
+        ...html
+          .slice(html.indexOf('id="species-entries"'))
+          .matchAll(/<li class="min-w-0">/gu),
+      ].length;
+
+    // The species lists its own entry and its cultivar's (`OVE-519`).
+    const species = await get(`/species/${evidence.speciesSlug}`);
+    expect(species).toContain('data-species-published="true"');
+    expect(species).toMatch(/name="robots" content="index, follow"/u);
+    expect(entries(species)).toBe(2);
+    // The cultivar lists its own.
+    const form = await get(
+      `/species/${evidence.speciesSlug}/${evidence.formSlug}`,
     );
-    expect(response.status()).toBe(200);
-    const html = await response.text();
-    const order = [...html.matchAll(/data-organism-section="([a-z-]+)"/gu)].map(
-      (match) => match[1]!,
-    );
-    // What gardeners wrote, then what the editors wrote, then the sources.
-    expect(order.indexOf("experience")).toBeGreaterThan(order.indexOf("facts"));
-    expect(order.indexOf("editorial")).toBeGreaterThan(
-      order.indexOf("experience"),
-    );
-    expect(order.indexOf("names-and-sources")).toBeGreaterThan(
-      order.indexOf("editorial"),
-    );
-    // The experience is referenced: each entry leads to the journal it is from.
-    const experience = html.slice(
-      html.indexOf('data-organism-section="experience"'),
-      html.indexOf('data-organism-section="editorial"'),
-    );
-    expect(experience).toContain("Відкрити вихідний запис");
-    // And the editors' note says whose it is.
-    const editorial = html.slice(
-      html.indexOf('data-organism-section="editorial"'),
-      html.indexOf('data-organism-section="names-and-sources"'),
-    );
-    expect(editorial).toContain("Від редакції OverGarden");
-    expect(editorial).toContain("Як його вирощують");
-    expect(editorial).not.toContain("Відкрити вихідний запис");
+    expect(form).toContain('data-species-published="true"');
+    expect(entries(form)).toBe(1);
+    // The editors' note stays in the database; no section, no source.
+    for (const html of [species, form]) {
+      expect(html).not.toContain("Як його вирощують");
+      expect(html).not.toContain("Від редакції");
+      expect(html).not.toContain("State Register of Plant Varieties");
+      expect(html).not.toContain("data-organism-section");
+    }
   });
 
-  test("the card is read before any script runs", async ({
+  test("the page is read before any script runs", async ({
     browser,
     baseURL,
   }) => {
@@ -643,7 +604,7 @@ test.describe("an organism's pages (OVE-497)", () => {
     await page.goto(speciesPath(organisms.tomato), { waitUntil: "load" });
     await expect(page.locator("h1")).toHaveText("Помідор ове");
     await expect(
-      page.locator('[data-organism-register-hub="true"]'),
+      page.getByRole("heading", { level: 2, name: "Записи" }),
     ).toBeVisible();
   });
 

@@ -3,21 +3,12 @@ import { sql, type Kysely } from "kysely";
 
 import { db } from "@/db";
 import type { Database, PlantObjectKind } from "@/db/schema";
-import type { InterfaceLocale } from "@/lib/interface-localization";
-import {
-  pickerKindForCatalogKind,
-  resolveObjectKindForCatalogSelection,
-} from "@/lib/garden/catalog-object-kind";
-import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import {
-  isObjectSetupUuid,
-  type CreatedObject,
-  type ObjectSetupInput,
+import { resolveObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
+import type {
+  CreatedObject,
+  ObjectSetupInput,
 } from "@/lib/garden/object-setup";
-import {
-  findSelectableCatalogItem,
-  findSelectableCatalogItemByPublicSlug,
-} from "@/server/catalog-repository";
+import { findSelectableCatalogItem } from "@/server/catalog-repository";
 import type { RequestScope } from "@/server/request-scope";
 
 export type CreateOwnedObjectResult =
@@ -184,97 +175,6 @@ export async function createOwnedObject(
       status: "created",
       object: toCreatedObject(created),
       replayed: false,
-    };
-  });
-}
-
-export interface OwnedCatalogMatch {
-  id: string;
-  displayName: string;
-  objectKind: PlantObjectKind;
-  spaceName: string;
-}
-
-/**
- * The gardener's own objects already linked to one organism — what a launch
- * from the catalogue offers first, so writing about the tomato they have does
- * not start a second tomato (`OVE-485` criterion 4).
- */
-export async function listOwnedObjectsForCatalogItem(
-  scope: RequestScope,
-  catalogItemId: string,
-  executor: Kysely<Database> = db,
-): Promise<OwnedCatalogMatch[]> {
-  return executor.transaction().execute(async (tx) => {
-    await sql`set local statement_timeout = '1200ms'`.execute(tx);
-    const rows = await tx
-      .selectFrom("plant_objects as o")
-      .innerJoin("spaces as s", "s.id", "o.space_id")
-      .select([
-        "o.id",
-        "o.display_name as displayName",
-        "o.object_kind as objectKind",
-        "s.display_name as spaceName",
-      ])
-      .where("o.owner_user_id", "=", scope.userId)
-      .where("s.owner_user_id", "=", scope.userId)
-      .where("o.catalog_item_id", "=", catalogItemId)
-      .orderBy("o.created_at", "asc")
-      .orderBy("o.id", "asc")
-      .limit(20)
-      .execute();
-    return rows.map((row) => ({
-      ...row,
-      objectKind: row.objectKind as PlantObjectKind,
-    }));
-  });
-}
-
-export interface ObjectSetupPrefill {
-  selection: FirstEntryCatalogSelection;
-  objectKind: PlantObjectKind;
-}
-
-/**
- * The organism a catalogue launch names, as the picker's own selection, with
- * the reader's language's primary name when the catalogue has one.
- */
-export async function readObjectSetupCatalogPrefill(
-  catalog: string,
-  locale: InterfaceLocale,
-  executor: Kysely<Database> = db,
-): Promise<ObjectSetupPrefill | null> {
-  return executor.transaction().execute(async (tx) => {
-    await sql`set local statement_timeout = '1200ms'`.execute(tx);
-    // An organism's public address names it by slug, as every catalogue link
-    // into the garden does; an id is accepted too. A species launches setup
-    // only from the standard base, the one the picker offers (ADR-0035 D3).
-    const item = isObjectSetupUuid(catalog)
-      ? await findSelectableCatalogItem(tx, catalog, { standardBaseOnly: true })
-      : await findSelectableCatalogItemByPublicSlug(catalog, tx, {
-          standardBaseOnly: true,
-        });
-    if (!item) return null;
-    const localized = await tx
-      .selectFrom("catalog_item_names")
-      .select("display_name")
-      .where("catalog_item_id", "=", item.id)
-      .where("locale", "=", locale)
-      .orderBy("is_primary", "desc")
-      .orderBy("weight", "desc")
-      .limit(1)
-      .executeTakeFirst();
-    return {
-      selection: {
-        id: item.id,
-        displayName: localized?.display_name ?? item.canonicalName,
-        kind: pickerKindForCatalogKind(item.catalogKind),
-        ...(localized ? { matchedName: item.canonicalName } : {}),
-      },
-      objectKind:
-        item.catalogKind === "breed"
-          ? "animal"
-          : (item.standardKind ?? "plant"),
     };
   });
 }

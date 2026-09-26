@@ -127,7 +127,7 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "catalog_evidence",
     "variety_aggregation",
     "candidate",
-    "src/server/public-variety-metadata.ts",
+    "src/server/species-page-metadata.ts",
   ),
   inventory(
     "lineage_object",
@@ -160,22 +160,10 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "src/server/public-localized-content.ts",
   ),
   inventory(
-    "variety_sitemap",
-    "variety_aggregation",
-    "candidate",
-    "src/server/public-variety-repository.ts",
-  ),
-  inventory(
     "topic_sitemap",
     "topic_aggregation",
     "candidate",
     "src/server/public-sitemap.ts",
-  ),
-  inventory(
-    "public_variety_repository",
-    "variety_aggregation",
-    "candidate",
-    "src/server/public-variety-repository.ts",
   ),
   inventory(
     "public_topic_repository",
@@ -203,8 +191,8 @@ export interface PublicSurfaceDiscoverySource {
    */
   servedLocale?: PublicLocale | null;
   equivalentLocales: readonly PublicLocale[] | null;
-  /** Organism cards only (ADR-0026 D9); absent for every other surface. */
-  organism?: { hasFirstHandContent: boolean } | null;
+  /** Species pages only (`OVE-519`); absent for every other surface. */
+  organism?: { published: boolean } | null;
 }
 
 export interface PublicSurfaceDiscoveryResult {
@@ -236,9 +224,7 @@ export function resolvePublicSurfaceDiscovery(
           servedLocale: source.servedLocale ?? null,
           equivalentLocales: normalizeLocales(source.equivalentLocales),
           surfaceKind: owner.surfaceKind,
-          hasFirstHandContent: source.organism
-            ? source.organism.hasFirstHandContent
-            : null,
+          published: source.organism ? source.organism.published : null,
         }
       : unresolvedCandidateInput(owner.surfaceKind, candidateState);
 

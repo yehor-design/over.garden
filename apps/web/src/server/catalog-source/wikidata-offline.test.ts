@@ -45,12 +45,4 @@ describe("Wikidata never runs on a request path", () => {
     // Falsify by adding a fetch to query.wikidata.org anywhere under src/.
     expect(offenders).toEqual([]);
   });
-
-  it("still links to a Wikidata item from a card, which is a URL and not a call", async () => {
-    const addresses = await readFile(
-      join(WEB_SOURCE, "lib", "catalog", "addresses.ts"),
-      "utf8",
-    );
-    expect(addresses).toContain("https://www.wikidata.org/wiki/");
-  });
 });

@@ -220,10 +220,10 @@ export async function seedOrganismFixture(
         seeded: false,
       };
 
-  // One public entry each makes the species and the form indexable, so their
-  // JSON-LD and sitemap rows exist; the orphan stays without entries. The
-  // entries are inserted directly, so the first-hand clock the publish path
-  // keeps is set here the way the 0054 backfill set it.
+  // One public entry each publishes the species and the form (`OVE-519`), so
+  // their JSON-LD and sitemap rows exist; the orphan stays without entries,
+  // and unpublished. The rule reads the entries themselves: nothing else is
+  // set for it.
   await pool.query(
     `insert into "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
      values ($1, $3, $2, true, now(), now())`,
@@ -252,11 +252,6 @@ export async function seedOrganismFixture(
       [ownerUserId, spaceId, id, `${prefix}-entry-${id.slice(0, 8)}-${suffix}`],
     );
   }
-
-  await pool.query(
-    `update catalog_items set first_hand_content_at = now() where id = any($1::uuid[])`,
-    [[speciesId, formId]],
-  );
 
   return {
     prefix,
