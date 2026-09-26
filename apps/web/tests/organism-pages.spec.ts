@@ -270,6 +270,24 @@ async function seedOrganism(input: {
     ],
   );
   organismIds.push(id);
+  // A species a gardener can choose is a member of the standard base
+  // (ADR-0035 D3); the setup launch offers no other.
+  if (input.rank === "species" && input.kingdom !== "Fungi") {
+    const kind = input.kingdom === "Animalia" ? "animal" : "plant";
+    await pool.query(
+      `insert into catalog_standard_species (
+         catalog_item_id, base_key, object_kind, base_group, latin_name, base_version
+       )
+       values ($1, $2, $3, $4, $5, '2026-09-26')`,
+      [
+        id,
+        `${kind}:${slug}`,
+        kind,
+        kind === "animal" ? "other_animals" : "herbs",
+        input.name,
+      ],
+    );
+  }
   for (const [display, locale, nameType] of input.names) {
     await pool.query(
       `insert into catalog_item_names (catalog_item_id, display_name, normalized_name, locale, is_primary, name_type)
@@ -350,7 +368,7 @@ test.describe("an organism's pages (OVE-497)", () => {
     const card = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
     expect(card).not.toContain("Публічний");
     expect(html).toMatch(
-      /<meta name="description" content="Solanum oveum — вид\. У каталозі 621 форма цього виду\./u,
+      /<meta name="description" content="Помідор ове — вид\. У каталозі 621 форма цього виду\./u,
     );
     // No counts of nothing: the paragraph already says nobody has written.
     expect(html).not.toMatch(/>0 записів</u);

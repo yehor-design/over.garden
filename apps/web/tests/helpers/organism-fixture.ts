@@ -155,6 +155,21 @@ export async function seedOrganismFixture(
       ],
     );
   }
+  // A species a gardener can choose is a member of the standard base
+  // (ADR-0035 D3); the picker and the setup launch offer no other.
+  await pool.query(
+    `insert into catalog_standard_species (
+       catalog_item_id, base_key, object_kind, base_group, latin_name, base_version
+     )
+     values ($1, $2, $3, $4, $5, '2026-09-26')`,
+    [
+      speciesId,
+      `plant:${speciesSlug}`,
+      "plant",
+      "vegetables",
+      "Solanum lycopersicum",
+    ],
+  );
   const names: Array<[string, string, string, boolean, string]> = [
     [speciesId, "Solanum lycopersicum", "la", true, "scientific_accepted"],
     [speciesId, "помідор", "uk", false, "vernacular"],

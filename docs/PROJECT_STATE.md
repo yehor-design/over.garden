@@ -2,7 +2,7 @@
 
 Status: living document. Update it whenever production behaviour, the direction,
 or the list of known gaps changes. Read it first, then `AGENTS.md`.
-Last reviewed: 2026-09-25.
+Last reviewed: 2026-09-26.
 
 This page answers four questions for anyone returning to OverGarden: what the
 product is today, what is actually true in production right now, what is being
@@ -74,6 +74,17 @@ MVP the same day (`OVE-527`, canceled). **Production is paused**: since about
 DEPLOYMENT_DISABLED` (the Hobby plan's usage pause, known gap 12), so Slice 29
 merges build but are not served, and production proofs of served pages wait
 for it.
+
+The standard species base (`OVE-530`) is in the production **database** since
+2026-09-26: migration `0081`, 413 members (313 plants, 100 animals) with their
+everyday uk/bg/ru names as the primary names, garden strawberry with its 92
+register cultivars attached, and an address for every member (roses are
+`/species/rosa-spp`). The code that restricts the picker and the save path to
+the base, retires the «повний каталог» search, and leads species titles and
+JSON-LD with the everyday name is on `main` and waits for a deployment like
+everything else. Measured against the production database: every 2026-09-25
+probe word finds its species first, and the picker's statement stays within
+its earlier timings. Receipt: `docs/STANDARD_SPECIES_BASE_PROOF_2026-09.md`.
 
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),

@@ -25,7 +25,6 @@ export const BROWSER_GATE_SPECS = [
   // The catalogue and its owner surfaces.
   "catalog-picker.spec.ts",
   "owner-catalog-curation.spec.ts",
-  "catalog-full-catalogue.spec.ts",
   // DESIGN.md §10, gates 7 and 8.
   "accessibility.spec.ts",
   "screen-states.spec.ts",

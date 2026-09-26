@@ -448,6 +448,34 @@ export interface CatalogSourceSnapshots {
   verified_at: Timestamp;
 }
 
+export interface CatalogStandardSpecies {
+  assertion_id: string | null;
+  base_group: string;
+  base_key: string;
+  base_version: string;
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  latin_name: string;
+  object_kind: string;
+  popularity: Generated<number>;
+  updated_at: Generated<Timestamp>;
+  wikidata_id: string | null;
+}
+
+export interface CatalogStandardSpeciesNames {
+  base_version: string;
+  catalog_item_id: string;
+  catalog_item_name_id: string;
+  created_at: Generated<Timestamp>;
+  created_by_base: boolean;
+  locale: string;
+  previous_display_name: string | null;
+  previous_is_primary: boolean | null;
+  previous_weight: Numeric | null;
+  review_status: string;
+  role: string;
+}
+
 export interface Communities {
   content_key: string;
   created_at: Generated<Timestamp>;
@@ -1138,6 +1166,8 @@ export interface DB {
   catalog_source_refresh_events: CatalogSourceRefreshEvents;
   catalog_source_refresh_records: CatalogSourceRefreshRecords;
   catalog_source_snapshots: CatalogSourceSnapshots;
+  catalog_standard_species: CatalogStandardSpecies;
+  catalog_standard_species_names: CatalogStandardSpeciesNames;
   communities: Communities;
   community_contribution_reports: CommunityContributionReports;
   community_contributions: CommunityContributions;

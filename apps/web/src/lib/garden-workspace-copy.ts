@@ -294,11 +294,6 @@ const UK_COPY = {
       empty: "У каталозі такого ще немає. Додайте як свою назву.",
       unavailable:
         "Каталог тимчасово недоступний. Свою назву можна додати й зараз.",
-      fullCatalogue: "Шукати в повному каталозі життя",
-      fullCatalogueHint:
-        "Мільйони видів із Catalogue of Life. Обраний вид з'явиться у вашому саду одразу.",
-      fullCatalogueEmpty: "У повному каталозі теж нічого не знайшлося.",
-      fullCatalogueSynonym: "Прийнята назва: {name}",
     },
   },
   saveProgress: {
@@ -662,11 +657,6 @@ const BG_COPY = {
       empty: "В каталога още няма такова. Добавете го като свое име.",
       unavailable:
         "Каталогът временно не е достъпен. Свое име може да добавите и сега.",
-      fullCatalogue: "Търси в пълния каталог на живота",
-      fullCatalogueHint:
-        "Милиони видове от Catalogue of Life. Избраният вид се появява в градината ви веднага.",
-      fullCatalogueEmpty: "И в пълния каталог няма такова.",
-      fullCatalogueSynonym: "Прието име: {name}",
     },
   },
   saveProgress: {
@@ -1026,11 +1016,6 @@ const RU_COPY = {
       empty: "В каталоге такого пока нет. Добавьте как своё название.",
       unavailable:
         "Каталог временно недоступен. Своё название можно добавить и сейчас.",
-      fullCatalogue: "Искать в полном каталоге жизни",
-      fullCatalogueHint:
-        "Миллионы видов из Catalogue of Life. Выбранный вид появится в вашем саду сразу.",
-      fullCatalogueEmpty: "В полном каталоге тоже ничего не нашлось.",
-      fullCatalogueSynonym: "Принятое название: {name}",
     },
   },
   saveProgress: {

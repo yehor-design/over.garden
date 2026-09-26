@@ -129,6 +129,9 @@ jobs:
       - name: Prove the register form attachment and the picker's market boost
         run: pnpm catalog:registers:prove-database
 
+      - name: Prove the standard species base, its re-run, its rollback and the base-only picker
+        run: pnpm catalog:standard-species:prove-database
+
       - name: Prove the catalog health figures, the retention window and its purge
         run: pnpm catalog:health:prove-database
 

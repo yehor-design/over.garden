@@ -10,6 +10,10 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import { LeafIcon } from "@/components/icons/Leaf";
+import { PawPrintIcon } from "@/components/icons/PawPrint";
+import { PlantIcon } from "@/components/icons/Plant";
+import { PlusIcon } from "@/components/icons/Plus";
 import type { PlantObjectKind } from "@/db/schema";
 import {
   catalogPickerAvailabilityForResponse,
@@ -23,10 +27,8 @@ import {
   CATALOG_SEARCH_MISS_MIN_QUERY_LENGTH,
   CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH,
   CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH,
-  parseCatalogFullCatalogueResponse,
   parseCatalogTypeaheadResponse,
   parseCatalogTypeaheadState,
-  type CatalogFullCatalogueRow,
   type CatalogPickerSelection,
 } from "@/lib/garden/catalog-typeahead-contract";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
@@ -116,19 +118,6 @@ export interface CatalogPickerProps {
     },
     signal: AbortSignal,
   ) => Promise<CatalogPickerFetchResult>;
-  /** The secondary path over the whole checklist (ADR-0026 D7). */
-  fetchFullCatalogue?: (
-    input: {
-      query: string;
-      objectKind: PlantObjectKind;
-      locale: InterfaceLocale;
-    },
-    signal: AbortSignal,
-  ) => Promise<CatalogFullCatalogueRow[]>;
-  /** Turns a checklist row into a node. Without it the secondary path is off. */
-  materializeFromCatalogue?: (
-    colId: string,
-  ) => Promise<FirstEntryCatalogSelection | null>;
 }
 
 export const CATALOG_PICKER_DEBOUNCE_MS = 180;
@@ -136,7 +125,6 @@ export const CATALOG_PICKER_REQUEST_TIMEOUT_MS = 5_000;
 
 type PickerOption =
   | { id: string; kind: "row"; row: CatalogPickerRow }
-  | { id: string; kind: "full"; row: CatalogFullCatalogueRow }
   | { id: string; kind: "own_name"; name: string };
 
 /**
@@ -160,9 +148,6 @@ function optionIsSelection(
   }
   return false;
 }
-
-/** Below this many canonical rows the full checklist is worth offering. */
-export const CATALOG_FULL_CATALOGUE_THRESHOLD = 3;
 
 /**
  * The one picker of the organism graph (ADR-0026 D7): a WAI-ARIA combobox
@@ -190,8 +175,6 @@ export function CatalogPicker({
   onPickOutcome,
   disabled = false,
   fetchRows = fetchCatalogRows,
-  fetchFullCatalogue = fetchFullCatalogueRows,
-  materializeFromCatalogue,
 }: CatalogPickerProps) {
   const inputId = useId();
   const listboxId = `${inputId}-listbox`;
@@ -216,10 +199,6 @@ export function CatalogPicker({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [syncedSelection, setSyncedSelection] = useState(selection);
-  const [fullRows, setFullRows] = useState<CatalogFullCatalogueRow[] | null>(
-    null,
-  );
-  const [fullSearching, setFullSearching] = useState(false);
   const reportedMissRef = useRef<string | null>(null);
   // When the gardener started typing, and whether this attempt has already
   // been reported. One attempt is one row: a picker that reported on every
@@ -287,7 +266,6 @@ export function CatalogPicker({
         );
         setRows(result.rows);
         setAvailability(result.availability);
-        setFullRows(null);
         setOpen(true);
       } catch (error) {
         if (
@@ -325,9 +303,6 @@ export function CatalogPicker({
         list.push({ id: `${listboxId}-${row.id}`, kind: "row", row });
       }
     }
-    for (const row of fullRows ?? []) {
-      list.push({ id: `${listboxId}-col-${row.colId}`, kind: "full", row });
-    }
     if (
       offersOwnNameOutcome(trimmedQuery) &&
       effectiveAvailability !== "idle"
@@ -342,7 +317,6 @@ export function CatalogPicker({
   }, [
     effectiveAvailability,
     effectiveRows,
-    fullRows,
     listboxId,
     selection,
     trimmedQuery,
@@ -395,12 +369,6 @@ export function CatalogPicker({
         row.id,
       );
       onSelectionChange({ kind: "item", row });
-    } else if (option.kind === "full") {
-      // Create-on-pick (ADR-0026 D7): the checklist row becomes a node, and
-      // the node is what the gardener's object points at. A refusal leaves
-      // the picker as it was, with the own-name outcome still there.
-      void pickFromFullCatalogue(option.row);
-      return;
     } else {
       reportMiss("own_name");
       reportOutcome("own_label", null);
@@ -410,40 +378,6 @@ export function CatalogPicker({
     setActiveIndex(-1);
   }
 
-  async function pickFromFullCatalogue(row: CatalogFullCatalogueRow) {
-    if (!materializeFromCatalogue) return;
-    setFullSearching(true);
-    try {
-      const selected = await materializeFromCatalogue(row.colId);
-      if (!selected) return;
-      onSelectionChange({ kind: "item", row: selected });
-      setOpen(false);
-      setActiveIndex(-1);
-    } catch {
-      // The own-name outcome is still there; nothing else changes.
-    } finally {
-      setFullSearching(false);
-    }
-  }
-
-  async function searchFullCatalogue() {
-    if (disabled || !materializeFromCatalogue) return;
-    setFullSearching(true);
-    const controller = new AbortController();
-    try {
-      const rows = await fetchFullCatalogue(
-        { query: trimmedQuery, objectKind, locale },
-        controller.signal,
-      );
-      setFullRows(rows);
-      setOpen(true);
-    } catch {
-      setFullRows([]);
-    } finally {
-      setFullSearching(false);
-    }
-  }
-
   function clear() {
     if (disabled) return;
     reportedMissRef.current = null;
@@ -451,7 +385,6 @@ export function CatalogPicker({
     reportedOutcomeRef.current = false;
     setQuery("");
     setRows([]);
-    setFullRows(null);
     setAvailability("idle");
     setOpen(false);
     setActiveIndex(-1);
@@ -624,10 +557,14 @@ export function CatalogPicker({
       >
         {statusText}
       </p>
+      {/* Threads' search results (ADR-0035 D3, DESIGN.md §5.24): one
+          surface of rows split by hairlines, a round glyph, the name in
+          weight and one muted line beneath — not a stack of cards. */}
       <ComboboxList
         id={listboxId}
         aria-label={copy.listLabel}
         hidden={!listVisible}
+        className="gap-0 overflow-hidden rounded-lg border border-border bg-surface"
       >
         {options.map((option, index) => {
           const active = index === clampedActiveIndex;
@@ -637,7 +574,9 @@ export function CatalogPicker({
           // reader that arrowing through the list is choosing each row.
           const chosen = optionIsSelection(option, selection);
           const optionClass =
-            "flex min-h-11 w-full items-center gap-3 text-left";
+            "flex min-h-14 w-full items-center gap-3 rounded-none border-0 border-b border-border px-3 py-2.5 text-left last:border-b-0";
+          const glyphClass =
+            "grid size-9 shrink-0 place-items-center rounded-full bg-surface-sunken text-text-secondary";
           if (option.kind === "own_name") {
             return (
               <ComboboxOption
@@ -650,45 +589,13 @@ export function CatalogPicker({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => choose(option)}
               >
+                <span aria-hidden="true" className={glyphClass}>
+                  <PlusIcon size={16} />
+                </span>
                 <span className="min-w-0 font-medium text-text">
                   {formatGardenWorkspaceTemplate(copy.ownName, {
                     query: option.name,
                   })}
-                </span>
-              </ComboboxOption>
-            );
-          }
-          if (option.kind === "full") {
-            const checklistRow = option.row;
-            const subtitle = [
-              checklistRow.rank,
-              checklistRow.acceptedName
-                ? formatGardenWorkspaceTemplate(copy.fullCatalogueSynonym, {
-                    name: checklistRow.acceptedName,
-                  })
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" · ");
-            return (
-              <ComboboxOption
-                key={option.id}
-                id={option.id}
-                active={active}
-                selected={chosen}
-                data-catalog-option="full_catalogue"
-                data-catalog-col-id={checklistRow.colId}
-                className={optionClass}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => choose(option)}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-text">
-                    {checklistRow.displayName}
-                  </span>
-                  <span className="block truncate text-caption text-text-muted">
-                    {subtitle}
-                  </span>
                 </span>
               </ComboboxOption>
             );
@@ -722,8 +629,19 @@ export function CatalogPicker({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(option)}
             >
+              <span aria-hidden="true" className={glyphClass}>
+                {row.kind === "species" ? (
+                  objectKind === "animal" ? (
+                    <PawPrintIcon size={16} />
+                  ) : (
+                    <PlantIcon size={16} />
+                  )
+                ) : (
+                  <LeafIcon size={16} />
+                )}
+              </span>
               <span className="min-w-0">
-                <span className="block truncate font-medium text-text">
+                <span className="block truncate font-semibold text-text">
                   {row.displayName}
                 </span>
                 <span className="block truncate text-caption text-text-muted">
@@ -734,32 +652,6 @@ export function CatalogPicker({
           );
         })}
       </ComboboxList>
-      {materializeFromCatalogue &&
-      searchable &&
-      fullRows === null &&
-      effectiveAvailability !== "searching" &&
-      effectiveRows.length < CATALOG_FULL_CATALOGUE_THRESHOLD ? (
-        <button
-          type="button"
-          data-catalog-full-catalogue="offer"
-          disabled={disabled || fullSearching}
-          onClick={() => void searchFullCatalogue()}
-          className="justify-self-start text-left text-caption text-text-muted underline underline-offset-4 hover:text-text"
-        >
-          {copy.fullCatalogue}
-          <span className="block text-caption no-underline">
-            {copy.fullCatalogueHint}
-          </span>
-        </button>
-      ) : null}
-      {fullRows !== null && fullRows.length === 0 ? (
-        <p
-          data-catalog-full-catalogue="empty"
-          className="text-caption text-text-muted"
-        >
-          {copy.fullCatalogueEmpty}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -783,22 +675,6 @@ export async function fetchCatalogRows(
       rowCount: rows.length,
     }),
   };
-}
-
-export async function fetchFullCatalogueRows(
-  input: {
-    query: string;
-    objectKind: PlantObjectKind;
-    locale: InterfaceLocale;
-  },
-  signal: AbortSignal,
-): Promise<CatalogFullCatalogueRow[]> {
-  const response = await fetch(
-    buildCatalogTypeaheadUrl({ ...input, scope: "full" }),
-    { signal },
-  );
-  if (!response.ok) return [];
-  return parseCatalogFullCatalogueResponse((await response.json()) as unknown);
 }
 
 function selectionText(selection: CatalogPickerSelection | null) {

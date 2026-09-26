@@ -512,7 +512,13 @@ async function resolveInitialCatalogSelection(
 ): Promise<FirstEntryCatalogSelection | null> {
   const publicSlug = firstParam(searchParams.catalog);
   if (!publicSlug) return null;
-  const item = await findSelectableCatalogItemByPublicSlug(publicSlug);
+  const item = await findSelectableCatalogItemByPublicSlug(
+    publicSlug,
+    undefined,
+    {
+      standardBaseOnly: true,
+    },
+  );
   if (!item) return null;
   return {
     id: item.id,

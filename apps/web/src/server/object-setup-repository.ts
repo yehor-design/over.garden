@@ -247,10 +247,13 @@ export async function readObjectSetupCatalogPrefill(
   return executor.transaction().execute(async (tx) => {
     await sql`set local statement_timeout = '1200ms'`.execute(tx);
     // An organism's public address names it by slug, as every catalogue link
-    // into the garden does; an id is accepted too.
+    // into the garden does; an id is accepted too. A species launches setup
+    // only from the standard base, the one the picker offers (ADR-0035 D3).
     const item = isObjectSetupUuid(catalog)
-      ? await findSelectableCatalogItem(tx, catalog)
-      : await findSelectableCatalogItemByPublicSlug(catalog, tx);
+      ? await findSelectableCatalogItem(tx, catalog, { standardBaseOnly: true })
+      : await findSelectableCatalogItemByPublicSlug(catalog, tx, {
+          standardBaseOnly: true,
+        });
     if (!item) return null;
     const localized = await tx
       .selectFrom("catalog_item_names")
@@ -268,7 +271,10 @@ export async function readObjectSetupCatalogPrefill(
         kind: pickerKindForCatalogKind(item.catalogKind),
         ...(localized ? { matchedName: item.canonicalName } : {}),
       },
-      objectKind: item.catalogKind === "breed" ? "animal" : "plant",
+      objectKind:
+        item.catalogKind === "breed"
+          ? "animal"
+          : (item.standardKind ?? "plant"),
     };
   });
 }
