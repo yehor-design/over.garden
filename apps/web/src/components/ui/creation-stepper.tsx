@@ -80,7 +80,7 @@ function CreationStepper({
   status,
   children,
 }: CreationStepperProps) {
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const rootRef = useRef<HTMLElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const headingRef = useRef<HTMLHeadingElement | null>(null);
   const [viewport, setViewport] = useState<{
@@ -157,9 +157,10 @@ function CreationStepper({
 
   const formId = useId();
   return (
-    <div
+    // The page's one `main`: the stepper is all the page there is while it
+    // is open, and a page with no `main` has no landmark to skip to.
+    <main
       ref={rootRef}
-      role="region"
       aria-label={label}
       data-creation-stepper="true"
       data-creation-step={step}
@@ -266,7 +267,7 @@ function CreationStepper({
           </footer>
         </div>
       </form>
-    </div>
+    </main>
   );
 }
 

@@ -13,7 +13,7 @@ function Harness({ onClose = vi.fn() }: { onClose?: () => void }) {
       <nav aria-label="Сайт">
         <button type="button">Стрічка</button>
       </nav>
-      <main>
+      <div>
         <CreationStepper
           label="Новий простір"
           step={step}
@@ -44,7 +44,7 @@ function Harness({ onClose = vi.fn() }: { onClose?: () => void }) {
             <button type="button">Додати фото</button>
           )}
         </CreationStepper>
-      </main>
+      </div>
     </div>
   );
 }
@@ -52,7 +52,7 @@ function Harness({ onClose = vi.fn() }: { onClose?: () => void }) {
 describe("CreationStepper", () => {
   it("asks one question per screen with its progress in words and a named close", () => {
     render(<Harness />);
-    expect(screen.getByRole("region", { name: "Новий простір" })).toBeTruthy();
+    expect(screen.getByRole("main", { name: "Новий простір" })).toBeTruthy();
     expect(
       screen.getByRole("heading", {
         level: 1,
