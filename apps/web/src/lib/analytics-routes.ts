@@ -15,7 +15,8 @@ export const ANALYTICS_ALLOWED_EXACT_PATHS = [
   "/blog",
   "/privacy",
   "/support",
-  "/first-publication-disclosure",
+  "/terms",
+  "/cookies",
 ] as const;
 
 export const ANALYTICS_ALLOWED_PREFIXES = [

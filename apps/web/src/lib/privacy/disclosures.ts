@@ -3,11 +3,17 @@ export const ERASURE_REQUEST_INTAKE_VERSION = "erasure-request-mvp-v1";
 
 export const SUPPORT_EMAIL = "support.overgarden@gmail.com";
 
+/**
+ * Where the terms, the privacy policy and the cookie rules
+ * (`src/lib/legal/legal-documents.ts`, ADR-0038) stand: drafted by the
+ * executor on 2026-09-26, waiting for the owner's approval and then a lawyer's
+ * review before launch. `docs/PROJECT_STATE.md` says the same.
+ */
 export const MVP_LEGAL_COPY_STATUS =
-  "founder_approved_mvp_lawyer_review_deferred" as const;
+  "drafted_owner_approval_and_lawyer_review_pending" as const;
 
 export const MVP_LEGAL_COPY_STATUS_LABEL =
-  "Founder-approved MVP copy; lawyer review deferred";
+  "Drafted; owner approval and lawyer review pending";
 
 export const MVP_LEGAL_COPY_REVIEW_NOTE =
   "This MVP notice is written/generated internally and approved by the founder for launch learning. It is not final lawyer-approved public policy.";

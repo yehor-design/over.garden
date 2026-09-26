@@ -885,6 +885,28 @@ export async function proxy(request: NextRequest) {
     );
   }
 
+  // The first-publication disclosure became a section of the terms of use
+  // (`OVE-526`): one 308 to it, in the reader's language, from the address
+  // and anything below it. Before the not-found blocks below — the address
+  // has no directory in `src/app` any more.
+  const retiredDisclosure = stripLocalePrefix(request.nextUrl.pathname);
+  if (
+    retiredDisclosure.path === "/first-publication-disclosure" ||
+    retiredDisclosure.path.startsWith("/first-publication-disclosure/")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = retiredDisclosure.locale
+      ? `/${retiredDisclosure.locale}/terms`
+      : "/terms";
+    url.search = "";
+    url.hash = "terms-publishing";
+    return withAppRouteContract(
+      NextResponse.redirect(url, { status: 308 }),
+      request,
+      localization,
+    );
+  }
+
   const legacyCatalogDoor = matchLegacyCatalogBrowsePath(
     request.nextUrl.pathname,
   );

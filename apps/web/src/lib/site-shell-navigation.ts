@@ -33,7 +33,7 @@ export interface SiteShellNavigationItem {
 }
 
 export interface SiteShellFooterLink {
-  key: "privacy" | "support" | "first-publication-disclosure" | "catalogue";
+  key: "privacy" | "support" | "terms" | "cookies" | "catalogue";
   label: string;
   href: string;
 }
@@ -293,9 +293,19 @@ export function getSiteShellNavigation(
         href: localizedPath(locale, CATALOG_BROWSE_PATH),
       },
       {
+        key: "terms",
+        label: copy.shell.terms,
+        href: localizedPath(locale, "/terms"),
+      },
+      {
         key: "privacy",
         label: copy.shell.privacy,
         href: localizedPath(locale, "/privacy"),
+      },
+      {
+        key: "cookies",
+        label: copy.shell.cookies,
+        href: localizedPath(locale, "/cookies"),
       },
       {
         key: "support",
@@ -305,11 +315,6 @@ export function getSiteShellNavigation(
         // prefixed (found on production on 2026-09-21); the `[locale]` twin
         // added since (`OVE-476`) is `noindex` and not what this link names.
         href: "/support",
-      },
-      {
-        key: "first-publication-disclosure",
-        label: copy.shell.firstPublicationDisclosure,
-        href: localizedPath(locale, "/first-publication-disclosure"),
       },
     ],
     labels: {

@@ -116,6 +116,26 @@ batch of 24 and hid everything past it. Topic pages adopt the list with
 `OVE-515`; the hidden catalogue's browse and register pages keep their
 previous/next links.
 
+Overgarden has terms of use since `OVE-526` (ADR-0038): `/terms`,
+`/privacy` (rewritten) and `/cookies`, in uk, bg and ru, each with a version
+and the date 2026-09-26, drawn from one source
+(`apps/web/src/lib/legal/legal-documents.ts`) and linked from the footer. The
+terms carry the photo licence, the minimum age, what may be published, how
+moderation and complaints work and erasure within a month; the privacy policy
+says what is public, who else processes data and how long each thing is kept,
+catalogue copies included; the cookie rules separate necessary cookies from
+analytics and marketing, with the two switches beneath them.
+`/first-publication-disclosure` is gone: its content is the terms'
+`#terms-publishing` section, and the address answers one 308 there. **The
+texts are drafts: they wait for the owner's approval and then a lawyer's
+review** (`MVP_LEGAL_COPY_STATUS`, and a line under every document says so).
+The lawyer is asked: where Overgarden is established and whether an EU
+representative is needed (GDPR Art. 27, DSA Art. 13); the minimum age (16 is
+drafted); whether the photo licence reaches photographs published before it
+existed; and whether declining the terms right after a first Google sign-in
+may delete the just-created account at once. The one acceptance, the split
+cookie choices and the complaint procedure follow in the same task.
+
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),
 32 executable tasks with OVE-475 first and OVE-478 integration/release last. Threads leads visual design; vc.ru supplies

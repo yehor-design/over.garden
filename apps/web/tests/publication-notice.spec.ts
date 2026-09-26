@@ -7,6 +7,10 @@ import {
   ATOMIC_JOURNAL_CREATE_PROTOCOL,
   ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
 } from "../src/lib/garden/entry-contracts";
+import {
+  getLegalDocument,
+  LEGAL_DOCUMENT_PATHS,
+} from "../src/lib/legal/legal-documents";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "../src/lib/privacy/disclosures";
 import { getTrustSurfaceCopy } from "../src/lib/trust-surface-copy";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
@@ -15,7 +19,7 @@ import {
   signInSyntheticGardener,
 } from "./helpers/synthetic-gardener";
 
-test("publication and privacy notices are readable without JavaScript in every language", async ({
+test("the terms, the privacy policy and the cookie rules are readable without JavaScript in every language", async ({
   browser,
   baseURL,
 }) => {
@@ -26,23 +30,37 @@ test("publication and privacy notices are readable without JavaScript in every l
     for (const locale of ["uk", "bg", "ru"] as const) {
       const prefix = locale === "uk" ? "" : `/${locale}`;
       const copy = getTrustSurfaceCopy(locale);
-      for (const path of ["/privacy", "/first-publication-disclosure"]) {
-        const response = await page.goto(`${baseURL}${prefix}${path}`);
-        expect(response?.status()).toBe(200);
-        await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-        await expect(
-          page.getByText(copy.firstPublication.lines[1], { exact: true }),
-        ).toBeVisible();
-        await expect(
-          page.getByText(copy.firstPublication.lines[3], { exact: true }),
-        ).toBeVisible();
-        await expect(
-          page.getByText(copy.firstPublication.lines[4], { exact: true }),
-        ).toBeVisible();
-        await expect(page.locator("main")).toContainText(
-          FIRST_PUBLICATION_DISCLOSURE_VERSION,
+      for (const key of ["terms", "privacy", "cookies"] as const) {
+        const document = getLegalDocument(locale, key);
+        const response = await page.goto(
+          `${baseURL}${prefix}${LEGAL_DOCUMENT_PATHS[key]}`,
         );
+        expect(response?.status()).toBe(200);
+        await expect(
+          page.getByRole("heading", {
+            level: 1,
+            name: document.title,
+            exact: true,
+          }),
+        ).toBeVisible();
+        for (const section of document.sections) {
+          await expect(
+            page.locator(`h2[id="${section.id}"]`),
+            `${locale} ${key} ${section.id}`,
+          ).toHaveText(section.heading);
+        }
+        await expect(page.locator("main")).toContainText(document.version);
       }
+      // The old disclosure is a section of the terms now: one 308, in the
+      // reader's language, to the section that holds its content.
+      const moved = await page.request.get(
+        `${baseURL}${prefix}/first-publication-disclosure`,
+        { maxRedirects: 0 },
+      );
+      expect(moved.status()).toBe(308);
+      expect(moved.headers().location).toBe(
+        `${prefix}/terms#terms-publishing`,
+      );
       await page.goto(`${baseURL}${prefix}/privacy`);
       await expect(page.locator('main a[href="/support"]')).toBeVisible();
       await page.locator('main a[href="/support"]').click();

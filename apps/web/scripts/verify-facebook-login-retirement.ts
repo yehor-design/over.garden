@@ -27,8 +27,10 @@ const CURRENT_AUTH_DOCS = [
 const META_RUNTIME_BASELINE_DIGESTS = {
   "src/app/api/meta/conversions/route.ts":
     "5d76a9e60683683f94ffa4c29253417f6fe6cb983c33d7812e5c837c00027724",
+  // Repinned 2026-09-26: the pixel's path allowlist swapped the retired
+  // `/first-publication-disclosure` for `/terms` and `/cookies` (`OVE-526`).
   "src/app/meta-marketing.tsx":
-    "d560b6c30bfd2d0576528aea6e031641088bdaa57265e29755a19b8bdc51ba73",
+    "36027307cc6150310b870032378c44f7a6a9aea3cb97a76c3f40caaa8aa40e47",
   "src/lib/meta-marketing/client.ts":
     "26bbaaa8f6dbf2e4ef102701e73a581316f48607d2720cd92c5b46563a97d98d",
   "src/lib/meta-marketing/events.ts":

@@ -54,7 +54,7 @@ describe("shouldGuardNavigation", () => {
     expect(shouldGuardNavigation(anchor({ href: "/garden" }), here)).toBe(false);
     expect(
       shouldGuardNavigation(
-        anchor({ href: "/first-publication-disclosure", target: "_blank" }),
+        anchor({ href: "/terms", target: "_blank" }),
         here,
       ),
     ).toBe(false);

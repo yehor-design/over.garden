@@ -120,7 +120,7 @@ export function LocalJournalPublicationDisclosure({
         label={copy.disclosure}
       />
       <Link
-        href="/first-publication-disclosure"
+        href="/terms#terms-publishing"
         className="ml-6 justify-self-start text-caption text-text-muted underline"
         target="_blank"
       >

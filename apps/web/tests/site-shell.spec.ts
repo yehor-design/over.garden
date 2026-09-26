@@ -295,9 +295,10 @@ test.describe("the three-column shell", () => {
     // file went on asking for the old address because it ran in no CI list —
     // found on 2026-09-20, the day it joined one.
     for (const address of [
+      "/terms",
       "/privacy",
+      "/cookies",
       "/support",
-      "/first-publication-disclosure",
       "/catalog",
     ]) {
       await expect(footer.locator(`a[href="${address}"]`)).toHaveCount(1);
