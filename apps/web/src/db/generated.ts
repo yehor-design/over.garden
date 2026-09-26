@@ -214,7 +214,6 @@ export interface CatalogItems {
   has_registered_forms: Generated<boolean>;
   id: Generated<string>;
   identity_state: Generated<string>;
-  indexable_override: boolean | null;
   is_host: Generated<boolean>;
   kingdom: string | null;
   locale: Generated<string>;
