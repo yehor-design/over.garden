@@ -15,6 +15,10 @@ export const OPERATOR_MENU_LINKS = [
     href: "/account/moderation/comments",
   },
   {
+    key: "reports",
+    href: "/account/moderation/reports",
+  },
+  {
     key: "catalog-queue",
     href: "/garden/catalog/queue",
   },
@@ -41,6 +45,7 @@ const COPY: Record<InterfaceLocale, OperatorMenuCopy> = {
     links: {
       communities: "Модерація спільнот",
       comments: "Модерація коментарів",
+      reports: "Скарги на вміст",
       "catalog-queue": "Черга рішень каталогу",
       "catalog-sources": "Джерела каталогу",
       erasure: "Запити на видалення",
@@ -51,6 +56,7 @@ const COPY: Record<InterfaceLocale, OperatorMenuCopy> = {
     links: {
       communities: "Модерация на общности",
       comments: "Модерация на коментари",
+      reports: "Сигнали за съдържание",
       "catalog-queue": "Опашка с решения за каталога",
       "catalog-sources": "Източници на каталога",
       erasure: "Заявки за изтриване",
@@ -61,6 +67,7 @@ const COPY: Record<InterfaceLocale, OperatorMenuCopy> = {
     links: {
       communities: "Модерация сообществ",
       comments: "Модерация комментариев",
+      reports: "Жалобы на контент",
       "catalog-queue": "Очередь решений каталога",
       "catalog-sources": "Источники каталога",
       erasure: "Запросы на удаление",

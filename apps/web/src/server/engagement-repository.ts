@@ -36,6 +36,7 @@ import {
 import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import type { RequestScope } from "@/server/request-scope";
 import { publicAuthorHandleSql } from "@/server/author-handle-sql";
+import { enqueueCommentRemovalStatement } from "@/server/moderation/comment-statement";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -807,6 +808,8 @@ export async function moderateEngagementCommentReport(
         "engagement_comment_reports.report_reason as reason",
         "engagement_comment_reports.report_state as reportState",
         "engagement_comments.comment_state as commentState",
+        "engagement_comments.target_kind as targetKind",
+        "engagement_comments.target_ref as targetRef",
       ])
       .where("engagement_comment_reports.id", "=", reportId)
       .forUpdate()
@@ -874,6 +877,20 @@ export async function moderateEngagementCommentReport(
         .where("comment_id", "=", selected.commentId)
         .where("report_state", "in", ["submitted", "reviewed"])
         .executeTakeFirst();
+      // ADR-0038 D5: the author learns why, in the removal's own transaction.
+      const place = await resolveCommentModerationPlace(
+        {
+          kind: selected.targetKind,
+          ref: selected.targetRef,
+        } as EngagementCommentTarget,
+        trx,
+      );
+      await enqueueCommentRemovalStatement(trx, {
+        commentId: selected.commentId,
+        reportId,
+        reason: selected.reason,
+        address: place?.href ?? null,
+      });
     } else {
       await trx
         .updateTable("engagement_comment_reports")

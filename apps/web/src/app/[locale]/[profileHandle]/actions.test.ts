@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
   followProfile: vi.fn(),
   unfollowProfile: vi.fn(),
   blockProfile: vi.fn(),
-  reportProfile: vi.fn(),
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
 }));
@@ -28,7 +27,6 @@ vi.mock("@/server/profile-interaction-repository", () => ({
   followProfile: mocks.followProfile,
   unfollowProfile: mocks.unfollowProfile,
   blockProfile: mocks.blockProfile,
-  reportProfile: mocks.reportProfile,
 }));
 
 describe("localized public profile actions", () => {
@@ -45,7 +43,6 @@ describe("localized public profile actions", () => {
     mocks.followProfile.mockResolvedValue("followed");
     mocks.unfollowProfile.mockResolvedValue("unfollowed");
     mocks.blockProfile.mockResolvedValue("blocked");
-    mocks.reportProfile.mockResolvedValue("reported");
   });
 
   it("follows and unfollows the exact profile through authenticated scope", async () => {
@@ -67,23 +64,6 @@ describe("localized public profile actions", () => {
     );
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/bg/@demo_olena?profileAction=unfollowed#profile-follow",
-    );
-  });
-
-  it("reports only an allowlisted reason and returns to the safety control", async () => {
-    const { reportProfileAction } = await import("./actions");
-    const formData = profileFormData("ru");
-    formData.set("reason", "privacy");
-
-    await reportProfileAction(undefined, formData);
-
-    expect(mocks.reportProfile).toHaveBeenCalledWith(
-      expect.any(Object),
-      "demo_olena",
-      "privacy",
-    );
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/ru/@demo_olena?profileAction=reported#profile-report",
     );
   });
 

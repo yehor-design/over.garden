@@ -820,7 +820,7 @@ describe("the sealed owner's links", () => {
   // `OVE-456` AC5. The menu groups: the reader's own pages, settings, the
   // owner's pages under the sealed role, sign out — and the owner's five links
   // stay exactly five unless the owner approves a sixth.
-  it("groups the menu, and the owner's group is exactly its five links", async () => {
+  it("groups the menu, and the owner's group is exactly its six links", async () => {
     mocks.pathname = "/garden";
     const user = (await import("@testing-library/user-event")).default;
     const { OPERATOR_MENU_LINKS } = await import("@/lib/operator-menu-copy");
@@ -872,7 +872,7 @@ describe("the sealed owner's links", () => {
     expect(hrefsOf(operator!)).toEqual(
       OPERATOR_MENU_LINKS.map((link) => link.href),
     );
-    expect(OPERATOR_MENU_LINKS).toHaveLength(5);
+    expect(OPERATOR_MENU_LINKS).toHaveLength(6);
   });
 
   it("renders nothing of the owner's group for a gardener who is not the owner", async () => {

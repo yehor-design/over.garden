@@ -159,6 +159,17 @@ export async function executeApprovedErasureRequest(
         trx,
         requesterUserId,
       ).execute();
+      // The complaint procedure (ADR-0038 D5): reports the subject sent and
+      // letters addressed to them, found by their email as well as by their
+      // account, because a report can be sent before signing in.
+      await buildDeleteContentReportsByEmailForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteModerationMessagesByEmailForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
       await buildDeleteAuthSessionsForErasureQuery(
         trx,
         requesterUserId,
@@ -506,6 +517,50 @@ export function buildDeleteVerificationRowsForErasureQuery(
         .selectFrom("user")
         .select("email")
         .where("id", "=", requesterUserId),
+    );
+}
+
+/** Reports sent under the subject's email, signed in or not. */
+export function buildDeleteContentReportsByEmailForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("content_reports")
+    .where((eb) =>
+      eb.or([
+        eb("reporter_user_id", "=", requesterUserId),
+        eb(
+          "reporter_email",
+          "in",
+          executor
+            .selectFrom("user")
+            .select(sql<string>`lower(email)`.as("email"))
+            .where("id", "=", requesterUserId),
+        ),
+      ]),
+    );
+}
+
+/** Letters of the complaint procedure addressed to the subject. */
+export function buildDeleteModerationMessagesByEmailForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("moderation_messages")
+    .where((eb) =>
+      eb.or([
+        eb("recipient_user_id", "=", requesterUserId),
+        eb(
+          "recipient_email",
+          "in",
+          executor
+            .selectFrom("user")
+            .select("email")
+            .where("id", "=", requesterUserId),
+        ),
+      ]),
     );
 }
 

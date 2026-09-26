@@ -122,7 +122,7 @@ export function ModerationAreas({
   current,
 }: {
   locale: InterfaceLocale;
-  current: "communities" | "comments";
+  current: "communities" | "comments" | "reports";
 }) {
   const copy = getModerationCopy(locale);
   return (
@@ -139,6 +139,11 @@ export function ModerationAreas({
           key: "comments",
           href: "/account/moderation/comments",
           label: copy.sections.comments,
+        },
+        {
+          key: "reports",
+          href: "/account/moderation/reports",
+          label: copy.sections.reports,
         },
       ]}
     />

@@ -82,6 +82,7 @@ describe("versioned application SQL bootstrap", () => {
       "0081_ove530_standard_species_base.sql",
       "0082_ove523_space_and_object_photos.sql",
       "0083_ove526_legal_acceptances.sql",
+      "0084_ove526_content_reports.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

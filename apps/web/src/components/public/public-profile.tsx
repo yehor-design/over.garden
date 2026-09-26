@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { FlagIcon as Flag } from "@/components/icons/Flag";
 import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
 import { DotsThreeIcon as MoreHorizontal } from "@/components/icons/DotsThree";
 import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
@@ -28,7 +27,10 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { AuthIntentAction } from "@/lib/auth/auth-intent-contract";
 import { entryCardFeedLabels } from "@/lib/entry-card-dates";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
-import { publicProfilePath } from "@/lib/garden/public-paths";
+import {
+  publicProfileBasePath,
+  publicProfilePath,
+} from "@/lib/garden/public-paths";
 import { resolveIllustration } from "@/lib/illustrations";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import {
@@ -50,14 +52,13 @@ import type {
 import {
   blockProfileAction,
   followProfileAction,
-  reportProfileAction,
   unfollowProfileAction,
 } from "@/app/[locale]/[profileHandle]/actions";
 import { loadProfilePortion } from "@/app/[locale]/[profileHandle]/profile-portion-actions";
 import { iconButtonVariants } from "@/components/ui/icon-button";
 import { HiddenField } from "@/components/ui/hidden-field";
-import { Field } from "@/components/ui/field";
-import { Select } from "@/components/ui/select";
+import { ReportContentLink } from "@/components/public/report-content-link";
+import { getReportCopy } from "@/lib/moderation/report-copy";
 
 /**
  * A city is more precise than a profile should say where its gardener lives,
@@ -585,19 +586,15 @@ export function ProfileActions({
           <MoreHorizontal aria-hidden="true" />
         </summary>
         <div className="absolute inset-x-0 top-11 z-popover grid w-auto gap-3 rounded-lg border border-border bg-surface-raised p-3 shadow-lg sm:right-0 sm:left-auto sm:w-64">
+          {/* ADR-0038 D5: a profile is reported through the one report
+              form, by anyone, signed in or not. */}
+          <ReportContentLink
+            address={publicProfileBasePath(profile.handle)}
+            label={getReportCopy(locale).link}
+            className="w-full justify-start px-3"
+          />
           {viewer.kind === "guest" ? (
             <>
-              <AuthIntentTrigger
-                action="report"
-                returnTo={returnTo}
-                target={target}
-                label={copy.report}
-                icon={<Flag aria-hidden="true" />}
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start"
-                formClassName="w-full"
-              />
               <AuthIntentTrigger
                 action="block"
                 returnTo={returnTo}
@@ -613,35 +610,6 @@ export function ProfileActions({
             </>
           ) : (
             <>
-              <OwnerScopedProgressiveForm
-                action={reportProfileAction}
-                className="grid gap-2"
-              >
-                {hiddenFields}
-                <Field label={copy.reportTitle} id="profile-report-reason">
-                  <Select name="reason" size="sm" defaultValue="spam">
-                    {Object.entries(copy.reportReasons).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ),
-                    )}
-                  </Select>
-                </Field>
-                <button
-                  type="submit"
-                  data-auth-intent-control="report"
-                  className={buttonVariants({
-                    variant: "secondary",
-                    size: "sm",
-                    className: "justify-start",
-                  })}
-                >
-                  <Flag aria-hidden="true" />
-                  {copy.reportSubmit}
-                </button>
-              </OwnerScopedProgressiveForm>
               <OwnerScopedProgressiveForm
                 action={blockProfileAction}
                 id="profile-block"

@@ -502,6 +502,8 @@ describe("OVE-314 active caller and schema retirement", () => {
     expect(OPERATOR_MENU_LINKS.map(({ href }) => href)).toEqual([
       "/account/communities",
       "/account/moderation/comments",
+      // ADR-0038 D5: the complaint procedure's reports, beside comments.
+      "/account/moderation/reports",
       // ADR-0026 D10 put the owner's two curation surfaces back into the menu.
       // They are not the retired Release Center: `/garden/catalog/registry`
       // and every other retired descendant still answers 404.

@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081` and `0082` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081`, `0082` and `0083` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -1276,3 +1276,26 @@ and object photos alone (`prove-migration-reapply --passes 3`: no failures).
 Post-apply production inventory returned `status: applied`, `absent: []` for
 0082. No historical migrations were replayed by this change.
 
+## `0083`, acceptance receipts of the terms — applied 2026-09-26
+
+`0083_ove526_legal_acceptances.sql` was applied through
+`scripts/apply-reviewed-migration.ts` with the current Vercel production
+configuration: one transaction, `digitalocean_managed`, `defaultdb`, five
+statements, 278 ms. SQL SHA-256:
+`47033da500f10696ba61fdd0d1d875c694e3f9d8a94a81f8c837a29c1023996d`.
+
+`legal_acceptances` holds one row per account and accepted version of the
+terms, the privacy policy and the cookie rules (`bundle_version`
+`legal-YYYY-MM-DD`), where it was given (`sign_up` or `acceptance_screen`) and
+when; its key is `(owner_user_id, bundle_version)` and it cascades on account
+erasure. Nothing was backfilled: no production account has accepted the
+documents yet, so every existing account meets the acceptance screen at its
+next signed-in visit once a deployment of `main` is live. The release
+production runs until then never reads the table.
+
+Rollback `sql/rollback/0083_….down.sql` keeps the table, as `0079`'s does:
+the receipts are the only record of who accepted what, and older code does not
+read them.
+
+Post-apply production inventory returned `status: applied`, `absent: []` for
+0083. No historical migrations were replayed by this change.

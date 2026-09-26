@@ -559,6 +559,28 @@ export interface CommunityRules {
   updated_at: Generated<Timestamp>;
 }
 
+export interface ContentReports {
+  created_at: Generated<Timestamp>;
+  decided_at: Timestamp | null;
+  decided_by_user_id: string | null;
+  decision_facts: string | null;
+  decision_ground: string | null;
+  explanation: string;
+  good_faith_confirmed_at: Timestamp;
+  id: Generated<string>;
+  locale: string;
+  reason: string;
+  reporter_email: string;
+  reporter_fingerprint: string;
+  reporter_name: string;
+  reporter_user_id: string | null;
+  state: Generated<string>;
+  target_address: string;
+  target_id: string;
+  target_kind: string;
+  target_owner_user_id: string | null;
+}
+
 export interface EngagementBookmarks {
   bookmark_state: Generated<string>;
   created_at: Generated<Timestamp>;
@@ -928,6 +950,24 @@ export interface MediaLifecycleRetentionRuns {
   status: string;
 }
 
+export interface ModerationMessages {
+  attempts: Generated<number>;
+  body_text: string;
+  comment_report_id: string | null;
+  content_report_id: string | null;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  kind: string;
+  last_error_class: string | null;
+  locale: string;
+  recipient_email: string;
+  recipient_user_id: string | null;
+  sent_at: Timestamp | null;
+  state: Generated<string>;
+  subject: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface NotificationPreferences {
   claims_enabled: Generated<boolean>;
   comments_enabled: Generated<boolean>;
@@ -1184,6 +1224,7 @@ export interface DB {
   community_moderation_audit_log: CommunityModerationAuditLog;
   community_moderators: CommunityModerators;
   community_rules: CommunityRules;
+  content_reports: ContentReports;
   engagement_bookmarks: EngagementBookmarks;
   engagement_comment_reports: EngagementCommentReports;
   engagement_comments: EngagementComments;
@@ -1214,6 +1255,7 @@ export interface DB {
   matching_worker_heartbeats: MatchingWorkerHeartbeats;
   media_assets: MediaAssets;
   media_lifecycle_retention_runs: MediaLifecycleRetentionRuns;
+  moderation_messages: ModerationMessages;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;
   plant_object_slug_history: PlantObjectSlugHistory;

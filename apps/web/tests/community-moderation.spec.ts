@@ -773,6 +773,22 @@ test.describe("the owner's moderation", () => {
       [fixture.comment.id],
     );
     expect(comment.rows[0]!.comment_state).toBe("removed");
+    // ADR-0038 D5: the writer is sent a statement of reasons naming the page
+    // the comment was on, the ground, and how to contest.
+    const statement = await pool.query<{
+      recipient_email: string;
+      body_text: string;
+    }>(
+      `select recipient_email, body_text from moderation_messages
+       where comment_report_id = $1::uuid and kind = 'statement_of_reasons'`,
+      [fixture.comment.reportId],
+    );
+    expect(statement.rows).toHaveLength(1);
+    expect(statement.rows[0]!.recipient_email).toBe(fixture.writer.email);
+    expect(statement.rows[0]!.body_text).toContain(
+      `/communities/${fixture.slug}/discussions/${fixture.kept.contributionId}`,
+    );
+    expect(statement.rows[0]!.body_text).toContain("terms#terms-content");
     await owner.close();
   });
 
