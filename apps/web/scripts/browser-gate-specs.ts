@@ -46,6 +46,7 @@ export const BROWSER_GATE_SPECS = [
   "journal-notion-composer.spec.ts",
   "publication-notice.spec.ts",
   "legal-acceptance.spec.ts",
+  "content-reports.spec.ts",
   "component-specimens.spec.ts",
   "redesign-fixtures.spec.ts",
   "owned-destinations.spec.ts",

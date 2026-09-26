@@ -34,7 +34,8 @@ export interface ErasureCoverageEntry {
 // the per-author entry counter (OVE-464): one row that says how many entries a
 // gardener has published, which is a fact about a person. v15 adds the
 // acceptance receipts of the terms (OVE-526): who accepted which version when.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove476.erasure-schema.v15";
+// v16 adds the complaint procedure's reports and letters (OVE-526).
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove476.erasure-schema.v16";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Versioned notice receipts contain no journal content and leave with the account.
@@ -59,6 +60,72 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     disposition: "delete",
     rationale:
       "Counted with account data; ON DELETE CASCADE removes every accepted version when the account is erased.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  // The complaint procedure (ADR-0038 D5, migration 0084). A report the
+  // subject sent goes with them — found by account and by email, because a
+  // report can be sent signed out; a report about the subject's content stays
+  // as the record of the decision, without the link to them.
+  {
+    id: "content_reports.reporter_user_id",
+    table: "content_reports",
+    columnOrPath: "reporter_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale: "ON DELETE CASCADE, and erasure deletes the subject's reports first.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "content_reports.reporter_email",
+    table: "content_reports",
+    columnOrPath: "reporter_email",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale:
+      "Reports sent under the subject's email are deleted with the account, signed in or not.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "content_reports.target_owner_user_id",
+    table: "content_reports",
+    columnOrPath: "target_owner_user_id",
+    kind: "fk",
+    disposition: "anonymize",
+    rationale:
+      "ON DELETE SET NULL keeps the decision record without the author; purged a year after the decision.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "content_reports.decided_by_user_id",
+    table: "content_reports",
+    columnOrPath: "decided_by_user_id",
+    kind: "fk",
+    disposition: "anonymize",
+    rationale: "ON DELETE SET NULL keeps the decision without its decider.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "moderation_messages.recipient_user_id",
+    table: "moderation_messages",
+    columnOrPath: "recipient_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale: "ON DELETE CASCADE, and erasure deletes the subject's letters first.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "moderation_messages.recipient_email",
+    table: "moderation_messages",
+    columnOrPath: "recipient_email",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale: "Letters addressed to the subject's email are deleted with the account.",
     dryRunOwned: true,
     executionOwned: true,
   },

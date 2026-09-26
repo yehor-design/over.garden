@@ -37,6 +37,8 @@ import {
 import { TopicViewerFollow } from "./topic-regions";
 import { publicTopicPath } from "@/lib/garden/public-paths";
 import { listKnowledgeForTopic } from "@/server/public-knowledge-related";
+import { ReportContentLink } from "@/components/public/report-content-link";
+import { getReportCopy } from "@/lib/moderation/report-copy";
 
 const TOPIC_VISIBLE_ENTRIES = 8;
 
@@ -150,24 +152,31 @@ export async function renderTopicPage(
       evidenceState={evidenceResult.state}
       related={listKnowledgeForTopic(locale, topic.topic.slug)}
       actions={
-        <Suspense
-          fallback={
-            <EngagementFollowControl
-              isAuthenticated={false}
+        <>
+          <Suspense
+            fallback={
+              <EngagementFollowControl
+                isAuthenticated={false}
+                locale={locale}
+                target={followTarget}
+                returnTo={returnTo}
+                following={false}
+              />
+            }
+          >
+            <TopicViewerFollow
               locale={locale}
               target={followTarget}
               returnTo={returnTo}
-              following={false}
+              searchParams={searchParams}
             />
-          }
-        >
-          <TopicViewerFollow
-            locale={locale}
-            target={followTarget}
-            returnTo={returnTo}
-            searchParams={searchParams}
+          </Suspense>
+          {/* ADR-0038 D5: anyone may report the tag page. */}
+          <ReportContentLink
+            address={publicTopicPath(topic.topic.slug)}
+            label={getReportCopy(locale).link}
           />
-        </Suspense>
+        </>
       }
       jsonLd={surface.jsonLd}
     />

@@ -1,3 +1,4 @@
+import { parseReportAddress } from "@/lib/moderation/report-contract";
 import {
   localizedPath,
   stripLocalePrefix,
@@ -253,6 +254,15 @@ export const INTERFACE_ROUTE_POLICIES = [
     ],
     safeQueryKeys: NO_QUERY_KEYS,
     preserveClientFragment: true,
+  },
+  {
+    // The report form (ADR-0038 D5): the page it reports travels with it, so
+    // choosing another language keeps the report about the same page.
+    id: "public-report-form",
+    mode: "same-path-preference",
+    exactPaths: ["/report"],
+    safeQueryKeys: ["address"],
+    preserveClientFragment: false,
   },
   {
     id: "public-community-detail",
@@ -630,6 +640,8 @@ function sanitizeInterfaceRouteQueryValue(
       return value === "grouped" || value === "individual" ? value : null;
     case "from":
       return sanitizePublicJournalDirectoryReturnTo(value, targetLocale);
+    case "address":
+      return parseReportAddress(value) ? value : null;
     default:
       return null;
   }

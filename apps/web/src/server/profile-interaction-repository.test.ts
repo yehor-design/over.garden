@@ -24,7 +24,6 @@ import {
   buildRemoveProfileFollowQuery,
   buildUpsertProfileBlockQuery,
   buildUpsertProfileFollowQuery,
-  buildUpsertProfileReportQuery,
 } from "./profile-interaction-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -170,21 +169,4 @@ describe("profile interaction repository", () => {
     expect(unblock.parameters).toContain(actorUserId);
   });
 
-  it("upserts one enum-only report per actor and target", () => {
-    const compiled = buildUpsertProfileReportQuery(
-      testDb,
-      scope,
-      targetUserId,
-      "privacy",
-    ).compile();
-
-    expect(compiled.sql).toContain('insert into "profile_reports"');
-    expect(compiled.sql).toContain(
-      'on conflict ("reporter_user_id", "target_user_id") do update',
-    );
-    expect(compiled.parameters).toContain("privacy");
-    expect(compiled.parameters).toContain(actorUserId);
-    expect(compiled.parameters).toContain(targetUserId);
-    expect(compiled.sql).not.toMatch(/body|details|message|email|ip_address/i);
-  });
 });

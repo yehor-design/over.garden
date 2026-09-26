@@ -158,8 +158,27 @@ a request queued before, and ignores them. «Налаштування cookies» 
 footer, the phone menu and account settings. The guest notice already asked
 analytics and marketing as two separate questions, each with two equal
 answers (marketing only where Meta measurement is switched on, which it is not
-in production), so it stays as it is, drawn before paint. The complaint
-procedure follows in the same task.
+in production), so it stays as it is, drawn before paint.
+
+Anyone can report a public entry, a profile, an object passport or a tag page
+since `OVE-526` (ADR-0038 D5; DSA Art. 16 and 17): «Поскаржитися» on each page
+opens `/report?address=…`, a plain form that works without JavaScript — a
+reason from seven, what is wrong, a name, an email and a good-faith statement.
+Five reports an hour and twenty a day from one network address (an HMAC of
+it, never the address, is kept). The reporter is written a receipt; the owner
+decides at `/account/moderation/reports`, beside comment moderation: keep, or
+take down with a ground in the terms or the law and the facts. Taking down an
+entry is the author's own delete; a profile loses its name, description and
+photo; an object passport its name and photo; a tag page is rejected. The
+reporter is written the decision, and the author a statement of reasons — what
+was restricted, the facts, the ground, that a person decided, how to contest.
+A comment the owner removes through comment moderation writes its author the
+same statement. Letters wait in an outbox (`moderation_messages`, migration
+`0084`), sent right after the request and again by a daily cron; reports and
+their letters are deleted a year after the decision, and with the account on
+erasure, found by email as well. Space pages and catalogue photographs join the
+same form with their own tasks. The owner has not yet approved the reasons,
+the report page or the list's design.
 
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),

@@ -8,7 +8,8 @@ export type AuthFrameScreen =
   | "signed-in"
   | "help"
   | "reset-password"
-  | "terms";
+  | "terms"
+  | "report";
 
 /**
  * The one layout every authentication screen uses (`OVE-504`, criterion 1).

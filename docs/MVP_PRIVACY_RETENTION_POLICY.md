@@ -14,6 +14,7 @@ A gardener is more likely to publish and keep journaling when OverGarden explain
 ## Public User Copy Rules
 
 - `/terms`, `/privacy` and `/cookies` (and their `/{locale}/` twins), `/erasure` and `/support` must show approved copy, not placeholder or public-release-blocked pilot copy. The three documents of ADR-0038 were drafted on 2026-09-26 and wait for the owner's approval and a lawyer's review (`MVP_LEGAL_COPY_STATUS`); their text and versions live in `apps/web/src/lib/legal/legal-documents.ts`.
+- Complaint reports (`content_reports`) and the letters of the complaint procedure (`moderation_messages`) are kept for one year after the owner's decision, then deleted by `/api/cron/moderation-mail`; an undecided report is kept until it is decided. Account erasure deletes the reports the subject sent and the letters addressed to them, found by account and by email; a report about the subject's content stays without the link to them. The rate limit keeps an HMAC of the reporter's network address, never the address.
 - `/first-publication-disclosure` is retired: its content is the `#terms-publishing` section of the terms and the "What is public" section of the privacy policy, and the address answers one 308 there.
 - The visible support/privacy contact is `support.overgarden@gmail.com`.
 - First-publication wording is versioned as `first-publication-v6` until ADR-0038's one acceptance replaces the first-publication checkbox.

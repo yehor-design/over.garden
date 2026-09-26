@@ -61,6 +61,9 @@ import {
   readPublicLineageGraphPage,
   readPublicObjectPassportPage,
 } from "@/server/public-cache";
+import { ReportContentLink } from "@/components/public/report-content-link";
+import { parseReportAddress } from "@/lib/moderation/report-contract";
+import { getReportCopy } from "@/lib/moderation/report-copy";
 
 interface PublicLineageObjectRouteProps {
   params: Promise<{ locale: string; objectId: string }>;
@@ -286,6 +289,16 @@ export async function renderPassport(
           searchParams={searchParams}
         />
       </Suspense>
+      {/* ADR-0038 D5: anyone may report the passport, signed in or not. A
+          passport still addressed by its id has no author-scoped address
+          the form can look up, so it offers nothing rather than a dead end. */}
+      {parseReportAddress(returnTo) ? (
+        <ReportContentLink
+          address={returnTo}
+          label={getReportCopy(locale).link}
+          className="justify-self-start"
+        />
+      ) : null}
     </main>
   );
 }

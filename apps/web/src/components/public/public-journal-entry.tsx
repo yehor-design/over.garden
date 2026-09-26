@@ -37,6 +37,8 @@ import type {
   PublicJournalEntryObject,
   PublicJournalEntryPage,
 } from "@/server/journal-repository";
+import { ReportContentLink } from "@/components/public/report-content-link";
+import { getReportCopy } from "@/lib/moderation/report-copy";
 
 /** The owner's link to the editor, for the slot `PublicJournalEntryView` offers. */
 export function OwnerEntryControlLink({
@@ -370,6 +372,13 @@ export function PublicJournalEntryView({
       </article>
 
       {children}
+
+      {/* ADR-0038 D5: anyone may report the entry, signed in or not. */}
+      <ReportContentLink
+        address={page.entry.publicPath}
+        label={getReportCopy(locale).link}
+        className="self-start"
+      />
 
       <RelatedHistory page={page} copy={copy} locale={locale} ugc={ugc} />
     </main>

@@ -56,6 +56,8 @@ export interface ErasureDryRunCounts {
   authAccounts: number;
   publicationDisclosures: number;
   legalAcceptances: number;
+  contentReports: number;
+  moderationMessages: number;
   publicIdentityProfiles: number;
   currentHandleClaims: number;
   retiredHandleClaims: number;
@@ -192,6 +194,8 @@ function buildErasureDryRunDataClasses(
         comments: counts.engagementComments,
         bookmarks: counts.engagementBookmarks,
         notification_receipts: counts.notificationReceipts,
+        content_reports: counts.contentReports,
+        moderation_messages: counts.moderationMessages,
       },
     },
     {

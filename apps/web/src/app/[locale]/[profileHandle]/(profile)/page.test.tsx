@@ -293,7 +293,8 @@ describe("/{locale}/@:handle public profile route", () => {
     );
 
     expect(html).toContain('id="profile-report" open=""');
-    expect(html).toContain('data-auth-intent-control="report"');
+    // ADR-0038 D5: a profile is reported through the one report form.
+    expect(html).toContain('href="/report?address=%2F%40green_thumb"');
   });
 
   it("builds public metadata without reading the viewer", async () => {

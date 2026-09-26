@@ -139,6 +139,49 @@ export function sendOwnerCatalogDigestEmail({
   });
 }
 
+/**
+ * One email of the complaint procedure (ADR-0038 D5): a receipt or a decision
+ * to a reporter, or a statement of reasons to an author. Plain text written
+ * by `moderation-mail.ts`; the HTML part is the same text, escaped, in
+ * paragraphs. The outbox row's id is the idempotency key, so a retried drain
+ * never sends a message twice.
+ */
+export function sendModerationEmail({
+  email,
+  subject,
+  text,
+  messageId,
+  env = process.env,
+  fetcher = fetch,
+  signal,
+}: {
+  email: string;
+  subject: string;
+  text: string;
+  messageId: string;
+  env?: EnvLike;
+  fetcher?: Fetcher;
+  signal?: AbortSignal;
+}): Promise<void> {
+  const config = resolveResendAuthEmailConfig(env);
+  return sendResendAuthEmail({
+    category: "moderation",
+    config,
+    content: {
+      subject,
+      text,
+      html: text
+        .split(/\n{2,}/u)
+        .map((paragraph) => `<p>${escapeHtml(paragraph).replaceAll("\n", "<br>")}</p>`)
+        .join(""),
+    },
+    email,
+    fetcher,
+    signal,
+    url: `moderation-message:${messageId}`,
+  });
+}
+
 /** Counts only, and every one of them a number this codebase computed. */
 export function buildOwnerCatalogDigestEmail(
   queueUrl: string,

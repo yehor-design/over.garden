@@ -14,7 +14,6 @@ import { parsePublicHandleSyntax } from "@/server/identity-policy";
 import {
   blockProfile,
   followProfile,
-  reportProfile,
   unfollowProfile,
   type ProfileInteractionResult,
 } from "@/server/profile-interaction-repository";
@@ -72,24 +71,6 @@ export async function unfollowProfileAction(
     ? await unfollowProfile(scope, handle)
     : ("unavailable" as const);
   finishProfileAction(formData, handle, result, "profile-follow");
-}
-
-export async function reportProfileAction(
-  _previousState: unknown,
-  formData: FormData,
-) {
-  const admission = await resolveMutationScope({
-    expectedOwnerUserId: ownerUserIdFromFormData(formData),
-  });
-  if (admission.status === "rejected") {
-    return { mutationScope: admission.code };
-  }
-  const scope = admission.scope;
-  const handle = normalizedHandle(formData);
-  const result = handle
-    ? await reportProfile(scope, handle, String(formData.get("reason") ?? ""))
-    : ("unavailable" as const);
-  finishProfileAction(formData, handle, result, "profile-report");
 }
 
 export async function blockProfileAction(

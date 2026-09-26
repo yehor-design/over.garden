@@ -338,7 +338,8 @@ describe("PublicProfileView (OVE-494)", () => {
 
     expect(html).toContain('id="profile-report"');
     expect(html).toContain('open=""');
-    expect(html).toContain('data-auth-intent-control="report"');
+    // ADR-0038 D5: reporting is the one report form, for everyone.
+    expect(html).toContain('href="/report?address=%2F%40demo_olena"');
     expect(html).toContain('data-auth-intent-control="block"');
     expect(html).toContain('action="/auth/intent/start"');
     expect(html).toContain('name="targetKind" value="profile"');

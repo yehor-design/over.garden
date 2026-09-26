@@ -11,15 +11,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export const PROFILE_REPORT_REASONS = [
-  "spam",
-  "harassment",
-  "privacy",
-  "impersonation",
-  "other",
-] as const;
-
-export type ProfileReportReason = (typeof PROFILE_REPORT_REASONS)[number];
 export type ProfileViewerState =
   | { kind: "owner" }
   | { kind: "blocked" }
@@ -185,33 +176,6 @@ export async function unblockProfileByBlockId(
     blockId,
   ).executeTakeFirst();
   return updated ? "unblocked" : "unavailable";
-}
-
-export async function reportProfile(
-  scope: RequestScope,
-  rawHandle: string,
-  rawReason: string,
-  executor: QueryExecutor = db,
-): Promise<ProfileInteractionResult> {
-  const reason = normalizeProfileReportReason(rawReason);
-  if (!reason) return "unavailable";
-  const target = await resolveInteractionTarget(scope, rawHandle, executor);
-  if (!target) return "unavailable";
-  await buildUpsertProfileReportQuery(
-    executor,
-    scope,
-    target.userId,
-    reason,
-  ).execute();
-  return "reported";
-}
-
-export function normalizeProfileReportReason(
-  value: string,
-): ProfileReportReason | null {
-  return PROFILE_REPORT_REASONS.includes(value as ProfileReportReason)
-    ? (value as ProfileReportReason)
-    : null;
 }
 
 export function buildProfileInteractionTargetQuery(
@@ -426,33 +390,6 @@ export function buildRemoveProfileBlockByIdQuery(
     .where("id", "=", blockId)
     .where("blocker_user_id", "=", scope.userId)
     .where("block_state", "=", "active")
-    .returning("id");
-}
-
-export function buildUpsertProfileReportQuery(
-  executor: QueryExecutor,
-  scope: RequestScope,
-  targetUserId: string,
-  reason: ProfileReportReason,
-) {
-  const now = new Date();
-  return executor
-    .insertInto("profile_reports")
-    .values({
-      reporter_user_id: scope.userId,
-      target_user_id: targetUserId,
-      report_reason: reason,
-      report_state: "submitted",
-      created_at: now,
-      updated_at: now,
-    })
-    .onConflict((oc) =>
-      oc.columns(["reporter_user_id", "target_user_id"]).doUpdateSet({
-        report_reason: reason,
-        report_state: "submitted",
-        updated_at: now,
-      }),
-    )
     .returning("id");
 }
 

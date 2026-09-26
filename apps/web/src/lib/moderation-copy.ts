@@ -17,6 +17,7 @@ const UK_COPY = {
     label: "Модерація",
     communities: "Спільноти",
     comments: "Коментарі",
+    reports: "Скарги",
   },
   backToGarden: "Назад до саду",
   views: {
@@ -182,6 +183,7 @@ const BG_COPY: ModerationCopy = {
     label: "Модериране",
     communities: "Общности",
     comments: "Коментари",
+    reports: "Сигнали",
   },
   backToGarden: "Назад към градината",
   views: {
@@ -346,6 +348,7 @@ const RU_COPY: ModerationCopy = {
     label: "Модерация",
     communities: "Сообщества",
     comments: "Комментарии",
+    reports: "Жалобы",
   },
   backToGarden: "Назад в сад",
   views: {

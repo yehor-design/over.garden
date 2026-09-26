@@ -42,6 +42,8 @@ export async function collectErasureDryRunCounts(
     authAccounts,
     publicationDisclosures,
     legalAcceptances,
+    contentReports,
+    moderationMessages,
     publicIdentityProfiles,
     currentHandleClaims,
     retiredHandleClaims,
@@ -99,6 +101,44 @@ export async function collectErasureDryRunCounts(
       .selectFrom("legal_acceptances")
       .select(sql<number>`count(*)::int`.as("count"))
       .where("owner_user_id", "=", requesterUserId)
+      .executeTakeFirstOrThrow()
+      .then((row) => row.count),
+    // The reports the requester sent — by account or by their email, since a
+    // report can be sent signed out — and the letters addressed to them.
+    executor
+      .selectFrom("content_reports")
+      .select(sql<number>`count(*)::int`.as("count"))
+      .where((eb) =>
+        eb.or([
+          eb("reporter_user_id", "=", requesterUserId),
+          eb(
+            "reporter_email",
+            "in",
+            executor
+              .selectFrom("user")
+              .select(sql<string>`lower(email)`.as("email"))
+              .where("id", "=", requesterUserId),
+          ),
+        ]),
+      )
+      .executeTakeFirstOrThrow()
+      .then((row) => row.count),
+    executor
+      .selectFrom("moderation_messages")
+      .select(sql<number>`count(*)::int`.as("count"))
+      .where((eb) =>
+        eb.or([
+          eb("recipient_user_id", "=", requesterUserId),
+          eb(
+            "recipient_email",
+            "in",
+            executor
+              .selectFrom("user")
+              .select("email")
+              .where("id", "=", requesterUserId),
+          ),
+        ]),
+      )
       .executeTakeFirstOrThrow()
       .then((row) => row.count),
     countPublicIdentityProfiles(executor, requesterUserId),
@@ -168,6 +208,8 @@ export async function collectErasureDryRunCounts(
     authAccounts,
     publicationDisclosures,
     legalAcceptances,
+    contentReports,
+    moderationMessages,
     publicIdentityProfiles,
     currentHandleClaims,
     retiredHandleClaims,

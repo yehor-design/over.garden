@@ -50,7 +50,8 @@ export type WorkspaceSurface =
   | "communities-moderation"
   | "community-moderation"
   | "community-moderation-settings"
-  | "comment-moderation";
+  | "comment-moderation"
+  | "content-reports";
 
 const SHELL_WIDTH = {
   narrow: "max-w-3xl",
