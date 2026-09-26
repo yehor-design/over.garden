@@ -550,7 +550,6 @@ function publicationRequest(mediaAssetId: string) {
       ],
     },
     coverMediaAssetId: mediaAssetId,
-    disclosureAccepted: true,
   };
 }
 
@@ -573,7 +572,6 @@ function publicationRequestWithoutMedia() {
       ],
     },
     coverMediaAssetId: null,
-    disclosureAccepted: true,
   };
 }
 

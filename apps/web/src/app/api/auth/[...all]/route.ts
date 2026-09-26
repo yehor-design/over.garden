@@ -48,6 +48,8 @@ export async function POST(request: Request) {
     const admission = await resolveMutationScope({
       expectedOwnerUserId: ownerUserIdFromRequest(request),
       authoritative: true,
+      // Protecting or deleting an account never waits on the terms.
+      legalAcceptance: "exempt",
     });
     if (admission.status === "rejected") {
       return mutationScopeResponse(admission);

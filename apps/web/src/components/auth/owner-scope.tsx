@@ -24,6 +24,8 @@ import {
   type ValueStore,
 } from "@/lib/value-store";
 import { HiddenField } from "@/components/ui/hidden-field";
+import { DocumentLink } from "@/components/ui/link";
+import { legalAcceptanceHref } from "@/lib/legal/legal-acceptance-href";
 
 export interface OwnerScopeContextValue {
   /** The owner this document was rendered for; null for a guest. */
@@ -83,16 +85,22 @@ const NOTICE_COPY: Record<
     session_required:
       "Сесія завершилась. Увійдіть знову, текст лишиться на екрані.",
     session_account_changed: "Ви увійшли як інший акаунт. Оновіть сторінку.",
+    legal_acceptance_required:
+      "Щоб зберігати зміни, прийміть умови використання.",
   },
   bg: {
     session_required:
       "Сесията приключи. Влезте отново, текстът остава на екрана.",
     session_account_changed: "Влязохте с друг акаунт. Обновете страницата.",
+    legal_acceptance_required:
+      "За да запазвате промени, приемете условията за ползване.",
   },
   ru: {
     session_required:
       "Сессия завершилась. Войдите снова, текст останется на экране.",
     session_account_changed: "Вы вошли как другой аккаунт. Обновите страницу.",
+    legal_acceptance_required:
+      "Чтобы сохранять изменения, примите условия использования.",
   },
 };
 
@@ -140,9 +148,32 @@ function OwnerScopeNotice({ locale }: { locale: InterfaceLocale }) {
       className="fixed inset-x-3 bottom-3 z-toast rounded-md border border-danger-border bg-surface px-4 py-3 text-body-sm text-text shadow-overlay sm:right-4 sm:left-auto sm:max-w-sm"
     >
       {NOTICE_COPY[locale][noticeCode]}
+      {noticeCode === "legal_acceptance_required" ? (
+        <>
+          {" "}
+          {/* A document navigation: the screen is a request-time page, and
+              this notice only draws after a refusal, on the client. */}
+          <DocumentLink
+            href={legalAcceptanceHref(
+              typeof window === "undefined"
+                ? null
+                : `${window.location.pathname}${window.location.search}`,
+            )}
+          >
+            {LEGAL_ACCEPTANCE_LINK_COPY[locale]}
+          </DocumentLink>
+        </>
+      ) : null}
     </p>
   ) : null;
 }
+
+/** The way out of a `legal_acceptance_required` refusal (ADR-0038 D2). */
+const LEGAL_ACCEPTANCE_LINK_COPY: Record<InterfaceLocale, string> = {
+  uk: "Прийняти умови",
+  bg: "Приемане на условията",
+  ru: "Принять условия",
+};
 
 const NO_OWNER = createValueStore<string | null>(null);
 const NO_NOTICE = createValueStore<MutationScopeCode | null>(null);

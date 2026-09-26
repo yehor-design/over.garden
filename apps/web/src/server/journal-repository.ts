@@ -69,7 +69,6 @@ import {
 } from "@/server/journal-topic-repository";
 import { enqueueLearningAttributionIntent } from "@/server/mvp-learning/attribution-outbox";
 import type { RequestScope } from "@/server/request-scope";
-import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import {
   claimJournalEntryCover,
   claimOrderedInlineMediaForEntry,
@@ -144,8 +143,6 @@ type NewJournalEntryRow = Insertable<Database["journal_entries"]>;
 export interface AtomicCreatePublicationInput {
   publishId: string;
   requestDigest: string;
-  disclosureAccepted: boolean;
-  disclosureVersion: string;
   coverMediaAssetId: string | null;
   handoff: {
     stagingSessionId: string;
@@ -354,7 +351,6 @@ export interface PlantObjectPage {
     coarse_region_code: PlantObject["coarse_region_code"];
     source_credit: PlantObjectCatalogSourceCredit | null;
   };
-  hasPriorPublicationDisclosure: boolean;
   entries: JournalEntryReadback[];
   gallery_media: EntryMediaReadback[];
 }
@@ -2039,7 +2035,6 @@ export async function getPlantObjectPage(
     mentionsByEntryId,
     galleryMedia,
     sourceCredit,
-    priorPublicationDisclosure,
   ] = await Promise.all([
     getProcessedMediaByEntryId(executor, scope, entryIds),
     getMentionedObjectsByEntryId(executor, scope, entryIds),
@@ -2047,7 +2042,6 @@ export async function getPlantObjectPage(
     objectRow.catalogItemId
       ? readPlantObjectCatalogSourceCredit(executor, objectRow.catalogItemId)
       : Promise.resolve(null),
-    buildPriorPublicationDisclosureQuery(executor, scope).executeTakeFirst(),
   ]);
 
   return {
@@ -2073,7 +2067,6 @@ export async function getPlantObjectPage(
       coarse_region_code: objectRow.objectCoarseRegionCode,
       source_credit: sourceCredit,
     },
-    hasPriorPublicationDisclosure: Boolean(priorPublicationDisclosure),
     entries: entryRows.map(({ timelineRelation, ...entry }) => ({
       ...entry,
       media: mediaByEntryId.get(entry.id) ?? null,
@@ -3407,26 +3400,6 @@ export function buildInsertJournalEntryQuery(
     .returningAll();
 }
 
-export function buildPriorPublicationDisclosureQuery(
-  executor: QueryExecutor,
-  scope: RequestScope,
-) {
-  return executor
-    .selectFrom("publication_disclosure_acceptances")
-    .select("owner_user_id as id")
-    .where("owner_user_id", "=", scope.userId)
-    .where("disclosure_version", "=", FIRST_PUBLICATION_DISCLOSURE_VERSION)
-    .limit(1);
-}
-
-export async function hasPriorPublicationDisclosure(
-  scope: RequestScope,
-): Promise<boolean> {
-  return Boolean(
-    await buildPriorPublicationDisclosureQuery(db, scope).executeTakeFirst(),
-  );
-}
-
 /**
  * INV-04: `deleted_at` and `purge_after` are both PostgreSQL time, taken from
  * one `now()` inside the deleting transaction. Computing the horizon in
@@ -4556,32 +4529,10 @@ async function atomicJournalEntryValues(
 ): Promise<Partial<NewJournalEntryRow>> {
   const atomic = input.atomicPublication;
   assertAtomicClientMutation(input.clientMutationId, atomic);
-  const priorDisclosure = await buildPriorPublicationDisclosureQuery(
-    executor,
-    scope,
-  ).executeTakeFirst();
-  const disclosureLogged = !priorDisclosure;
-  if (
-    disclosureLogged &&
-    (!atomic.disclosureAccepted ||
-      atomic.disclosureVersion !== FIRST_PUBLICATION_DISCLOSURE_VERSION)
-  ) {
-    throw new Error("First-publication disclosure must be accepted.");
-  }
+  // No first-publication step since ADR-0038: publishing needs the one
+  // acceptance of the terms, which the write admission already checked
+  // (`resolveMutationScope`). The `0079` receipts stay as history.
   const now = new Date();
-  if (disclosureLogged) {
-    await executor
-      .insertInto("publication_disclosure_acceptances")
-      .values({
-        owner_user_id: scope.userId,
-        disclosure_version: FIRST_PUBLICATION_DISCLOSURE_VERSION,
-        accepted_at: now,
-      })
-      .onConflict((oc) =>
-        oc.columns(["owner_user_id", "disclosure_version"]).doNothing(),
-      )
-      .execute();
-  }
   return {
     id: atomic.publishId,
     visibility: "public",
@@ -4593,10 +4544,8 @@ async function atomicJournalEntryValues(
       ownerUserId: scope.userId,
     }),
     published_at: now,
-    first_publication_disclosure_version: disclosureLogged
-      ? FIRST_PUBLICATION_DISCLOSURE_VERSION
-      : null,
-    first_publication_disclosed_at: disclosureLogged ? now : null,
+    first_publication_disclosure_version: null,
+    first_publication_disclosed_at: null,
   };
 }
 

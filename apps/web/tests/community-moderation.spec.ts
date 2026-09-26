@@ -26,6 +26,7 @@ import {
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * The owner's moderation (`OVE-500`, criteria 5 and 7–12).
@@ -268,6 +269,7 @@ async function account(prefix: string): Promise<SyntheticGardener> {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   gardeners.push(id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")

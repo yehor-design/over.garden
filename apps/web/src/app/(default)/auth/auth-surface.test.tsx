@@ -148,6 +148,26 @@ describe("the anatomy every comparable product ships", () => {
     expect(render({ mode: "sign-up" })).not.toContain("Забули пароль?");
   });
 
+  it("asks for the one acceptance on sign-up only: unticked, required, linking the three documents", () => {
+    // ADR-0038 D2: the documents open beside the form, so what was typed stays.
+    const signUp = render({ mode: "sign-up" });
+    const box = signUp.match(/<input[^>]*name="legalAccepted"[^>]*>/u)?.[0];
+    expect(box).toBeDefined();
+    expect(box).toContain('type="checkbox"');
+    expect(box).toContain('required=""');
+    expect(box).not.toMatch(/\schecked(?:=|\s|\/?>)/u);
+    for (const href of ["/terms", "/privacy", "/cookies"]) {
+      expect(signUp).toMatch(
+        new RegExp(`<a[^>]*target="_blank"[^>]*href="${href}"`, "u"),
+      );
+    }
+    expect(signUp).toContain("Я приймаю ");
+    expect(render()).not.toContain('name="legalAccepted"');
+    expect(render({ mode: "sign-up", locale: "bg" })).toContain(
+      'href="/bg/terms"',
+    );
+  });
+
   it("marks both credential fields required and gives each its autocomplete", () => {
     const signIn = render();
     expect(signIn).toMatch(/required=""[^>]*name="email"/u);

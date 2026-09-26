@@ -35,7 +35,6 @@ import {
   buildObjectJournalEntryCountQuery,
   buildPlantObjectCatalogSourceCreditQuery,
   buildPlantObjectPageObjectQuery,
-  buildPriorPublicationDisclosureQuery,
   buildProcessedMediaForEntriesQuery,
   buildProcessedObjectMediaGalleryQuery,
   buildPublicEntrySlugsForObjectQuery,
@@ -246,23 +245,6 @@ describe("journal repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       "00000000-0000-0000-0000-000000000001",
-    ]);
-  });
-
-  it("checks first-publication disclosure inside owner scope", () => {
-    const compiled = buildPriorPublicationDisclosureQuery(
-      testDb,
-      scopedToUser("00000000-0000-0000-0000-000000000001"),
-    ).compile();
-
-    expect(compiled.sql).toContain('"owner_user_id" = $1');
-    expect(compiled.sql).toContain('from "publication_disclosure_acceptances"');
-    expect(compiled.sql).toContain('"disclosure_version" = $2');
-    expect(compiled.sql).toContain("limit $3");
-    expect(compiled.parameters).toEqual([
-      "00000000-0000-0000-0000-000000000001",
-      "first-publication-v6",
-      1,
     ]);
   });
 

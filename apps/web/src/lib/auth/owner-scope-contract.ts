@@ -12,6 +12,8 @@ export const OWNER_USER_ID_DOCUMENT_ATTRIBUTE = "data-owner-user-id";
 export const MUTATION_SCOPE_CODES = [
   "session_required",
   "session_account_changed",
+  // ADR-0038 D2: signed in, but without a receipt for the current terms.
+  "legal_acceptance_required",
 ] as const;
 
 export type MutationScopeCode = (typeof MUTATION_SCOPE_CODES)[number];

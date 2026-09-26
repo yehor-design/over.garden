@@ -1,6 +1,8 @@
 import type { PublicLocale } from "@/lib/public-localization";
 import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 
+import type { LegalDocumentKey } from "./legal-paths";
+
 /**
  * Overgarden's three documents (ADR-0038, `OVE-526`): the terms of use, the
  * privacy policy and the cookie rules, in the three interface languages.
@@ -23,13 +25,11 @@ export const LEGAL_BUNDLE_VERSION = "legal-2026-09-26";
 /** The minimum age to hold an account (a question for the lawyer). */
 export const MINIMUM_ACCOUNT_AGE = 16;
 
-export type LegalDocumentKey = "terms" | "privacy" | "cookies";
-
-export const LEGAL_DOCUMENT_PATHS: Record<LegalDocumentKey, string> = {
-  terms: "/terms",
-  privacy: "/privacy",
-  cookies: "/cookies",
-};
+export {
+  COOKIE_CHOICES_SECTION_ID,
+  LEGAL_DOCUMENT_PATHS,
+  type LegalDocumentKey,
+} from "./legal-paths";
 
 export interface LegalSection {
   id: string;
@@ -88,9 +88,7 @@ const uk: Record<LegalDocumentKey, LegalDocument> = {
       {
         id: "terms-age",
         heading: "Вік",
-        paragraphs: [
-          `Мати акаунт можна з ${age} років.`,
-        ],
+        paragraphs: [`Мати акаунт можна з ${age} років.`],
       },
       {
         id: "terms-account",
@@ -291,9 +289,7 @@ const uk: Record<LegalDocumentKey, LegalDocument> = {
       {
         id: "cookies-necessary",
         heading: "Необхідні",
-        paragraphs: [
-          "Без них сайт не працює, тому згода на них не потрібна:",
-        ],
+        paragraphs: ["Без них сайт не працює, тому згода на них не потрібна:"],
         items: [
           "cookie входу «overgarden.session_token» — щоб ви залишалися в акаунті;",
           "«overgarden_interface_locale» — мова інтерфейсу, яку ви обрали;",
@@ -463,7 +459,9 @@ const bg: Record<LegalDocumentKey, LegalDocument> = {
       {
         id: "privacy-collect",
         heading: "Какво събираме",
-        paragraphs: ["Събираме само това, което е нужно за работата на услугата:"],
+        paragraphs: [
+          "Събираме само това, което е нужно за работата на услугата:",
+        ],
         items: [
           "профил: имейл, име и парола в криптиран вид или — ако влизате с Google — имейл, име и снимка от профила в Google;",
           "публичен профил: потребителско име, снимка, описание, езици и, ако решите, област;",
@@ -855,8 +853,10 @@ const ru: Record<LegalDocumentKey, LegalDocument> = {
   },
 };
 
-const DOCUMENTS: Record<PublicLocale, Record<LegalDocumentKey, LegalDocument>> =
-  { uk, bg, ru };
+const DOCUMENTS: Record<
+  PublicLocale,
+  Record<LegalDocumentKey, LegalDocument>
+> = { uk, bg, ru };
 
 export function getLegalDocument(
   locale: PublicLocale,

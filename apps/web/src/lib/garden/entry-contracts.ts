@@ -77,8 +77,13 @@ export interface AtomicJournalCreateRequest {
   /** `mediaAssetId` → 16 px WebP data URI painted until the photo loads. */
   mediaPlaceholders?: Record<string, string>;
   returnTo: string;
-  disclosureAccepted: boolean;
-  disclosureVersion: string;
+  /**
+   * Sent by composers before the first-publication checkbox was retired
+   * (ADR-0038). A request queued then may still carry them; the server
+   * accepts and ignores both.
+   */
+  disclosureAccepted?: boolean;
+  disclosureVersion?: string;
 }
 
 export interface AtomicJournalCreateResponse {

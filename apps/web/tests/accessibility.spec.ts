@@ -224,10 +224,6 @@ async function publishFixtureEntry(
     .first();
   await editor.click();
   await page.keyboard.type("Запис для перевірки доступності.");
-  const disclosure = composer.locator(
-    'input[name="publicationDisclosureAccepted"]',
-  );
-  if ((await disclosure.count()) > 0) await disclosure.check();
   const [response] = await Promise.all([
     page.waitForResponse(
       (candidate) =>
@@ -482,15 +478,6 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
       .first();
     await tabTo(page, editor, "the journal editor");
     await page.keyboard.type("Перший запис, набраний лише з клавіатури.");
-
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if ((await disclosure.count()) > 0) {
-      await tabTo(page, disclosure, "the publication disclosure");
-      await page.keyboard.press("Space");
-      await expect(disclosure).toBeChecked();
-    }
 
     const publish = composer.getByRole("button", { name: /Опублікувати/u });
     await tabTo(page, publish, "the publish control");

@@ -15,7 +15,6 @@ const mocks = vi.hoisted(() => ({
   getRequestInterfaceLocale: vi.fn(),
   readOwnedDestination: vi.fn(),
   hasOwnedObjects: vi.fn(),
-  hasPriorPublicationDisclosure: vi.fn(),
   readCommunityWritingContext: vi.fn(),
   composer: vi.fn(),
 }));
@@ -31,7 +30,6 @@ vi.mock("@/server/owned-destination-repository", () => ({
   hasOwnedObjects: mocks.hasOwnedObjects,
 }));
 vi.mock("@/server/journal-repository", () => ({
-  hasPriorPublicationDisclosure: mocks.hasPriorPublicationDisclosure,
 }));
 vi.mock("@/server/community-repository", () => ({
   readCommunityWritingContext: mocks.readCommunityWritingContext,
@@ -99,7 +97,6 @@ describe("/garden/new — a link that names where to write (OVE-501)", () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.readOwnedDestination.mockResolvedValue(TOMATO);
     mocks.hasOwnedObjects.mockResolvedValue(true);
-    mocks.hasPriorPublicationDisclosure.mockResolvedValue(true);
   });
 
   it("opens a reminder's plant, says nothing about the link, and closes back to the row", async () => {

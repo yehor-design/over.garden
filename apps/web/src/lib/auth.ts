@@ -13,6 +13,10 @@ import {
 } from "@/lib/auth/explicit-google-linking";
 import { resolveGoogleSocialProviderConfig } from "@/lib/auth/google-oauth";
 import {
+  assertSignUpLegalAcceptance,
+  recordSignUpLegalAcceptance,
+} from "@/lib/auth/legal-acceptance";
+import {
   createRetiredSharedIdentityDatabaseHooks,
   isRetiredSharedIdentityEmailSignIn,
 } from "@/lib/auth/retired-shared-identity";
@@ -84,17 +88,21 @@ export const auth = betterAuth({
           message: "Invalid email or password",
         });
       }
+      // ADR-0038 D2: no account without the ticked box, whoever calls.
+      assertSignUpLegalAcceptance(context);
     }),
   },
-  databaseHooks: createRetiredSharedIdentityDatabaseHooks(async (userId) => {
-    const user = await db
-      .selectFrom("user")
-      .select("email")
-      .where("id", "=", userId)
-      .executeTakeFirst();
+  databaseHooks: withSignUpLegalAcceptance(
+    createRetiredSharedIdentityDatabaseHooks(async (userId) => {
+      const user = await db
+        .selectFrom("user")
+        .select("email")
+        .where("id", "=", userId)
+        .executeTakeFirst();
 
-    return user?.email;
-  }),
+      return user?.email;
+    }),
+  ),
   plugins: [nextCookies()],
   advanced: {
     cookiePrefix: "overgarden",
@@ -106,3 +114,19 @@ export const auth = betterAuth({
 });
 
 export type AuthSession = typeof auth.$Infer.Session;
+
+/** The sign-up receipt, written once the account row exists (ADR-0038 D2). */
+function withSignUpLegalAcceptance<
+  Hooks extends { user: { create: Record<string, unknown> } },
+>(hooks: Hooks) {
+  return {
+    ...hooks,
+    user: {
+      ...hooks.user,
+      create: {
+        ...hooks.user.create,
+        after: recordSignUpLegalAcceptance,
+      },
+    },
+  };
+}

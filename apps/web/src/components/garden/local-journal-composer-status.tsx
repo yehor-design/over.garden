@@ -1,13 +1,9 @@
 "use client";
 
-import Link from "next/link";
-
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import type { LocalJournalMediaLease } from "@/lib/garden/local-journal-media-coordinator";
-import type { AtomicJournalCreateCopy } from "@/lib/garden/atomic-journal-create-copy";
 import type { LocalJournalComposerState } from "@/lib/garden/use-local-journal-composer";
-import { Checkbox } from "@/components/ui/checkbox";
 
 export interface LocalJournalComposerStatusCopy {
   localOnly: string;
@@ -94,38 +90,6 @@ export function LocalJournalComposerStatus({
           {copy.cancelPublishing}
         </Button>
       ) : null}
-    </div>
-  );
-}
-
-export function LocalJournalPublicationDisclosure({
-  accepted,
-  disabled,
-  copy,
-  onChange,
-}: {
-  accepted: boolean;
-  disabled: boolean;
-  copy: AtomicJournalCreateCopy;
-  onChange(value: boolean): void;
-}) {
-  return (
-    <div className="grid gap-1 border-y border-border py-3">
-      <Checkbox
-        name="publicationDisclosureAccepted"
-        required
-        checked={accepted}
-        disabled={disabled}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-        label={copy.disclosure}
-      />
-      <Link
-        href="/terms#terms-publishing"
-        className="ml-6 justify-self-start text-caption text-text-muted underline"
-        target="_blank"
-      >
-        {copy.disclosureLink}
-      </Link>
     </div>
   );
 }

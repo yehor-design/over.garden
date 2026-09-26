@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
+import { acceptLegalDocuments } from "./legal-acceptance";
 
 /**
  * One gardener, one plant, one published entry with a cover photograph.
@@ -78,6 +79,7 @@ export async function seedPublishedEntryFixture(
      values ($1, 'Олена з Полтави', $2, true, now(), now())`,
     [ownerUserId, `${prefix}-${suffix}@example.test`],
   );
+  await acceptLegalDocuments(pool, ownerUserId);
   // Sign-up claims a handle (a trigger); the fixture reads the one it was given.
   const claimed = await pool.query<{ handle: string }>(
     `select normalized_handle as handle from user_handle_registry

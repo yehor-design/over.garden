@@ -199,6 +199,7 @@ async function createVerifiedCredentialSession(input: {
         email: input.email,
         password: TEST_PASSWORD,
         name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+        legalAccepted: true,
       },
     },
   );

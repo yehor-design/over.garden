@@ -204,7 +204,7 @@ const INTERFACE_COPY = {
         "Публічний журнал садівництва: кожен запис відкритий і може з’являтися в пошуку.",
       support: "Підтримка",
       terms: "Умови використання",
-      cookies: "Правила cookies",
+      cookies: "Налаштування cookies",
       sourcesTitle: "Джерела даних",
       sourcesDescription:
         "Назви організмів — з Catalogue of Life; реєстрові дані — з EPPO Global Database. Світлини належать їхнім авторам.",
@@ -313,7 +313,7 @@ const INTERFACE_COPY = {
         "Публичен дневник за градинарство: всеки запис е отворен и може да се появява в търсачките.",
       support: "Поддръжка",
       terms: "Условия за ползване",
-      cookies: "Правила за бисквитките",
+      cookies: "Настройки за бисквитките",
       sourcesTitle: "Източници на данни",
       sourcesDescription:
         "Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.",
@@ -421,7 +421,7 @@ const INTERFACE_COPY = {
         "Публичный журнал садоводства: каждая запись открыта и может появляться в поиске.",
       support: "Поддержка",
       terms: "Условия использования",
-      cookies: "Правила cookies",
+      cookies: "Настройки cookies",
       sourcesTitle: "Источники данных",
       sourcesDescription:
         "Названия организмов — из Catalogue of Life; реестровые данные — из EPPO Global Database. Фотографии принадлежат их авторам.",

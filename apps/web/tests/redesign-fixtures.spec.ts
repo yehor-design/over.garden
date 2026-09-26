@@ -20,6 +20,7 @@ import {
   expireSyntheticSession,
   makeSyntheticPhotograph,
 } from "./helpers/redesign-fixtures";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 let pool: Pool;
 test.beforeAll(() => {
@@ -36,6 +37,7 @@ for (const preset of COLLECTION_PRESETS)
       'insert into "user" (id, name, email, "emailVerified", "createdAt", "updatedAt") values ($1, $2, $3, true, now(), now())',
       [id, "Synthetic gardener", `ove480-${id}@example.test`],
     );
+    await acceptLegalDocuments(pool, id);
     try {
       const fixture = await seedCollection(pool, id, preset);
       const counts = await pool.query(

@@ -13,6 +13,7 @@ import { SignInIcon as LogIn } from "@/components/icons/SignIn";
 import { NewspaperIcon as Newspaper } from "@/components/icons/Newspaper";
 import { NotebookIcon as NotebookText } from "@/components/icons/Notebook";
 import { ShieldCheckIcon as ShieldCheck } from "@/components/icons/ShieldCheck";
+import { SlidersHorizontalIcon as SlidersHorizontal } from "@/components/icons/SlidersHorizontal";
 import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import { NotePencilIcon as SquarePen } from "@/components/icons/NotePencil";
 import { UserIcon as UserRound } from "@/components/icons/User";
@@ -170,10 +171,15 @@ export function SiteShellMobileNavigation({
 export function SiteShellMobileUtilities({
   privacyHref,
   privacyLabel,
+  cookiesHref,
+  cookiesLabel,
   children,
 }: {
   privacyHref: string;
   privacyLabel: string;
+  /** «Налаштування cookies» (ADR-0038 D4): changing a choice from the menu. */
+  cookiesHref?: string;
+  cookiesLabel?: string;
   children?: React.ReactNode;
 }) {
   return (
@@ -191,6 +197,19 @@ export function SiteShellMobileUtilities({
         <ShieldCheck data-icon="inline-start" aria-hidden="true" />
         {privacyLabel}
       </Link>
+      {cookiesHref && cookiesLabel ? (
+        <Link
+          href={cookiesHref}
+          data-site-shell-cookie-settings="true"
+          className={buttonVariants({
+            variant: "ghost",
+            className: "justify-start",
+          })}
+        >
+          <SlidersHorizontal data-icon="inline-start" aria-hidden="true" />
+          {cookiesLabel}
+        </Link>
+      ) : null}
       {children}
     </div>
   );

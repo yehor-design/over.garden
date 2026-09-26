@@ -56,7 +56,13 @@ export async function signInSyntheticGardener(input: {
       `${input.baseURL}/api/auth/sign-up/email`,
       {
         headers: { origin: input.baseURL },
-        data: { email, password, name: PRIVATE_AUTH_COMPATIBILITY_NAME },
+        data: {
+          email,
+          password,
+          name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+          // The sign-up form's ticked box (ADR-0038 D2).
+          legalAccepted: true,
+        },
       },
     );
     statuses.push(response.status());

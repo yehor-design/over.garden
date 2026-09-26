@@ -805,6 +805,13 @@ export interface LearningAttributionOutbox {
   user_id: string;
 }
 
+export interface LegalAcceptances {
+  accepted_at: Generated<Timestamp>;
+  bundle_version: string;
+  owner_user_id: string;
+  source: string;
+}
+
 export interface LineageNodeFollows {
   created_at: Generated<Timestamp>;
   follow_state: Generated<string>;
@@ -1198,6 +1205,7 @@ export interface DB {
   journal_topics: JournalTopics;
   learning_actor_attributions: LearningActorAttributions;
   learning_attribution_outbox: LearningAttributionOutbox;
+  legal_acceptances: LegalAcceptances;
   lineage_node_follows: LineageNodeFollows;
   lineage_pending_source_identities: LineagePendingSourceIdentities;
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;

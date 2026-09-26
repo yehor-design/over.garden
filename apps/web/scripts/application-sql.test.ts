@@ -81,6 +81,7 @@ describe("versioned application SQL bootstrap", () => {
       "0080_retire_wishlist.sql",
       "0081_ove530_standard_species_base.sql",
       "0082_ove523_space_and_object_photos.sql",
+      "0083_ove526_legal_acceptances.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

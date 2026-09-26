@@ -150,7 +150,8 @@ describe("site shell navigation contract", () => {
       ["catalogue", "/bg/catalog"],
       ["terms", "/bg/terms"],
       ["privacy", "/bg/privacy"],
-      ["cookies", "/bg/cookies"],
+      // «Налаштування cookies»: the two choices where the cookie rules end.
+      ["cookies", "/bg/cookies#cookies-controls"],
       // `/support` has no prefixed twin: it renders in the reader's language
       // at its one address, and `/bg/support` is a 404.
       ["support", "/support"],

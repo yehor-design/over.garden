@@ -19,6 +19,7 @@ import {
   WCAG_AA_TAGS,
 } from "./helpers/redesign-accessibility";
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * The owner curation queue end to end (OVE-391, ADR-0026 D10), against a
@@ -1123,6 +1124,7 @@ async function createMember(pool: Pool): Promise<string> {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, memberEmail(id), PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
      values ($1::uuid, $2::text, 'credential', $2::uuid, $3::text, now(), now())`,

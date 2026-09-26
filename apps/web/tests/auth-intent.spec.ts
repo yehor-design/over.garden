@@ -22,6 +22,7 @@ import {
   SYNTHETIC_GARDENER_PASSWORD,
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * `OVE-504`: the four authentication screens, and a guest's action carried
@@ -126,6 +127,7 @@ async function account(_browser: Browser, _baseURL: string, prefix: string) {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   gardeners.push(id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
@@ -845,10 +847,6 @@ test.describe("writing survives a sign-in in another tab", () => {
     await page.evaluate(() => {
       (window as unknown as { __ove504Tab?: string }).__ove504Tab = "alive";
     });
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if ((await disclosure.count()) > 0) await disclosure.check();
 
     // The session ends while the gardener writes.
     const cookies = await context.cookies();

@@ -248,10 +248,6 @@ test.describe("an entry keeps the language it was written in", () => {
       .first();
     await editor.click();
     await page.keyboard.type(title);
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if ((await disclosure.count()) > 0) await disclosure.check();
     const [published] = await Promise.all([
       page.waitForResponse(
         (candidate) =>

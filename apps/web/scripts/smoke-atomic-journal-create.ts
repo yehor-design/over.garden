@@ -470,8 +470,6 @@ function atomicPublicationWithMedia() {
     publication: {
       publishId,
       requestDigest: digest43(publishId),
-      disclosureAccepted: true,
-      disclosureVersion: "first-publication-v6",
       coverMediaAssetId: mediaAssetId,
       handoff: {
         stagingSessionId,
@@ -497,8 +495,6 @@ function atomicPublication() {
   return {
     publishId,
     requestDigest: digest43(publishId),
-    disclosureAccepted: true,
-    disclosureVersion: "first-publication-v6",
     coverMediaAssetId: null,
     handoff: null,
   };
@@ -513,8 +509,6 @@ function atomicPublicationWithInvalidMedia() {
     publication: {
       publishId,
       requestDigest: digest43(publishId),
-      disclosureAccepted: true,
-      disclosureVersion: "first-publication-v6",
       coverMediaAssetId: null,
       handoff: {
         stagingSessionId,

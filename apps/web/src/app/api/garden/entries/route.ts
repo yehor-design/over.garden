@@ -1,4 +1,3 @@
-import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 
 import { randomUUID } from "node:crypto";
 
@@ -201,8 +200,6 @@ async function createEntry(request: Request, scope: RequestScope) {
     const atomicPublication = {
       publishId: body.publishId,
       requestDigest,
-      disclosureAccepted: body.disclosureAccepted,
-      disclosureVersion: body.disclosureVersion,
       coverMediaAssetId: body.coverMediaAssetId,
       handoff: handoff
         ? {
@@ -371,12 +368,15 @@ function parseAtomicJournalCreateRequest(
     !isMediaPlaceholderMap(value.mediaPlaceholders) ||
     typeof value.returnTo !== "string" ||
     value.returnTo.length > 2_048 ||
-    typeof value.disclosureAccepted !== "boolean"
+    // The first-publication checkbox is gone (ADR-0038); a request an older
+    // composer queued may still carry its two fields, which are ignored.
+    (value.disclosureAccepted !== undefined &&
+      typeof value.disclosureAccepted !== "boolean") ||
+    (value.disclosureVersion !== undefined &&
+      (typeof value.disclosureVersion !== "string" ||
+        value.disclosureVersion.length > 80))
   ) {
     throw new AtomicJournalCreateError("atomic_request_invalid", 400);
-  }
-  if (value.disclosureVersion !== FIRST_PUBLICATION_DISCLOSURE_VERSION) {
-    throw new AtomicJournalCreateError("disclosure_version_changed", 409);
   }
   return value as unknown as AtomicJournalCreateRequest;
 }
@@ -557,6 +557,9 @@ async function atomicRequestDigest(
         document: input.document,
         coverMediaAssetId: input.coverMediaAssetId,
         receiptSetDigest: input.receiptSetDigest,
+        // Retired with the first-publication checkbox (ADR-0038) and absent
+        // from new requests, where `stableJson` drops them; a request an
+        // older composer queued still hashes to what it hashed to then.
         disclosureAccepted: input.disclosureAccepted,
         disclosureVersion: input.disclosureVersion,
       }),
@@ -743,12 +746,9 @@ function safeAtomicErrorCode(error: unknown) {
     "staging_request_timeout",
     "staging_request_unavailable",
     "public_media_not_ready",
-    "First-publication disclosure must be accepted.",
   ]);
   return typeof candidate === "string" && allowed.has(candidate)
-    ? candidate === "First-publication disclosure must be accepted."
-      ? "first_publication_disclosure_required"
-      : candidate
+    ? candidate
     : "atomic_publication_failed";
 }
 
@@ -766,7 +766,6 @@ function errorStatus(error: unknown, code: string) {
     return 409;
   }
   if (code === "destination_unavailable") return 404;
-  if (code === "first_publication_disclosure_required") return 400;
   return 503;
 }
 

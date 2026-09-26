@@ -87,7 +87,10 @@ describe("the one entry composer (OVE-486)", () => {
     );
     expect(source).toContain("useLocalJournalComposer({");
     expect(source).toContain('imageInsertionMode="immediate"');
-    expect(source).toContain("LocalJournalPublicationDisclosure");
+    // No first-publication step: the one acceptance of the terms replaced
+    // it (ADR-0038).
+    expect(source).not.toContain("LocalJournalPublicationDisclosure");
+    expect(source).not.toContain("publicationDisclosureAccepted");
     expect(source).toContain(
       '<fieldset disabled={persistenceFrozen} className="contents">',
     );
@@ -107,7 +110,6 @@ describe("the one entry composer (OVE-486)", () => {
           locale={locale}
           initialDestination={beehive}
           today="2026-07-16"
-          requiresFirstPublicationDisclosure
         />,
       );
       // Where, when and who can see it, before the text.
@@ -144,7 +146,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={null}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
       />,
     );
     expect(html).toContain('data-owned-destination-create="true"');
@@ -173,7 +174,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={null}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
       />,
     );
     expect(html).toContain("data-owned-destination-picker");
@@ -191,7 +191,6 @@ describe("the one entry composer (OVE-486)", () => {
           locale="uk"
           initialDestination={null}
           today="2026-07-16"
-          requiresFirstPublicationDisclosure={false}
           destinationNotice={notice}
         />,
       );
@@ -211,7 +210,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={beehive}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
         destinationNotice="object"
       />,
     );
@@ -233,7 +231,6 @@ describe("the one entry composer (OVE-486)", () => {
           },
         ]}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
       />,
     );
     expect(html).toContain('data-entry-composer-mentions="true"');
@@ -250,7 +247,6 @@ describe("the one entry composer (OVE-486)", () => {
         initialDestination={balcony}
         initialSpaceObjects={[]}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
       />,
     );
     expect(html).toContain('data-entry-composer-space-empty="true"');
@@ -263,7 +259,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={beehive}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
       />,
     );
     expect(html).not.toContain("Я розумію, що цей запис");
@@ -278,7 +273,6 @@ describe("the one entry composer (OVE-486)", () => {
           locale={locale}
           initialDestination={null}
           today="2026-07-16"
-          requiresFirstPublicationDisclosure={false}
           community={community}
         />,
       );
@@ -305,7 +299,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={null}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
         community={{ ...community, member: false }}
       />,
     );
@@ -321,7 +314,6 @@ describe("the one entry composer (OVE-486)", () => {
         initialDestination={balcony}
         initialSpaceObjects={[]}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
         community={community}
       />,
     );
@@ -337,7 +329,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={beehive}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
         community={community}
       />,
     );
@@ -355,7 +346,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={null}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
         community={closed}
       />,
     );
@@ -373,7 +363,6 @@ describe("the one entry composer (OVE-486)", () => {
         initialDestination={balcony}
         initialSpaceObjects={[]}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
         community={closed}
       />,
     );
@@ -387,7 +376,6 @@ describe("the one entry composer (OVE-486)", () => {
         locale="uk"
         initialDestination={null}
         today="2026-07-16"
-        requiresFirstPublicationDisclosure={false}
       />,
     );
     expect(html).not.toContain("data-entry-composer-community");

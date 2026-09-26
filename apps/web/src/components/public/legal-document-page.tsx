@@ -1,4 +1,7 @@
-import { PublicArticle, type PublicArticleSection } from "@/components/public/public-article";
+import {
+  PublicArticle,
+  type PublicArticleSection,
+} from "@/components/public/public-article";
 import { Link } from "@/components/ui/link";
 import {
   getLegalDocument,

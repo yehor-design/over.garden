@@ -7,6 +7,7 @@ import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import { scanAccessibility } from "./helpers/redesign-accessibility";
 import { cleanupCollection } from "./helpers/redesign-fixtures";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * «Показати ще» (`OVE-518`, DESIGN.md §5.26): a long list shows twenty, then
@@ -51,6 +52,7 @@ async function seedFeed(pool: Pool): Promise<Fixture> {
      values ($1, 'Олена з Полтави', $2, true, now(), now())`,
     [fixture.ownerUserId, `ove518-${suffix}@example.test`],
   );
+  await acceptLegalDocuments(pool, fixture.ownerUserId);
   await pool.query(
     `insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Город')`,
     [fixture.spaceId, fixture.ownerUserId],

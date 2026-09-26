@@ -297,7 +297,8 @@ test.describe("the three-column shell", () => {
     for (const address of [
       "/terms",
       "/privacy",
-      "/cookies",
+      // «Налаштування cookies»: the two choices where the cookie rules end.
+      "/cookies#cookies-controls",
       "/support",
       "/catalog",
     ]) {

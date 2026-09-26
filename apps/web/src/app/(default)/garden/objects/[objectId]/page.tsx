@@ -308,9 +308,6 @@ async function PlantObjectSections({
             species: page.plantObject.catalog_canonical_name ?? null,
           }}
           today={today}
-          requiresFirstPublicationDisclosure={
-            !page.hasPriorPublicationDisclosure
-          }
           closeHref={`/garden/objects/${encodeURIComponent(objectId)}`}
         />
       </section>

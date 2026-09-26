@@ -4,6 +4,7 @@ import { expect, test, type APIRequestContext } from "playwright/test";
 import { Pool } from "pg";
 
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * A passport and a topic at their Latin names (OVE-465, ADR-0029 D4 as amended
@@ -167,6 +168,7 @@ async function seedNamesFixture(pool: Pool): Promise<NamesFixture> {
      values ($1, 'ove465 gardener', $2, true, now(), now())`,
     [ownerUserId, `ove465-${suffix}@example.test`],
   );
+  await acceptLegalDocuments(pool, ownerUserId);
   const claimed = await pool.query<{ handle: string }>(
     `select normalized_handle as handle from user_handle_registry
      where user_id = $1 and lifecycle_state = 'current'`,

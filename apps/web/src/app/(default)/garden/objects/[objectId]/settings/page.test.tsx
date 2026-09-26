@@ -261,7 +261,6 @@ function objectPage({
         attributionText: string | null;
       },
     },
-    hasPriorPublicationDisclosure: false,
     entries: [],
     gallery_media: [],
   };

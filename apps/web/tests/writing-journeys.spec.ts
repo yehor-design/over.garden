@@ -163,13 +163,6 @@ async function write(page: Page, composer: Locator, text: string) {
   await expect(editorOf(composer)).toContainText(text);
 }
 
-async function acceptDisclosure(composer: Locator) {
-  const disclosure = composer.locator(
-    'input[name="publicationDisclosureAccepted"]',
-  );
-  if ((await disclosure.count()) > 0) await disclosure.check();
-}
-
 async function entriesWithBody(body: string) {
   const rows = await pool.query<{
     id: string;
@@ -284,7 +277,6 @@ test("1 · same-named tomato: global Write, the greenhouse one by its space, one
     steps.push("choose the tomato in its space");
     await expect(composer).toContainText(target.spaceName);
     await write(page, composer, body);
-    await acceptDisclosure(composer);
     await composer.locator('[data-entry-composer-publish="true"]').click();
     steps.push("Publish");
     await page.waitForURL(new RegExp(`/garden/objects/${target.id}$`, "u"), {
@@ -344,7 +336,6 @@ test("2 · space weather note: one activation from the space, the space's own en
       .first()
       .check();
     steps.push("mention one plant (required for a space entry)");
-    await acceptDisclosure(composer);
     await composer.locator('[data-entry-composer-publish="true"]').click();
     steps.push("Publish");
     await page.waitForURL(new RegExp(`/garden/spaces/${space.id}`, "u"), {
@@ -439,7 +430,6 @@ test("3 · change of destination after the text and a photograph: both kept, the
     await expect(image).toBeVisible();
     await expect(composer).toContainText(to.spaceName);
 
-    await acceptDisclosure(composer);
     await composer.locator('[data-entry-composer-publish="true"]').click();
     steps.push("Publish");
     await expect.poll(() => sent, { timeout: 30_000 }).not.toBeNull();
@@ -510,7 +500,6 @@ test("4 · a plant created while writing, then an animal in a new space: each wi
     await spacePicker.getByRole("option").first().click();
     steps.push("choose its space");
     await write(page, composer, body);
-    await acceptDisclosure(composer);
     await composer.locator('[data-entry-composer-publish="true"]').click();
     steps.push("Publish");
     await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u, {
@@ -572,7 +561,6 @@ test("4 · a plant created while writing, then an animal in a new space: each wi
       .locator('[data-entry-composer-new-space-name="true"]')
       .fill("Курник");
     await write(page, composer, animalBody);
-    await acceptDisclosure(composer);
     await composer.locator('[data-entry-composer-publish="true"]').click();
     animalSteps.push("Publish");
     await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u, {
@@ -626,7 +614,6 @@ test("5 · a failed publish is retried with nothing lost and nothing doubled —
     await page.goto(`/garden/new?object=${target.id}`, { waitUntil: "load" });
     let composer = await composerOn(page);
     await write(page, composer, lostBody);
-    await acceptDisclosure(composer);
     let attempts = 0;
     await page.route("**/api/garden/entries", async (route) => {
       if (route.request().method() !== "POST") return route.continue();
@@ -666,7 +653,6 @@ test("5 · a failed publish is retried with nothing lost and nothing doubled —
     await page.goto(`/garden/new?object=${target.id}`, { waitUntil: "load" });
     composer = await composerOn(page);
     await write(page, composer, committedBody);
-    await acceptDisclosure(composer);
     const publishIds: string[] = [];
     await page.route("**/api/garden/entries", async (route) => {
       if (route.request().method() !== "POST") return route.continue();

@@ -190,10 +190,6 @@ test.describe("photographs and blocks in the shared composer (OVE-487)", () => {
         .toBe("56px");
 
       // A plain note publishes as it always has.
-      const disclosure = composer.locator(
-        'input[name="publicationDisclosureAccepted"]',
-      );
-      if ((await disclosure.count()) > 0) await disclosure.check();
       await composer.locator('[data-entry-composer-publish="true"]').click();
       await page.waitForURL(new RegExp(`/garden/objects/${tomato}`, "u"), {
         timeout: 30_000,
@@ -364,10 +360,6 @@ test.describe("photographs and blocks in the shared composer (OVE-487)", () => {
 
       // Publish with a failed photograph sends nothing and takes the reader
       // to the first photograph that needs them.
-      const disclosure = composer.locator(
-        'input[name="publicationDisclosureAccepted"]',
-      );
-      if ((await disclosure.count()) > 0) await disclosure.check();
       await composer.locator('[data-entry-composer-publish="true"]').click();
       await expect(action(landscapeId!, "retry")).toBeFocused();
       expect(published).toBeNull();

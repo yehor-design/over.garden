@@ -25,6 +25,7 @@ import {
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * Activity and its reminders (`OVE-501`).
@@ -312,10 +313,6 @@ test("Write opens the composer for exactly that plant, and the entry lands on it
     });
 
     await typeInto(page, "Перші квіти на нижній китиці.");
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if ((await disclosure.count()) > 0) await disclosure.check();
     await composer.locator('[data-entry-composer-publish="true"]').click();
     await page.waitForURL(
       (target) =>
@@ -746,6 +743,7 @@ async function account(prefix: string): Promise<SyntheticGardener> {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   accounts.push(id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")

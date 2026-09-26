@@ -32,8 +32,9 @@ export interface ErasureCoverageEntry {
 // drops the retired matcher's reviewer path with its table (OVE-399): a path
 // nobody can walk is not a path the manifest should keep classifying. v13 adds
 // the per-author entry counter (OVE-464): one row that says how many entries a
-// gardener has published, which is a fact about a person.
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove476.erasure-schema.v14";
+// gardener has published, which is a fact about a person. v15 adds the
+// acceptance receipts of the terms (OVE-526): who accepted which version when.
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove476.erasure-schema.v15";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Versioned notice receipts contain no journal content and leave with the account.
@@ -45,6 +46,19 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     disposition: "delete",
     rationale:
       "Counted with account data; ON DELETE CASCADE removes all versions when the account is erased.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  // Receipts of the terms, the privacy policy and the cookie rules (ADR-0038):
+  // no content, and nothing to keep once the account is gone.
+  {
+    id: "legal_acceptances.owner_user_id",
+    table: "legal_acceptances",
+    columnOrPath: "owner_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "Counted with account data; ON DELETE CASCADE removes every accepted version when the account is erased.",
     dryRunOwned: true,
     executionOwned: true,
   },

@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getAuthoritativeCurrentSession: vi.fn(),
+  hasCurrentLegalAcceptance: vi.fn(),
+}));
+
+vi.mock("@/server/legal-acceptance", () => ({
+  hasCurrentLegalAcceptance: mocks.hasCurrentLegalAcceptance,
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -29,6 +34,33 @@ describe("mutation scope (ADR-0022, D6)", () => {
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue(owner);
     mocks.getAuthoritativeCurrentSession.mockResolvedValue(owner);
+    mocks.hasCurrentLegalAcceptance.mockResolvedValue(true);
+  });
+
+  it("refuses a signed-in write without a receipt for the current terms, with 403", async () => {
+    mocks.hasCurrentLegalAcceptance.mockResolvedValue(false);
+    await expect(resolveMutationScope()).resolves.toEqual({
+      status: "rejected",
+      code: "legal_acceptance_required",
+      statusCode: 403,
+    });
+    expect(mocks.hasCurrentLegalAcceptance).toHaveBeenCalledWith("owner-a");
+  });
+
+  it("refuses when the receipt cannot be read, rather than assuming one", async () => {
+    mocks.hasCurrentLegalAcceptance.mockRejectedValue(new Error("down"));
+    await expect(resolveMutationScope()).resolves.toMatchObject({
+      status: "rejected",
+      code: "legal_acceptance_required",
+    });
+  });
+
+  it("lets account protection and erasure through without a receipt", async () => {
+    mocks.hasCurrentLegalAcceptance.mockResolvedValue(false);
+    await expect(
+      resolveMutationScope({ legalAcceptance: "exempt" }),
+    ).resolves.toMatchObject({ status: "admitted" });
+    expect(mocks.hasCurrentLegalAcceptance).not.toHaveBeenCalled();
   });
 
   it("admits the cookie-cached session and derives the repository scope", async () => {

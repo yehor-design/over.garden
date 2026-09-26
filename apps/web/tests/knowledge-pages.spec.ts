@@ -19,6 +19,7 @@ import {
   tabToControl,
 } from "./helpers/redesign-accessibility";
 import type { SyntheticGardener } from "./helpers/synthetic-gardener";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * `OVE-498`: knowledge says what each piece is and what it rests on.
@@ -153,6 +154,7 @@ async function ensureTopicFixture(pool: Pool) {
      on conflict (id) do nothing`,
     [FIXTURE.userId],
   );
+  await acceptLegalDocuments(pool, FIXTURE.userId);
   const handle = await pool.query(
     `select 1 from user_handle_registry where user_id = $1 and lifecycle_state = 'current'`,
     [FIXTURE.userId],
