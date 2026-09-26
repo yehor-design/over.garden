@@ -146,6 +146,13 @@ async function capture(page: Page, testInfo: TestInfo, name: string) {
   });
 }
 
+/** «Показати ще» after the plants and animals (`OVE-518`). */
+function objectsMore(page: Page) {
+  return page.locator(
+    '[data-garden-collection-list="object"] ~ [data-show-more] [data-show-more-link]',
+  );
+}
+
 test.describe("My garden as a collection", () => {
   test("0, 1, 100 and 1000 objects: set up, read whole, then searched and paged", async ({
     context,
@@ -182,7 +189,9 @@ test.describe("My garden as a collection", () => {
     await expect(
       page.locator('[data-garden-collection-item="space"]'),
     ).toHaveCount(1);
-    await expect(page.locator('[data-garden-new-object="true"]').first()).toBeVisible();
+    await expect(
+      page.locator('[data-garden-new-object="true"]').first(),
+    ).toBeVisible();
 
     // One plant in one space: read whole — no search, no orders.
     const one = await reseed(COLLECTION_PRESETS[2]);
@@ -212,12 +221,15 @@ test.describe("My garden as a collection", () => {
     await expect(
       page.locator('[data-garden-collection-group="object"] h2'),
     ).toContainText("100");
+    // «Показати ще» (`OVE-518`): twenty, and the next portion's real address
+    // — or, once the link has come within a screen, the one after it.
     await expect(
-      page.locator('[data-garden-collection-list="object"] > li'),
-    ).toHaveCount(24);
-    await expect(
-      page.locator('[data-garden-collection-pagination="true"]'),
-    ).toContainText("Сторінка 1 з 5");
+      page.locator('[data-garden-collection-list="object"] > li').nth(19),
+    ).toBeVisible();
+    await expect(objectsMore(page)).toHaveAttribute(
+      "href",
+      /^\/garden\?page=[23]#garden-collection$/u,
+    );
     // Recent first: the plant written about yesterday leads.
     await expect(
       page.locator('[data-garden-collection-list="object"] > li').first(),
@@ -237,9 +249,10 @@ test.describe("My garden as a collection", () => {
     // 1000 objects in 20 spaces: one row found without scanning a card.
     const thousand = await reseed(COLLECTION_PRESETS[4]);
     await openGarden(page);
-    await expect(
-      page.locator('[data-garden-collection-pagination="true"]'),
-    ).toContainText("Сторінка 1 з 42");
+    await expect(objectsMore(page)).toHaveAttribute(
+      "href",
+      /^\/garden\?page=[23]#garden-collection$/u,
+    );
     await expect(page.locator('[data-garden-all-spaces="true"]')).toContainText(
       "20",
     );
@@ -392,13 +405,18 @@ test.describe("My garden as a collection", () => {
     ).toHaveCount(3);
     await openGarden(page, "?page=2");
     await expect(
-      page.locator('[data-garden-collection-pagination="true"]'),
-    ).toContainText("Сторінка 2 з 5");
-    // A stale page past the end shows the last page, not an empty garden.
+      page.locator('[data-garden-collection-list="object"] > li').nth(19),
+    ).toBeVisible();
+    await expect(objectsMore(page)).toHaveAttribute(
+      "href",
+      /^\/garden\?page=[34]#garden-collection$/u,
+    );
+    // A stale page past the end shows the last portion, with nothing after it.
     await openGarden(page, "?page=9");
     await expect(
-      page.locator('[data-garden-collection-pagination="true"]'),
-    ).toContainText("Сторінка 5 з 5");
+      page.locator('[data-garden-collection-list="object"] > li'),
+    ).toHaveCount(20);
+    await expect(objectsMore(page)).toHaveCount(0);
 
     // The controls work before the bundle does: the search is a GET form on
     // the page's own address, and pages, modes and rows are anchors.
@@ -407,10 +425,10 @@ test.describe("My garden as a collection", () => {
       return {
         action: search?.getAttribute("action") ?? null,
         method: (search?.getAttribute("method") ?? "").toLowerCase(),
-        previous:
+        more:
           document
             .querySelector(
-              '[data-garden-collection-pagination="true"] a[rel="prev"]',
+              '[data-garden-collection-list="object"] ~ [data-show-more] a',
             )
             ?.getAttribute("href") ?? null,
         modes: [
@@ -424,7 +442,7 @@ test.describe("My garden as a collection", () => {
     expect(controls).toEqual({
       action: "/garden",
       method: "get",
-      previous: "/garden?page=4#garden-collection",
+      more: null,
       modes: ["/garden", "/garden?kind=object", "/garden?kind=space"],
       writes: true,
     });
@@ -454,7 +472,8 @@ test.describe("My garden as a collection", () => {
       .evaluateAll((links) =>
         links.map((link) => link.textContent?.trim() ?? ""),
       );
-    expect(names.length).toBe(24);
+    // The first portion of twenty (`OVE-518`).
+    expect(names.length).toBeGreaterThanOrEqual(20);
     expect([...names].sort((a, b) => a.localeCompare(b, "uk"))[0]).toBe(
       names[0],
     );

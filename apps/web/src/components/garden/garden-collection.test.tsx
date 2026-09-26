@@ -131,7 +131,7 @@ describe("GardenCollection", () => {
     expect(html).toContain('class="sr-only"');
   });
 
-  it("pages the plants and keeps the query in every page link", () => {
+  it("reads the plants in portions and keeps the query in «Показати ще» (OVE-518)", () => {
     const html = render(
       { q: "Томат", page: "2" },
       ready({ items: [], total: 0, owned: 3 }),
@@ -141,12 +141,10 @@ describe("GardenCollection", () => {
         owned: 90,
       }),
     );
-    expect(html).toContain("Сторінка 2 з 3");
-    expect(html).toContain(
-      'href="/garden?q=%D0%A2%D0%BE%D0%BC%D0%B0%D1%82#garden-collection"',
-    );
-    expect(html).toContain(
-      'href="/garden?q=%D0%A2%D0%BE%D0%BC%D0%B0%D1%82&amp;page=3#garden-collection"',
+    // No page count and no way back: the next portion, as a real link.
+    expect(html).not.toContain('data-slot="pagination"');
+    expect(html).toMatch(
+      /<a href="\/garden\?q=%D0%A2%D0%BE%D0%BC%D0%B0%D1%82&amp;page=3#garden-collection"[^>]*data-show-more-link="true"[^>]*>Показати ще<\/a>/u,
     );
     // The empty spaces group steps aside during a search.
     expect(html).not.toContain('id="garden-spaces"');

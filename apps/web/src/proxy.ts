@@ -84,7 +84,9 @@ import {
 } from "@/lib/address/match-address-path";
 import {
   paginatedListingPageSize,
+  isCursorListing,
   paginatedListingRobotsTag,
+  requestedListingCursor,
   requestedListingPage,
 } from "@/lib/public-listing-pagination";
 import { normalizePublicProfileTab } from "@/lib/public-profile-tabs";
@@ -1102,6 +1104,30 @@ export async function proxy(request: NextRequest) {
     const { isListingPageBeyondTheEnd } =
       await import("@/server/public-listing-bounds");
     const beyond = await isListingPageBeyondTheEnd(
+      request.nextUrl.pathname,
+      request.nextUrl.searchParams,
+    ).catch(() => false);
+    if (beyond) {
+      return withAppRouteContract(
+        notFoundDocument(
+          renderNotFoundUnknownRouteHtml(locale, lifecycleLocation),
+        ),
+        request,
+        localization,
+      );
+    }
+  }
+
+  // The same bound for a listing read by cursor: a cursor that is not one, or
+  // one with nothing after it, is a 404 before anything streams.
+  if (
+    isDocumentNavigation &&
+    isCursorListing(request.nextUrl.pathname) &&
+    requestedListingCursor(request.nextUrl.searchParams) !== null
+  ) {
+    const { isListingCursorBeyondTheEnd } =
+      await import("@/server/public-listing-bounds");
+    const beyond = await isListingCursorBeyondTheEnd(
       request.nextUrl.pathname,
       request.nextUrl.searchParams,
     ).catch(() => false);

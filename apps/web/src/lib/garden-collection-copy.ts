@@ -53,7 +53,6 @@ export interface GardenCollectionCopy {
     addObject: string;
     addSpace: string;
   };
-  pagination: { label: string; previous: string; next: string; page: string };
 }
 
 const uk: GardenCollectionCopy = {
@@ -121,12 +120,6 @@ const uk: GardenCollectionCopy = {
     body: "Сад складається з просторів — балкона, теплиці, ділянки — і рослин чи тварин у них.",
     addObject: "Додати рослину чи тварину",
     addSpace: "Створити простір",
-  },
-  pagination: {
-    label: "Сторінки саду",
-    previous: "Попередні",
-    next: "Наступні",
-    page: "Сторінка {page} з {pages}",
   },
 };
 
@@ -196,12 +189,6 @@ const bg: GardenCollectionCopy = {
     addObject: "Добави растение или животно",
     addSpace: "Създай пространство",
   },
-  pagination: {
-    label: "Страници на градината",
-    previous: "Предишни",
-    next: "Следващи",
-    page: "Страница {page} от {pages}",
-  },
 };
 
 const ru: GardenCollectionCopy = {
@@ -269,12 +256,6 @@ const ru: GardenCollectionCopy = {
     body: "Сад состоит из пространств — балкона, теплицы, участка — и растений или животных в них.",
     addObject: "Добавить растение или животное",
     addSpace: "Создать пространство",
-  },
-  pagination: {
-    label: "Страницы сада",
-    previous: "Предыдущие",
-    next: "Следующие",
-    page: "Страница {page} из {pages}",
   },
 };
 

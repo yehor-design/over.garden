@@ -2,27 +2,19 @@ import Link from "next/link";
 
 import { MagnifyingGlassIcon } from "@/components/icons/MagnifyingGlass";
 import { NotePencilIcon } from "@/components/icons/NotePencil";
-import { PawPrintIcon } from "@/components/icons/PawPrint";
-import { PlantIcon } from "@/components/icons/Plant";
 import { PlusIcon } from "@/components/icons/Plus";
-import { SquaresFourIcon } from "@/components/icons/SquaresFour";
 import { WorkspaceSectionError } from "@/components/garden/workspace-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { FilterBar } from "@/components/ui/filter-bar";
-import { ListRow } from "@/components/ui/list-row";
-import { Pagination } from "@/components/ui/pagination";
 import { SearchInput } from "@/components/ui/search-input";
 import { Section } from "@/components/ui/section";
 import {
-  formatLastEntry,
   GARDEN_COLLECTION_PAGE_SIZE,
   GARDEN_COLLECTION_QUERY_LIMIT,
   GARDEN_SPACES_PREVIEW_SIZE,
   gardenCollectionHref,
-  gardenCollectionItemAnchor,
-  gardenCollectionItemHref,
   gardenCollectionWriteHref,
   type GardenCollectionItem,
   type GardenCollectionRequest,
@@ -37,6 +29,15 @@ import {
 import { resolveIllustrationRole } from "@/lib/illustrations";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { WorkspaceSection } from "@/server/workspace-failure";
+import {
+  GardenItemRow,
+  GardenItemRows,
+} from "@/components/garden/garden-item-row";
+import { loadGardenGroupPortion } from "@/app/(default)/garden/garden-portion-actions";
+import { ShowMoreList } from "@/components/ui/show-more-list";
+import { getShowMoreCopy } from "@/lib/show-more";
+
+export { GardenItemRow };
 
 /**
  * The actions My garden exists for, first and by name (`OVE-489`): write,
@@ -464,23 +465,17 @@ function SpacesGroup({
       }
     >
       {group.items.length > 0 ? (
-        <ul className="grid" data-garden-collection-list="space">
-          {group.items.map((item) => (
-            <GardenItemRow
-              key={item.id}
-              item={item}
-              locale={locale}
-              today={today}
-              writeHref={gardenCollectionWriteHref(item, request)}
-            />
-          ))}
-        </ul>
+        <GroupList
+          kind="space"
+          locale={locale}
+          request={request}
+          today={today}
+          items={group.items}
+          more={!preview && request.page < pages}
+        />
       ) : (
         <p className="text-body-sm text-text-muted">{copy.emptyGroup.spaces}</p>
       )}
-      {!preview && pages > 1 ? (
-        <GroupPagination copy={copy} request={request} pages={pages} />
-      ) : null}
     </Section>
   );
 }
@@ -524,17 +519,14 @@ function ObjectsGroup({
       className="scroll-mt-20"
     >
       {group.items.length > 0 ? (
-        <ul className="grid" data-garden-collection-list="object">
-          {group.items.map((item) => (
-            <GardenItemRow
-              key={item.id}
-              item={item}
-              locale={locale}
-              today={today}
-              writeHref={gardenCollectionWriteHref(item, request)}
-            />
-          ))}
-        </ul>
+        <GroupList
+          kind="object"
+          locale={locale}
+          request={request}
+          today={today}
+          items={group.items}
+          more={request.page < pages}
+        />
       ) : (
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-body-sm text-text-muted">
@@ -550,135 +542,57 @@ function ObjectsGroup({
           </Link>
         </div>
       )}
-      {pages > 1 ? (
-        <GroupPagination copy={copy} request={request} pages={pages} />
-      ) : null}
     </Section>
   );
 }
 
-function GroupPagination({
-  copy,
-  request,
-  pages,
-}: {
-  copy: GardenCollectionCopy;
-  request: GardenCollectionRequest;
-  pages: number;
-}) {
-  const page = Math.min(request.page, pages);
-  return (
-    <Pagination
-      label={copy.pagination.label}
-      data-garden-collection-pagination="true"
-      previousHref={
-        page > 1 ? gardenCollectionHref(request, { page: page - 1 }) : null
-      }
-      previousLabel={copy.pagination.previous}
-      nextHref={
-        page < pages ? gardenCollectionHref(request, { page: page + 1 }) : null
-      }
-      nextLabel={copy.pagination.next}
-      status={template(copy.pagination.page, { page, pages })}
-    />
-  );
-}
-
 /**
- * One owned thing: what it is, where it lives, when it was last written about,
- * and Write. Two tomatoes differ by their space in the line under the name, so
- * the row that is pressed is the tomato that is meant (FAST_ENTRY.md). A space's
- * own page leaves the space out of its rows (`showSpace`): every row there is in
- * it.
+ * A group's rows read in portions (DESIGN.md §5.26): this page's portion, then
+ * «Показати ще» to the next page of the same view.
  */
-export function GardenItemRow({
-  item,
+function GroupList({
+  kind,
   locale,
+  request,
   today,
-  writeHref,
-  showSpace = true,
+  items,
+  more,
 }: {
-  item: GardenCollectionItem;
+  kind: "space" | "object";
   locale: InterfaceLocale;
+  request: GardenCollectionRequest;
   today: string;
-  writeHref: string;
-  showSpace?: boolean;
+  items: GardenCollectionItem[];
+  more: boolean;
 }) {
-  const copy = getGardenCollectionCopy(locale);
-  const Icon =
-    item.kind === "space"
-      ? SquaresFourIcon
-      : item.objectKind === "animal"
-        ? PawPrintIcon
-        : PlantIcon;
-  const detail =
-    item.kind === "space"
-      ? [
-          copy.row.space,
-          template(copy.row.objectsInSpace, { count: item.objectCount }),
-        ]
-      : // The order the destination picker uses: what, where, then the
-        // organism as the secondary disambiguation (FAST_ENTRY.md).
-        [
-          item.objectKind === "animal" ? copy.row.animal : copy.row.plant,
-          showSpace ? item.space.displayName : null,
-          item.species,
-        ].filter((part): part is string => Boolean(part));
-  const [before, after] = copy.row.lastEntry.split("{when}");
-
   return (
-    <ListRow
-      id={gardenCollectionItemAnchor(item)}
-      data-garden-collection-item={item.kind}
-      className="scroll-mt-24 items-center"
-      media={
-        item.kind === "space" && item.photo ? (
-          // eslint-disable-next-line @next/next/no-img-element -- the stored WebP's smallest variant (ADR-0022 D2)
-          <img
-            src={item.photo.src}
-            srcSet={item.photo.srcSet ?? undefined}
-            sizes="40px"
-            alt=""
-            data-garden-space-photo="true"
-            className="size-10 rounded-lg bg-surface-sunken object-cover"
-          />
-        ) : (
-          <span className="flex size-10 items-center justify-center rounded-lg bg-surface-sunken text-text-muted">
-            <Icon aria-hidden="true" className="size-5" />
-          </span>
-        )
+    <ShowMoreList
+      as="ul"
+      className="grid"
+      data-garden-collection-list={kind}
+      copy={getShowMoreCopy(locale)}
+      next={
+        more
+          ? {
+              token: String(request.page + 1),
+              href: gardenCollectionHref(request, { page: request.page + 1 }),
+            }
+          : null
       }
-      title={<span className="break-words">{item.displayName}</span>}
-      href={gardenCollectionItemHref(item)}
-      description={detail.join(" · ")}
-      meta={
-        <span data-garden-last-entry={item.lastEntryDate ?? "never"}>
-          {item.lastEntryDate ? (
-            <>
-              {before}
-              <time dateTime={item.lastEntryDate}>
-                {formatLastEntry(item.lastEntryDate, today, locale)}
-              </time>
-              {after}
-            </>
-          ) : (
-            copy.row.never
-          )}
-        </span>
-      }
-      actions={
-        <Link
-          href={writeHref}
-          aria-label={template(copy.row.writeLabel, {
-            name: item.displayName,
-          })}
-          data-garden-write={item.id}
-          className={buttonVariants({ variant: "secondary", size: "sm" })}
-        >
-          <NotePencilIcon aria-hidden="true" />
-          {copy.row.write}
-        </Link>
-      }
-    />
+      load={loadGardenGroupPortion.bind(null, {
+        locale,
+        kind,
+        q: request.q,
+        sort: request.sort,
+        spaceId: null,
+      })}
+    >
+      <GardenItemRows
+        items={items}
+        locale={locale}
+        today={today}
+        writeHrefFor={(item) => gardenCollectionWriteHref(item, request)}
+      />
+    </ShowMoreList>
   );
 }

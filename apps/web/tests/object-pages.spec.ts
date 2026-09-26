@@ -233,7 +233,21 @@ test.describe("an owned object's pages", () => {
     expect((await composer.boundingBox())!.y).toBeLessThan(
       (await timeline.boundingBox())!.y,
     );
-    await expect(timeline.locator("article")).toHaveCount(30);
+    // Twenty entries, then «Показати ще» (`OVE-518`): a real link to the
+    // timeline's next portion, which arrives in place as it scrolls near.
+    await expect(timeline.locator("article").nth(19)).toBeVisible();
+    await timeline
+      .locator("[data-show-more-link]")
+      .scrollIntoViewIfNeeded()
+      .catch(() => undefined);
+    await expect(timeline.locator("article")).toHaveCount(30, {
+      timeout: 15_000,
+    });
+    const entryIds = await timeline
+      .locator("article")
+      .evaluateAll((articles) => articles.map((article) => article.id));
+    expect(new Set(entryIds).size).toBe(30);
+    await expect(timeline.locator("[data-show-more-link]")).toHaveCount(0);
     // The progress summary is a span and two photographs below Write, never
     // a second copy of the timeline above it.
     const progress = page.locator(

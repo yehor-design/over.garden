@@ -35,7 +35,9 @@ const PROGRESSIVE_SURFACES = [
   // `OVE-456`: the reader's own pages and the erasure family. Removing a
   // bookmark, asking for erasure, and every control on the two moderation
   // surfaces.
-  "app/[locale]/bookmarks/page.tsx",
+  // Since `OVE-518` the shelf's rows — and their Remove — live beside the
+  // page, so a «Показати ще» portion renders the same forms.
+  "components/social/bookmark-shelf-items.tsx",
   "app/(default)/erasure/page.tsx",
   // Since `OVE-500` a community's report decisions live in its moderation
   // parts, and its one setting on a page of its own.

@@ -451,7 +451,7 @@ describe("public profile handle contracts", () => {
         avatarAltText: "Green leaves",
       },
       entrySummary: {
-        publicEntryCount: "12",
+        publicEntryCount: "22",
         publicObjectCount: "3",
         publicPlantCount: "1",
         publicAnimalCount: "1",
@@ -540,12 +540,12 @@ describe("public profile handle contracts", () => {
     });
 
     expect(page.summary).toMatchObject({
-      publicEntryCount: 12,
+      publicEntryCount: 22,
       publicObjectCount: 3,
       objectKinds: { plant: 1, animal: 1 },
       relationships: { followers: 4, following: 3 },
     });
-    // Twelve entries are two pages of ten; three objects are one page.
+    // Twenty-two entries are two portions of twenty; three objects are one.
     expect(page.entries).toMatchObject({ page: 1, pageCount: 2 });
     expect(page.objects).toMatchObject({ page: 1, pageCount: 1 });
     expect(page.objects.items[0]).toMatchObject({

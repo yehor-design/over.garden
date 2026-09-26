@@ -47,10 +47,6 @@ export interface PublicJournalDirectoryCopy {
   degradedSearchTitle: string;
   degradedSearchBody: string;
   retry: string;
-  paginationLabel: string;
-  previousPage: string;
-  loadMore: string;
-  pageLabel: string;
   discuss: string;
   publishedBy: string;
   safeRegion: string;
@@ -135,10 +131,6 @@ const COPY = {
     degradedSearchBody:
       "Показуємо збіги з обмеженої добірки свіжих публічних журналів. Повторіть пошук, щоб перевірити весь індекс.",
     retry: "Спробувати ще раз",
-    paginationLabel: "Сторінки журналів",
-    previousPage: "Попередня сторінка",
-    loadMore: "Показати більше журналів",
-    pageLabel: "Сторінка",
     discuss: "Обговорення",
     publishedBy: "Автор",
     safeRegion: "Регіон",
@@ -206,10 +198,6 @@ const COPY = {
     degradedSearchBody:
       "Показваме съвпадения от ограничен набор скорошни публични дневници. Повторете търсенето, за да проверите целия индекс.",
     retry: "Опитайте отново",
-    paginationLabel: "Страници на дневниците",
-    previousPage: "Предишна страница",
-    loadMore: "Покажи още дневници",
-    pageLabel: "Страница",
     discuss: "Обсъждане",
     publishedBy: "Автор",
     safeRegion: "Регион",
@@ -278,10 +266,6 @@ const COPY = {
     degradedSearchBody:
       "Показываем совпадения из ограниченной подборки свежих публичных журналов. Повторите поиск, чтобы проверить весь индекс.",
     retry: "Повторить",
-    paginationLabel: "Страницы журналов",
-    previousPage: "Предыдущая страница",
-    loadMore: "Показать больше журналов",
-    pageLabel: "Страница",
     discuss: "Обсуждение",
     publishedBy: "Автор",
     safeRegion: "Регион",

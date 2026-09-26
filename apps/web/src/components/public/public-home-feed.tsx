@@ -1,8 +1,9 @@
 import Link from "next/link";
 
+import { loadPublicFeedPortion } from "@/app/[locale]/feed-portion-actions";
 import {
   buildPublicFeedHref,
-  PublicFeedEntryCard,
+  PublicFeedEntryItems,
 } from "@/components/public/public-feed-entry-card";
 import {
   SiteShellContextRailModules,
@@ -15,13 +16,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
-import { Pagination } from "@/components/ui/pagination";
+import { ShowMoreList } from "@/components/ui/show-more-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { isKindTopicSlug } from "@/lib/system-topic-labels";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import { getShowMoreCopy } from "@/lib/show-more";
 import type {
   PublicFeedKind,
   PublicFeedPage,
@@ -47,10 +49,6 @@ export interface PublicHomeFeedCopy {
   discuss: string;
   publishedBy: string;
   safeRegion: string;
-  loadMore: string;
-  firstPage: string;
-  paginationLabel: string;
-  endOfFeed: string;
   emptyTitle: string;
   emptyBody: string;
   emptyPrimary: string;
@@ -163,50 +161,41 @@ export function PublicHomeFeed({
 
       {state === "ready" ? (
         <>
-          <ol className="grid list-none gap-4" data-public-feed-list="true">
-            {feed.entries.map((entry, index) => (
-              <li key={entry.id} className="min-w-0">
-                <PublicFeedEntryCard
-                  locale={locale}
-                  copy={copy}
-                  entry={entry}
-                  priority={index === firstPhotograph}
-                  returnTo={buildPublicFeedHref(locale, {
-                    cursor: null,
-                    kind: request.kind,
-                    topic: request.topic,
-                  })}
-                />
-              </li>
-            ))}
-          </ol>
-          {/* A feed that fits on one page gets the sentence and no
-              navigation: two disabled edges and a status line between them is
-              three controls saying the same nothing, and at 375 px they wrap
-              into three columns of two words each. */}
-          {request.cursor || feed.nextCursor ? (
-            <Pagination
-              label={copy.paginationLabel}
-              previousLabel={copy.firstPage}
-              previousHref={
-                request.cursor
-                  ? buildPublicFeedHref(locale, { ...request, cursor: null })
-                  : null
-              }
-              nextLabel={copy.loadMore}
-              nextHref={
-                feed.nextCursor
-                  ? buildPublicFeedHref(locale, {
+          <ShowMoreList
+            className="grid list-none gap-4"
+            data-public-feed-list="true"
+            label={copy.heading}
+            copy={getShowMoreCopy(locale)}
+            next={
+              feed.nextCursor
+                ? {
+                    token: feed.nextCursor,
+                    href: buildPublicFeedHref(locale, {
                       ...request,
                       cursor: feed.nextCursor,
-                    })
-                  : null
-              }
-              status={feed.nextCursor ? undefined : copy.endOfFeed}
+                    }),
+                  }
+                : null
+            }
+            load={loadPublicFeedPortion.bind(null, {
+              locale,
+              kind: request.kind,
+              topic: request.topic,
+              listing: "home",
+            })}
+          >
+            <PublicFeedEntryItems
+              locale={locale}
+              copy={copy}
+              entries={feed.entries}
+              priorityIndex={firstPhotograph}
+              returnTo={buildPublicFeedHref(locale, {
+                cursor: null,
+                kind: request.kind,
+                topic: request.topic,
+              })}
             />
-          ) : (
-            <p className="text-body-sm text-text-muted">{copy.endOfFeed}</p>
-          )}
+          </ShowMoreList>
         </>
       ) : null}
 

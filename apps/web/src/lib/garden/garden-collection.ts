@@ -1,4 +1,5 @@
 import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
 /**
@@ -25,7 +26,7 @@ export interface GardenCollectionRequest {
 }
 
 /** Plants and animals on one page of the collection. */
-export const GARDEN_COLLECTION_PAGE_SIZE = 24;
+export const GARDEN_COLLECTION_PAGE_SIZE = LIST_PORTION_SIZE;
 /** Spaces shown beside the plants and animals before "All spaces". */
 export const GARDEN_SPACES_PREVIEW_SIZE = 6;
 /**

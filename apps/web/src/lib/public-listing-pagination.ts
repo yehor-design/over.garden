@@ -55,6 +55,27 @@ const FILTERED_LISTINGS: Readonly<Record<string, readonly string[]>> = {
  */
 const REGISTER_HUB_PATH = /^\/species\/[^/]+\/register$/u;
 
+/**
+ * Listings read by a keyset cursor (`?cursor=`) rather than a page number
+ * (`OVE-518`): the home feed is ordered by publication, so a new entry
+ * published while someone reads never shifts a portion. Its later portions
+ * follow the same rule as page two of anything else — `noindex, follow`, and a
+ * 404 for a cursor that is not one or that has nothing after it
+ * (`isListingCursorBeyondTheEnd`).
+ */
+const CURSOR_LISTINGS: ReadonlySet<string> = new Set(["/"]);
+
+export function isCursorListing(pathname: string): boolean {
+  const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
+  return CURSOR_LISTINGS.has(path);
+}
+
+/** The cursor a request asked for, or `null` for the first portion. */
+export function requestedListingCursor(search: URLSearchParams): string | null {
+  const raw = search.get("cursor");
+  return raw ? raw : null;
+}
+
 export function paginatedListingPageSize(pathname: string): number | null {
   const path = stripLocalePrefix(pathname).path.replace(/\/+$/u, "") || "/";
   return PAGINATED_LISTINGS[path] ?? null;
@@ -114,6 +135,9 @@ export function paginatedListingRobotsTag(
   // bound is the profile's own, in `isPublicProfilePageBeyondTheEnd`.
   if (matchPublicProfilePath(pathname) !== null) {
     return requestedListingPage(search) === null ? null : "noindex, follow";
+  }
+  if (isCursorListing(pathname)) {
+    return requestedListingCursor(search) === null ? null : "noindex, follow";
   }
   if (paginatedListingPageSize(pathname) === null) return null;
   return requestedListingPage(search) === null ? null : "noindex, follow";

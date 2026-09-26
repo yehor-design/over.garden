@@ -242,23 +242,24 @@ test("a saved entry reads as a post and opens with the way back to the same page
     await page.goto("/bookmarks", { waitUntil: "load" });
     const shelf = page.locator('[data-saved-shelf="bookmarks"]');
     await expect(shelf).toBeVisible();
-    // Thirteen entries, the passport and the withdrawn one: fifteen, twelve
-    // to a page.
+    // Thirteen entries, the passport and the withdrawn one: fifteen, in one
+    // portion of twenty (`OVE-518`), so no «Показати ще».
     await expect(page.locator("[data-my-social-count]")).toHaveAttribute(
       "data-my-social-count",
       "15",
     );
-    await expect(shelf.locator(":scope > li")).toHaveCount(12);
+    await expect(shelf.locator(":scope > li")).toHaveCount(15);
     await expect(
       shelf.locator('li[data-saved-item="journal_entry"] article'),
-    ).toHaveCount(12);
+    ).toHaveCount(13);
+    await expect(page.locator("[data-show-more-link]")).toHaveCount(0);
     await scanAccessibility(page, testInfo, "bookmarks-many-1440");
     await page.screenshot({
       path: path.join(SCREENSHOTS, "bookmarks-many-uk-1440.png"),
       fullPage: true,
     });
 
-    await page.goto("/bookmarks?kind=journal_entry&page=2", {
+    await page.goto("/bookmarks?kind=journal_entry", {
       waitUntil: "load",
     });
     await expect(shelf).toBeVisible();
@@ -270,7 +271,7 @@ test("a saved entry reads as a post and opens with the way back to the same page
     const link = card.locator('article a[href*="from="]').first();
     const href = (await link.getAttribute("href"))!;
     expect(new URL(href, baseURL).searchParams.get("from")).toBe(
-      "/bookmarks?kind=journal_entry&page=2",
+      "/bookmarks?kind=journal_entry",
     );
     await link.click();
     await page.waitForURL((target) => target.searchParams.has("from"));
@@ -278,18 +279,18 @@ test("a saved entry reads as a post and opens with the way back to the same page
     await expect(back).toHaveText("Закладки");
     await expect(back).toHaveAttribute(
       "href",
-      "/bookmarks?kind=journal_entry&page=2",
+      "/bookmarks?kind=journal_entry",
     );
     await back.click();
     await page.waitForURL(
       (target) =>
         target.pathname === "/bookmarks" &&
-        target.searchParams.get("kind") === "journal_entry" &&
-        target.searchParams.get("page") === "2",
+        target.searchParams.get("kind") === "journal_entry",
     );
+    // The thirteen entries and the withdrawn one: the filtered shelf.
     await expect(
       page.locator('[data-saved-shelf="bookmarks"]:visible > li'),
-    ).toHaveCount(2);
+    ).toHaveCount(14);
 
     await page.setViewportSize(PHONE);
     await page.goto("/bookmarks", { waitUntil: "load" });
@@ -385,7 +386,7 @@ test("what is no longer public stays on the shelf, says why, and can still be re
   );
   try {
     const page = await context.newPage();
-    await page.goto("/bookmarks?kind=journal_entry&page=2", {
+    await page.goto("/bookmarks?kind=journal_entry", {
       waitUntil: "load",
     });
     const gone = page.locator(`#saved-journal_entry-${goneEntryId}`);

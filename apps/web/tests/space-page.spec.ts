@@ -349,29 +349,49 @@ test.describe("a space's own page", () => {
     await page.locator('[data-space-all="history"]').click();
     await expect(page).toHaveURL(/view=history/u);
     await expect(page.locator("[data-space-history-entry]")).toHaveCount(20);
-    await expect(
-      page.locator('[data-space-pagination="history"]'),
-    ).toContainText("Сторінка 1 з 2");
-    await page
-      .locator('[data-space-pagination="history"] a[rel="next"]')
-      .click();
-    await expect(page.locator("[data-space-history-entry]")).toHaveCount(5);
+    // «Показати ще» (`OVE-518`): a real link to the next portion, which
+    // arrives in place as it comes within a screen.
+    const moreHistory = page.locator(
+      '[data-space-history-list="true"] ~ [data-show-more] [data-show-more-link]',
+    );
+    await waitForHydration(page.locator('[data-space-history-list="true"]'));
+    if (await moreHistory.count()) {
+      await expect(moreHistory).toHaveAttribute(
+        "href",
+        `/garden/spaces/${space.id}?view=history&page=2#space-history`,
+      );
+      await moreHistory.scrollIntoViewIfNeeded();
+    }
+    await expect(page.locator("[data-space-history-entry]")).toHaveCount(25, {
+      timeout: 15_000,
+    });
     const ids = await page
       .locator("[data-space-history-entry]")
       .evaluateAll((rows) =>
         rows.map((row) => row.getAttribute("data-space-history-entry")),
       );
-    expect(new Set(ids).size).toBe(5);
+    expect(new Set(ids).size).toBe(25);
+    await expect(page.locator("[data-show-more-link]")).toHaveCount(0);
+    // The link's own address is that portion alone.
+    await page.goto(
+      `/garden/spaces/${space.id}?view=history&page=2#space-history`,
+      { waitUntil: "load" },
+    );
+    await expect(page.locator("[data-space-history-entry]")).toHaveCount(5, {
+      timeout: 20_000,
+    });
 
     await page.goto(`/garden/spaces/${space.id}?view=objects`, {
       waitUntil: "load",
     });
-    await expect(
-      page.locator('[data-space-objects-list="true"] > li'),
-    ).toHaveCount(24, { timeout: 20_000 });
-    await expect(
-      page.locator('[data-space-pagination="objects"]'),
-    ).toContainText("Сторінка 1 з 2");
+    // Twenty rows, then the rest as the link comes within a screen.
+    const objectRows = page.locator('[data-space-objects-list="true"] > li');
+    await waitForHydration(page.locator('[data-space-objects-list="true"]'));
+    const moreObjects = page.locator(
+      '[data-space-objects-list="true"] ~ [data-show-more] [data-show-more-link]',
+    );
+    if (await moreObjects.count()) await moreObjects.scrollIntoViewIfNeeded();
+    await expect(objectRows).toHaveCount(30, { timeout: 15_000 });
 
     // The object's page names its space and leads back to it.
     await page.goto(`/garden/objects/${space.objects[0]!.id}`, {

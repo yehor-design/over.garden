@@ -23,6 +23,7 @@ import { Link } from "@/components/ui/link";
 import { MediaFigure } from "@/components/ui/media-figure";
 import { PageHeader } from "@/components/ui/page-header";
 import { Section } from "@/components/ui/section";
+import { ShowMoreList } from "@/components/ui/show-more-list";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatLivingObjectPassportDate,
@@ -36,6 +37,11 @@ import {
 } from "@/lib/living-object-passport";
 import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { contentLanguageAttribute } from "@/lib/public-localization";
+import type {
+  ShowMoreCopy,
+  ShowMoreLoader,
+  ShowMoreNext,
+} from "@/lib/show-more";
 import { cn } from "@/lib/utils";
 
 /**
@@ -268,21 +274,63 @@ export function PublicLivingObjectPassportTimeline({
   return <PassportTimeline passport={passport} locale={locale} />;
 }
 
+/**
+ * One portion of the owner's timeline (`OVE-518`, DESIGN.md §5.26): which
+ * entries this address shows, the year the portion before it ended on (so a
+ * year's heading is not repeated), and «Показати ще» to the next.
+ */
+export interface PassportTimelinePortion {
+  entries: LivingObjectPassportTimelineEntry[];
+  precedingYear?: string;
+  first: boolean;
+  next: ShowMoreNext | null;
+  load: ShowMoreLoader;
+  copy: ShowMoreCopy;
+}
+
 export function OwnerLivingObjectPassportTimeline({
   passport,
   locale,
   renderEntryActions,
+  portion,
 }: {
   passport: OwnerLivingObjectPassportPresentation;
   locale: InterfaceLocale;
   renderEntryActions: (entry: LivingObjectPassportTimelineEntry) => ReactNode;
+  /** The owner's story read in portions of twenty rather than as a preview. */
+  portion?: PassportTimelinePortion;
 }) {
   return (
     <PassportTimeline
       passport={passport}
       locale={locale}
       renderEntryActions={renderEntryActions}
+      portion={portion}
     />
+  );
+}
+
+/**
+ * Timeline entries as list items, for a portion fetched by «Показати ще»:
+ * the same cards, and a year's heading only where the year changes.
+ */
+export function PassportTimelineEntries({
+  entries,
+  locale,
+  renderEntryActions,
+  precedingYear,
+}: {
+  entries: LivingObjectPassportTimelineEntry[];
+  locale: InterfaceLocale;
+  renderEntryActions?: (entry: LivingObjectPassportTimelineEntry) => ReactNode;
+  precedingYear?: string;
+}) {
+  return renderTimelineEntries(
+    entries,
+    locale,
+    getLivingObjectPassportCopy(locale),
+    renderEntryActions,
+    precedingYear,
   );
 }
 
@@ -463,12 +511,49 @@ function PassportTimeline({
   passport,
   locale,
   renderEntryActions,
+  portion,
 }: {
   passport: LivingObjectPassportPresentation;
   locale: InterfaceLocale;
   renderEntryActions?: (entry: LivingObjectPassportTimelineEntry) => ReactNode;
+  portion?: PassportTimelinePortion;
 }) {
   const copy = getLivingObjectPassportCopy(locale);
+  if (portion && portion.entries.length > 0) {
+    return (
+      <Section
+        id="passport-timeline"
+        className="border-t border-border pt-6"
+        level={2}
+        title={
+          passport.audience === "owner"
+            ? copy.ownerChronology
+            : copy.publicChronology
+        }
+        description={formatLivingObjectPassportEntryCount(
+          locale,
+          passport.timeline.totalCount,
+        )}
+      >
+        <ShowMoreList
+          className="grid list-none gap-4"
+          data-passport-timeline-list="true"
+          copy={portion.copy}
+          next={portion.next}
+          load={portion.load}
+        >
+          {renderTimelineEntries(
+            portion.entries,
+            locale,
+            copy,
+            renderEntryActions,
+            portion.precedingYear,
+            portion.first,
+          )}
+        </ShowMoreList>
+      </Section>
+    );
+  }
   const preview = passport.timeline.entries.slice(0, TIMELINE_PREVIEW_SIZE);
   const continuation = passport.timeline.entries.slice(TIMELINE_PREVIEW_SIZE);
 

@@ -33,6 +33,7 @@ import {
   rethrowAsInteractionUnavailable,
   utcDayWindow,
 } from "@/server/interaction-admission";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import type { RequestScope } from "@/server/request-scope";
 import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
@@ -41,7 +42,6 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 const MAX_COMMENT_BODY_LENGTH = 600;
 export const ENGAGEMENT_COMMENT_PAGE_SIZE = 8;
 const MAX_COMMENT_READBACK = 24;
-const MAX_BOOKMARK_READBACK = 50;
 const BOOKMARK_LOOKUP_BATCH = 4;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UUID_PATTERN =
@@ -651,7 +651,9 @@ export function buildEngagementCommentModerationQueueQuery(
       "engagement_comments.comment_state as commentState",
       // The text only while the comment is shown: a removed comment is not
       // the public's any more, and the queue does not keep it.
-      sql<string | null>`case when ${sql.ref("engagement_comments.comment_state")} = 'active' then left(${sql.ref("engagement_comments.body")}, 400) end`.as(
+      sql<
+        string | null
+      >`case when ${sql.ref("engagement_comments.comment_state")} = 'active' then left(${sql.ref("engagement_comments.body")}, 400) end`.as(
         "commentBody",
       ),
       "user_public_profiles.handle as authorHandle",
@@ -899,22 +901,46 @@ export async function moderateEngagementCommentReport(
   });
 }
 
+/** One portion of the shelf, newest first, and where the next one starts. */
+export interface EngagementBookmarkShelfPage {
+  items: EngagementBookmarkShelfItem[];
+  nextCursor: string | null;
+}
+
+/**
+ * The bookmark shelf, a portion at a time (`OVE-518`, DESIGN.md §5.26): paged
+ * in SQL by `(created_at, id)`, so a bookmark added while someone reads never
+ * shifts a portion, and filtered by kind in SQL too. It used to read one
+ * capped batch and slice it in memory, which hid every bookmark past it.
+ */
 export async function listEngagementBookmarks(
   scope: RequestScope,
   executor: QueryExecutor = db,
-): Promise<EngagementBookmarkShelfItem[]> {
-  const rows = await buildListEngagementBookmarksQuery(
-    executor,
-    scope,
-    MAX_BOOKMARK_READBACK,
-  ).execute();
+  page: {
+    kind?: EngagementTargetKind | null;
+    cursor?: string | null;
+    pageSize?: number;
+  } = {},
+): Promise<EngagementBookmarkShelfPage> {
+  const pageSize = Math.min(
+    Math.max(Math.trunc(page.pageSize ?? LIST_PORTION_SIZE), 1),
+    LIST_PORTION_SIZE,
+  );
+  const cursor = page.cursor ? decodeBookmarkCursor(page.cursor) : null;
+  if (page.cursor && !cursor) return { items: [], nextCursor: null };
+  const rows = await buildListEngagementBookmarksQuery(executor, scope, {
+    limit: pageSize + 1,
+    kind: page.kind ?? null,
+    cursor,
+  }).execute();
+  const visible = rows.slice(0, pageSize);
   const items: EngagementBookmarkShelfItem[] = [];
 
   // Four at a time: each target is its own lookup, and a shelf of fifty read
   // one by one was fifty round trips before the page could answer. Four is
   // the fan-out the pool is sized for (`POOLED_DATABASE_POOL_MAX`).
-  for (let start = 0; start < rows.length; start += BOOKMARK_LOOKUP_BATCH) {
-    const batch = rows.slice(start, start + BOOKMARK_LOOKUP_BATCH);
+  for (let start = 0; start < visible.length; start += BOOKMARK_LOOKUP_BATCH) {
+    const batch = visible.slice(start, start + BOOKMARK_LOOKUP_BATCH);
     const resolved = await Promise.all(
       batch.map(async (row) => {
         const target = normalizeEngagementTarget(row.targetKind, row.targetRef);
@@ -937,7 +963,69 @@ export async function listEngagementBookmarks(
     items.push(...resolved);
   }
 
-  return items;
+  const last = visible.at(-1);
+  return {
+    items,
+    nextCursor:
+      rows.length > pageSize && last
+        ? encodeBookmarkCursor(last.addedAt, last.bookmarkId)
+        : null,
+  };
+}
+
+/** How many bookmarks the shelf holds, in all and under each kind. */
+export async function countEngagementBookmarks(
+  scope: RequestScope,
+  executor: QueryExecutor = db,
+): Promise<{ total: number; byKind: Partial<Record<string, number>> }> {
+  const rows = await executor
+    .selectFrom("engagement_bookmarks")
+    .select(["target_kind as kind", sql<number>`count(*)::int`.as("count")])
+    .where("owner_user_id", "=", scope.userId)
+    .where("bookmark_state", "=", "active")
+    .groupBy("target_kind")
+    .execute();
+  const byKind: Partial<Record<string, number>> = {};
+  let total = 0;
+  for (const row of rows) {
+    byKind[row.kind] = Number(row.count);
+    total += Number(row.count);
+  }
+  return { total, byKind };
+}
+
+interface BookmarkCursor {
+  addedAt: Date;
+  id: string;
+}
+
+function encodeBookmarkCursor(addedAt: Date | string, id: string) {
+  return Buffer.from(
+    JSON.stringify({ v: 1, at: new Date(addedAt).toISOString(), id }),
+    "utf8",
+  ).toString("base64url");
+}
+
+function decodeBookmarkCursor(value: string): BookmarkCursor | null {
+  try {
+    const decoded = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as { v?: unknown; at?: unknown; id?: unknown };
+    if (decoded.v !== 1 || typeof decoded.at !== "string") return null;
+    if (typeof decoded.id !== "string" || !UUID_PATTERN.test(decoded.id)) {
+      return null;
+    }
+    const addedAt = new Date(decoded.at);
+    if (
+      Number.isNaN(addedAt.getTime()) ||
+      addedAt.toISOString() !== decoded.at
+    ) {
+      return null;
+    }
+    return { addedAt, id: decoded.id };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -1579,9 +1667,13 @@ export function buildActionableEngagementCommentQuery(
 export function buildListEngagementBookmarksQuery(
   executor: QueryExecutor,
   scope: RequestScope,
-  limit = MAX_BOOKMARK_READBACK,
+  page: {
+    limit?: number;
+    kind?: EngagementTargetKind | null;
+    cursor?: BookmarkCursor | null;
+  } = {},
 ) {
-  return executor
+  let query = executor
     .selectFrom("engagement_bookmarks")
     .select([
       "id as bookmarkId",
@@ -1592,10 +1684,29 @@ export function buildListEngagementBookmarksQuery(
       "updated_at as updatedAt",
     ])
     .where("owner_user_id", "=", scope.userId)
-    .where("bookmark_state", "=", "active")
+    .where("bookmark_state", "=", "active");
+  if (page.kind) query = query.where("target_kind", "=", page.kind);
+  const cursor = page.cursor;
+  if (cursor) {
+    query = query.where((eb) =>
+      eb.or([
+        eb("created_at", "<", cursor.addedAt),
+        eb.and([
+          eb("created_at", "=", cursor.addedAt),
+          eb("id", ">", cursor.id),
+        ]),
+      ]),
+    );
+  }
+  return query
     .orderBy("created_at", "desc")
     .orderBy("id", "asc")
-    .limit(normalizeReadbackLimit(limit));
+    .limit(
+      Math.min(
+        Math.max(Math.trunc(page.limit ?? LIST_PORTION_SIZE + 1), 1),
+        LIST_PORTION_SIZE + 1,
+      ),
+    );
 }
 
 function engagementLikeOwnerPredicate(owner: EngagementLikeOwner) {
@@ -1688,42 +1799,46 @@ export function buildPublicLineageObjectTargetQuery(
   executor: QueryExecutor,
   plantObjectId: string,
 ) {
-  return executor
-    .selectFrom("plant_objects")
-    .innerJoin("journal_entries as public_entries", (join) =>
-      join
-        .onRef("public_entries.plant_object_id", "=", "plant_objects.id")
-        .onRef(
-          "public_entries.owner_user_id",
-          "=",
-          "plant_objects.owner_user_id",
-        )
-        .on("public_entries.visibility", "=", "public")
-        .on("public_entries.lifecycle_state", "=", "active")
-        .on("public_entries.public_gone_at", "is", null)
-        .on("public_entries.public_slug", "is not", null)
-        .on(
-          publicLaunchSurfacePredicates(
-            sql.ref<string | null>("public_entries.content_class"),
+  return (
+    executor
+      .selectFrom("plant_objects")
+      .innerJoin("journal_entries as public_entries", (join) =>
+        join
+          .onRef("public_entries.plant_object_id", "=", "plant_objects.id")
+          .onRef(
+            "public_entries.owner_user_id",
+            "=",
+            "plant_objects.owner_user_id",
+          )
+          .on("public_entries.visibility", "=", "public")
+          .on("public_entries.lifecycle_state", "=", "active")
+          .on("public_entries.public_gone_at", "is", null)
+          .on("public_entries.public_slug", "is not", null)
+          .on(
+            publicLaunchSurfacePredicates(
+              sql.ref<string | null>("public_entries.content_class"),
+            ),
           ),
+      )
+      .select([
+        "plant_objects.id as plantObjectId",
+        "plant_objects.display_name as displayName",
+        "plant_objects.owner_user_id as ownerUserId",
+        "plant_objects.public_slug as publicSlug",
+        publicAuthorHandleSql("plant_objects.owner_user_id").as(
+          "addressHandle",
         ),
-    )
-    .select([
-      "plant_objects.id as plantObjectId",
-      "plant_objects.display_name as displayName",
-      "plant_objects.owner_user_id as ownerUserId",
-      "plant_objects.public_slug as publicSlug",
-      publicAuthorHandleSql("plant_objects.owner_user_id").as("addressHandle"),
-    ])
-    .where("plant_objects.id", "=", plantObjectId)
-    // `owner_user_id` is grouped by, which is what lets the handle scalar
-    // read it (see `author-handle-sql.ts`).
-    .groupBy([
-      "plant_objects.id",
-      "plant_objects.display_name",
-      "plant_objects.owner_user_id",
-      "plant_objects.public_slug",
-    ]);
+      ])
+      .where("plant_objects.id", "=", plantObjectId)
+      // `owner_user_id` is grouped by, which is what lets the handle scalar
+      // read it (see `author-handle-sql.ts`).
+      .groupBy([
+        "plant_objects.id",
+        "plant_objects.display_name",
+        "plant_objects.owner_user_id",
+        "plant_objects.public_slug",
+      ])
+  );
 }
 
 export function buildPublicVarietyTargetQuery(
@@ -1976,7 +2091,6 @@ export function normalizeEngagementCommentTarget(
   }
   return normalizeEngagementTarget(kindValue, refValue);
 }
-
 
 async function listEngagementComments(
   target: EngagementCommentTarget,

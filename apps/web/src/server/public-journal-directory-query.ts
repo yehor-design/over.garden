@@ -6,6 +6,7 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import { catalogSpeciesSlugSql } from "@/server/catalog-address-sql";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { publicAuthorHandleSql } from "@/server/author-handle-sql";
@@ -15,7 +16,7 @@ export type PublicJournalDirectoryQueryExecutor =
   | Kysely<Database>
   | Transaction<Database>;
 
-export const PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE = 8;
+export const PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE = LIST_PORTION_SIZE;
 export const PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT = 256;
 const MAX_PUBLIC_JOURNAL_DIRECTORY_PAGE = 1_000;
 const MAX_PUBLIC_JOURNAL_DIRECTORY_QUERY_LENGTH = 120;

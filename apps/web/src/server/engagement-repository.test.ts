@@ -855,7 +855,7 @@ describe("the bookmark shelf's read and write (OVE-502)", () => {
     ];
     const log: string[] = [];
 
-    const items = await listEngagementBookmarks(
+    const { items } = await listEngagementBookmarks(
       scope,
       scriptedDb(
         statements,
@@ -943,7 +943,7 @@ describe("the bookmark shelf's read and write (OVE-502)", () => {
   });
 
   it("marks a saved entry behind a block as unavailable, not as gone from the shelf", async () => {
-    const items = await listEngagementBookmarks(
+    const { items } = await listEngagementBookmarks(
       scope,
       scriptedDb(
         statements,

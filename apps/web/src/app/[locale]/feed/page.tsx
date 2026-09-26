@@ -1,7 +1,4 @@
 import { SignInIcon as LogIn } from "@/components/icons/SignIn";
-import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
-import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
-import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,21 +7,22 @@ import { MySocialLayout } from "@/components/social/my-social-layout";
 import { buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EntryCard } from "@/components/ui/entry-card";
 import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
-import { Pagination } from "@/components/ui/pagination";
-import { PublicFeedEntryCard } from "@/components/public/public-feed-entry-card";
-import { entryCardDates } from "@/lib/entry-card-dates";
+import { ShowMoreList } from "@/components/ui/show-more-list";
+import { PublicFeedEntryItems } from "@/components/public/public-feed-entry-card";
+import {
+  FollowedFeedEntryItems,
+  followedFeedHref,
+} from "@/components/social/followed-feed-entry-card";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
 import { resolveIllustration } from "@/lib/illustrations";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
-import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import {
-  contentLanguageAttribute,
   isPublicLocale,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
+import { getShowMoreCopy } from "@/lib/show-more";
 import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -38,21 +36,19 @@ import {
 import { scopedToUser } from "@/server/request-scope";
 import {
   listFollowedFeedPage,
-  type FollowedFeedItem,
   type FollowedFeedObjectKind,
   type FollowedFeedSource,
 } from "@/server/social-return-repository";
 import { evaluateNonDiscoveryRouteIndexability } from "@/server/public-surface-indexing-policy";
+import {
+  loadFollowedFeedPortion,
+  loadPublicFeedPortion,
+} from "../feed-portion-actions";
 
 interface LocalizedFeedRouteProps {
   params: Promise<{ locale: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
-
-const KIND_ICONS: Record<"plant" | "animal", React.ReactNode> = {
-  plant: <Sprout aria-hidden="true" className="size-4" />,
-  animal: <PawPrint aria-hidden="true" className="size-4" />,
-};
 
 export async function generateMetadata({
   params,
@@ -137,36 +133,36 @@ export default async function LocalizedFollowedFeedRoute({
           }
         />
       ) : (
-        <ol className="grid list-none gap-4">
-          {page.items.map((item, index) => (
-            <li key={item.key} className="min-w-0">
-              <FollowedFeedEntryCard
-                item={item}
-                locale={localeParam}
-                priority={index === 0}
-              />
-            </li>
-          ))}
-        </ol>
-      )}
-      {page.items.length > 0 &&
-      (page.nextCursor || firstParam(query.cursor)) ? (
-        <Pagination
-          label={copy.feed.paginationLabel}
-          previousLabel={copy.feed.firstPage}
-          previousHref={
-            firstParam(query.cursor)
-              ? feedHref(localeParam, source, objectKind, null)
-              : null
-          }
-          nextLabel={copy.feed.more}
-          nextHref={
+        <ShowMoreList
+          className="grid list-none gap-4"
+          data-followed-feed-list="true"
+          copy={getShowMoreCopy(localeParam)}
+          next={
             page.nextCursor
-              ? feedHref(localeParam, source, objectKind, page.nextCursor)
+              ? {
+                  token: page.nextCursor,
+                  href: followedFeedHref(
+                    localeParam,
+                    source,
+                    objectKind,
+                    page.nextCursor,
+                  ),
+                }
               : null
           }
-        />
-      ) : null}
+          load={loadFollowedFeedPortion.bind(null, {
+            locale: localeParam,
+            source,
+            objectKind,
+          })}
+        >
+          <FollowedFeedEntryItems
+            items={page.items}
+            locale={localeParam}
+            priorityIndex={0}
+          />
+        </ShowMoreList>
+      )}
     </MySocialLayout>
   );
 }
@@ -257,18 +253,37 @@ async function renderSignedOutFollowedFeed({
             }
           />
         ) : (
-          <ol className="grid list-none gap-4">
-            {feed.entries.map((entry, index) => (
-              <li key={entry.id} className="min-w-0">
-                <PublicFeedEntryCard
-                  entry={entry}
-                  locale={locale}
-                  copy={homeCopy}
-                  priority={index === 0}
-                />
-              </li>
-            ))}
-          </ol>
+          <ShowMoreList
+            className="grid list-none gap-4"
+            data-public-feed-list="true"
+            copy={getShowMoreCopy(locale)}
+            next={
+              feed.nextCursor
+                ? {
+                    token: feed.nextCursor,
+                    href: followedFeedHref(
+                      locale,
+                      "all",
+                      "all",
+                      feed.nextCursor,
+                    ),
+                  }
+                : null
+            }
+            load={loadPublicFeedPortion.bind(null, {
+              locale,
+              kind: request.kind,
+              topic: request.topic,
+              listing: "feed",
+            })}
+          >
+            <PublicFeedEntryItems
+              entries={feed.entries}
+              locale={locale}
+              copy={homeCopy}
+              priorityIndex={0}
+            />
+          </ShowMoreList>
         )}
       </div>
     </MySocialLayout>
@@ -333,7 +348,7 @@ function FollowedFeedBar({
           {
             key: "source",
             label: sourceLabels[source],
-            removeHref: feedHref(locale, "all", objectKind, null),
+            removeHref: followedFeedHref(locale, "all", objectKind, null),
           },
         ]),
     ...(objectKind === "all"
@@ -343,7 +358,7 @@ function FollowedFeedBar({
             key: "kind",
             label:
               objectKind === "plant" ? copy.feed.plants : copy.feed.animals,
-            removeHref: feedHref(locale, source, "all", null),
+            removeHref: followedFeedHref(locale, source, "all", null),
           },
         ]),
   ].map((chip) => ({
@@ -381,90 +396,6 @@ function FollowedFeedBar({
       }}
     />
   );
-}
-
-function FollowedFeedEntryCard({
-  item,
-  locale,
-  priority,
-}: {
-  item: FollowedFeedItem;
-  locale: PublicLocale;
-  priority: boolean;
-}) {
-  const copy = getSocialSurfaceCopy(locale);
-  const homeCopy = getLocalizedHomeContent(locale).feed;
-  const reason = item.reasons[0];
-  const dates = entryCardDates(locale, item.entryDate, item.publishedAt);
-
-  return (
-    <EntryCard
-      id={item.key}
-      href={item.href}
-      title={item.title}
-      contentLanguage={
-        item.sourceLanguage
-          ? contentLanguageAttribute(item.sourceLanguage, locale).lang
-          : undefined
-      }
-      subject={{
-        label: item.object.displayName,
-        href: item.object.href,
-        kindLabel: homeCopy.kindLabels[item.object.kind],
-        icon: KIND_ICONS[item.object.kind],
-        meta: item.object.varietyText ?? undefined,
-      }}
-      dateTime={dates.dateTime}
-      dateLabel={dates.dateLabel}
-      published={dates.published}
-      excerpt={item.excerpt}
-      cover={
-        item.mediaUrl
-          ? {
-              src: item.mediaUrl,
-              alt: publicCardMediaAltText({ caption: item.mediaCaption }),
-            }
-          : null
-      }
-      author={{ displayName: item.author.label, href: item.author.href }}
-      authorPrefix={homeCopy.publishedBy}
-      engagement={
-        <>
-          {reason ? (
-            <span className="text-caption text-text-muted">
-              {reason === "people"
-                ? copy.feed.fromPerson
-                : reason === "topics"
-                  ? copy.feed.fromTopic
-                  : copy.feed.fromObject}
-            </span>
-          ) : null}
-          <Link
-            href={`${item.href}#comments`}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            <MessageCircle aria-hidden="true" />
-            {homeCopy.discuss}
-          </Link>
-        </>
-      }
-      priority={priority}
-    />
-  );
-}
-
-function feedHref(
-  locale: PublicLocale,
-  source: FollowedFeedSource,
-  objectKind: FollowedFeedObjectKind,
-  cursor?: string | null,
-) {
-  const params = new URLSearchParams();
-  if (source !== "all") params.set("source", source);
-  if (objectKind !== "all") params.set("kind", objectKind);
-  if (cursor) params.set("cursor", cursor);
-  const path = localizedPath(locale, "/feed");
-  return params.size ? `${path}?${params}` : path;
 }
 
 function parseSource(value: string | undefined): FollowedFeedSource {

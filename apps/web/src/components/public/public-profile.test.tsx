@@ -265,13 +265,14 @@ describe("PublicProfileView (OVE-494)", () => {
     expect(panels[1]).not.toContain("hidden");
   });
 
-  it("pages through every entry with real links and says where the reader is", async () => {
+  it("reads every list in portions with «Показати ще», a real link to the tab's next page (OVE-518)", async () => {
     const first = await render();
-    expect(first).toContain('aria-label="Сторінки записів"');
-    expect(first).toContain('href="/@demo_olena?page=2"');
-    expect(first).toContain("Сторінка 1 з 2");
-    // Objects fit on one page: no navigation for them at all.
-    expect(first).not.toContain('aria-label="Сторінки об’єктів"');
+    expect(first).toMatch(
+      /<a href="\/@demo_olena\?page=2"[^>]*data-show-more-link="true"[^>]*>Показати ще<\/a>/u,
+    );
+    // Objects fit in one portion: no link after them at all.
+    expect(first.match(/data-show-more-link=/gu)).toHaveLength(1);
+    expect(first).not.toContain('data-slot="pagination"');
 
     const second = await render({
       profile: {
@@ -280,9 +281,9 @@ describe("PublicProfileView (OVE-494)", () => {
         objects: { ...PROFILE.objects, pageCount: 3, page: 1 },
       },
     });
-    // Back to the first page is the bare address: absent means unset.
-    expect(second).toContain('href="/@demo_olena"');
-    expect(second).toContain("Сторінка 2 з 2");
+    // The last portion of the entries has nothing after it; the objects'
+    // first portion leads to their second.
+    expect(second).not.toContain('href="/@demo_olena?page=3"');
     expect(second).toContain('href="/@demo_olena?tab=objects&amp;page=2"');
   });
 

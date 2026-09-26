@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { Suspense } from "react";
 
 import {
@@ -26,7 +25,6 @@ import {
 import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
-import { publicJournalEntryAddress } from "@/lib/garden/public-paths";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -40,11 +38,7 @@ import {
 } from "@/server/workspace-failure";
 import { gardenObjectPath, ObjectShell } from "./object-shell";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { deleteJournalEntryAction } from "./actions";
 import { EntryComposer } from "@/components/garden/entry-composer";
-import { EntryActionsMenu } from "@/components/garden/entry-actions-menu";
-import { getEntryActionsCopy } from "@/lib/entry-actions-copy";
-import { gardenEntryEditPath } from "@/app/(default)/garden/entries/[entryId]/edit/edit-shell";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { ObjectLegacyAnchors } from "./object-legacy-anchors";
 import { ObjectProgressMoment } from "./object-progress-moment";
@@ -56,6 +50,12 @@ import {
   ownPassportPath,
 } from "./object-sections";
 import { SaveProgressMoment } from "../../save-progress-moment";
+import { loadObjectHistoryPortion } from "./object-history-portion-actions";
+import { objectHistoryHref, requestedHistoryPage } from "./object-history-href";
+import { OwnerEntryActions } from "./owner-entry-actions";
+import type { PassportTimelinePortion } from "@/components/living-object-passport/living-object-passport";
+import type { LivingObjectPassportTimelineEntry } from "@/lib/living-object-passport";
+import { LIST_PORTION_SIZE, getShowMoreCopy } from "@/lib/show-more";
 
 interface PlantObjectPageProps {
   params: Promise<{ objectId: string }>;
@@ -65,6 +65,8 @@ interface PlantObjectPageProps {
     saveProgress?: string | string[];
     authIntent?: string | string[];
     authControl?: string | string[];
+    /** The timeline's portion (`OVE-518`). */
+    page?: string | string[];
   }>;
 }
 
@@ -337,6 +339,12 @@ async function PlantObjectSections({
       <OwnerLivingObjectPassportTimeline
         passport={presentation}
         locale={locale}
+        portion={objectHistoryPortion({
+          objectId,
+          locale,
+          entries: presentation.timeline.entries,
+          page: requestedHistoryPage(query.page),
+        })}
         renderEntryActions={(timelineEntry) => {
           const entry = entriesById.get(timelineEntry.id);
           return entry ? (
@@ -353,67 +361,39 @@ async function PlantObjectSections({
   );
 }
 
-function OwnerEntryActions({
-  entry,
+/**
+ * The portion of the owner's timeline this address shows (DESIGN.md §5.26):
+ * twenty entries, the year the previous portion ended on, and the link to the
+ * next. The summaries above the timeline still read the whole story.
+ */
+function objectHistoryPortion({
   objectId,
   locale,
-  authorHandle,
+  entries,
+  page,
 }: {
-  entry: PlantObjectPage["entries"][number];
   objectId: string;
   locale: InterfaceLocale;
-  /** The owner's registry handle; the public link hangs from it (ADR-0029 D9). */
-  authorHandle: string | null;
-}) {
-  const actionCopy = getEntryActionsCopy(locale);
-
-  if (entry.visibility === "public" && entry.public_slug) {
-    const publicHref = publicJournalEntryAddress({
-      authorHandle,
-      entryNumber: entry.author_entry_number,
-      publicSlug: entry.public_slug,
-    });
-    // Back to this entry's place in the timeline once the edit is saved or
-    // discarded (`OVE-488` criterion 6).
-    const editHref = gardenEntryEditPath(
-      entry.id,
-      `/garden/objects/${encodeURIComponent(objectId)}#passport-entry-${entry.id}`,
-    );
-    return (
-      <div
-        data-owner-entry-controls="public"
-        className="flex flex-wrap items-center justify-between gap-2"
-      >
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Link
-            href={editHref}
-            data-owner-entry-edit={entry.id}
-            className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
-          >
-            {actionCopy.edit}
-          </Link>
-          <Link
-            href={publicHref}
-            className="text-link hover:text-link-hover text-body-sm font-medium underline-offset-4 hover:underline"
-          >
-            {actionCopy.openPublic}
-          </Link>
-        </div>
-        {/* The one irreversible act on an entry, behind its own menu and
-            apart from everything an owner does every day (OG-UX-045). */}
-        <EntryActionsMenu
-          locale={locale}
-          entryId={entry.id}
-          entryTitle={entry.title}
-          objectId={objectId}
-          deleteAction={deleteJournalEntryAction}
-          focusAfterDelete="#passport-timeline h2"
-        />
-      </div>
-    );
-  }
-
-  return null;
+  entries: LivingObjectPassportTimelineEntry[];
+  page: number;
+}): PassportTimelinePortion {
+  const pages = Math.max(1, Math.ceil(entries.length / LIST_PORTION_SIZE));
+  const current = Math.min(page, pages);
+  const start = (current - 1) * LIST_PORTION_SIZE;
+  return {
+    entries: entries.slice(start, start + LIST_PORTION_SIZE),
+    precedingYear: start > 0 ? entries[start - 1]?.year : undefined,
+    first: current === 1,
+    next:
+      current < pages
+        ? {
+            token: String(current + 1),
+            href: objectHistoryHref(objectId, current + 1),
+          }
+        : null,
+    load: loadObjectHistoryPortion.bind(null, { locale, objectId }),
+    copy: getShowMoreCopy(locale),
+  };
 }
 
 async function recordOwnRecordRevisited(

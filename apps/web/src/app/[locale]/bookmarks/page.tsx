@@ -1,73 +1,55 @@
-import { ArrowSquareOutIcon as ExternalLink } from "@/components/icons/ArrowSquareOut";
-import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
-import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import {
-  removeBookmarkFromShelfAction,
-  restoreBookmarkToShelfAction,
-} from "@/app/(default)/bookmarks/actions";
-import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
+import { restoreBookmarkToShelfAction } from "@/app/(default)/bookmarks/actions";
 import {
   WorkspaceSectionError,
   workspaceSchemaMissingHint,
 } from "@/components/garden/workspace-state";
-import { MySocialLayout } from "@/components/social/my-social-layout";
 import {
-  ShelfNotice,
-  ShelfRemoveButton,
-  ShelfRow,
-} from "@/components/social/shelf";
+  BookmarkForm,
+  BookmarkShelfItems,
+  bookmarkHref,
+  type BookmarkFilter,
+  type ShelfOutcomeNotice,
+} from "@/components/social/bookmark-shelf-items";
+import { MySocialLayout } from "@/components/social/my-social-layout";
+import { ShelfNotice } from "@/components/social/shelf";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { ToggleChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EntryCard } from "@/components/ui/entry-card";
-import { HiddenField } from "@/components/ui/hidden-field";
-import { iconButtonVariants } from "@/components/ui/icon-button";
-import { Pagination } from "@/components/ui/pagination";
-import { entryCardDates } from "@/lib/entry-card-dates";
+import { ShowMoreList } from "@/components/ui/show-more-list";
 import { resolveIllustration } from "@/lib/illustrations";
-import { publicCardMediaAltText } from "@/lib/public-media-alt";
 import {
   buildLanguageAlternates,
-  contentLanguageAttribute,
   isPublicLocale,
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import {
-  readShelfOutcome,
-  shelfRowAnchor,
-  type ShelfAction,
-} from "@/lib/social/shelf-view";
+import { getShowMoreCopy } from "@/lib/show-more";
+import { readShelfOutcome } from "@/lib/social/shelf-view";
 import {
   fillSocialTemplate,
   getSocialSurfaceCopy,
   type SocialSurfaceCopy,
 } from "@/lib/social-surface-copy";
+import { savedEntryCards } from "@/server/bookmark-shelf";
 import {
+  countEngagementBookmarks,
   findPublicEngagementTarget,
   listEngagementBookmarks,
   normalizeEngagementTarget,
-  type EngagementBookmarkShelfItem,
   type EngagementTarget,
 } from "@/server/engagement-repository";
-import { getLocalizedHomeContent } from "@/server/public-localized-content";
-import {
-  listSavedEntryCards,
-  type FollowedFeedItem,
-} from "@/server/social-return-repository";
 import { resolveWorkspaceViewer } from "@/server/workspace-access";
 import {
   settleSection,
   workspaceSectionDeadlineMs,
 } from "@/server/workspace-failure";
-
-const PAGE_SIZE = 12;
+import { loadBookmarkPortion } from "./bookmark-portion-actions";
 
 interface LocalizedBookmarksRouteProps {
   params: Promise<{ locale: string }>;
@@ -91,21 +73,6 @@ export async function generateMetadata({
       : undefined,
     robots: { index: false, follow: false },
   };
-}
-
-type BookmarkFilter = "all" | EngagementTarget["kind"];
-
-interface ShelfOutcomeNotice {
-  outcome: "removed" | "restored" | "failed";
-  action: ShelfAction;
-  target: EngagementTarget;
-  /** The thing's public name, when it still has one. */
-  name: string | null;
-  /**
-   * Whether it is still public, so that putting it back can succeed: saving
-   * needs a public target, and an Undo that can only fail is not one.
-   */
-  restorable: boolean;
 }
 
 /**
@@ -136,8 +103,8 @@ export default async function LocalizedBookmarksRoute({
   const locale = localeParam;
   const copy = getSocialSurfaceCopy(locale);
   const filter = parseFilter(firstParam(query.kind));
-  const page = parsePage(firstParam(query.page));
-  const viewHref = bookmarkHref(locale, filter, page);
+  const cursor = parseCursor(firstParam(query.cursor));
+  const viewHref = bookmarkHref(locale, filter, cursor);
   const layout = {
     locale,
     active: "bookmarks" as const,
@@ -173,28 +140,26 @@ export default async function LocalizedBookmarksRoute({
   const outcome = readBookmarkOutcome(query);
   const settled = await settleSection(
     async () => {
-      const items = await listEngagementBookmarks(viewer.scope);
+      const [shelf, counts] = await Promise.all([
+        listEngagementBookmarks(viewer.scope, undefined, {
+          kind: filter === "all" ? null : filter,
+          cursor,
+        }),
+        countEngagementBookmarks(viewer.scope),
+      ]);
       const [cards, removedTarget] = await Promise.all([
-        listSavedEntryCards(
-          viewer.scope,
-          items
-            .filter(
-              (item) => item.available && item.target.kind === "journal_entry",
-            )
-            .map((item) => item.target.ref),
-          locale,
-        ),
+        savedEntryCards(viewer.scope, shelf.items, locale),
         // A removed thing is off the shelf, so its name is read again — from
         // its public page, never from the address.
         outcome && outcome.outcome !== "restored"
           ? findPublicEngagementTarget(outcome.target, undefined, viewer.scope)
           : Promise.resolve(null),
       ]);
-      return { items, cards, removedTarget };
+      return { shelf, counts, cards, removedTarget };
     },
     {
-      // The shelf, its targets four at a time, then the entries' cards with
-      // their photos.
+      // The shelf's portion, its targets four at a time, then the entries'
+      // cards with their photos.
       deadlineMs: workspaceSectionDeadlineMs(4),
       surface: "bookmarks",
       section: "shelf",
@@ -213,31 +178,24 @@ export default async function LocalizedBookmarksRoute({
     );
   }
 
-  const { items: allItems, cards, removedTarget } = settled.value;
-  const filtered = allItems.filter((item) =>
-    filter === "all" ? true : item.target.kind === filter,
-  );
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount);
-  const items = filtered.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE,
-  );
-  const currentView = bookmarkHref(locale, filter, currentPage);
+  const { shelf, counts, cards, removedTarget } = settled.value;
+  const items = shelf.items;
+  const filteredCount =
+    filter === "all" ? counts.total : (counts.byKind[filter] ?? 0);
+  const currentView = bookmarkHref(locale, filter, null);
   const notice: ShelfOutcomeNotice | null = outcome
     ? {
         ...outcome,
         name:
-          allItems.find((item) => sameTarget(item.target, outcome.target))
-            ?.target.label ??
+          items.find((item) => sameTarget(item.target, outcome.target))?.target
+            .label ??
           removedTarget?.label ??
           null,
         restorable: Boolean(removedTarget),
       }
     : null;
-  // Beside its row when the row is on this page; above the list otherwise —
-  // a refused Undo, whose row is gone, or a row the shelf moved to another
-  // page since the press.
+  // Beside its row when the row is in this portion; above the list otherwise
+  // — a refused Undo, whose row is gone, or a row further down the shelf.
   const failedRowKey =
     notice?.outcome === "failed"
       ? items.find((item) => sameTarget(item.target, notice.target))?.key
@@ -246,11 +204,11 @@ export default async function LocalizedBookmarksRoute({
   return (
     <MySocialLayout
       {...layout}
-      count={filtered.length}
+      count={filteredCount}
       // Chips only where there is something to filter (`OVE-502`): an empty
       // shelf used to draw five controls that could only ever show nothing.
       controls={
-        allItems.length > 0 ? (
+        counts.total > 0 ? (
           <BookmarkFilters locale={locale} active={filter} />
         ) : undefined
       }
@@ -278,8 +236,8 @@ export default async function LocalizedBookmarksRoute({
         ) : null
       }
     >
-      {/* A refused write whose row is not on this page — an Undo, whose row
-          is gone — is said above the list, with the same press again. */}
+      {/* A refused write whose row is not in this portion — an Undo, whose
+          row is gone — is said above the list, with the same press again. */}
       {notice?.outcome === "failed" && !failedRowKey ? (
         <div id="shelf-outcome" className="scroll-mt-24">
           <Callout
@@ -305,7 +263,7 @@ export default async function LocalizedBookmarksRoute({
           </Callout>
         </div>
       ) : null}
-      {allItems.length === 0 ? (
+      {counts.total === 0 ? (
         <EmptyState
           illustration={resolveIllustration("empty-journal")}
           title={copy.bookmarks.emptyTitle}
@@ -334,56 +292,32 @@ export default async function LocalizedBookmarksRoute({
           }
         />
       ) : (
-        <ul
+        <ShowMoreList
+          as="ul"
           className="grid gap-4"
           aria-label={copy.bookmarks.title}
           data-saved-shelf="bookmarks"
+          copy={getShowMoreCopy(locale)}
+          next={
+            shelf.nextCursor
+              ? {
+                  token: shelf.nextCursor,
+                  href: bookmarkHref(locale, filter, shelf.nextCursor),
+                }
+              : null
+          }
+          load={loadBookmarkPortion.bind(null, { locale, filter })}
         >
-          {items.map((item) => {
-            const card =
-              item.available && item.target.kind === "journal_entry"
-                ? cards.get(item.target.ref)
-                : undefined;
-            const failed = item.key === failedRowKey ? notice! : null;
-            return card ? (
-              <SavedEntry
-                key={item.key}
-                item={item}
-                card={card}
-                locale={locale}
-                returnTo={currentView}
-                failed={failed}
-              />
-            ) : (
-              <BookmarkRow
-                key={item.key}
-                item={item}
-                locale={locale}
-                returnTo={currentView}
-                failed={failed}
-              />
-            );
-          })}
-        </ul>
+          <BookmarkShelfItems
+            items={items}
+            cards={cards}
+            locale={locale}
+            returnTo={currentView}
+            failedRowKey={failedRowKey}
+            notice={notice}
+          />
+        </ShowMoreList>
       )}
-      {pageCount > 1 ? (
-        <Pagination
-          label={copy.bookmarks.title}
-          previousLabel={copy.common.previous}
-          previousHref={
-            currentPage > 1
-              ? bookmarkHref(locale, filter, currentPage - 1)
-              : null
-          }
-          nextLabel={copy.common.next}
-          nextHref={
-            currentPage < pageCount
-              ? bookmarkHref(locale, filter, currentPage + 1)
-              : null
-          }
-          status={copy.common.pagePlace(currentPage, pageCount)}
-        />
-      ) : null}
     </MySocialLayout>
   );
 }
@@ -426,217 +360,6 @@ function BookmarkFilters({
   );
 }
 
-const KIND_ICONS: Record<"plant" | "animal", React.ReactNode> = {
-  plant: <Sprout aria-hidden="true" className="size-4" />,
-  animal: <PawPrint aria-hidden="true" className="size-4" />,
-};
-
-/**
- * A saved entry, as the feed draws it (`OVE-502`): the same card, so it reads
- * here as it read where it was saved, and it opens with `?from=` this view so
- * the entry's way back returns to the shelf.
- */
-function SavedEntry({
-  item,
-  card,
-  locale,
-  returnTo,
-  failed,
-}: {
-  item: EngagementBookmarkShelfItem;
-  card: FollowedFeedItem;
-  locale: PublicLocale;
-  returnTo: string;
-  failed: ShelfOutcomeNotice | null;
-}) {
-  const copy = getSocialSurfaceCopy(locale);
-  const homeCopy = getLocalizedHomeContent(locale).feed;
-  const dates = entryCardDates(locale, card.entryDate, card.publishedAt);
-  const anchor = shelfRowAnchor(`${item.target.kind}:${item.target.ref}`);
-  return (
-    <li
-      id={anchor}
-      data-saved-item="journal_entry"
-      data-saved-available="true"
-      className="grid scroll-mt-24 gap-2"
-    >
-      <EntryCard
-        id={card.key}
-        href={`${card.href}?${new URLSearchParams({ from: returnTo })}`}
-        title={card.title}
-        contentLanguage={
-          card.sourceLanguage
-            ? contentLanguageAttribute(card.sourceLanguage, locale).lang
-            : undefined
-        }
-        subject={{
-          label: card.object.displayName,
-          href: card.object.href,
-          kindLabel: homeCopy.kindLabels[card.object.kind],
-          icon: KIND_ICONS[card.object.kind],
-          meta: card.object.varietyText ?? undefined,
-        }}
-        dateTime={dates.dateTime}
-        dateLabel={dates.dateLabel}
-        published={dates.published}
-        excerpt={card.excerpt}
-        cover={
-          card.mediaUrl
-            ? {
-                src: card.mediaUrl,
-                alt: publicCardMediaAltText({ caption: card.mediaCaption }),
-              }
-            : null
-        }
-        author={{ displayName: card.author.label, href: card.author.href }}
-        authorPrefix={homeCopy.publishedBy}
-        headingLevel={2}
-        engagement={
-          <>
-            <span className="text-caption text-text-muted">
-              {`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
-            </span>
-            <BookmarkForm
-              action={removeBookmarkFromShelfAction}
-              target={item.target}
-              locale={locale}
-              returnTo={returnTo}
-            >
-              <ShelfRemoveButton
-                label={fillSocialTemplate(copy.bookmarks.removeLabel, {
-                  name: card.title,
-                })}
-              />
-            </BookmarkForm>
-          </>
-        }
-      />
-      {failed ? <FailedNotice copy={copy} action={failed.action} /> : null}
-    </li>
-  );
-}
-
-/**
- * A saved plant or animal, variety or topic — or anything that is not public
- * any more, which says so and can still be removed.
- */
-function BookmarkRow({
-  item,
-  locale,
-  returnTo,
-  failed,
-}: {
-  item: EngagementBookmarkShelfItem;
-  locale: PublicLocale;
-  returnTo: string;
-  failed: ShelfOutcomeNotice | null;
-}) {
-  const copy = getSocialSurfaceCopy(locale);
-  const available = item.available && item.target.href && item.target.label;
-  const name = available ? item.target.label! : copy.bookmarks.unavailableTitle;
-  return (
-    <ShelfRow
-      id={shelfRowAnchor(`${item.target.kind}:${item.target.ref}`)}
-      data-saved-item={item.target.kind}
-      data-saved-available={available ? "true" : "false"}
-      kindLabel={targetLabel(item.target.kind, locale)}
-      title={name}
-      href={available ? item.target.href! : undefined}
-      meta={
-        <>
-          {available ? null : (
-            <span className="block">
-              {copy.bookmarks.unavailable[item.target.kind]}
-            </span>
-          )}
-          {`${copy.common.saved} ${formatDate(item.addedAt, locale)}`}
-        </>
-      }
-      actions={
-        <>
-          {available ? (
-            <Link
-              href={item.target.href!}
-              aria-label={`${copy.common.open}: ${name}`}
-              className={iconButtonVariants({ variant: "secondary" })}
-            >
-              <ExternalLink aria-hidden="true" className="size-5" />
-            </Link>
-          ) : null}
-          <BookmarkForm
-            action={removeBookmarkFromShelfAction}
-            target={item.target}
-            locale={locale}
-            returnTo={returnTo}
-          >
-            <ShelfRemoveButton
-              label={fillSocialTemplate(copy.bookmarks.removeLabel, {
-                // Without a public name, what it was and when it was saved:
-                // two withdrawn entries are two different buttons.
-                name: available
-                  ? name
-                  : [
-                      name,
-                      targetLabel(item.target.kind, locale),
-                      `${copy.common.saved} ${formatDate(item.addedAt, locale)}`,
-                    ].join(" · "),
-              })}
-            />
-          </BookmarkForm>
-          {failed ? (
-            <div className="basis-full">
-              <FailedNotice copy={copy} action={failed.action} />
-            </div>
-          ) : null}
-        </>
-      }
-    />
-  );
-}
-
-function BookmarkForm({
-  action,
-  target,
-  locale,
-  returnTo,
-  children,
-}: {
-  action: typeof removeBookmarkFromShelfAction;
-  target: EngagementTarget;
-  locale: PublicLocale;
-  returnTo: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <OwnerScopedProgressiveForm action={action}>
-      <HiddenField name="targetKind" value={target.kind} />
-      <HiddenField name="targetRef" value={target.ref} />
-      <HiddenField name="locale" value={locale} />
-      <HiddenField name="returnTo" value={returnTo} />
-      {children}
-    </OwnerScopedProgressiveForm>
-  );
-}
-
-function FailedNotice({
-  copy,
-  action,
-}: {
-  copy: SocialSurfaceCopy;
-  action: ShelfAction;
-}) {
-  return (
-    <Callout
-      tone="danger"
-      live="assertive"
-      data-shelf-outcome="failed"
-      className="py-2"
-    >
-      <p>{copy.bookmarks.failed[action]}</p>
-    </Callout>
-  );
-}
-
 function noticeTitle(copy: SocialSurfaceCopy, notice: ShelfOutcomeNotice) {
   if (notice.outcome === "restored") {
     return notice.name
@@ -673,26 +396,6 @@ function sameTarget(left: EngagementTarget, right: EngagementTarget) {
   return left.kind === right.kind && left.ref === right.ref;
 }
 
-function bookmarkHref(
-  locale: PublicLocale,
-  filter: BookmarkFilter,
-  page: number,
-) {
-  const params = new URLSearchParams();
-  if (filter !== "all") params.set("kind", filter);
-  if (page > 1) params.set("page", String(page));
-  const path = localizedPath(locale, "/bookmarks");
-  return params.size ? `${path}?${params}` : path;
-}
-
-function targetLabel(kind: string, locale: PublicLocale) {
-  const copy = getSocialSurfaceCopy(locale).bookmarks;
-  if (kind === "journal_entry") return copy.journals;
-  if (kind === "lineage_object") return copy.objects;
-  if (kind === "variety") return copy.varieties;
-  return copy.topics;
-}
-
 function parseFilter(value: string | undefined): BookmarkFilter {
   return value === "journal_entry" ||
     value === "lineage_object" ||
@@ -702,20 +405,11 @@ function parseFilter(value: string | undefined): BookmarkFilter {
     : "all";
 }
 
-function parsePage(value: string | undefined) {
-  const page = Number(value);
-  return Number.isInteger(page) && page > 0 && page <= 50 ? page : 1;
+/** A shelf cursor is opaque base64url; anything else is the first portion. */
+function parseCursor(value: string | undefined) {
+  return value && /^[A-Za-z0-9_-]{1,256}$/u.test(value) ? value : null;
 }
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function formatDate(value: Date | string, locale: PublicLocale) {
-  return new Date(value).toLocaleDateString(locale, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  });
 }

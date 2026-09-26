@@ -1,14 +1,11 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BookOpenIcon as BookOpen } from "@/components/icons/BookOpen";
 import { FlagIcon as Flag } from "@/components/icons/Flag";
 import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
 import { DotsThreeIcon as MoreHorizontal } from "@/components/icons/DotsThree";
 import { NotePencilIcon as NotePencil } from "@/components/icons/NotePencil";
-import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
 import { PlusIcon as Plus } from "@/components/icons/Plus";
 import { ShieldSlashIcon as ShieldBan } from "@/components/icons/ShieldSlash";
-import { PlantIcon as Sprout } from "@/components/icons/Plant";
 import { TranslateIcon as Translate } from "@/components/icons/Translate";
 import { UserMinusIcon as UserMinus } from "@/components/icons/UserMinus";
 import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
@@ -16,22 +13,20 @@ import { UserPlusIcon as UserPlus } from "@/components/icons/UserPlus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { OwnerScopedProgressiveForm } from "@/components/auth/owner-scope";
-import { PublicFeedEntryCard } from "@/components/public/public-feed-entry-card";
+import { PublicFeedEntryItems } from "@/components/public/public-feed-entry-card";
+import { ProfileObjectItems } from "@/components/public/profile-object-card";
 import { PublicProfileTabs } from "@/components/public/public-profile-tabs";
-import { buildPublicMediaSourceSet } from "@/lib/media/derivative-keys";
 import { buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
-import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Link as TextLink } from "@/components/ui/link";
-import { MediaFigure } from "@/components/ui/media-figure";
-import { Pagination } from "@/components/ui/pagination";
+import { ShowMoreList } from "@/components/ui/show-more-list";
 import { ProfileHeader } from "@/components/ui/profile-header";
 import { Section } from "@/components/ui/section";
 import type { TabModel } from "@/components/ui/tabs";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type { AuthIntentAction } from "@/lib/auth/auth-intent-contract";
-import { entryCardDates, entryCardFeedLabels } from "@/lib/entry-card-dates";
+import { entryCardFeedLabels } from "@/lib/entry-card-dates";
 import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import { resolveIllustration } from "@/lib/illustrations";
@@ -45,13 +40,12 @@ import {
   getPublicProfileCopy,
   PUBLIC_PROFILE_LANGUAGE_LABELS,
 } from "@/lib/public-profile-copy";
-import { formatPublicCount } from "@/lib/public-surface-localization";
+import { getShowMoreCopy } from "@/lib/show-more";
 import { cn } from "@/lib/utils";
 import type { ProfileViewerState } from "@/server/profile-interaction-repository";
 import type {
   PublicProfileEvidencePage,
   PublicProfileListPage,
-  PublicProfileObjectEvidence,
 } from "@/server/public-profile-repository";
 import {
   blockProfileAction,
@@ -59,6 +53,7 @@ import {
   reportProfileAction,
   unfollowProfileAction,
 } from "@/app/[locale]/[profileHandle]/actions";
+import { loadProfilePortion } from "@/app/[locale]/[profileHandle]/profile-portion-actions";
 import { iconButtonVariants } from "@/components/ui/icon-button";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Field } from "@/components/ui/field";
@@ -182,31 +177,27 @@ export function PublicProfileView({
         >
           {profile.entries.items.length > 0 ? (
             <>
-              <ol className="grid list-none gap-4" data-profile-entries="true">
-                {profile.entries.items.map((entry, index) => (
-                  <li key={entry.id} className="min-w-0">
-                    <PublicFeedEntryCard
-                      locale={locale}
-                      copy={entryCardFeedLabels(locale)}
-                      entry={entry}
-                      headingLevel={cardHeadingLevel}
-                      priority={index === entryPhotograph}
-                    />
-                  </li>
-                ))}
-              </ol>
-              {preview ? null : (
-                <ProfileListPagination
-                  label={copy.entriesPages}
-                  list={profile.entries}
-                  previousLabel={copy.newerEntries}
-                  nextLabel={copy.olderEntries}
-                  status={copy.pageStatus}
-                  hrefFor={(page) =>
-                    publicProfileListHref(basePath, "entries", page)
-                  }
+              <ProfileList
+                as="ol"
+                className="grid list-none gap-4"
+                data-profile-entries="true"
+                preview={preview}
+                locale={locale}
+                handle={profile.handle}
+                tab="entries"
+                list={profile.entries}
+                hrefFor={(page) =>
+                  publicProfileListHref(basePath, "entries", page)
+                }
+              >
+                <PublicFeedEntryItems
+                  locale={locale}
+                  copy={entryCardFeedLabels(locale)}
+                  entries={profile.entries.items}
+                  headingLevel={cardHeadingLevel}
+                  priorityIndex={entryPhotograph}
                 />
-              )}
+              </ProfileList>
             </>
           ) : profile.entries.page > 1 ? (
             <ProfilePageMissing
@@ -251,33 +242,26 @@ export function PublicProfileView({
         >
           {profile.objects.items.length > 0 ? (
             <>
-              <ul
+              <ProfileList
+                as="ul"
                 className="grid list-none gap-4 sm:grid-cols-2"
                 data-profile-objects="true"
+                preview={preview}
+                locale={locale}
+                handle={profile.handle}
+                tab="objects"
+                list={profile.objects}
+                hrefFor={(page) =>
+                  publicProfileListHref(basePath, "objects", page)
+                }
               >
-                {profile.objects.items.map((object, index) => (
-                  <li key={object.objectId} className="min-w-0">
-                    <ProfileObjectCard
-                      object={object}
-                      locale={locale}
-                      headingLevel={cardHeadingLevel}
-                      priority={index === objectPhotograph}
-                    />
-                  </li>
-                ))}
-              </ul>
-              {preview ? null : (
-                <ProfileListPagination
-                  label={copy.objectsPages}
-                  list={profile.objects}
-                  previousLabel={copy.previousObjects}
-                  nextLabel={copy.nextObjects}
-                  status={copy.pageStatus}
-                  hrefFor={(page) =>
-                    publicProfileListHref(basePath, "objects", page)
-                  }
+                <ProfileObjectItems
+                  objects={profile.objects.items}
+                  locale={locale}
+                  headingLevel={cardHeadingLevel}
+                  priorityIndex={objectPhotograph}
                 />
-              )}
+              </ProfileList>
             </>
           ) : profile.objects.page > 1 ? (
             <ProfilePageMissing
@@ -409,39 +393,52 @@ function ProfileTabLabel({ label, count }: { label: string; count: number }) {
 }
 
 /**
- * The way through a list longer than a page.
- *
- * A list that fits on one page gets no navigation at all: two disabled edges
- * and a status line between them would be three controls saying nothing.
+ * A profile list read in portions (DESIGN.md §5.26): the page's portion, then
+ * «Показати ще» to the next page of the same tab. The owner's editor preview
+ * shows the first portion only, as it always did.
  */
-function ProfileListPagination<Item>({
-  label,
+function ProfileList<Item>({
+  as,
+  className,
+  preview,
+  locale,
+  handle,
+  tab,
   list,
-  previousLabel,
-  nextLabel,
-  status,
   hrefFor,
+  children,
+  ...props
 }: {
-  label: string;
+  as: "ol" | "ul";
+  className: string;
+  preview: boolean;
+  locale: InterfaceLocale;
+  handle: string;
+  tab: PublicProfileTabId;
   list: PublicProfileListPage<Item>;
-  previousLabel: string;
-  nextLabel: string;
-  status: string;
   hrefFor: (page: number) => string;
-}) {
-  if (list.pageCount <= 1) return null;
-  const page = Math.min(list.page, list.pageCount);
+  children: ReactNode;
+} & { [data: `data-${string}`]: string }) {
+  const Tag = as;
+  if (preview) {
+    return (
+      <Tag className={className} {...props}>
+        {children}
+      </Tag>
+    );
+  }
+  const next = list.page < list.pageCount ? list.page + 1 : null;
   return (
-    <Pagination
-      label={label}
-      previousLabel={previousLabel}
-      previousHref={page > 1 ? hrefFor(page - 1) : null}
-      nextLabel={nextLabel}
-      nextHref={page < list.pageCount ? hrefFor(page + 1) : null}
-      status={status
-        .replace("{page}", String(page))
-        .replace("{count}", String(list.pageCount))}
-    />
+    <ShowMoreList
+      as={as}
+      className={className}
+      {...props}
+      copy={getShowMoreCopy(locale)}
+      next={next ? { token: String(next), href: hrefFor(next) } : null}
+      load={loadProfilePortion.bind(null, { locale, handle, tab })}
+    >
+      {children}
+    </ShowMoreList>
   );
 }
 
@@ -681,114 +678,6 @@ export function ProfileActions({
  * has one; without one the card is words and a small mark of the kind, not a
  * grey box standing in for a picture.
  */
-function ProfileObjectCard({
-  object,
-  locale,
-  headingLevel,
-  priority,
-}: {
-  object: PublicProfileObjectEvidence;
-  locale: InterfaceLocale;
-  headingLevel: 2 | 3;
-  priority: boolean;
-}) {
-  const copy = getPublicProfileCopy(locale);
-  const Heading = headingLevel === 2 ? "h2" : "h3";
-  const titleId = `profile-object-${object.objectId}-title`;
-  const kindLabel = object.objectKind === "animal" ? copy.animal : copy.plant;
-  const latest = entryCardDates(locale, object.latestEntryDate, null);
-
-  return (
-    <Card
-      as="article"
-      interactive
-      data-profile-object={object.objectId}
-      aria-labelledby={titleId}
-      className="grid h-full content-start gap-3 overflow-hidden p-4"
-    >
-      {object.coverImageUrl ? (
-        <MediaFigure
-          aspect="card"
-          className="-mx-4 -mt-4"
-          src={object.coverImageUrl}
-          srcSet={
-            buildPublicMediaSourceSet({
-              publicUrl: object.coverImageUrl,
-              intrinsicWidth: object.coverIntrinsicWidth,
-              intrinsicHeight: object.coverIntrinsicHeight,
-              variantLongEdges: object.coverVariantLongEdges,
-            }).srcSet
-          }
-          placeholderDataUri={object.coverPlaceholderDataUri}
-          alt={object.coverImageAlt}
-          sizes="(min-width: 640px) 20rem, 100vw"
-          focalX={object.coverFocalX}
-          focalY={object.coverFocalY}
-          intrinsicWidth={object.coverIntrinsicWidth}
-          intrinsicHeight={object.coverIntrinsicHeight}
-          priority={priority}
-        />
-      ) : null}
-
-      <div className="flex min-w-0 items-start gap-3">
-        {object.coverImageUrl ? null : (
-          <span
-            aria-hidden="true"
-            className="flex size-10 shrink-0 items-center justify-center rounded-md bg-surface-sunken text-text-muted"
-          >
-            <ObjectKindIcon kind={object.objectKind} />
-          </span>
-        )}
-        <div className="grid min-w-0 gap-1">
-          <Heading
-            id={titleId}
-            className="text-h3 break-words text-text-heading"
-          >
-            <TextLink
-              href={object.publicPath}
-              variant="quiet"
-              className="text-text-heading"
-            >
-              {object.displayName}
-            </TextLink>
-          </Heading>
-          <p className="text-caption break-words text-text-muted">
-            {object.identityLabel ?? kindLabel}
-          </p>
-        </div>
-      </div>
-
-      <p
-        data-profile-object-journal="true"
-        className="flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text-muted"
-      >
-        <BookOpen className="size-4 shrink-0" aria-hidden="true" />
-        <span>
-          {copy.journal}:{" "}
-          {formatPublicCount(locale, "entry", object.publicEntryCount)}
-        </span>
-        <span aria-hidden="true">·</span>
-        <span>
-          {copy.latestEntry.split("{date}")[0]}
-          <time dateTime={latest.dateTime} className="tabular-nums">
-            {latest.dateLabel}
-          </time>
-        </span>
-      </p>
-    </Card>
-  );
-}
-
-function ObjectKindIcon({
-  kind,
-}: {
-  kind: PublicProfileObjectEvidence["objectKind"];
-}) {
-  if (kind === "animal")
-    return <PawPrint className="size-5" aria-hidden="true" />;
-  return <Sprout className="size-5" aria-hidden="true" />;
-}
-
 export function profileActionMessage(
   status: string | null | undefined,
   locale: InterfaceLocale,

@@ -15,8 +15,6 @@ export interface SocialSurfaceCopy {
     empty: string;
     emptyTitle: string;
     emptyAction: string;
-    paginationLabel: string;
-    firstPage: string;
     all: string;
     people: string;
     objects: string;
@@ -27,7 +25,6 @@ export interface SocialSurfaceCopy {
     fromPerson: string;
     fromObject: string;
     fromTopic: string;
-    more: string;
     sourceFiltersLabel: string;
     kindFiltersLabel: string;
   };
@@ -55,7 +52,6 @@ export interface SocialSurfaceCopy {
     markRead: string;
     markUnread: string;
     dismiss: string;
-    more: string;
     filtersLabel: string;
     listLabel: string;
     /** Who did it: "Від {actors}". */
@@ -140,11 +136,8 @@ export interface SocialSurfaceCopy {
     saved: string;
     remove: string;
     open: string;
-    previous: string;
-    next: string;
     itemCount: (count: number) => string;
     unreadCount: (count: number) => string;
-    pagePlace: (page: number, pageCount: number) => string;
     loadError: (surface: string) => string;
     retry: string;
     noResultsTitle: string;
@@ -174,8 +167,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
         "Підпишіться на профіль, живий об'єкт або тему, і нові публічні записи з'являться тут.",
       emptyTitle: "Стрічка підписок поки порожня",
       emptyAction: "Знайти журнали",
-      paginationLabel: "Сторінки стрічки підписок",
-      firstPage: "До початку стрічки",
       all: "Усі",
       people: "Люди",
       objects: "Об'єкти",
@@ -186,7 +177,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       fromPerson: "Від автора",
       fromObject: "Від об'єкта",
       fromTopic: "За темою",
-      more: "Показати наступні записи",
       sourceFiltersLabel: "Джерело записів",
       kindFiltersLabel: "Тип живого об'єкта",
     },
@@ -214,7 +204,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       markRead: "Позначити прочитаним",
       markUnread: "Позначити непрочитаним",
       dismiss: "Прибрати",
-      more: "Показати наступні",
       filtersLabel: "Тип подій",
       listLabel: "Події",
       from: "Від {actors}",
@@ -308,7 +297,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип закладок",
     },
     common: {
-      pagePlace: (page, pageCount) => `Сторінка ${page} з ${pageCount}`,
       noResultsTitle: "Нічого не збіглося",
       noResultsDescription: "Спробуйте зняти фільтр.",
       clearFilters: "Зняти фільтри",
@@ -318,8 +306,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       saved: "Збережено",
       remove: "Прибрати",
       open: "Відкрити",
-      previous: "Назад",
-      next: "Далі",
       itemCount: (count) =>
         `${count} ${pluralForm("uk", count, {
           one: "елемент",
@@ -349,8 +335,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
         "Последвайте профил, жив обект или тема и новите публични записи ще се появят тук.",
       emptyTitle: "Емисията от следвани е още празна",
       emptyAction: "Намерете дневници",
-      paginationLabel: "Страници на емисията от следвани",
-      firstPage: "Към началото на емисията",
       all: "Всички",
       people: "Хора",
       objects: "Обекти",
@@ -361,7 +345,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       fromPerson: "От автор",
       fromObject: "От обект",
       fromTopic: "По тема",
-      more: "Покажи следващите записи",
       sourceFiltersLabel: "Източник на записите",
       kindFiltersLabel: "Тип жив обект",
     },
@@ -389,7 +372,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       markRead: "Маркирай като прочетено",
       markUnread: "Маркирай като непрочетено",
       dismiss: "Премахни",
-      more: "Покажи следващите",
       filtersLabel: "Тип известия",
       listLabel: "Известия",
       from: "От {actors}",
@@ -484,7 +466,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип отметки",
     },
     common: {
-      pagePlace: (page, pageCount) => `Страница ${page} от ${pageCount}`,
       noResultsTitle: "Нищо не съвпадна",
       noResultsDescription: "Опитайте да махнете филтъра.",
       clearFilters: "Махни филтрите",
@@ -494,8 +475,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       saved: "Запазено",
       remove: "Премахни",
       open: "Отвори",
-      previous: "Назад",
-      next: "Напред",
       itemCount: (count) =>
         `${count} ${pluralForm("bg", count, {
           one: "елемент",
@@ -523,8 +502,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
         "Подпишитесь на профиль, живой объект или тему, и новые публичные записи появятся здесь.",
       emptyTitle: "Лента подписок пока пуста",
       emptyAction: "Найти журналы",
-      paginationLabel: "Страницы ленты подписок",
-      firstPage: "К началу ленты",
       all: "Все",
       people: "Люди",
       objects: "Объекты",
@@ -535,7 +512,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       fromPerson: "От автора",
       fromObject: "От объекта",
       fromTopic: "По теме",
-      more: "Показать следующие записи",
       sourceFiltersLabel: "Источник записей",
       kindFiltersLabel: "Тип живого объекта",
     },
@@ -563,7 +539,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       markRead: "Отметить прочитанным",
       markUnread: "Отметить непрочитанным",
       dismiss: "Убрать",
-      more: "Показать следующие",
       filtersLabel: "Тип событий",
       listLabel: "События",
       from: "От {actors}",
@@ -658,7 +633,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       filtersLabel: "Тип закладок",
     },
     common: {
-      pagePlace: (page, pageCount) => `Страница ${page} из ${pageCount}`,
       noResultsTitle: "Ничего не совпало",
       noResultsDescription: "Попробуйте снять фильтр.",
       clearFilters: "Снять фильтры",
@@ -668,8 +642,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       saved: "Сохранено",
       remove: "Убрать",
       open: "Открыть",
-      previous: "Назад",
-      next: "Далее",
       itemCount: (count) =>
         `${count} ${pluralForm("ru", count, {
           one: "элемент",

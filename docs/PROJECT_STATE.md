@@ -100,6 +100,22 @@ gone from «Мій сад»: an empty garden offers «Створити прос�
 the composer at `/garden/new`. Like everything since the pause, it is on
 `main` and waits for a deployment.
 
+Every long list reads in portions of twenty since `OVE-518` (DESIGN.md §5.26):
+the home feed, `/feed`, a profile's entries and objects, `/journals`,
+bookmarks, notifications, «Мій сад», a space's plants and history, and an
+object's timeline. At the end of a portion «Показати ще» is a real link to the
+next portion's address (`?cursor=` for the feed, the followed feed, bookmarks
+and notifications, which are ordered by time; `?page=` elsewhere), and with
+JavaScript the next portion is rendered by the list's own Server Function and
+appended when the link comes within a screen — three portions in a row, then
+the link waits for a press so the footer stays reachable (the owner's approval
+of that rule is pending). Later portions answer `X-Robots-Tag: noindex,
+follow`, and a cursor that is not one or has nothing after it is a 404 decided
+in the proxy. Bookmarks are paged in SQL now; before, the shelf read one capped
+batch of 24 and hid everything past it. Topic pages adopt the list with
+`OVE-515`; the hidden catalogue's browse and register pages keep their
+previous/next links.
+
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),
 32 executable tasks with OVE-475 first and OVE-478 integration/release last. Threads leads visual design; vc.ru supplies

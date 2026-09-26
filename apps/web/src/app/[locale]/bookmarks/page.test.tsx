@@ -14,6 +14,45 @@ const mocks = vi.hoisted(() => ({
   listSavedEntryCards: vi.fn(),
 }));
 
+/**
+ * The shelf as the database answers it since `OVE-518`: the mock stands for
+ * every active bookmark, and this does what the SQL does — the kind filter, a
+ * portion of twenty from the cursor (here, the index it starts at), and the
+ * counts beside it.
+ */
+const shelf = vi.hoisted(() => {
+  type Row = { target: { kind: string } };
+  let everything: Promise<Row[]> = Promise.resolve([]);
+  return {
+    async page(
+      scope: unknown,
+      executor: unknown,
+      page: { kind?: string | null; cursor?: string | null } = {},
+    ) {
+      everything = Promise.resolve(
+        mocks.listEngagementBookmarks(scope, executor, page) as Promise<Row[]>,
+      );
+      const all = await everything;
+      const filtered = page.kind
+        ? all.filter((item) => item.target.kind === page.kind)
+        : all;
+      const start = page.cursor ? Number(page.cursor) : 0;
+      return {
+        items: filtered.slice(start, start + 20),
+        nextCursor: start + 20 < filtered.length ? String(start + 20) : null,
+      };
+    },
+    async counts() {
+      const all = await everything;
+      const byKind: Record<string, number> = {};
+      for (const item of all) {
+        byKind[item.target.kind] = (byKind[item.target.kind] ?? 0) + 1;
+      }
+      return { total: all.length, byKind };
+    },
+  };
+});
+
 vi.mock("@/server/workspace-access", () => ({
   resolveWorkspaceViewer: mocks.resolveWorkspaceViewer,
 }));
@@ -22,7 +61,8 @@ vi.mock("@/server/workspace-access", () => ({
 // so an outcome in the address is re-checked here as it is in production.
 vi.mock("@/server/engagement-repository", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/server/engagement-repository")>()),
-  listEngagementBookmarks: mocks.listEngagementBookmarks,
+  listEngagementBookmarks: shelf.page,
+  countEngagementBookmarks: shelf.counts,
   findPublicEngagementTarget: mocks.findPublicEngagementTarget,
 }));
 
@@ -126,6 +166,19 @@ async function renderShelf(
   );
 }
 
+/** `count` saved varieties, newest first. */
+function sorts(count: number): EngagementBookmarkShelfItem[] {
+  return Array.from({ length: count }, (_, index) => ({
+    ...SAVED_VARIETY,
+    key: `bookmark:${String(index).padStart(16, "0")}`,
+    target: {
+      ...SAVED_VARIETY.target,
+      ref: `sort-${index}`,
+      label: `Sort ${index}`,
+    },
+  }));
+}
+
 /** One row of the shelf, from its `<li>` to its end. */
 function row(html: string, id: string) {
   const at = html.indexOf(`id="${id}"`);
@@ -205,7 +258,11 @@ describe("/{locale}/bookmarks", () => {
     // No locale argument any more: a bookmark's target has one address, under
     // its author, and the reader's language does not choose between three of
     // them (ADR-0029 D10).
-    expect(mocks.listEngagementBookmarks).toHaveBeenCalledWith(SCOPE);
+    expect(mocks.listEngagementBookmarks).toHaveBeenCalledWith(
+      SCOPE,
+      undefined,
+      { kind: null, cursor: null },
+    );
     expect(html).toContain("Закладки");
     expect(html).toContain("Pomidor Cheri");
     expect(html).toContain(`href="/variety/${VARIETY}"`);
@@ -228,16 +285,16 @@ describe("/{locale}/bookmarks", () => {
       "uk",
       {
         kind: "variety",
-        page: "2",
+        cursor: "20",
         outcome: "removed",
         action: "remove",
         target: `variety:${VARIETY}`,
       },
-      "/bookmarks?kind=variety&amp;page=2",
+      "/bookmarks?kind=variety&amp;cursor=20",
     ],
     ["bg", { kind: "journal_entry" }, "/bg/bookmarks?kind=journal_entry"],
     // A filter or a page the shelf does not have is not carried.
-    ["ru", { kind: "user", page: "999" }, "/ru/bookmarks"],
+    ["ru", { kind: "user", cursor: "not a cursor" }, "/ru/bookmarks"],
   ] as const)(
     "asks a guest to sign in and brings them back to the same view in %s",
     async (locale, query, next) => {
@@ -285,7 +342,7 @@ describe("/{locale}/bookmarks", () => {
 
       const html = await renderShelf({
         kind: "variety",
-        page: "2",
+        cursor: "20",
         outcome: "removed",
         action: "remove",
         target: `variety:${VARIETY}`,
@@ -293,7 +350,7 @@ describe("/{locale}/bookmarks", () => {
 
       expect(html).toContain('data-section-failure="query_timeout"');
       expect(html).toContain(
-        'href="/bookmarks?kind=variety&amp;page=2" data-workspace-retry="section"',
+        'href="/bookmarks?kind=variety&amp;cursor=20" data-workspace-retry="section"',
       );
       expect(html).not.toContain("data-saved-shelf");
       expect(html).not.toContain("data-shelf-notice");
@@ -426,26 +483,22 @@ describe("/{locale}/bookmarks", () => {
     expect(html).not.toContain(uk.bookmarks.emptyTitle);
   });
 
-  it("comes back to the page it was pressed on, and a page past the end is the last one", async () => {
-    mocks.listEngagementBookmarks.mockResolvedValue(
-      Array.from({ length: 13 }, (_, index) => ({
-        ...SAVED_VARIETY,
-        key: `bookmark:${String(index).padStart(16, "0")}`,
-        target: {
-          ...SAVED_VARIETY.target,
-          ref: `sort-${index}`,
-          label: `Sort ${index}`,
-        },
-      })),
+  it("reads the shelf in portions of twenty, each its own address, and every form returns to the shelf (OVE-518)", async () => {
+    mocks.listEngagementBookmarks.mockResolvedValue(sorts(25));
+
+    const first = await renderShelf();
+    expect(count(first, 'data-shelf-row="true"')).toBe(20);
+    expect(first).toMatch(
+      /<a href="\/bookmarks\?cursor=20"[^>]*data-show-more-link="true"[^>]*>Показати ще<\/a>/u,
     );
+    // The count in the header is the shelf's, not the portion's.
+    expect(first).toContain('data-my-social-count="25"');
 
-    for (const page of ["2", "9"]) {
-      const html = await renderShelf({ page });
-
-      expect(count(html, 'data-shelf-row="true"')).toBe(1);
-      expect(html).toContain("Sort 12");
-      expect(html).toContain('name="returnTo" value="/bookmarks?page=2"');
-    }
+    const second = await renderShelf({ cursor: "20" });
+    expect(count(second, 'data-shelf-row="true"')).toBe(5);
+    expect(second).toContain("Sort 24");
+    expect(second).not.toContain("data-show-more-link");
+    expect(second).toContain('name="returnTo" value="/bookmarks"');
   });
 
   it("names what a removal removed, with an Undo that needs no bundle", async () => {
@@ -567,42 +620,34 @@ describe("/{locale}/bookmarks", () => {
     },
   );
 
-  it("says a failed removal above the shelf when its row is on another page of the view", async () => {
-    mocks.listEngagementBookmarks.mockResolvedValue(
-      Array.from({ length: 13 }, (_, index) => ({
-        ...SAVED_VARIETY,
-        key: `bookmark:${String(index).padStart(16, "0")}`,
-        target: {
-          ...SAVED_VARIETY.target,
-          ref: `sort-${index}`,
-          label: `Sort ${index}`,
-        },
-      })),
-    );
+  it("says a failed removal above the shelf when its row is in a later portion", async () => {
+    mocks.listEngagementBookmarks.mockResolvedValue(sorts(25));
     const outcome = {
       outcome: "failed",
       action: "remove",
-      target: "variety:sort-12",
+      target: "variety:sort-22",
     };
 
-    // The thirteenth row is on page two; the reader is on page one.
-    const firstPage = await renderShelf(outcome);
-    const callout = firstPage.slice(firstPage.indexOf('id="shelf-outcome"'));
+    // The twenty-third row is in the second portion; the reader is on the first.
+    const firstPortion = await renderShelf(outcome);
+    const callout = firstPortion.slice(
+      firstPortion.indexOf('id="shelf-outcome"'),
+    );
 
-    expect(firstPage).not.toContain('id="saved-variety-sort-12"');
-    expect(firstPage).toContain('id="shelf-outcome"');
+    expect(firstPortion).not.toContain('id="saved-variety-sort-22"');
+    expect(firstPortion).toContain('id="shelf-outcome"');
     expect(callout).toContain('data-shelf-outcome="failed"');
     expect(callout).toContain(uk.bookmarks.failed.remove);
     // A removal is pressed again on its row, not from the notice.
     expect(callout).not.toContain(uk.common.retry);
-    expect(count(firstPage, 'data-shelf-outcome="failed"')).toBe(1);
+    expect(count(firstPortion, 'data-shelf-outcome="failed"')).toBe(1);
 
-    // On its own page, the same outcome is said beside the row.
-    const secondPage = await renderShelf({ ...outcome, page: "2" });
-    expect(row(secondPage, "saved-variety-sort-12")).toContain(
+    // In its own portion, the same outcome is said beside the row.
+    const secondPortion = await renderShelf({ ...outcome, cursor: "20" });
+    expect(row(secondPortion, "saved-variety-sort-22")).toContain(
       'data-shelf-outcome="failed"',
     );
-    expect(secondPage).not.toContain('id="shelf-outcome"');
+    expect(secondPortion).not.toContain('id="shelf-outcome"');
   });
 
   it.each([
