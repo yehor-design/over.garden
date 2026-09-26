@@ -189,6 +189,8 @@ export function buildOwnerObjectPassportPresentation(
           focalY: page.object_photo.media.focalY,
           intrinsicWidth: page.object_photo.media.intrinsicWidth,
           intrinsicHeight: page.object_photo.media.intrinsicHeight,
+          placeholderDataUri: page.object_photo.view.placeholderDataUri,
+          variantLongEdges: page.object_photo.variantLongEdges,
         }
       : (gallery[0] ?? null),
     gallery,

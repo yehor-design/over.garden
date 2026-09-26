@@ -154,6 +154,78 @@ describe("owner object passport presentation", () => {
     );
   });
 
+  it("covers the passport with the object's own photo before any entry photo (OVE-524)", () => {
+    const page = ownerPage({ objectKind: "animal", entries: [] });
+    page.gallery_media = [
+      {
+        id: "entry-photo",
+        derivativeKey: "derivatives/entry-photo/1.webp",
+        publicUrl: "https://media.example/derivatives/entry-photo/1.webp",
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: 1600,
+        intrinsicHeight: 1200,
+      },
+    ];
+    const withoutOwn = buildOwnerObjectPassportPresentation(
+      page,
+      emptyProvenance(),
+      "uk",
+    );
+    expect(withoutOwn.cover?.publicUrl).toContain("entry-photo");
+
+    page.object_photo = {
+      media: {
+        id: "object-photo",
+        derivativeKey: "derivatives/object-photo/1.webp",
+        publicUrl: "https://media.example/derivatives/object-photo/1.webp",
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: 1600,
+        intrinsicHeight: 900,
+      },
+      view: {
+        src: "https://media.example/derivatives/object-photo/1.webp",
+        srcSet: null,
+        width: 1600,
+        height: 900,
+        placeholderDataUri: null,
+      },
+      variantLongEdges: [1280, 480],
+    };
+    const withOwn = buildOwnerObjectPassportPresentation(
+      page,
+      emptyProvenance(),
+      "uk",
+    );
+    expect(withOwn.cover).toMatchObject({
+      publicUrl: "https://media.example/derivatives/object-photo/1.webp",
+      alt: page.plantObject.display_name,
+      variantLongEdges: [1280, 480],
+    });
+  });
+
+  it("shows the owner their own species and cultivar words, marked as their own (0086)", () => {
+    const page = ownerPage({ objectKind: "plant", entries: [] });
+    page.plantObject.catalogKind = null;
+    page.plantObject.species_text = "Помідор бабусин";
+    page.plantObject.variety_state = "own";
+    page.plantObject.variety_text = "Рожевий";
+    const presentation = buildOwnerObjectPassportPresentation(
+      page,
+      emptyProvenance(),
+      "uk",
+    );
+    expect(presentation.identity.value).toBe("Помідор бабусин · Рожевий");
+    expect(presentation.identity.state).not.toBe(
+      buildOwnerObjectPassportPresentation(
+        ownerPage({ objectKind: "plant", entries: [] }),
+        emptyProvenance(),
+        "uk",
+      ).identity.state,
+    );
+  });
+
   it.each([
     ["uk", "Регіон: Україна — місто Київ"],
     ["bg", "Регион: Украйна — град Киев"],

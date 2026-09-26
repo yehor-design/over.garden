@@ -547,13 +547,13 @@ async function seedSmokeRows() {
       space_id: SPACE_ID,
       display_name: "OVE-97 Smoke Plant",
       object_kind: "plant",
-      catalog_item_id: CATALOG_ITEM_ID,
+      // The gardener's own words for what it is (migration 0086): an own
+      // species and an own cultivar, private, which erasure clears. A retired
+      // card is never linked any more — 0055 moved every object off them.
+      catalog_item_id: null,
+      species_text: "OVE-97 private species text",
       variety_text: "OVE-97 private variety text",
-      // `free_text`, not `user_added`: migration 0061 removed that fourth
-      // state — a gardener's own name is a label on a node now (`OVE-387`) —
-      // and this fixture kept writing it, so the smoke had been failing on its
-      // own seed since. Found by running it for `OVE-456`.
-      variety_state: "free_text",
+      variety_state: "own",
       location_visibility: "region",
       coarse_region_code: "UA-30",
       created_at: now,

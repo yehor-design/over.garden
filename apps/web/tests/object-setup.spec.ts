@@ -1,7 +1,15 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Pool } from "pg";
-import { expect, test, type Page } from "playwright/test";
+import {
+  expect,
+  test,
+  type APIRequestContext,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "playwright/test";
 
+import { fakeStaging, photograph } from "./helpers/fake-staging";
 import { waitForHydration } from "./helpers/hydration";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import {
@@ -12,15 +20,288 @@ import { cleanupCollection } from "./helpers/redesign-fixtures";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 
 /**
- * Adding a plant or an animal is its own short setup (`OVE-485`): kind, name
- * (the catalogue search), space, review — with nothing lost between steps or
- * across a space created on the way, and one object per intent. A species
- * page launches nothing since `OVE-519`.
+ * Adding a plant or an animal is a full-screen stepper (`OVE-524`, ADR-0035
+ * D1, DESIGN.md §5.24, §5.28): «Простір» → «Рослина чи тварина?» → an
+ * optional photo cropped and turned in the browser → «Вкажіть ім'я …» →
+ * «Вид» → «Сорт» / «Порода» → «Додати». The count is this run's; «Не знаю»
+ * is the default species and cultivar; a species comes from the standard base
+ * by everyday words; a typed cultivar or breed becomes a shared entry the next
+ * gardener sees at once, and a name that matches one reuses it.
  *
- * Every outcome is read back from the database.
+ * Every outcome is read back from the database. The staging Worker cannot be
+ * signed for locally, so a photo's uploads are answered in the browser and
+ * the request that commits it is read (`helpers/fake-staging.ts`); the row
+ * its claim would write is written here.
  */
 
 const LOCALE_COOKIE = "overgarden_interface_locale";
+const RUN = randomUUID().slice(0, 8);
+
+interface Fixture {
+  tomato: string;
+  chicken: string;
+  strawberry: string;
+  pepper: string;
+  zucchini: string;
+  wolf: string;
+  oxheart: string;
+  barao: string;
+  seedUser: string;
+  snapshot: string;
+}
+
+async function one<T>(pool: Pool, statement: string, params: unknown[] = []) {
+  return (await pool.query(statement, params)).rows[0] as T;
+}
+
+async function seedFixture(pool: Pool): Promise<Fixture> {
+  const snapshot = await one<{ id: string }>(
+    pool,
+    `insert into catalog_source_snapshots (
+       source_slug, source_name, source_category, source_version, source_url,
+       license, parser_version, payload_sha256, fetched_at, verified_at, status
+     )
+     values ('ove524-browser', 'Seed', 'species_backbone', $1, 'https://example.test/',
+             'CC0', 'ove524', $2, now(), now(), 'imported')
+     returning id`,
+    [`ove524-${RUN}`, createHash("sha256").update(RUN).digest("hex")],
+  );
+  const assertion = await one<{ id: string }>(
+    pool,
+    `insert into catalog_source_assertions (
+       source_slug, source_snapshot_id, rights_class, confidence, decision, reason_codes
+     )
+     values ('ove524-browser', $1, 'source_public', 1, 'automatic', array['ove524_browser'])
+     returning id`,
+    [snapshot.id],
+  );
+  async function species(input: {
+    key: string;
+    latin: string;
+    kingdom: "Plantae" | "Animalia";
+    names: string[];
+    base: { kind: "plant" | "animal"; group: string } | null;
+  }) {
+    const id = randomUUID();
+    await pool.query(
+      `insert into catalog_items (
+         id, canonical_name, normalized_name, public_slug, source, source_id,
+         locale, node_kind, kingdom, rank, identity_state
+       )
+       values ($1, $2, catalog_normalize_name($2), $3, 'species_backbone', $4,
+               'la', 'taxon', $5, 'species', 'active')`,
+      [
+        id,
+        input.latin,
+        `ove524-${RUN}-${input.key}`,
+        `ove524:${id}`,
+        input.kingdom,
+      ],
+    );
+    await pool.query(
+      `insert into catalog_item_names (
+         catalog_item_id, display_name, normalized_name, locale, script,
+         is_primary, name_type, weight
+       )
+       values ($1, $2, catalog_normalize_name($2), 'la', 'latin', true, 'scientific_accepted', 5)`,
+      [id, input.latin],
+    );
+    for (const [index, name] of input.names.entries()) {
+      await pool.query(
+        `insert into catalog_item_names (
+           catalog_item_id, display_name, normalized_name, locale, script,
+           is_primary, name_type, weight
+         )
+         values ($1, $2, catalog_normalize_name($2), 'uk', 'cyrillic', $3, 'vernacular', 5)`,
+        [id, name, index === 0],
+      );
+    }
+    if (input.base) {
+      // Popular enough to lead any other base species with the same name.
+      await pool.query(
+        `insert into catalog_standard_species (
+           catalog_item_id, base_key, object_kind, base_group, latin_name,
+           popularity, base_version
+         )
+         values ($1, $2, $3, $4, $5, 900000, '2026-09-26')`,
+        [
+          id,
+          `${input.base.kind}:ove524-${RUN}-${input.key}`,
+          input.base.kind,
+          input.base.group,
+          input.latin,
+        ],
+      );
+    }
+    return id;
+  }
+  async function registered(name: string, key: string, speciesId: string) {
+    const id = randomUUID();
+    await pool.query(
+      `insert into catalog_items (
+         id, canonical_name, normalized_name, public_slug, source, source_id,
+         locale, node_kind, kingdom, rank, identity_state
+       )
+       values ($1, $2, catalog_normalize_name($2), $3, 'ua_state_register', $4,
+               'uk', 'cultivar', 'Plantae', 'cultivar', 'active')`,
+      [id, name, `ove524-${RUN}-${key}`, `ove524:${id}`],
+    );
+    await pool.query(
+      `insert into catalog_item_names (
+         catalog_item_id, display_name, normalized_name, locale, script,
+         is_primary, name_type, weight
+       )
+       values ($1, $2, catalog_normalize_name($2), 'uk', 'cyrillic', true, 'denomination', 4)`,
+      [id, name],
+    );
+    await pool.query(
+      `insert into catalog_item_relations (from_catalog_item_id, to_catalog_item_id, relation_type, assertion_id)
+       values ($1, $2, 'form_of', $3)`,
+      [id, speciesId, assertion.id],
+    );
+    return id;
+  }
+
+  const tomato = await species({
+    key: "tomato",
+    latin: "Solanum lycopersicum",
+    kingdom: "Plantae",
+    names: ["помідор", "томат"],
+    base: { kind: "plant", group: "vegetables" },
+  });
+  const chicken = await species({
+    key: "chicken",
+    latin: "Gallus gallus domesticus",
+    kingdom: "Animalia",
+    names: ["курка", "кури"],
+    base: { kind: "animal", group: "poultry" },
+  });
+  const strawberry = await species({
+    key: "strawberry",
+    latin: "Fragaria × ananassa",
+    kingdom: "Plantae",
+    names: ["полуниця", "суниця садова"],
+    base: { kind: "plant", group: "berries" },
+  });
+  const pepper = await species({
+    key: "pepper",
+    latin: "Capsicum annuum",
+    kingdom: "Plantae",
+    names: ["перець", "болгарський перець", "солодкий перець"],
+    base: { kind: "plant", group: "vegetables" },
+  });
+  const zucchini = await species({
+    key: "zucchini",
+    latin: "Cucurbita pepo",
+    kingdom: "Plantae",
+    names: ["кабачок", "цукіні"],
+    base: { kind: "plant", group: "vegetables" },
+  });
+  // In the catalogue, not in the base: found by nothing.
+  const wolf = await species({
+    key: "wolf",
+    latin: "Canis lupus",
+    kingdom: "Animalia",
+    names: ["вовк сірий"],
+    base: null,
+  });
+  const oxheart = await registered("Бичаче серце", "oxheart", tomato);
+  const barao = await registered("Де Барао", "de-barao", tomato);
+
+  // Somebody's tomato already uses «Бичаче серце»; nobody uses «Де Барао».
+  const seedUser = randomUUID();
+  await pool.query(
+    `insert into "user" (id, name, email, "emailVerified", "createdAt", "updatedAt")
+     values ($1, 'ove524 seed', $2, true, now(), now())`,
+    [seedUser, `ove524-seed-${RUN}@example.test`],
+  );
+  const seedSpace = randomUUID();
+  await pool.query(
+    `insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Грядка')`,
+    [seedSpace, seedUser],
+  );
+  await pool.query(
+    `insert into plant_objects (
+       id, owner_user_id, space_id, display_name, object_kind,
+       catalog_item_id, variety_state, variety_text
+     )
+     values (gen_random_uuid(), $1, $2, 'Сусідський', 'plant', $3, 'selected', 'Бичаче серце')`,
+    [seedUser, seedSpace, oxheart],
+  );
+  return {
+    tomato,
+    chicken,
+    strawberry,
+    pepper,
+    zucchini,
+    wolf,
+    oxheart,
+    barao,
+    seedUser,
+    snapshot: snapshot.id,
+  };
+}
+
+async function gardenerEntries(pool: Pool, speciesId: string) {
+  return (
+    await pool.query<{
+      id: string;
+      canonical_name: string;
+      created_by_user_id: string | null;
+      reviewed_at: Date | null;
+      node_kind: string;
+    }>(
+      `select item.id, item.canonical_name, item.created_by_user_id,
+              item.reviewed_at, item.node_kind
+         from catalog_items as item
+         join catalog_item_relations as relation
+           on relation.from_catalog_item_id = item.id
+          and relation.relation_type = 'form_of'
+        where relation.to_catalog_item_id = $1 and item.source = 'gardener'
+        order by item.created_at`,
+      [speciesId],
+    )
+  ).rows;
+}
+
+async function cleanupFixture(pool: Pool, fixture: Fixture | null) {
+  if (!fixture) return;
+  const species = [
+    fixture.tomato,
+    fixture.chicken,
+    fixture.strawberry,
+    fixture.pepper,
+    fixture.zucchini,
+    fixture.wolf,
+  ];
+  await cleanupCollection(pool, fixture.seedUser);
+  const entries = await pool.query<{ id: string }>(
+    `select relation.from_catalog_item_id as id
+       from catalog_item_relations as relation
+      where relation.to_catalog_item_id = any($1::uuid[])
+        and relation.relation_type = 'form_of'`,
+    [species],
+  );
+  const forms = entries.rows.map((row) => row.id);
+  await pool.query(
+    "delete from plant_objects where catalog_item_id = any($1::uuid[])",
+    [[...species, ...forms]],
+  );
+  await pool.query("delete from catalog_items where id = any($1::uuid[])", [
+    [...forms, ...species],
+  ]);
+  await pool.query(
+    `delete from catalog_source_assertions
+      where source_snapshot_id = $1
+         or (source_slug = 'overgarden-gardeners'
+             and not exists (select 1 from catalog_item_relations as r where r.assertion_id = catalog_source_assertions.id)
+             and not exists (select 1 from catalog_item_names as n where n.assertion_id = catalog_source_assertions.id))`,
+    [fixture.snapshot],
+  );
+  await pool.query("delete from catalog_source_snapshots where id = $1", [
+    fixture.snapshot,
+  ]);
+}
 
 async function objectsOf(pool: Pool, userId: string) {
   return (
@@ -32,428 +313,996 @@ async function objectsOf(pool: Pool, userId: string) {
       catalog_item_id: string | null;
       variety_state: string;
       variety_text: string | null;
+      species_text: string | null;
     }>(
       `select id, display_name, object_kind, space_id, catalog_item_id,
-              variety_state, variety_text
+              variety_state, variety_text, species_text
          from plant_objects where owner_user_id = $1 order by created_at`,
       [userId],
     )
   ).rows;
 }
 
-async function spacesOf(pool: Pool, userId: string) {
-  return (
-    await pool.query<{ id: string; display_name: string }>(
-      "select id, display_name from spaces where owner_user_id = $1 order by created_at",
-      [userId],
-    )
-  ).rows;
+async function createSpace(
+  request: APIRequestContext,
+  baseURL: string,
+  displayName: string,
+) {
+  const response = await request.post(`${baseURL}/api/garden/spaces`, {
+    data: {
+      requestId: randomUUID(),
+      displayName,
+      locationVisibility: "hidden",
+      coarseRegionCode: null,
+    },
+  });
+  expect(response.status()).toBe(201);
+  return ((await response.json()) as { space: { id: string } }).space.id;
 }
 
-async function openFlow(page: Page, query = "") {
+async function gardener(
+  browser: import("playwright/test").Browser,
+  baseURL: string,
+  pool: Pool,
+  prefix: string,
+) {
+  const context = await browser.newContext();
+  const user = await signInSyntheticGardener({
+    baseURL,
+    context,
+    pool,
+    prefix,
+  });
+  await context.addCookies([
+    { name: LOCALE_COOKIE, value: "uk", url: baseURL },
+  ]);
+  return { context, user };
+}
+
+async function openStepper(page: Page, query = "") {
   await page.goto(`/garden/objects/new${query}`, { waitUntil: "load" });
-  const flow = page.locator('[data-object-setup-flow="true"]');
-  await expect(flow).toBeVisible({ timeout: 20_000 });
-  await waitForHydration(flow);
-  return flow;
+  const stepper = page.locator('[data-creation-stepper="true"]');
+  await expect(stepper).toBeVisible({ timeout: 20_000 });
+  await waitForHydration(stepper);
+  return stepper;
+}
+
+function progress(stepper: Locator) {
+  return stepper.locator("[data-creation-progress]");
+}
+
+function question(stepper: Locator) {
+  return stepper.getByRole("heading", { level: 1 });
+}
+
+function primary(stepper: Locator) {
+  return stepper.locator('[data-creation-primary="true"]');
+}
+
+function selected(stepper: Locator) {
+  return stepper.locator('[data-choice-selected="true"]');
+}
+
+async function insertObjectPhoto(
+  pool: Pool,
+  input: { owner: string; objectId: string; mediaAssetId: string },
+) {
+  await pool.query(
+    `insert into media_assets (id, owner_user_id, plant_object_id, derivative_key, usage_role,
+       intrinsic_width, intrinsic_height, focal_x, focal_y, upload_generation,
+       declared_size_bytes, variant_long_edges)
+     values ($1, $2, $3, $4, 'cover_only', 1600, 900, 0.5, 0.5, 1, 90000, '{1280,480}')`,
+    [
+      input.mediaAssetId,
+      input.owner,
+      input.objectId,
+      `derivatives/${input.mediaAssetId}/1.webp`,
+    ],
+  );
 }
 
 test.describe("object setup", () => {
   let pool: Pool;
-  test.beforeAll(() => {
+  let fixture: Fixture | null = null;
+  test.beforeAll(async () => {
     pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+    fixture = await seedFixture(pool);
   });
   test.afterAll(async () => {
+    await cleanupFixture(pool, fixture);
     await pool.end();
   });
 
-  test("a first-time gardener at 320 px: own name, a space made on the way, one object", async ({
+  test("the full run: an animal, a photo cropped and turned, «Рябка», «курка», a new breed «Брама» — which the next gardener sees at once", async ({
     browser,
     baseURL,
   }, testInfo) => {
-    const context = await browser.newContext();
-    let userId: string | null = null;
+    test.setTimeout(180_000);
+    const f = fixture!;
+    const first = await gardener(browser, baseURL!, pool, "ove524-full");
+    let second: Awaited<ReturnType<typeof gardener>> | null = null;
     try {
-      userId = (
-        await signInSyntheticGardener({
-          baseURL: baseURL!,
-          context,
-          pool,
-          prefix: "ove485-first",
-        })
-      ).id;
-      await context.addCookies([
-        { name: LOCALE_COOKIE, value: "uk", url: baseURL! },
-      ]);
-      const page = await context.newPage();
-      await page.setViewportSize({ width: 320, height: 720 });
-      const flow = await openFlow(page);
-      await expectReflow(page);
+      const spaceId = await createSpace(
+        first.context.request,
+        baseURL!,
+        "Двір",
+      );
+      const staging = await fakeStaging(first.context, async () => "stage");
+      // The create request is read, then sent on without the photo: its claim
+      // needs the real Worker's receipts, which `route.test.ts` and
+      // `schema:object-species:prove-database` prove instead.
+      let sent = null as Record<string, unknown> | null;
+      await first.context.route("**/api/garden/objects", async (route) => {
+        if (route.request().method() !== "POST") return route.continue();
+        const body = route.request().postDataJSON() as Record<string, unknown>;
+        sent = body;
+        await route.continue({
+          postData: JSON.stringify({ ...body, photo: null }),
+        });
+      });
 
-      // Kind: plant is the default; the question is answered with Next.
-      await flow.getByRole("button", { name: "Далі" }).click();
-      const nameSection = flow.locator('[data-object-setup-section="name"]');
-      await expect(nameSection).toHaveAttribute("data-state", "active");
-      // Next with no name: an error, and the step stays open.
-      await nameSection.getByRole("button", { name: "Далі" }).click();
+      const page = await first.context.newPage();
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await page.setViewportSize({ width: 1280, height: 900 });
+      const stepper = await openStepper(page);
+
+      // 1 · «Простір»: the one space is chosen, and «Далі» and «Додати
+      // простір» are both there.
+      await expect(question(stepper)).toHaveText("Простір");
+      await expect(progress(stepper)).toHaveText("Крок 1 з 5");
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-object-setup-space",
+        spaceId,
+      );
       await expect(
-        nameSection.locator('[data-object-setup-error="name"]'),
-      ).toBeVisible();
-      const name = nameSection.getByRole("combobox");
-      await name.fill("Томат на підвіконні");
-      await nameSection.getByRole("button", { name: "Далі" }).click();
+        stepper.locator('[data-object-setup-add-space="true"]'),
+      ).toHaveText("Додати простір");
+      await scanAccessibility(page, testInfo, "object-setup-space-1280");
+      await page.screenshot({ path: testInfo.outputPath("1-space-1280.png") });
+      await primary(stepper).click();
 
-      // No space yet: the space stepper, then back here with the new space
-      // selected (`?space=`, ADR-0035 D1).
-      const spaceSection = flow.locator('[data-object-setup-section="space"]');
-      await expect(spaceSection).toHaveAttribute("data-state", "active");
-      await spaceSection
-        .locator('[data-object-setup-new-space="true"]')
-        .click();
-      await page.waitForURL("**/garden/spaces/new?returnTo=**");
+      // 2 · a choice answers and moves on.
+      await expect(question(stepper)).toHaveText("Рослина чи тварина?");
+      await page.screenshot({ path: testInfo.outputPath("2-kind-1280.png") });
+      await stepper.locator('[data-object-setup-kind="animal"]').click();
+      await page.waitForURL(/step=photo/u);
+
+      // 3 · the photo, cropped to the cover and turned a quarter.
+      await expect(question(stepper)).toHaveText("Додайте фото тварини");
+      await expect(progress(stepper)).toHaveText("Крок 3 з 5");
+      await stepper.locator('[data-owned-photo-input="true"]').setInputFiles({
+        name: "ryabka.jpg",
+        mimeType: "image/jpeg",
+        buffer: await photograph(page, "portrait", "image/jpeg"),
+      });
+      const frame = stepper.locator('[data-photo-crop-frame="true"]');
+      await expect(frame).toBeVisible();
+      await expect(
+        stepper.locator('[data-photo-crop-done="true"]'),
+      ).toBeEnabled();
+      await frame.focus();
+      await page.keyboard.press("r");
+      await expect(frame).toHaveAttribute("data-crop-turns", "1");
+      await stepper.getByRole("button", { name: "Готово" }).click();
+      await expect(
+        stepper.locator("[data-owned-photo-status]"),
+      ).toHaveAttribute("data-owned-photo-status", "ready", {
+        timeout: 30_000,
+      });
+      await page.screenshot({ path: testInfo.outputPath("3-photo-1280.png") });
+      await primary(stepper).click();
+
+      // 4 · the name.
+      await expect(question(stepper)).toHaveText("Вкажіть ім'я тварини");
+      const name = stepper.locator('[data-object-setup-name="true"]');
+      await expect(name).toHaveAttribute("placeholder", "Рябка");
+      await name.fill("Рябка");
+      await page.screenshot({ path: testInfo.outputPath("4-name-1280.png") });
+      await page.keyboard.press("Enter");
+
+      // 5 · «Вид»: «Не знаю» until the gardener says otherwise; «курка»
+      // finds the species by its everyday name.
+      await expect(question(stepper)).toHaveText("Вид");
+      await expect(progress(stepper)).toHaveText("Крок 5 з 5");
+      await expect(primary(stepper)).toHaveText("Додати");
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      const search = stepper.locator(
+        '[data-object-setup-species-search="true"]',
+      );
+      await expect(search).toHaveAttribute("placeholder", "Наприклад, курка");
+      await search.fill("курка");
+      const chicken = stepper.locator(`[data-species-id="${f.chicken}"]`);
+      await expect(chicken).toBeVisible();
+      await expect(chicken).toContainText("Gallus gallus domesticus");
+      await scanAccessibility(page, testInfo, "object-setup-species-1280");
+      await page.screenshot({
+        path: testInfo.outputPath("5-species-1280.png"),
+      });
+      await chicken.click();
+      // A species adds «Порода» to this run.
+      await expect(progress(stepper)).toHaveText("Крок 5 з 6");
+      await expect(primary(stepper)).toHaveText("Далі");
+      await primary(stepper).click();
+
+      // 6 · «Порода»: «Не знаю» and no hint; «Брама» typed and added.
+      await expect(question(stepper)).toHaveText("Порода");
+      await expect(progress(stepper)).toHaveText("Крок 6 з 6");
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      const breed = stepper.locator(
+        '[data-object-setup-cultivar-search="true"]',
+      );
+      await expect(breed).not.toHaveAttribute("placeholder", /.+/u);
+      await breed.fill("Брама");
+      const add = stepper.locator('[data-cultivar-add="true"]');
+      await expect(add).toHaveText(/Додати «Брама»/u);
+      await add.click();
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "add",
+      );
+      await page.screenshot({ path: testInfo.outputPath("6-breed-1280.png") });
+      await primary(stepper).click();
+      await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u);
+      const objectId = new URL(page.url()).pathname.split("/").at(-1)!;
+
+      // Exactly what was chosen, with the staged photo's receipts.
+      expect(sent).not.toBeNull();
+      expect(sent!.species).toEqual({
+        kind: "catalog",
+        catalogItemId: f.chicken,
+      });
+      expect(sent!.cultivar).toEqual({ kind: "new", name: "Брама" });
+      const staged = staging.uploads.filter((upload) => upload.status === 200);
+      const primaryUpload = staged.find((upload) => upload.variant === 0)!;
+      expect(primaryUpload.width / primaryUpload.height).toBeCloseTo(16 / 9, 1);
+      const photo = sent!.photo as Record<string, unknown>;
+      expect(photo.mediaAssetId).toBe(primaryUpload.mediaAssetId);
+
+      // One shared, unreviewed breed entry, and the object on it.
+      const entries = await gardenerEntries(pool, f.chicken);
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        canonical_name: "Брама",
+        created_by_user_id: first.user.id,
+        reviewed_at: null,
+        node_kind: "breed",
+      });
+      expect(await objectsOf(pool, first.user.id)).toEqual([
+        expect.objectContaining({
+          id: objectId,
+          display_name: "Рябка",
+          object_kind: "animal",
+          space_id: spaceId,
+          catalog_item_id: entries[0]!.id,
+          variety_state: "selected",
+          variety_text: "Брама",
+          species_text: null,
+        }),
+      ]);
+
+      // The photo the claim would write is the passport's cover.
+      await insertObjectPhoto(pool, {
+        owner: first.user.id,
+        objectId,
+        mediaAssetId: primaryUpload.mediaAssetId,
+      });
+      await page.goto(`/garden/objects/${objectId}`, { waitUntil: "load" });
+      await expect(
+        page.getByRole("img", { name: "Рябка" }).first(),
+      ).toHaveAttribute("src", new RegExp(primaryUpload.mediaAssetId, "u"));
+      await page.screenshot({ path: testInfo.outputPath("7-object-1280.png") });
+      expect(errors).toEqual([]);
+
+      // The next gardener: «Брама» is on the chicken's list without typing.
+      second = await gardener(browser, baseURL!, pool, "ove524-second");
+      const secondSpace = await createSpace(
+        second.context.request,
+        baseURL!,
+        "Курник",
+      );
+      const secondPage = await second.context.newPage();
+      const next = await openStepper(secondPage, `?space=${secondSpace}`);
+      // Started inside a space: «Простір» is not asked or counted.
+      await expect(question(next)).toHaveText("Рослина чи тварина?");
+      await expect(progress(next)).toHaveText("Крок 1 з 4");
+      await next.locator('[data-object-setup-kind="animal"]').click();
+      await next.getByRole("button", { name: "Пропустити" }).click();
+      await next.locator('[data-object-setup-name="true"]').fill("Чорнушка");
+      await secondPage.keyboard.press("Enter");
+      await next
+        .locator('[data-object-setup-species-search="true"]')
+        .fill("кури");
+      await next.locator(`[data-species-id="${f.chicken}"]`).click();
+      await primary(next).click();
+      const shared = next.locator(`[data-cultivar-id="${entries[0]!.id}"]`);
+      await expect(shared).toHaveText(/Брама/u);
+      await shared.click();
+      await primary(next).click();
+      await secondPage.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u);
+      expect((await objectsOf(pool, second.user.id))[0]!.catalog_item_id).toBe(
+        entries[0]!.id,
+      );
+      expect(await gardenerEntries(pool, f.chicken)).toHaveLength(1);
+    } finally {
+      await cleanupCollection(pool, first.user.id);
+      await first.context.close();
+      if (second) {
+        await cleanupCollection(pool, second.user.id);
+        await second.context.close();
+      }
+    }
+  });
+
+  test("no space yet: the space stepper first, then step 1 with the new space chosen; leaving it goes home", async ({
+    browser,
+    baseURL,
+  }) => {
+    const { context, user } = await gardener(
+      browser,
+      baseURL!,
+      pool,
+      "ove524-nospace",
+    );
+    try {
+      const page = await context.newPage();
+      await page.goto("/garden/objects/new", { waitUntil: "load" });
+      await page.waitForURL(/\/garden\/spaces\/new\?returnTo=/u);
+
+      // Leaving the space stepper does not bounce back here.
+      const spaceStepper = page.locator('[data-creation-stepper="true"]');
+      await waitForHydration(spaceStepper);
+      await spaceStepper.locator('[data-creation-close="true"]').click();
+      await page.waitForURL((url) => url.pathname === "/garden");
+
+      await page.goto("/garden/objects/new", { waitUntil: "load" });
+      await page.waitForURL(/\/garden\/spaces\/new\?returnTo=/u);
+      await waitForHydration(spaceStepper);
+      await spaceStepper.getByLabel("Назва простору").fill("Теплиця");
+      await page.keyboard.press("Enter");
+      await spaceStepper.getByRole("button", { name: "Пропустити" }).click();
+      await page.waitForURL(/\/garden\/objects\/new\?from=space-setup/u);
+      const created = (
+        await pool.query<{ id: string }>(
+          "select id from spaces where owner_user_id = $1",
+          [user.id],
+        )
+      ).rows;
+      expect(created).toHaveLength(1);
       const stepper = page.locator('[data-creation-stepper="true"]');
       await waitForHydration(stepper);
-      await stepper.getByLabel("Назва простору").fill("Підвіконня");
-      await page.keyboard.press("Enter");
-      await stepper.getByRole("button", { name: "Пропустити" }).click();
-      await page.waitForURL(/\/garden\/objects\/new\?space=/u);
-      const back = await openFlow(page, new URL(page.url()).search);
-      await back.getByRole("button", { name: "Далі" }).click();
-      const renamed = back.locator('[data-object-setup-section="name"]');
-      await renamed.getByRole("combobox").fill("Томат на підвіконні");
-      await renamed.getByRole("button", { name: "Далі" }).click();
-      const chosen = back.locator('[data-object-setup-section="space"]');
-      await expect(chosen).toContainText("Підвіконня");
-
-      await chosen.getByRole("button", { name: "Далі" }).click();
-      const review = back.locator('[data-object-setup-section="review"]');
-      await expect(review).toHaveAttribute("data-state", "active");
-      await expect(review.locator("[data-object-setup-review]")).toContainText(
-        "Ще не визначено",
+      await expect(question(stepper)).toHaveText("Простір");
+      await expect(progress(stepper)).toHaveText("Крок 1 з 5");
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-object-setup-space",
+        created[0]!.id,
       );
-      await expect(review).toContainText("нічого не публікує");
-      await scanAccessibility(page, testInfo, "object-setup-review-320");
-      await review.locator('[data-object-setup-submit="true"]').click();
+    } finally {
+      await cleanupCollection(pool, user.id);
+      await context.close();
+    }
+  });
 
-      const result = page.locator('[data-object-setup-result="created"]');
-      await expect(result).toBeVisible();
-      await expect(result).toBeFocused();
-      const objectId = await result.getAttribute("data-object-id");
+  test("one space with a photo: shown with it and chosen; «Додати простір» comes back with the new one chosen", async ({
+    browser,
+    baseURL,
+  }, testInfo) => {
+    test.setTimeout(90_000);
+    const { context, user } = await gardener(
+      browser,
+      baseURL!,
+      pool,
+      "ove524-onespace",
+    );
+    try {
+      const spaceId = await createSpace(context.request, baseURL!, "Балкон");
+      const photoId = randomUUID();
+      await pool.query(
+        `insert into media_assets (id, owner_user_id, space_id, derivative_key, usage_role,
+           intrinsic_width, intrinsic_height, focal_x, focal_y, upload_generation,
+           declared_size_bytes, variant_long_edges)
+         values ($1, $2, $3, $4, 'cover_only', 1600, 900, 0.5, 0.5, 1, 90000, '{1280,480}')`,
+        [photoId, user.id, spaceId, `derivatives/${photoId}/1.webp`],
+      );
+      const page = await context.newPage();
+      await page.setViewportSize({ width: 375, height: 740 });
+      const stepper = await openStepper(page);
+      await expectReflow(page);
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-object-setup-space",
+        spaceId,
+      );
       await expect(
-        result.locator('[data-object-setup-write="true"]'),
-      ).toHaveAttribute(
-        "href",
-        `/garden/objects/${objectId}#follow-up-composer`,
-      );
+        stepper.locator('[data-object-setup-space-photo="true"]'),
+      ).toHaveAttribute("srcset", /480w/u);
+      await expect(primary(stepper)).toHaveText("Далі");
+      await scanAccessibility(page, testInfo, "object-setup-one-space-375");
+      await page.screenshot({ path: testInfo.outputPath("one-space-375.png") });
 
-      const [space] = await spacesOf(pool, userId);
-      expect(space?.display_name).toBe("Підвіконня");
-      expect(await objectsOf(pool, userId)).toEqual([
-        {
-          id: objectId,
-          display_name: "Томат на підвіконні",
-          object_kind: "plant",
-          space_id: space!.id,
+      await stepper.locator('[data-object-setup-add-space="true"]').click();
+      await page.waitForURL(/\/garden\/spaces\/new\?returnTo=/u);
+      const spaceStepper = page.locator('[data-creation-stepper="true"]');
+      await waitForHydration(spaceStepper);
+      await spaceStepper.getByLabel("Назва простору").fill("Теплиця");
+      await page.keyboard.press("Enter");
+      await spaceStepper.getByRole("button", { name: "Пропустити" }).click();
+      await page.waitForURL(/\/garden\/objects\/new\?from=space-setup/u);
+      await waitForHydration(stepper);
+      const greenhouse = (
+        await pool.query<{ id: string }>(
+          "select id from spaces where owner_user_id = $1 and display_name = 'Теплиця'",
+          [user.id],
+        )
+      ).rows[0]!.id;
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-object-setup-space",
+        greenhouse,
+      );
+      await expect(stepper.locator("[data-object-setup-space]")).toHaveCount(2);
+    } finally {
+      await pool.query("delete from media_assets where owner_user_id = $1", [
+        user.id,
+      ]);
+      await cleanupCollection(pool, user.id);
+      await context.close();
+    }
+  });
+
+  test("«Не знаю» for the species, then an own species with an own cultivar, Back keeping every answer — at 375 px", async ({
+    browser,
+    baseURL,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const f = fixture!;
+    const { context, user } = await gardener(
+      browser,
+      baseURL!,
+      pool,
+      "ove524-own",
+    );
+    try {
+      const spaceId = await createSpace(context.request, baseURL!, "Город");
+      const page = await context.newPage();
+      await page.setViewportSize({ width: 375, height: 740 });
+
+      // «Не знаю»: no «Сорт» step and the count says so; «Додати» without
+      // touching anything.
+      let stepper = await openStepper(page, `?space=${spaceId}`);
+      await stepper.locator('[data-object-setup-kind="plant"]').click();
+      await stepper.getByRole("button", { name: "Пропустити" }).click();
+      await stepper
+        .locator('[data-object-setup-name="true"]')
+        .fill("Щось зелене");
+      await page.keyboard.press("Enter");
+      await expect(question(stepper)).toHaveText("Вид");
+      await expect(progress(stepper)).toHaveText("Крок 4 з 4");
+      await expect(
+        stepper.locator('[data-object-setup-species-search="true"]'),
+      ).toHaveAttribute("placeholder", "Наприклад, помідор");
+      await expectReflow(page);
+      // A phone's keyboard shrinks the viewport; the frame follows it, so the
+      // step's button stays in view.
+      await page.setViewportSize({ width: 375, height: 420 });
+      await stepper
+        .locator('[data-object-setup-species-search="true"]')
+        .focus();
+      await expect(primary(stepper)).toBeInViewport();
+      await page.setViewportSize({ width: 375, height: 740 });
+      await primary(stepper).click();
+      await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u);
+      expect(await objectsOf(pool, user.id)).toEqual([
+        expect.objectContaining({
+          display_name: "Щось зелене",
           catalog_item_id: null,
           variety_state: "unknown",
+          species_text: null,
           variety_text: null,
-        },
+        }),
       ]);
-      // Adding an object publishes nothing.
+
+      // An own species: «Сорт» becomes a private text field or «Не знаю».
+      stepper = await openStepper(page, `?space=${spaceId}`);
+      await stepper.locator('[data-object-setup-kind="plant"]').click();
+      await stepper.getByRole("button", { name: "Пропустити" }).click();
+      const name = stepper.locator('[data-object-setup-name="true"]');
+      await name.fill("Бабусині помідори");
+      await page.keyboard.press("Enter");
+      // Back returns to the name, and it is still there.
+      await page.goBack();
+      await expect(question(stepper)).toHaveText("Вкажіть ім'я рослини");
+      await expect(name).toHaveValue("Бабусині помідори");
+      await name.press("Enter");
+      await stepper.locator('[data-choice-option="own"]').click();
+      const own = stepper.locator('[data-object-setup-species-own="true"]');
+      await expect(own).toBeFocused();
+      await own.fill("Помідор бабусин");
+      await expect(progress(stepper)).toHaveText("Крок 4 з 5");
+      await primary(stepper).click();
+      await expect(question(stepper)).toHaveText("Сорт");
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      await stepper.locator('[data-choice-option="own"]').click();
+      await stepper
+        .locator('[data-object-setup-cultivar-own="true"]')
+        .fill("Рожевий");
+      await scanAccessibility(page, testInfo, "object-setup-own-cultivar-375");
+      await page.screenshot({
+        path: testInfo.outputPath("own-cultivar-375.png"),
+      });
+      await primary(stepper).click();
+      await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u);
+      const ownObject = (await objectsOf(pool, user.id)).at(-1)!;
+      expect(ownObject).toMatchObject({
+        display_name: "Бабусині помідори",
+        catalog_item_id: null,
+        variety_state: "own",
+        variety_text: "Рожевий",
+        species_text: "Помідор бабусин",
+      });
+      // The owner sees their own words; nobody else does.
+      await expect(
+        page.locator('main[data-workspace-surface="object"]'),
+      ).toContainText("Помідор бабусин · Рожевий");
+
+      // A species from the base: «Сорт» opens on «Не знаю», and «Додати»
+      // works without touching it.
+      stepper = await openStepper(page, `?space=${spaceId}`);
+      await stepper.locator('[data-object-setup-kind="plant"]').click();
+      await stepper.getByRole("button", { name: "Пропустити" }).click();
+      await stepper
+        .locator('[data-object-setup-name="true"]')
+        .fill("Томат на грядці");
+      await page.keyboard.press("Enter");
+      await stepper
+        .locator('[data-object-setup-species-search="true"]')
+        .fill("томат");
+      await stepper.locator(`[data-species-id="${f.tomato}"]`).click();
+      await primary(stepper).click();
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      await primary(stepper).click();
+      await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u);
+      expect((await objectsOf(pool, user.id)).at(-1)).toMatchObject({
+        catalog_item_id: f.tomato,
+        variety_state: "selected",
+        species_text: null,
+      });
+    } finally {
+      await cleanupCollection(pool, user.id);
+      await context.close();
+    }
+  });
+
+  test("the species search: everyday words find the base first, nothing outside it, Enter takes only a highlighted row, a failed search keeps both answers", async ({
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(120_000);
+    const f = fixture!;
+    const { context, user } = await gardener(
+      browser,
+      baseURL!,
+      pool,
+      "ove524-search",
+    );
+    try {
+      const spaceId = await createSpace(context.request, baseURL!, "Грядка");
+      const page = await context.newPage();
+      const stepper = await openStepper(page, `?space=${spaceId}`);
+      await stepper.locator('[data-object-setup-kind="plant"]').click();
+      await stepper.getByRole("button", { name: "Пропустити" }).click();
+      await stepper.locator('[data-object-setup-name="true"]').fill("Перша");
+      await page.keyboard.press("Enter");
+      const search = stepper.locator(
+        '[data-object-setup-species-search="true"]',
+      );
+      const firstFound = stepper.locator("[data-species-id]").first();
+
+      for (const [word, id] of [
+        ["полуниця", f.strawberry],
+        ["болгарський перець", f.pepper],
+        ["кабачок", f.zucchini],
+      ] as const) {
+        await search.fill(word);
+        await expect(firstFound).toHaveAttribute("data-species-id", id);
+      }
+
+      // Outside the base: nothing is offered, and the own variant takes it.
+      await search.fill("вовк сірий");
+      await expect(stepper.locator("[data-choice-status]")).toHaveAttribute(
+        "data-choice-status",
+        "empty",
+      );
+      await expect(
+        stepper.locator(`[data-species-id="${f.wolf}"]`),
+      ).toHaveCount(0);
+      await expect(stepper.locator('[data-choice-option="own"]')).toBeVisible();
+
+      // Enter with nothing highlighted takes nothing and moves nowhere.
+      await search.fill("помідор");
+      await expect(
+        stepper.locator(`[data-species-id="${f.tomato}"]`),
+      ).toBeVisible();
+      await search.press("Enter");
+      await expect(page).toHaveURL(/step=species/u);
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      // Highlighted with the arrows, it is taken.
+      await search.press("ArrowDown");
+      await search.press("ArrowDown");
+      await search.press("Enter");
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        `species:${f.tomato}`,
+      );
+
+      // A search that fails says so; «Не знаю» and the own variant work.
+      await page.route("**/api/public/catalog/species**", (route) =>
+        route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({ suggestions: [], state: "unavailable" }),
+        }),
+      );
+      await search.fill("кабачки");
+      await expect(stepper.locator("[data-choice-status]")).toHaveText(
+        "Пошук зараз недоступний. Можна ввести свій варіант або вибрати «Не знаю».",
+      );
+      await stepper.locator('[data-choice-option="unknown"]').click();
+      await expect(selected(stepper)).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      await stepper.locator('[data-choice-option="own"]').click();
+      await expect(
+        stepper.locator('[data-object-setup-species-own="true"]'),
+      ).toHaveValue("кабачки");
+    } finally {
+      await cleanupCollection(pool, user.id);
+      await context.close();
+    }
+  });
+
+  test("the cultivar list: only what objects use and gardeners added; a matching name reuses the entry", async ({
+    browser,
+    baseURL,
+  }) => {
+    test.setTimeout(90_000);
+    const f = fixture!;
+    const { context, user } = await gardener(
+      browser,
+      baseURL!,
+      pool,
+      "ove524-list",
+    );
+    try {
+      const spaceId = await createSpace(context.request, baseURL!, "Теплиця");
+      const page = await context.newPage();
+      const stepper = await openStepper(page, `?space=${spaceId}`);
+      await stepper.locator('[data-object-setup-kind="plant"]').click();
+      await stepper.getByRole("button", { name: "Пропустити" }).click();
+      await stepper.locator('[data-object-setup-name="true"]').fill("Серце");
+      await page.keyboard.press("Enter");
+      await stepper
+        .locator('[data-object-setup-species-search="true"]')
+        .fill("помідор");
+      await stepper.locator(`[data-species-id="${f.tomato}"]`).click();
+      await primary(stepper).click();
+
+      await expect(
+        stepper.locator(`[data-cultivar-id="${f.oxheart}"]`),
+      ).toBeVisible();
+      await expect(
+        stepper.locator(`[data-cultivar-id="${f.barao}"]`),
+      ).toHaveCount(0);
+      const filter = stepper.locator(
+        '[data-object-setup-cultivar-search="true"]',
+      );
+      await filter.fill("бичаче серце");
+      await expect(
+        stepper.locator("[data-cultivar-id]").first(),
+      ).toHaveAttribute("data-cultivar-id", f.oxheart);
+      await expect(stepper.locator('[data-cultivar-add="true"]')).toHaveCount(
+        0,
+      );
+      // A typo still finds it.
+      await filter.fill("бичаче серцк");
+      await expect(
+        stepper.locator(`[data-cultivar-id="${f.oxheart}"]`),
+      ).toBeVisible();
+      await stepper.locator(`[data-cultivar-id="${f.oxheart}"]`).click();
+      await primary(stepper).click();
+      await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u);
+      expect((await objectsOf(pool, user.id))[0]!.catalog_item_id).toBe(
+        f.oxheart,
+      );
+      expect(await gardenerEntries(pool, f.tomato)).toEqual([]);
+    } finally {
+      await cleanupCollection(pool, user.id);
+      await context.close();
+    }
+  });
+
+  test("settings: an object without a photo gets one, it is the cover; replaced, then removed with its files queued", async ({
+    browser,
+    baseURL,
+  }, testInfo) => {
+    test.setTimeout(120_000);
+    const { context, user } = await gardener(
+      browser,
+      baseURL!,
+      pool,
+      "ove524-settings",
+    );
+    try {
+      const spaceId = await createSpace(context.request, baseURL!, "Пасіка");
+      const objectId = randomUUID();
+      const created = await context.request.post(
+        `${baseURL}/api/garden/objects`,
+        {
+          data: {
+            requestId: objectId,
+            objectKind: "animal",
+            displayName: "Вулик 1",
+            spaceId,
+          },
+        },
+      );
+      expect(created.status()).toBe(201);
+      await fakeStaging(context, async () => "stage");
+      // The save is read; the row the server's claim would write is written
+      // here (replacing the previous one, as the server does), and the page is
+      // told it was saved.
+      const saved: string[] = [];
+      await context.route(
+        `**/api/garden/objects/${objectId}/photo`,
+        async (route) => {
+          if (route.request().method() !== "PUT") return route.continue();
+          const photo = (
+            route.request().postDataJSON() as { photo: Record<string, unknown> }
+          ).photo;
+          const mediaAssetId = photo.mediaAssetId as string;
+          saved.push(mediaAssetId);
+          await pool.query(
+            "delete from media_assets where plant_object_id = $1",
+            [objectId],
+          );
+          await insertObjectPhoto(pool, {
+            owner: user.id,
+            objectId,
+            mediaAssetId,
+          });
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({ status: "saved" }),
+          });
+        },
+      );
+
+      const page = await context.newPage();
+      const errors: string[] = [];
+      page.on("pageerror", (error) => errors.push(error.message));
+      await page.goto(`/garden/objects/${objectId}/settings`, {
+        waitUntil: "load",
+      });
+      const settings = page.locator("[data-object-photo-settings]");
+      await waitForHydration(settings);
+      for (const orientation of ["landscape", "portrait"] as const) {
+        const file = {
+          name: `${orientation}.png`,
+          mimeType: "image/png",
+          buffer: await photograph(page, orientation, "image/png"),
+        };
+        if (orientation === "landscape") {
+          // No photo yet: the field offers to add one.
+          await settings
+            .locator('[data-owned-photo-input="true"]')
+            .setInputFiles(file);
+        } else {
+          // «Замінити» opens the same editor for the next one.
+          const [chooser] = await Promise.all([
+            page.waitForEvent("filechooser"),
+            settings.getByRole("button", { name: "Замінити" }).click(),
+          ]);
+          await chooser.setFiles(file);
+        }
+        await expect(
+          settings.locator('[data-photo-crop-done="true"]'),
+        ).toBeEnabled({
+          timeout: 20_000,
+        });
+        await settings.getByRole("button", { name: "Готово" }).click();
+        const expected = orientation === "landscape" ? 1 : 2;
+        await expect
+          .poll(() => saved.length, { timeout: 30_000 })
+          .toBe(expected);
+        await expect(settings).toHaveAttribute(
+          "data-object-photo-settings",
+          "saved",
+        );
+      }
+      await expect(
+        settings.locator('[data-owned-photo-preview="true"]'),
+      ).toHaveAttribute("srcset", /480w/u);
+      await scanAccessibility(page, testInfo, "object-settings-photo");
+
+      await page.goto(`/garden/objects/${objectId}`, { waitUntil: "load" });
+      await expect(
+        page.getByRole("img", { name: "Вулик 1" }).first(),
+      ).toHaveAttribute("src", new RegExp(saved[1]!, "u"));
+
+      // «Прибрати» takes it away through the real route, files and all.
+      await page.goto(`/garden/objects/${objectId}/settings`, {
+        waitUntil: "load",
+      });
+      await waitForHydration(settings);
+      await settings.getByRole("button", { name: "Прибрати" }).click();
+      await expect(settings).toHaveAttribute(
+        "data-object-photo-settings",
+        "removed",
+      );
       expect(
         (
           await pool.query(
-            "select count(*)::int as n from journal_entries where owner_user_id = $1",
-            [userId],
+            "select 1 from media_assets where plant_object_id = $1",
+            [objectId],
           )
-        ).rows[0].n,
-      ).toBe(0);
-    } finally {
-      if (userId) await cleanupCollection(pool, userId);
-      await context.close();
-    }
-  });
-
-  test("a returning gardener with 20 spaces: an animal, the right space, a same-name warning", async ({
-    browser,
-    baseURL,
-  }) => {
-    const context = await browser.newContext();
-    let userId: string | null = null;
-    try {
-      userId = (
-        await signInSyntheticGardener({
-          baseURL: baseURL!,
-          context,
-          pool,
-          prefix: "ove485-many",
-        })
-      ).id;
-      const spaceIds: string[] = [];
-      for (let index = 1; index <= 20; index += 1) {
-        const id = randomUUID();
-        spaceIds.push(id);
-        await pool.query(
-          "insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)",
-          [id, userId, `Двір ${String(index).padStart(2, "0")}`],
-        );
-      }
-      await pool.query(
-        `insert into plant_objects (owner_user_id, space_id, display_name, object_kind)
-         values ($1, $2, 'Кури', 'animal')`,
-        [userId, spaceIds[16]],
+        ).rows,
+      ).toEqual([]);
+      const revokes = await pool.query<{ reason: string }>(
+        `select payload->>'reason' as reason from job_queue
+          where payload->>'kind' = 'media_derivative_revoke'
+            and payload::text like '%' || $1 || '%'`,
+        [saved[1]],
       );
-      await context.addCookies([
-        { name: LOCALE_COOKIE, value: "ru", url: baseURL! },
+      expect(revokes.rows.length).toBeGreaterThan(0);
+      await pool.query(
+        `delete from job_queue where payload::text like '%' || $1 || '%'`,
+        [saved[1]],
+      );
+      await page.goto(`/garden/objects/${objectId}`, { waitUntil: "load" });
+      await expect(page.getByRole("img", { name: "Вулик 1" })).toHaveCount(0);
+      expect(errors).toEqual([]);
+    } finally {
+      await pool.query("delete from media_assets where owner_user_id = $1", [
+        user.id,
       ]);
-      const page = await context.newPage();
-      const flow = await openFlow(page);
-
-      await flow.getByRole("radio", { name: /^Животное/u }).check();
-      await expect(
-        flow.getByRole("radio", { name: /^Животное/u }),
-      ).toBeChecked();
-      await flow.getByRole("button", { name: "Далее" }).click();
-      await flow
-        .locator('[data-object-setup-section="name"]')
-        .getByRole("combobox")
-        .fill("Кури");
-      await flow
-        .locator('[data-object-setup-section="name"]')
-        .getByRole("button", { name: "Далее" })
-        .click();
-
-      // Twenty spaces: find the seventeenth by typing, choose it.
-      const spaceSection = flow.locator('[data-object-setup-section="space"]');
-      const picker = spaceSection.getByRole("combobox");
-      await picker.fill("Двір 17");
-      await spaceSection
-        .getByRole("option", { name: /Двір 17/u })
-        .first()
-        .click();
-      await spaceSection.getByRole("button", { name: "Далее" }).click();
-      await flow.locator('[data-object-setup-submit="true"]').click();
-
-      // The same name in the same space is asked about, not refused.
-      const duplicate = flow.locator('[data-object-setup-outcome="duplicate"]');
-      await expect(duplicate).toBeVisible();
-      await expect(duplicate).toContainText("Двір 17");
-      expect(await objectsOf(pool, userId)).toHaveLength(1);
-      await duplicate
-        .getByRole("button", { name: "Добавить ещё одно" })
-        .click();
-      const result = page.locator('[data-object-setup-result="created"]');
-      await expect(result).toBeVisible();
-
-      const objects = await objectsOf(pool, userId);
-      expect(objects).toHaveLength(2);
-      expect(objects[1]).toMatchObject({
-        id: await result.getAttribute("data-object-id"),
-        display_name: "Кури",
-        object_kind: "animal",
-        space_id: spaceIds[16],
-      });
-    } finally {
-      if (userId) await cleanupCollection(pool, userId);
+      await cleanupCollection(pool, user.id);
       await context.close();
     }
   });
 
-  test("the endpoint: one object per intent, and every refusal is a status", async ({
+  test("the endpoint: one object per intent, one entry per name, and every refusal is a status", async ({
     browser,
     baseURL,
   }) => {
-    const context = await browser.newContext();
-    const stranger = await browser.newContext();
-    const guest = await browser.newContext();
-    let userId: string | null = null;
-    let strangerId: string | null = null;
+    const f = fixture!;
+    const first = await gardener(browser, baseURL!, pool, "ove524-api");
+    const second = await gardener(browser, baseURL!, pool, "ove524-api2");
     try {
-      userId = (
-        await signInSyntheticGardener({
-          baseURL: baseURL!,
-          context,
-          pool,
-          prefix: "ove485-api",
-        })
-      ).id;
-      strangerId = (
-        await signInSyntheticGardener({
-          baseURL: baseURL!,
-          context: stranger,
-          pool,
-          prefix: "ove485-stranger",
-        })
-      ).id;
-      const spaceId = randomUUID();
-      const strangerSpaceId = randomUUID();
-      await pool.query(
-        "insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Сад'), ($3, $4, 'Чужий сад')",
-        [spaceId, userId, strangerSpaceId, strangerId],
+      const spaceId = await createSpace(
+        first.context.request,
+        baseURL!,
+        "Двір",
       );
-      const endpoint = `${baseURL}/api/garden/objects`;
+      const otherSpace = await createSpace(
+        second.context.request,
+        baseURL!,
+        "Двір",
+      );
+      const post = (context: BrowserContext, data: Record<string, unknown>) =>
+        context.request.post(`${baseURL}/api/garden/objects`, { data });
+      const requestId = randomUUID();
       const body = {
-        requestId: randomUUID(),
-        objectKind: "plant",
-        displayName: "  Яблуня   біла ",
+        requestId,
+        objectKind: "animal",
+        displayName: "Кохінхінка",
         spaceId,
-        catalogItemId: null,
-        catalogLabel: "Біла наливна",
+        species: { kind: "catalog", catalogItemId: f.chicken },
+        cultivar: { kind: "new", name: "Кохінхін" },
       };
-
-      const first = await context.request.post(endpoint, { data: body });
-      expect(first.status()).toBe(201);
-      expect(first.headers()["cache-control"]).toContain("no-store");
-      expect(await first.json()).toMatchObject({
-        status: "created",
-        replayed: false,
-        object: { id: body.requestId, displayName: "Яблуня біла" },
-      });
-      const again = await context.request.post(endpoint, { data: body });
+      expect((await post(first.context, body)).status()).toBe(201);
+      const again = await post(first.context, body);
       expect(again.status()).toBe(200);
-      expect(await again.json()).toMatchObject({ replayed: true });
-      await Promise.all(
-        [0, 1, 2].map(() => context.request.post(endpoint, { data: body })),
-      );
-      const rows = await objectsOf(pool, userId);
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({
-        variety_state: "free_text",
-        variety_text: "Біла наливна",
+      expect(await again.json()).toMatchObject({
+        status: "created",
+        replayed: true,
       });
-
-      // Another gardener's space is not a destination.
-      const foreignSpace = await context.request.post(endpoint, {
-        data: { ...body, requestId: randomUUID(), spaceId: strangerSpaceId },
-      });
-      expect(foreignSpace.status()).toBe(422);
-      expect(await foreignSpace.json()).toEqual({
-        status: "space_unavailable",
-      });
-      // A catalogue id that is not selectable is refused, not linked.
-      const missingIdentity = await context.request.post(endpoint, {
-        data: {
-          ...body,
-          requestId: randomUUID(),
-          displayName: "Інша",
-          catalogItemId: randomUUID(),
-        },
-      });
-      expect(missingIdentity.status()).toBe(422);
-      expect(await missingIdentity.json()).toEqual({
-        status: "identity_unavailable",
-      });
-      const empty = await context.request.post(endpoint, {
-        data: { ...body, requestId: randomUUID(), displayName: " " },
-      });
-      expect(empty.status()).toBe(422);
       expect(
         (
-          await context.request.post(endpoint, {
-            data: { ...body, objectKind: "mineral" },
+          await post(second.context, {
+            ...body,
+            requestId: randomUUID(),
+            spaceId: otherSpace,
+            cultivar: { kind: "new", name: "кохінхін" },
           })
         ).status(),
-      ).toBe(400);
-      // Nobody else can claim the id; a guest cannot write.
-      const claimed = await stranger.request.post(endpoint, {
-        data: { ...body, spaceId: strangerSpaceId },
-      });
-      expect(claimed.status()).toBe(409);
-      expect(await claimed.json()).toEqual({ status: "conflict" });
+      ).toBe(201);
       expect(
-        (await guest.request.post(endpoint, { data: body })).status(),
-      ).toBe(401);
-      expect(await objectsOf(pool, userId)).toHaveLength(1);
-      expect(await objectsOf(pool, strangerId)).toHaveLength(0);
-    } finally {
-      if (userId) await cleanupCollection(pool, userId);
-      if (strangerId) await cleanupCollection(pool, strangerId);
-      await Promise.all([context.close(), stranger.close(), guest.close()]);
-    }
-  });
+        (await gardenerEntries(pool, f.chicken)).filter(
+          (entry) => entry.canonical_name === "Кохінхін",
+        ),
+      ).toHaveLength(1);
 
-  test("a space stepper left half-way writes nothing and returns here, and My garden offers the flow", async ({
-    browser,
-    baseURL,
-  }) => {
-    const context = await browser.newContext();
-    let userId: string | null = null;
-    try {
-      userId = (
-        await signInSyntheticGardener({
-          baseURL: baseURL!,
-          context,
-          pool,
-          prefix: "ove485-cancel",
-        })
-      ).id;
-      await context.addCookies([
-        { name: LOCALE_COOKIE, value: "uk", url: baseURL! },
-      ]);
-      const page = await context.newPage();
-      const flow = await openFlow(page);
-      await flow.getByRole("button", { name: "Далі" }).click();
-      await flow
-        .locator('[data-object-setup-section="name"]')
-        .getByRole("combobox")
-        .fill("Малина");
-      await flow
-        .locator('[data-object-setup-section="name"]')
-        .getByRole("button", { name: "Далі" })
-        .click();
-      await flow.locator('[data-object-setup-new-space="true"]').click();
-      await page.waitForURL("**/garden/spaces/new?returnTo=**");
-      const stepper = page.locator('[data-creation-stepper="true"]');
-      await waitForHydration(stepper);
-      await stepper.getByLabel("Назва простору").fill("Недороблений");
-      // Leaving asks first, then returns to this flow with nothing written.
-      await page.keyboard.press("Escape");
-      await page
-        .locator('[data-space-setup-discard="true"]')
-        .getByRole("button", { name: "Вийти" })
-        .click();
-      await page.waitForURL(/\/garden\/objects\/new$/u);
-      expect(await spacesOf(pool, userId)).toHaveLength(0);
-      const back = await openFlow(page);
-      await back.getByRole("button", { name: "Далі" }).click();
-      await back
-        .locator('[data-object-setup-section="name"]')
-        .getByRole("combobox")
-        .fill("Малина");
-      await back
-        .locator('[data-object-setup-section="name"]')
-        .getByRole("button", { name: "Далі" })
-        .click();
-      // Next without a space: an error, not a request.
-      await back
-        .locator('[data-object-setup-section="space"]')
-        .getByRole("button", { name: "Далі" })
-        .click();
-      await expect(
-        back.locator('[data-object-setup-error="space"]'),
-      ).toBeVisible();
-      expect(await objectsOf(pool, userId)).toHaveLength(0);
-
-      // My garden's inventory offers this flow once there is a garden.
-      await context.request.post(`${baseURL}/api/garden/spaces`, {
-        data: {
+      for (const [label, data, status] of [
+        [
+          "outside the base",
+          { species: { kind: "catalog", catalogItemId: f.wolf } },
+          422,
+        ],
+        [
+          "the other kind",
+          {
+            objectKind: "plant",
+            species: { kind: "catalog", catalogItemId: f.chicken },
+          },
+          422,
+        ],
+        [
+          "another species' entry",
+          {
+            objectKind: "plant",
+            species: { kind: "catalog", catalogItemId: f.tomato },
+            cultivar: { kind: "entry", catalogItemId: f.chicken },
+          },
+          422,
+        ],
+        [
+          "a cultivar without a species",
+          {
+            species: { kind: "unknown" },
+            cultivar: { kind: "new", name: "Брама" },
+          },
+          400,
+        ],
+        [
+          "an own species too long",
+          {
+            species: { kind: "own", text: "я".repeat(121) },
+            cultivar: undefined,
+          },
+          422,
+        ],
+      ] as const) {
+        const response = await post(first.context, {
+          ...body,
           requestId: randomUUID(),
-          displayName: "Сад",
-          locationVisibility: "hidden",
-          coarseRegionCode: null,
-        },
-      });
-      await page.goto("/garden", { waitUntil: "load" });
-      await expect(
-        page
-          .locator(
-            '[data-garden-new-object="true"], [data-garden-inventory-new-object="true"]',
-          )
-          .first(),
-      ).toHaveAttribute("href", "/garden/objects/new");
+          displayName: `Відмова: ${label}`,
+          cultivar: { kind: "unknown" },
+          ...data,
+        });
+        expect(response.status(), label).toBe(status);
+      }
+
+      const forms = await first.context.request.get(
+        `${baseURL}/api/garden/catalog/forms?species=${f.chicken}&kind=animal`,
+      );
+      expect(forms.status()).toBe(200);
+      expect(forms.headers()["cache-control"]).toContain("no-store");
+      const guest = await browser.newContext();
+      const refused = await guest.request.get(
+        `${baseURL}/api/garden/catalog/forms?species=${f.chicken}&kind=animal`,
+      );
+      expect(refused.status()).toBe(401);
+      await guest.close();
     } finally {
-      if (userId) await cleanupCollection(pool, userId);
-      await context.close();
+      await cleanupCollection(pool, first.user.id);
+      await cleanupCollection(pool, second.user.id);
+      await first.context.close();
+      await second.context.close();
     }
   });
 });

@@ -271,17 +271,18 @@ test.describe("a space's own page", () => {
     );
     await page.locator('[data-space-action="add-object"]').click();
     await expect(page).toHaveURL(/\/garden\/objects\/new\?space=/u);
-    const flow = page.locator('[data-object-setup-flow="true"]');
-    await waitForHydration(flow);
-    await flow.getByRole("button", { name: "Напред" }).click();
-    const nameSection = flow.locator('[data-object-setup-section="name"]');
-    await nameSection.getByRole("combobox").fill("Мушкато");
-    await nameSection.getByRole("combobox").press("Escape");
-    await nameSection.getByRole("button", { name: "Напред" }).click();
-    const spaceSection = flow.locator('[data-object-setup-section="space"]');
-    await expect(spaceSection).toContainText("Балкон");
-    await spaceSection.getByRole("button", { name: "Напред" }).click();
-    await flow.locator('[data-object-setup-submit="true"]').click();
+    // Started inside the space: «Пространство» is not asked (OVE-524).
+    const stepper = page.locator('[data-creation-stepper="true"]');
+    await waitForHydration(stepper);
+    await expect(stepper.locator("[data-creation-progress]")).toHaveText(
+      "Стъпка 1 от 4",
+    );
+    await stepper.locator('[data-object-setup-kind="plant"]').click();
+    await stepper.getByRole("button", { name: "Пропусни" }).click();
+    const name = stepper.locator('[data-object-setup-name="true"]');
+    await name.fill("Мушкато");
+    await name.press("Enter");
+    await stepper.locator('[data-creation-primary="true"]').click();
 
     await page.waitForURL(new RegExp(`/garden/spaces/${space.id}`, "u"), {
       timeout: 30_000,

@@ -14,16 +14,18 @@ import {
 import { Pool } from "pg";
 
 /**
- * The gardener picker end to end (OVE-387, ADR-0026 D5–D7), against a
- * production build and a real database:
+ * The gardener picker end to end (OVE-387, ADR-0026 D5–D7; the object
+ * stepper's «Вид» and «Сорт» since OVE-524), against a production build and a
+ * real database:
  *
- *   1. the three outcomes — a species, a form with its species implied, and
- *      "add as my own name" — each published into a gardener's garden and
- *      read back from `plant_objects`;
+ *   1. the three outcomes — a species of the standard base, a cultivar typed
+ *      on «Сорт» that reuses the registered form, and the gardener's own
+ *      species — each published into a gardener's garden and read back from
+ *      `plant_objects`;
  *   2. a keyboard-only run: combobox roles, arrow keys moving
- *      `aria-activedescendant`, Enter picking;
- *   3. the route stubbed to 503: the own-name outcome alone, and the entry
- *      still publishes;
+ *      `aria-activedescendant`, Enter taking only a highlighted row;
+ *   3. the search stubbed to 503: it says so, and the own variant still
+ *      publishes;
  *   4. the object page's control: an own-name object re-resolved to a species;
  *   5. an axe scan of the composer with no violations;
  *   6. search misses recorded with the normalized text.
@@ -99,36 +101,41 @@ test.describe("OVE-387 catalog picker", () => {
       expect(beforeHtml).toContain('data-species-published="false"');
       expect(beforeHtml).toMatch(/name="robots" content="noindex, nofollow"/u);
 
-      // Outcome 1: a species, picked by keyboard alone.
-      await openComposer(page, spaceId);
-      const combobox = pickerCombobox(page);
+      // Outcome 1: a species, picked by keyboard alone. The object stepper's
+      // «Вид» (`OVE-524`) offers the standard base only; Enter takes only a
+      // highlighted row.
+      await openStepperAtSpecies(page, spaceId, `Помідор ${fixture.suffix}`);
+      const combobox = speciesSearch(page);
       await combobox.focus();
       await page.keyboard.type("томат");
-      const listbox = pickerListbox(page);
-      await expect(listbox).toBeVisible({ timeout: 10_000 });
+      const listbox = speciesListbox(page);
       const options = listbox.getByRole("option");
-      await expect(options.first()).toHaveAttribute(
-        "data-catalog-option",
-        "species",
+      const tomato = listbox.locator(
+        `[data-species-id="${fixture.speciesId}"]`,
       );
-      await expect(options.first()).toContainText(/Помідор/u);
-      await expect(
-        listbox.locator('[data-catalog-option="own_name"]'),
-      ).toHaveCount(1);
+      await expect(tomato).toBeVisible({ timeout: 10_000 });
+      await expect(tomato).toContainText(/Помідор/u);
+      // «Не знаю» first, the own variant last, always.
+      await expect(options.first()).toHaveAttribute(
+        "data-choice-option",
+        "unknown",
+      );
+      await expect(options.last()).toHaveAttribute("data-choice-option", "own");
       await expect(combobox).toHaveAttribute("aria-expanded", "true");
       await expect(combobox).toHaveAttribute(
         "aria-controls",
         (await listbox.getAttribute("id")) ?? "",
       );
-      // The list announces itself (`OVE-458` AC6). A combobox whose options
-      // arrive asynchronously must say how many there are, or a screen-reader
-      // user is left holding an input that silently filled.
-      const announcement = page.locator("[data-catalog-availability]");
+      // The list announces itself (`OVE-458` AC6).
+      const announcement = page.locator("[data-choice-status]");
       await expect(announcement).toHaveAttribute("aria-live", "polite");
-      await expect(announcement).toContainText(
-        new RegExp(`${await options.count()}`, "u"),
-      );
+      await expect(announcement).toContainText(/Знайдено: \d+/u);
 
+      // Enter with nothing highlighted takes nothing.
+      await page.keyboard.press("Enter");
+      await expect(
+        page.locator('[data-choice-selected="true"]'),
+      ).toHaveAttribute("data-choice-option", "unknown");
       await page.keyboard.press("ArrowDown");
       const firstOptionId = await options.first().getAttribute("id");
       await expect(combobox).toHaveAttribute(
@@ -146,23 +153,24 @@ test.describe("OVE-387 catalog picker", () => {
         "aria-activedescendant",
         firstOptionId ?? "",
       );
+      await page.keyboard.press("ArrowDown");
+      await expect(options.nth(1)).toHaveAttribute(
+        "data-species-id",
+        fixture.speciesId,
+      );
       await page.keyboard.press("Enter");
       await expect(
-        page.locator("[data-catalog-availability='selected']"),
-      ).toContainText(/Вид: Помідор/u);
+        page.locator('[data-choice-selected="true"]'),
+      ).toHaveAttribute("data-species-id", fixture.speciesId);
       await expect(
-        page.locator("[data-catalog-picker='true']"),
+        page.locator('[data-creation-stepper="true"]'),
       ).not.toContainText(
         /Перевірено|Підтверджено джерелом|Кандидат|карантин|каталог продукту/iu,
       );
 
       await runAxeOnComposer(page);
 
-      const first = await publishEntry(
-        page,
-        `Помідор ${fixture.suffix}`,
-        "Перший запис про помідор.",
-      );
+      const first = await finishAndPublish(page, "Перший запис про помідор.");
       expect(first.variety_state).toBe("selected");
       expect(await readItem(pool, first.catalog_item_id)).toMatchObject({
         node_kind: "taxon",
@@ -191,55 +199,50 @@ test.describe("OVE-387 catalog picker", () => {
       await expect(speciesPage).not.toContainText("Де Барао");
       await page.goto("/garden");
 
-      // Outcome 2: a form, with its species implied in the row.
-      await openComposer(page, spaceId);
-      await pickerCombobox(page).fill("де барао");
-      const cultivarOption = pickerListbox(page)
-        .locator('[data-catalog-option="cultivar"]')
-        .first();
-      await expect(cultivarOption).toBeVisible({ timeout: 10_000 });
-      // OVE-395, ADR-0026 D7: two cultivars carry exactly this denomination
-      // and only one of them is in the Ukrainian register. The row a Ukrainian
-      // reader is offered first, and publishes, is the registered one — the
-      // identity below is the assertion, not the count, because a database
-      // may legitimately hold other organisms whose names begin the same way.
-      await expect(cultivarOption).toContainText(/Сорт · Помідор/u);
-      await cultivarOption.click();
+      // Outcome 2: a cultivar, typed on «Сорт»: nobody uses «Де Барао» yet,
+      // so it is not on the list, and the typed name reuses the registered
+      // form rather than adding a second (`OVE-524`) — the registered one,
+      // not its unregistered homonym (OVE-395).
+      await openStepperAtSpecies(page, spaceId, `Де Барао ${fixture.suffix}`);
+      await speciesSearch(page).fill("помідор");
+      await speciesListbox(page)
+        .locator(`[data-species-id="${fixture.speciesId}"]`)
+        .click();
+      await page.locator('[data-creation-primary="true"]').click();
       await expect(
-        page.locator("[data-catalog-availability='selected']"),
-      ).toContainText(/Сорт: Де Барао/u);
-      const second = await publishEntry(
-        page,
-        `Де Барао ${fixture.suffix}`,
-        "Перший запис про сорт.",
-      );
+        page.locator(`[data-cultivar-id="${fixture.cultivarId}"]`),
+      ).toHaveCount(0);
+      await page
+        .locator('[data-object-setup-cultivar-search="true"]')
+        .fill("де барао");
+      await page.locator('[data-cultivar-add="true"]').click();
+      const second = await finishAndPublish(page, "Перший запис про сорт.");
       expect(second).toMatchObject({
         variety_state: "selected",
         catalog_item_id: fixture.cultivarId,
       });
       expect(second?.catalog_item_id).not.toBe(fixture.homonymId);
 
-      // Outcome 3: the gardener's own name, which matches nothing.
-      await openComposer(page, spaceId);
+      // Outcome 3: the gardener's own species, which the base does not hold.
+      await openStepperAtSpecies(page, spaceId, `Ягода ${fixture.suffix}`);
       const ownName = `Моя рідкісна ягода ${fixture.suffix}`;
-      await pickerCombobox(page).fill(ownName);
-      const ownNameOption = pickerListbox(page).locator(
-        '[data-catalog-option="own_name"]',
+      await speciesSearch(page).fill(ownName);
+      await expect(page.locator("[data-choice-status]")).toHaveAttribute(
+        "data-choice-status",
+        "empty",
+        { timeout: 10_000 },
       );
-      await expect(ownNameOption).toBeVisible({ timeout: 10_000 });
       await expect(
-        pickerListbox(page).locator('[data-catalog-option="species"]'),
+        speciesListbox(page).locator("[data-species-id]"),
       ).toHaveCount(0);
-      await ownNameOption.click();
+      await page.locator('[data-choice-option="own"]').click();
       await expect(
-        page.locator("[data-catalog-availability='selected']"),
-      ).toContainText(new RegExp(`Ваша назва: ${escapeRegExp(ownName)}`, "u"));
-      // No rename: the own name the gardener just declared is the object's
-      // name, and publishing must carry exactly it.
-      const third = await publishEntry(page, null, "Перший запис про ягоду.");
+        page.locator('[data-object-setup-species-own="true"]'),
+      ).toHaveValue(ownName);
+      const third = await finishAndPublish(page, "Перший запис про ягоду.");
       expect(third).toMatchObject({
-        variety_state: "free_text",
-        variety_text: ownName,
+        variety_state: "unknown",
+        species_text: ownName,
         catalog_item_id: null,
       });
       await expect
@@ -248,35 +251,36 @@ test.describe("OVE-387 catalog picker", () => {
         })
         .toMatchObject({ locale: "uk", object_kind: "plant" });
 
-      // The route stubbed to 503: only the own name remains, and it publishes.
-      await page.route("**/api/public/catalog/typeahead**", (route) =>
+      // The search stubbed to 503: it says so, and the own variant still
+      // publishes.
+      await page.route("**/api/public/catalog/species**", (route) =>
         route.fulfill({
           status: 503,
           contentType: "application/json",
           body: JSON.stringify({ suggestions: [], state: "unavailable" }),
         }),
       );
-      await openComposer(page, spaceId);
-      const offlineName = `Без каталогу ${fixture.suffix}`;
-      await pickerCombobox(page).fill(offlineName);
-      await expect(
-        page.locator("[data-catalog-availability='unavailable']"),
-      ).toBeVisible({ timeout: 10_000 });
-      const offlineOptions = pickerListbox(page).getByRole("option");
-      await expect(offlineOptions).toHaveCount(1);
-      await expect(offlineOptions.first()).toHaveAttribute(
-        "data-catalog-option",
-        "own_name",
+      await openStepperAtSpecies(
+        page,
+        spaceId,
+        `Без каталогу ${fixture.suffix}`,
       );
-      await offlineOptions.first().click();
-      // Same as above: the declared own name is the object's name.
-      const fourth = await publishEntry(page, null, "Запис без каталогу.");
+      const offlineName = `Без каталогу ${fixture.suffix}`;
+      await speciesSearch(page).fill(offlineName);
+      await expect(page.locator("[data-choice-status]")).toHaveAttribute(
+        "data-choice-status",
+        "unavailable",
+        { timeout: 10_000 },
+      );
+      await expect(speciesListbox(page).getByRole("option")).toHaveCount(2);
+      await page.locator('[data-choice-option="own"]').click();
+      const fourth = await finishAndPublish(page, "Запис без каталогу.");
       expect(fourth).toMatchObject({
-        variety_state: "free_text",
-        variety_text: offlineName,
+        variety_state: "unknown",
+        species_text: offlineName,
         catalog_item_id: null,
       });
-      await page.unroute("**/api/public/catalog/typeahead**");
+      await page.unroute("**/api/public/catalog/species**");
 
       // The object page: an own-name object re-resolved to the species.
       await page.goto(`/garden/objects/${third.id}/settings`);
@@ -332,69 +336,49 @@ test.describe("OVE-387 catalog picker", () => {
   });
 });
 
-/** The picker's own combobox: the page has native selects with that role too. */
-function pickerCombobox(page: Page) {
-  return page.locator(
-    '[data-object-setup-section="name"] [data-catalog-picker="true"] [role="combobox"]',
-  );
+/** The species step's search field (`OVE-524`). */
+function speciesSearch(page: Page) {
+  return page.locator('[data-object-setup-species-search="true"]');
 }
 
-function pickerListbox(page: Page) {
-  return page.locator(
-    '[data-object-setup-section="name"] [data-catalog-picker="true"] [role="listbox"]',
-  );
-}
-
-async function openComposer(page: Page, spaceId: string) {
-  const response = await page.goto(`/garden/objects/new?space=${spaceId}`);
-  expect(response?.status()).toBe(200);
-  const flow = page.locator('[data-object-setup-flow="true"]');
-  await expect(flow).toBeVisible({ timeout: 15_000 });
-  await waitForHydration(flow);
-  // Plant is the kind's default; the name step is the picker.
-  await flow.getByRole("button", { name: "Далі" }).click();
-  await expect(pickerCombobox(page)).toBeVisible({ timeout: 10_000 });
+function speciesListbox(page: Page) {
+  return page.locator('[data-object-setup-step="species"] [role="listbox"]');
 }
 
 /**
- * Adds the object and publishes its first entry. `plantName` renames the
- * object first; `null` keeps whatever the picker already holds, which is what
- * the own-name outcome needs — the name field *is* the picker, so renaming
- * after declaring an own name would be declaring a different one.
+ * The object stepper from inside the gardener's one space (so «Простір» is
+ * not asked) up to «Вид»: a plant, no photo, the name.
  */
-async function publishEntry(
-  page: Page,
-  plantName: string | null,
-  body: string,
-) {
-  const nameField = pickerCombobox(page);
-  if (plantName !== null) {
-    // Typing opens the picker's listbox, and the list can cover the fields
-    // below it on a narrow viewport; Escape closes it and keeps the text.
-    await nameField.fill(plantName);
-    await nameField.press("Escape");
-  }
-  // The object is read back by the name it is actually added under, which is
-  // whatever the field holds — the picker fills it on a pick, and keeps the
-  // gardener's own name when there is none.
-  const publishedName = await nameField.inputValue();
-  const flow = page.locator('[data-object-setup-flow="true"]');
-  await flow
-    .locator('[data-object-setup-section="name"]')
-    .getByRole("button", { name: "Далі" })
-    .click();
-  await flow
-    .locator('[data-object-setup-section="space"]')
-    .getByRole("button", { name: "Далі" })
-    .click();
-  await flow.locator('[data-object-setup-submit="true"]').click();
-  const result = page.locator('[data-object-setup-result="created"]');
-  await expect(result).toBeVisible({ timeout: 20_000 });
-  const objectId = await result.getAttribute("data-object-id");
-  if (!objectId) throw new Error(`Object "${publishedName}" was not created.`);
+async function openStepperAtSpecies(page: Page, spaceId: string, name: string) {
+  const response = await page.goto(`/garden/objects/new?space=${spaceId}`);
+  expect(response?.status()).toBe(200);
+  const stepper = page.locator('[data-creation-stepper="true"]');
+  await expect(stepper).toBeVisible({ timeout: 15_000 });
+  await waitForHydration(stepper);
+  await stepper.locator('[data-object-setup-kind="plant"]').click();
+  await stepper.getByRole("button", { name: "Пропустити" }).click();
+  const field = stepper.locator('[data-object-setup-name="true"]');
+  await field.fill(name);
+  await field.press("Enter");
+  await expect(speciesSearch(page)).toBeVisible({ timeout: 10_000 });
+}
 
-  // Its first entry, through the real endpoint: publishing is what publishes
-  // the species page this spec reads (`OVE-519`).
+/**
+ * «Далі» and «Додати» to the end of the stepper, then the object's first
+ * entry through the real endpoint: publishing is what publishes the species
+ * page this spec reads (`OVE-519`).
+ */
+async function finishAndPublish(page: Page, body: string) {
+  const stepper = page.locator('[data-creation-stepper="true"]');
+  const primary = stepper.locator('[data-creation-primary="true"]');
+  while (!/Додати/u.test((await primary.textContent()) ?? "")) {
+    await primary.click();
+  }
+  await primary.click();
+  await page.waitForURL(/\/garden\/objects\/[0-9a-f-]{36}$/u, {
+    timeout: 20_000,
+  });
+  const objectId = new URL(page.url()).pathname.split("/").at(-1)!;
   const origin = new URL(page.url()).origin;
   const response = await page.request.post(`${origin}/api/garden/entries`, {
     headers: {
@@ -408,12 +392,14 @@ async function publishEntry(
         plantObjectId: objectId,
         entryDate: new Date().toISOString().slice(0, 10),
       },
-      title: `${publishedName} — перший запис`,
+      title: `${await readObjectName(objectId)} — перший запис`,
       text: body,
     }),
   });
   if (response.status() >= 400) {
-    throw new Error(`Publish answered ${response.status()}: ${await response.text()}`);
+    throw new Error(
+      `Publish answered ${response.status()}: ${await response.text()}`,
+    );
   }
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   try {
@@ -421,16 +407,29 @@ async function publishEntry(
       id: string;
       variety_state: string;
       variety_text: string | null;
+      species_text: string | null;
       catalog_item_id: string | null;
     }>(
-      `select id::text as id, variety_state, variety_text, catalog_item_id::text as catalog_item_id
+      `select id::text as id, variety_state, variety_text, species_text,
+              catalog_item_id::text as catalog_item_id
        from plant_objects where id = $1`,
       [objectId],
     );
-    if (!row.rows[0]) {
-      throw new Error(`Object "${publishedName}" was not persisted.`);
-    }
+    if (!row.rows[0]) throw new Error(`Object ${objectId} was not persisted.`);
     return row.rows[0];
+  } finally {
+    await pool.end();
+  }
+}
+
+async function readObjectName(objectId: string) {
+  const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+  try {
+    const row = await pool.query<{ display_name: string }>(
+      "select display_name from plant_objects where id = $1",
+      [objectId],
+    );
+    return row.rows[0]?.display_name ?? "";
   } finally {
     await pool.end();
   }
@@ -462,7 +461,7 @@ async function runAxeOnComposer(page: Page) {
         };
       }
     ).axe;
-    const composer = document.querySelector('[data-object-setup-flow="true"]');
+    const composer = document.querySelector('[data-creation-stepper="true"]');
     if (!composer) throw new Error("composer missing");
     const result = await axe.run(composer, {
       runOnly: { type: "tag", values: tags },
@@ -790,7 +789,9 @@ async function selectLocale(
 }
 
 async function cleanupSyntheticUser(pool: Pool, userId: string) {
-  await pool.query("delete from spaces where owner_user_id = $1::uuid", [userId]);
+  await pool.query("delete from spaces where owner_user_id = $1::uuid", [
+    userId,
+  ]);
   await pool.query('delete from public."user" where id = $1::uuid', [userId]);
 }
 
@@ -802,8 +803,4 @@ function requiredLocalDatabaseUrl() {
     throw new Error("The picker spec runs against a loopback database only.");
   }
   return url;
-}
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

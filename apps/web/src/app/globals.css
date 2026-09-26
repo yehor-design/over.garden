@@ -665,6 +665,14 @@ html {
   }
 }
 
+/* A creation stepper is the whole screen and brings its own close and Back
+   (DESIGN.md §5.24): the tab bar is not under it but gone. Its room stays, so
+   the cookie notice floats above the stepper's own buttons rather than on
+   them. */
+html:has([data-creation-stepper]) [data-site-shell-region="mobile-navigation"] {
+  display: none;
+}
+
 @media (width >= 40rem) {
   html {
     --consent-notice-estimate: 6.5rem;

@@ -18,6 +18,7 @@ import {
   buildPublicObjectPassportGalleryQuery,
   buildPublicObjectPassportRootQuery,
   buildPublicObjectPassportTimelineQuery,
+  buildPublicObjectPassportPhotoQuery,
   serializePublicObjectPassportPage,
   classifyPublicObjectPassportLifecycle,
 } from "./public-object-passport-repository";
@@ -234,6 +235,83 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
     expect(compiled.parameters.at(-1)).toBe(6);
     expect(compiled.sql).not.toMatch(/quarantine_key|owner_user_id as|email/i);
+  });
+
+  it("reads the object's own photo only through its owner, public derivatives only (OVE-524)", () => {
+    const compiled = buildPublicObjectPassportPhotoQuery(
+      testDb,
+      plantObjectId,
+    ).compile();
+    expect(compiled.sql).toContain(
+      '"plant_objects"."owner_user_id" = "media_assets"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain('"media_assets"."plant_object_id" = ');
+    expect(compiled.sql).toContain('"media_assets"."revoked_at" is null');
+    expect(compiled.sql).toContain(
+      '"media_assets"."derivative_key" is not null',
+    );
+    expect(compiled.parameters).toEqual([plantObjectId, 1]);
+  });
+
+  it("covers the public passport with the object's own photo before the first entry photo (OVE-524)", () => {
+    const root = {
+      plantObjectId,
+      displayName: "Рябка",
+      objectKind: "animal",
+      varietyText: null,
+      varietyState: "unknown",
+      catalogKind: null,
+      catalogCanonicalName: null,
+      catalogPublicSlug: null,
+      catalogSpeciesSlug: null,
+      objectLocationVisibility: "hidden",
+      objectCoarseRegionCode: null,
+      spaceLocationVisibility: "hidden",
+      spaceCoarseRegionCode: null,
+      publicEntryCount: "1",
+      firstEntryDate: new Date("2026-07-01T12:00:00.000Z"),
+      latestEntryDate: new Date("2026-07-01T12:00:00.000Z"),
+      authorHandle: "green_thumb",
+      addressHandle: "green_thumb",
+      publicSlug: "ryabka",
+      authorDisplayName: null,
+      authorAvatarUrl: null,
+    } as Parameters<typeof serializePublicObjectPassportPage>[0];
+    const gallery = [
+      {
+        mediaId: "entry-photo",
+        mediaDerivativeKey: "derivatives/entry-photo.webp",
+        mediaFocalX: 0.5,
+        mediaFocalY: 0.5,
+        mediaIntrinsicWidth: 1200,
+        mediaIntrinsicHeight: 900,
+      },
+    ];
+    const withoutOwn = serializePublicObjectPassportPage(root, [], gallery);
+    expect(withoutOwn.coverMediaPublicUrl).toContain("entry-photo");
+    const withOwn = serializePublicObjectPassportPage(
+      root,
+      [],
+      gallery,
+      "uk",
+      undefined,
+      {
+        mediaId: "object-photo",
+        mediaDerivativeKey: "derivatives/object-photo/1.webp",
+        mediaFocalX: 0.5,
+        mediaFocalY: 0.5,
+        mediaIntrinsicWidth: 1600,
+        mediaIntrinsicHeight: 900,
+        mediaPlaceholderDataUri: null,
+        mediaVariantLongEdges: [1280, 480],
+      },
+    );
+    expect(withOwn.coverMediaPublicUrl).toContain("object-photo");
+    expect(withOwn.coverMediaVariantLongEdges).toEqual([1280, 480]);
+    // The gallery stays the entries' photographs.
+    expect(withOwn.galleryMediaPublicUrls).toEqual([
+      expect.stringContaining("entry-photo"),
+    ]);
   });
 
   it("fetches one page-size overflow record for the real show-more state", () => {

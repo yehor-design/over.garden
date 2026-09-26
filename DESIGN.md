@@ -1829,9 +1829,17 @@ the species as small photo cards, scattered and slightly overlapping.
   it. «Не знаю» is the default and always the first option; «Ввести свій
   варіант» is always the last.
 - **«Сорт» / «Порода»** lists what the project's objects of that species
-  already use and what gardeners added, filtered by the characters typed.
-  «Не знаю» is the default; «Немає в списку» turns the field into a text
-  input whose value becomes a shared entry at once.
+  already use and what gardeners added, most used first, filtered by the
+  characters typed — forgiving case, a typo and Ukrainian or Russian spelling.
+  «Не знаю» is the default and always first. A typed name that matches no
+  entry is offered last as «Додати «…»» and becomes a shared entry at once; a
+  name that matches one after that folding is that entry, and no add row is
+  offered. After an own species there is no list: «Не знаю» or «Ввести свій
+  варіант», a private text field.
+- **The list is always there** (`ChoiceSearchList`): the field above it, the
+  answers in one surface below, the chosen one with a check. With nothing
+  typed the species list is its two fixed answers; the cultivar list is the
+  species' entries.
 - **Enter selects only a highlighted row.** Arrow keys highlight; nothing is
   picked by typing alone.
 - **A search that fails says so** («Пошук зараз недоступний») and keeps «Не

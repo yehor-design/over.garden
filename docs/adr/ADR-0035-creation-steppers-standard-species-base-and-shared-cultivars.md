@@ -147,6 +147,27 @@ the owner afterwards ("не перед публікацією … я потім 
   ADR-0034's rule.
 - After an own species text, the cultivar is the gardener's own text too.
 - The owner corrects entries after publication in «Сорти й породи» (D7).
+- **As built (`OVE-524`, 2026-09-26).** Migration `0086` stores the two
+  choices as made. `plant_objects.catalog_item_id` with `variety_state =
+  'selected'` stays the most specific node chosen — the species, or its
+  cultivar or breed entry — so every reader of an object's organism, the
+  publication rule included, is unchanged. The own species is
+  `plant_objects.species_text`; an own cultivar after it is `variety_state =
+  'own'` with `variety_text`; a CHECK names the four combinations. A
+  gardener's entry is a catalogue form (`source = 'gardener'`, `form_of` its
+  species, created by the gardener, `reviewed_at` null) with an address and a
+  page like any form. One entry per species and name: the writer takes a
+  per-species lock and matches by `catalog_cultivar_key` (the shared
+  normalizer, then Ukrainian and Russian spellings of one sound folded), any
+  name of any active form — a registered cultivar no object uses included. The
+  label the old picker kept moved to the own species; `free_text` stays legal
+  only for the revert of a historic label link, until D6 removes the ladder.
+  The species step's search reads the base alone
+  (`/api/public/catalog/species`), which is what makes its first search after
+  a cold start answer: on production the whole-catalogue statement spent
+  89.6 ms planning and 277 ms executing on a fresh backend; the base alone
+  runs in about 60 ms there and 4 ms warm. Account erasure clears an entry's
+  creator and keeps the entry for the gardeners who use it.
 
 ### D5. The selected-state lock is removed
 

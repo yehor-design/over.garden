@@ -33,6 +33,7 @@ export function ChoiceRadioList({
   value,
   onChange,
   onPick,
+  marksAnswer = false,
   className,
 }: {
   name: string;
@@ -42,6 +43,11 @@ export function ChoiceRadioList({
   value: string | null;
   onChange: (value: string) => void;
   onPick?: (value: string) => void;
+  /**
+   * The row a stepper focuses when this is its first question
+   * (`data-creation-answer`): the chosen one, else the first.
+   */
+  marksAnswer?: boolean;
   className?: string;
 }) {
   // Set by a pointer press on a row and spent by the click that follows it;
@@ -53,14 +59,23 @@ export function ChoiceRadioList({
       <div className="grid overflow-hidden rounded-lg border border-border bg-surface">
         {options.map((option, index) => {
           const chosen = option.value === value;
+          const answer =
+            marksAnswer &&
+            (chosen ||
+              (index === 0 && !options.some((item) => item.value === value)));
           return (
             <Radio
               key={option.value}
               presentation="custom"
-              label={option.subtitle ? `${option.title}, ${option.subtitle}` : option.title}
+              label={
+                option.subtitle
+                  ? `${option.title}, ${option.subtitle}`
+                  : option.title
+              }
               name={name}
               value={option.value}
               checked={chosen}
+              data-creation-answer={answer ? "true" : undefined}
               onChange={() => onChange(option.value)}
               onClick={() => {
                 if (!pointer.current) return;

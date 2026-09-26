@@ -51,7 +51,10 @@ import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
 import { useOwnedPhotoUpload } from "@/lib/garden/use-owned-photo-upload";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { buildSignInHref } from "@/lib/navigation/sign-in-href";
-import { getObjectSetupCopy, type ObjectSetupCopy } from "@/lib/object-setup-copy";
+import {
+  getObjectSetupCopy,
+  type ObjectSetupCopy,
+} from "@/lib/object-setup-copy";
 import { getOwnedPhotoCopy } from "@/lib/owned-photo-copy";
 
 export interface ObjectSetupSpaceOption {
@@ -131,7 +134,11 @@ export function ObjectSetupFlow({
   const photoCopy = getOwnedPhotoCopy(locale);
   const upload = useOwnedPhotoUpload();
 
-  const draftRaw = useSyncExternalStore(subscribeNever, readDraftRaw, () => null);
+  const draftRaw = useSyncExternalStore(
+    subscribeNever,
+    readDraftRaw,
+    () => null,
+  );
   const search = useSyncExternalStore(subscribeLocation, readSearch, () => "");
   const [edits, setEdits] = useState<Answers | null>(null);
   const answers =
@@ -178,7 +185,10 @@ export function ObjectSetupFlow({
         if (change.kind && change.kind !== base.kind) {
           next.species = { kind: "unknown" };
           next.cultivar = { kind: "unknown" };
-        } else if (change.species && !sameSpecies(change.species, base.species)) {
+        } else if (
+          change.species &&
+          !sameSpecies(change.species, base.species)
+        ) {
           next.cultivar = { kind: "unknown" };
         }
         writeDraft(next);
@@ -253,7 +263,10 @@ export function ObjectSetupFlow({
         else next();
         return;
       case "cultivar":
-        if (answers.cultivar.kind === "own" || answers.cultivar.kind === "new") {
+        if (
+          answers.cultivar.kind === "own" ||
+          answers.cultivar.kind === "new"
+        ) {
           const text = validateObjectChoiceText(
             answers.cultivar.kind === "own"
               ? answers.cultivar.text
@@ -466,6 +479,7 @@ export function ObjectSetupFlow({
         <div className="grid min-w-0 gap-4" data-object-setup-step="space">
           <ChoiceRadioList
             name="space"
+            marksAnswer
             legend={copy.space.listLabel}
             value={answers.spaceId}
             onChange={(spaceId) => {
@@ -503,7 +517,10 @@ export function ObjectSetupFlow({
           <NextLink
             href={spaceSetupHref}
             data-object-setup-add-space="true"
-            className={buttonVariants({ variant: "secondary", className: "w-fit" })}
+            className={buttonVariants({
+              variant: "secondary",
+              className: "w-fit",
+            })}
           >
             <PlusIcon size={16} />
             {copy.space.addSpace}
@@ -516,6 +533,7 @@ export function ObjectSetupFlow({
         <div data-object-setup-step="kind">
           <ChoiceRadioList
             name="kind"
+            marksAnswer
             legend={copy.kind.question}
             value={answers.kind}
             onChange={(value) => update({ kind: value as PlantObjectKind })}
@@ -811,7 +829,9 @@ function initialAnswers(input: {
     (spaces.length === 1 ? spaces[0]!.id : null);
   return {
     requestId: draft.requestId ?? input.pageRequestId,
-    spaceId: input.skipSpace ? (known(input.initialSpaceId) ?? spaceId) : spaceId,
+    spaceId: input.skipSpace
+      ? (known(input.initialSpaceId) ?? spaceId)
+      : spaceId,
     kind: draft.kind ?? null,
     name: draft.name ?? "",
     species: draft.species ?? { kind: "unknown" },
@@ -861,7 +881,8 @@ function parseDraft(raw: string | null): Partial<Answers> {
     if (typeof value.spaceId === "string" && UUID.test(value.spaceId)) {
       draft.spaceId = value.spaceId;
     }
-    if (value.kind === "plant" || value.kind === "animal") draft.kind = value.kind;
+    if (value.kind === "plant" || value.kind === "animal")
+      draft.kind = value.kind;
     if (typeof value.name === "string") draft.name = value.name.slice(0, 200);
     const species = value.species as Record<string, unknown> | undefined;
     if (species?.kind === "own" && typeof species.text === "string") {
@@ -894,7 +915,11 @@ function parseDraft(raw: string | null): Partial<Answers> {
       UUID.test(cultivar.id) &&
       typeof cultivar.name === "string"
     ) {
-      draft.cultivar = { kind: "entry", id: cultivar.id, name: cultivar.name.slice(0, 200) };
+      draft.cultivar = {
+        kind: "entry",
+        id: cultivar.id,
+        name: cultivar.name.slice(0, 200),
+      };
     } else if (cultivar?.kind === "new" && typeof cultivar.name === "string") {
       draft.cultivar = { kind: "new", name: cultivar.name.slice(0, 200) };
     } else if (cultivar?.kind === "own" && typeof cultivar.text === "string") {

@@ -637,15 +637,20 @@ test.describe("erasure, asked for and carried out (OVE-505)", () => {
     );
     const page = await phone.newPage();
 
-    // A setup flow keeps the tab bar, and its step's actions stick to the
-    // bottom of the screen: "Next" opened underneath the bar at 320 px.
+    // A setup flow is a full-screen stepper (DESIGN.md §5.24): the tab bar is
+    // gone under it, its "Next" sits at the bottom of the screen, and the
+    // notice floats above it — answerable, never on it. "Next" once opened
+    // underneath the bar at 320 px.
     await page.goto("/garden/objects/new", { waitUntil: "load" });
     await expect(page.locator(`${NOTICE}:visible`)).toHaveCount(1);
     const next = page.getByRole("button", { name: "Далі" }).first();
     await waitForHydration(next);
     expect(await underChrome(page, next), "Next at load").toEqual([]);
+    await expect(page.locator(TAB_BAR)).toBeHidden();
+    // Tab stays in the frame — close, the answer, "Next" — and then reaches
+    // the notice rather than the page under the frame.
     const walk = await tabUntilChrome(page);
-    expect(walk.reached).toBeGreaterThan(5);
+    expect(walk.reached).toBeGreaterThanOrEqual(3);
     expect(walk.covered, walk.covered.join(" | ")).toEqual([]);
     await scrollToTop(page);
     await page.screenshot({

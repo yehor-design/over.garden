@@ -362,7 +362,11 @@ export interface PlantObjectPage {
   entries: JournalEntryReadback[];
   gallery_media: EntryMediaReadback[];
   /** The object's own photo, its cover before any entry photo (OVE-524). */
-  object_photo: { media: EntryMediaReadback; view: OwnedPhotoView } | null;
+  object_photo: {
+    media: EntryMediaReadback;
+    view: OwnedPhotoView;
+    variantLongEdges: number[];
+  } | null;
 }
 
 export interface PlantObjectCatalogSourceCredit {
@@ -2104,6 +2108,7 @@ export async function getPlantObjectPage(
             intrinsicHeight: objectPhoto.height,
           },
           view: ownedPhotoView(objectPhoto),
+          variantLongEdges: objectPhoto.variantLongEdges,
         }
       : null,
   };
@@ -4884,7 +4889,9 @@ function normalizeCreateFirstPlantEntryInput(
     catalogItemId,
     catalogLabel: catalogLabel ? normalizeCatalogLabel(catalogLabel) : null,
     varietyText: null,
-    varietyState: (catalogItemId ? "selected" : "unknown") satisfies VarietyState,
+    varietyState: (catalogItemId
+      ? "selected"
+      : "unknown") satisfies VarietyState,
     title: normalizeJournalEntryTitle(input.title),
     body: content.body,
     contentDocument: content.document,

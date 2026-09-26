@@ -24,7 +24,9 @@ import { ProgressBar } from "@/components/ui/progress-bar";
  * - Escape and the close control call `onClose`; asking before discarding
  *   answers is the owner's (the frame cannot know what was typed).
  * - While it is open, everything outside it is `inert`: the site's header,
- *   rails and footer are under it and must not be reachable by Tab.
+ *   rails and footer are under it and must not be reachable by Tab. The
+ *   cookie notice is the exception — it is owed on every page — and the
+ *   phone's tab bar is not under it but gone (`globals.css`).
  * - The frame follows the visual viewport, so on a phone with the keyboard
  *   open the primary button sits above the keyboard, not behind it.
  */
@@ -58,6 +60,9 @@ export interface CreationStepperProps {
   status?: React.ReactNode;
   children: React.ReactNode;
 }
+
+const CONSENT_NOTICES =
+  "[data-analytics-consent-banner], [data-meta-marketing-consent-banner]";
 
 function CreationStepper({
   label,
@@ -110,6 +115,14 @@ function CreationStepper({
       for (const sibling of Array.from(parent?.children ?? [])) {
         if (sibling === node || sibling.hasAttribute("inert")) continue;
         if (sibling.tagName === "SCRIPT" || sibling.tagName === "STYLE")
+          continue;
+        // The cookie question stays answerable over the frame: it is owed on
+        // every page (ADR-0032 D7), and an inert notice is one that cannot
+        // be answered at all.
+        if (
+          sibling.matches(CONSENT_NOTICES) ||
+          sibling.querySelector(CONSENT_NOTICES)
+        )
           continue;
         sibling.setAttribute("inert", "");
         made.push(sibling);

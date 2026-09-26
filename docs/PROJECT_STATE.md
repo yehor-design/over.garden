@@ -100,6 +100,28 @@ gone from «Мій сад»: an empty garden offers «Створити прос�
 the composer at `/garden/new`. Like everything since the pause, it is on
 `main` and waits for a deployment.
 
+A plant or an animal is added in the same stepper since `OVE-524` (ADR-0035
+D1–D4, `DESIGN.md` §5.24, §5.28): «Простір» (skipped from inside a space; one
+space is chosen already, «Додати простір» runs the space stepper and comes
+back with it chosen, and a gardener with no space goes there first) →
+«Рослина чи тварина?» → an optional photo with the crop editor → «Вкажіть
+ім'я …» → «Вид» → «Сорт» / «Порода» → «Додати». The count follows the steps
+this run shows: «Не знаю» for the species removes «Сорт». «Вид» searches the
+standard base alone (`/api/public/catalog/species`), whose statement reads the
+base's own names and not the catalogue — the fix for the first searches that
+answered `503` on 2026-09-25. «Сорт» / «Порода» lists the forms of that
+species some object uses and the ones gardeners added, most used first; a
+typed name becomes a shared entry at once (`source = 'gardener'`, not
+reviewed, with a page like any form), and a name that matches one after
+normalization reuses it. An own species makes the cultivar a private text.
+Enter takes only a highlighted row, in this search and in the settings picker.
+The object's photo is its passport cover before the first entry photo, and is
+added, replaced and removed in its settings. Migration `0086` stores the two
+choices (`plant_objects.species_text`, `variety_state = 'own'`, a CHECK over
+the four combinations) and moved the ten launch-smoke labels to the own
+species; it waits to be applied to production, before the deployment of
+`main`.
+
 Every long list reads in portions of twenty since `OVE-518` (DESIGN.md §5.26):
 the home feed, `/feed`, a profile's entries and objects, `/journals`,
 bookmarks, notifications, «Мій сад», a space's plants and history, and an
