@@ -133,8 +133,33 @@ The lawyer is asked: where Overgarden is established and whether an EU
 representative is needed (GDPR Art. 27, DSA Art. 13); the minimum age (16 is
 drafted); whether the photo licence reaches photographs published before it
 existed; and whether declining the terms right after a first Google sign-in
-may delete the just-created account at once. The one acceptance, the split
-cookie choices and the complaint procedure follow in the same task.
+may delete the just-created account at once. 
+A person accepts the three documents once, before using the product
+(ADR-0038 D2). The email sign-up has one unticked, required box linking them,
+and `/sign-up/email` refuses a body without it, whoever calls it; the receipt
+(`legal_acceptances`, migration `0083`, one row per account and version) is
+written as soon as the account row exists. Not in the same transaction:
+Better Auth runs this deployment's adapter without transactions, and turning
+them on would roll back every sign-up whose verification mail fails. If that
+write fails, the account is whole and meets the acceptance screen at its first
+sign-in. A Google sign-in, an account from before the documents, and any
+account after a document changes meet `/auth/terms` before any `/garden` or
+`/account` page: the proxy answers 307 there, and 307 onward once accepted.
+The screen shows what matters in three lines, links the documents, and has the
+two cookie switches, both off. «Прийняти» writes the receipt and records any
+switch left untouched as off. «Не приймаю» signs out, and deletes only an
+account created since the documents that never accepted and owns nothing.
+Every signed-in write is refused without a current receipt
+(`resolveMutationScope`, code `legal_acceptance_required`, 403), except
+account protection and erasure requests; the refusal notice links the screen.
+Public pages never ask. The first-publication checkbox is gone from the
+composer and the entries API; the API still accepts the retired fields from
+a request queued before, and ignores them. «Налаштування cookies» is in the
+footer, the phone menu and account settings. The guest notice already asked
+analytics and marketing as two separate questions, each with two equal
+answers (marketing only where Meta measurement is switched on, which it is not
+in production), so it stays as it is, drawn before paint. The complaint
+procedure follows in the same task.
 
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),

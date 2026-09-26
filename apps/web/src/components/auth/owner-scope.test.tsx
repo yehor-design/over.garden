@@ -58,9 +58,49 @@ describe("owner scope (ADR-0022, D6)", () => {
     const notice = renderer!.root.findByProps({
       "data-mutation-scope-notice": "session_account_changed",
     });
-    expect(notice.props.children).toBe(
+    expect(notice.props.children).toEqual([
       "Влязохте с друг акаунт. Обновете страницата.",
+      null,
+    ]);
+    expect(renderer!.root.findByType("main").props.children).toBe(
+      "Composer text stays",
     );
+    await act(async () => renderer!.unmount());
+  });
+
+  it("says a write needs the terms accepted, and links the acceptance screen", async () => {
+    function Probe() {
+      const scope = useOwnerScope();
+      useEffect(() => {
+        void scope.handleResponse(
+          new Response(
+            JSON.stringify({ code: "legal_acceptance_required" }),
+            { status: 403 },
+          ),
+        );
+      }, [scope]);
+      return <main>Composer text stays</main>;
+    }
+    let renderer: ReactTestRenderer | undefined;
+    await act(async () => {
+      renderer = create(
+        <OwnerScopeProvider locale="uk" ownerUserId="owner-a">
+          <Probe />
+        </OwnerScopeProvider>,
+      );
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    const notice = renderer!.root.findByProps({
+      "data-mutation-scope-notice": "legal_acceptance_required",
+    });
+    expect(notice.props.children[0]).toBe(
+      "Щоб зберігати зміни, прийміть умови використання.",
+    );
+    const link = notice.findByType("a");
+    expect(link.props.href).toBe("/auth/terms?next=%2Fgarden");
+    expect(link.props.children).toBe("Прийняти умови");
     expect(renderer!.root.findByType("main").props.children).toBe(
       "Composer text stays",
     );

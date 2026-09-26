@@ -175,24 +175,45 @@ describe("POST /api/garden/entries atomic create", () => {
     expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
   });
 
-  it.each([undefined, "first-publication-v5", "invented-version"])(
-    "rejects stale or missing disclosure version %s before media or journal writes",
-    async (disclosureVersion) => {
+  it.each([
+    [undefined, undefined],
+    [true, "first-publication-v6"],
+    [false, "first-publication-v5"],
+  ])(
+    "publishes without a first-publication step, and ignores its retired fields (%s, %s)",
+    async (disclosureAccepted, disclosureVersion) => {
+      // ADR-0038: the one acceptance of the terms replaced the checkbox; a
+      // request an older composer queued may still carry its two fields.
       const { POST } = await import("./route");
-      const request = { ...atomicRequest({}), disclosureVersion };
+      const request = {
+        ...atomicRequest({}),
+        disclosureAccepted,
+        disclosureVersion,
+      };
       const response = await POST(
         atomicJsonRequest(request as AtomicJournalCreateRequest),
       );
-      expect(response.status).toBe(409);
-      await expect(response.json()).resolves.toEqual({
-        code: "disclosure_version_changed",
-      });
-      expect(mocks.claimEphemeralPublicationMedia).not.toHaveBeenCalled();
-      expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
-      expect(mocks.createPlantObjectJournalEntry).not.toHaveBeenCalled();
-      expect(mocks.createSpaceJournalEntry).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(mocks.createFirstPlantEntry).toHaveBeenCalledTimes(1);
+      const [, input] = mocks.createFirstPlantEntry.mock.calls[0]!;
+      expect(input.atomicPublication).not.toHaveProperty("disclosureAccepted");
+      expect(input.atomicPublication).not.toHaveProperty("disclosureVersion");
     },
   );
+
+  it("refuses a disclosure field of the wrong shape as an invalid request", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      atomicJsonRequest({
+        ...atomicRequest({}),
+        disclosureAccepted: "yes",
+      } as unknown as AtomicJournalCreateRequest),
+    );
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      code: "atomic_request_invalid",
+    });
+  });
 
   it("commits a first entry directly public and returns the exact safe source context", async () => {
     const { POST } = await import("./route");
@@ -227,8 +248,6 @@ describe("POST /api/garden/entries atomic create", () => {
         clientMutationId: "atomic:opaque",
         atomicPublication: expect.objectContaining({
           publishId: ENTRY_ID,
-          disclosureAccepted: true,
-          disclosureVersion: "first-publication-v6",
           handoff: null,
         }),
       }),
@@ -714,8 +733,6 @@ function atomicRequest(
     coverMediaAssetId: null,
     mediaClaimReceipts: [],
     returnTo: "/garden",
-    disclosureAccepted: true,
-    disclosureVersion: "first-publication-v6",
     ...overrides,
   };
 }

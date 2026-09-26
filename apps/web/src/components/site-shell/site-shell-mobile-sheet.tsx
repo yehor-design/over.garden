@@ -39,6 +39,7 @@ export function SiteShellMobileSheet({
 }) {
   const [open, onOpenChange] = useState(defaultOpen);
   const privacy = navigation.footerLinks.find((link) => link.key === "privacy");
+  const cookies = navigation.footerLinks.find((link) => link.key === "cookies");
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -91,6 +92,8 @@ export function SiteShellMobileSheet({
           <SiteShellMobileUtilities
             privacyHref={privacy?.href ?? "/privacy"}
             privacyLabel={privacy?.label ?? ""}
+            cookiesHref={cookies?.href}
+            cookiesLabel={cookies?.label}
           >
             {isAuthenticated ? (
               <SignOutControl

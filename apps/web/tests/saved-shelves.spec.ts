@@ -31,6 +31,7 @@ import {
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * Bookmarks (`OVE-502`), the one shelf since the wishlist was retired
@@ -504,6 +505,7 @@ async function account(prefix: string): Promise<SyntheticGardener> {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   accounts.push(id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")

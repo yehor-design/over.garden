@@ -170,10 +170,6 @@ test.describe("OVE-417 Notion-shaped composer", () => {
       ).toHaveCount(1);
 
       // 8. Publish, and read the blocks back from the page a reader sees.
-      const disclosure = composer.locator(
-        'input[name="publicationDisclosureAccepted"]',
-      );
-      if ((await disclosure.count()) > 0) await disclosure.check();
       const [response] = await Promise.all([
         page.waitForResponse(
           (candidate) =>

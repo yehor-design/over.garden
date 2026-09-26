@@ -4,7 +4,10 @@ import { notFound } from "next/navigation";
 import { AnalyticsPrivacyControls } from "@/app/google-analytics";
 import { MetaMarketingPrivacyControls } from "@/app/meta-marketing";
 import { LegalDocumentPage } from "@/components/public/legal-document-page";
-import { getLegalDocument } from "@/lib/legal/legal-documents";
+import {
+  COOKIE_CHOICES_SECTION_ID,
+  getLegalDocument,
+} from "@/lib/legal/legal-documents";
 import { isPublicLocale, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import {
@@ -55,7 +58,7 @@ export default async function LocalizedCookiesPage({
       documentKey="cookies"
       extraSections={[
         {
-          id: "cookies-controls",
+          id: COOKIE_CHOICES_SECTION_ID,
           heading: copy.choicesTitle,
           body: (
             <div className="grid gap-4">

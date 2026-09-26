@@ -276,7 +276,6 @@ function objectPage() {
       coarse_region_code: null,
       source_credit: null,
     },
-    hasPriorPublicationDisclosure: false,
     entries: [],
     gallery_media: [],
   };

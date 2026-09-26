@@ -24,10 +24,7 @@ import {
   journalMediaReadinessText,
   summarizeJournalMediaReadiness,
 } from "@/components/garden/journal-media-readiness";
-import {
-  LocalJournalComposerStatus,
-  LocalJournalPublicationDisclosure,
-} from "@/components/garden/local-journal-composer-status";
+import { LocalJournalComposerStatus } from "@/components/garden/local-journal-composer-status";
 import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
@@ -113,7 +110,6 @@ export interface EntryComposerProps {
   initialDestination: OwnedDestination | null;
   /** The server's date, replaced by the reader's own local date on mount. */
   today: string;
-  requiresFirstPublicationDisclosure: boolean;
   /** Objects of the initial space, when the page has them already. */
   initialSpaceObjects?: readonly SpaceObjectOption[];
   /** Where Close returns to: the page the composer was opened from. */
@@ -183,7 +179,6 @@ export function EntryComposer({
   locale,
   initialDestination,
   today,
-  requiresFirstPublicationDisclosure,
   initialSpaceObjects,
   closeHref = null,
   community = null,
@@ -232,7 +227,6 @@ export function EntryComposer({
   const [message, setMessage] = useState(atomicCopy.localOnly);
   const [destinationError, setDestinationError] = useState<string | null>(null);
   const [authRecoveryUrl, setAuthRecoveryUrl] = useState<string | null>(null);
-  const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const [titleEdited, setTitleEdited] = useState(false);
   const labels = getStructuredJournalComposerLabels(locale);
   const storyImageIds = listJournalDocumentImageMediaIds(
@@ -494,7 +488,6 @@ export function EntryComposer({
         title,
         document,
         coverMediaAssetId: selectedCoverMediaAssetId(coverSelection, document),
-        disclosureAccepted,
         returnTo: newObject
           ? "/garden"
           : destination!.kind === "object"
@@ -648,9 +641,7 @@ export function EntryComposer({
   // with Orca, `OVE-478`). It shows as loading and stays where the reader is
   // (DESIGN.md §4.4).
   const publishing = submitState === "publishing";
-  const publishBlocked =
-    (persistenceFrozen && !publishing) ||
-    (requiresFirstPublicationDisclosure && !disclosureAccepted);
+  const publishBlocked = persistenceFrozen && !publishing;
 
   return (
     <form
@@ -1059,15 +1050,6 @@ export function EntryComposer({
             </Field>
           </div>
         </details>
-
-        {requiresFirstPublicationDisclosure ? (
-          <LocalJournalPublicationDisclosure
-            accepted={disclosureAccepted}
-            disabled={persistenceFrozen}
-            copy={atomicCopy}
-            onChange={setDisclosureAccepted}
-          />
-        ) : null}
       </fieldset>
 
       {authRecoveryUrl ? (

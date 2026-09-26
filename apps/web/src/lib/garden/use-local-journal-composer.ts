@@ -44,7 +44,6 @@ import {
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
 import { BrowserJournalImageEncoder } from "@/lib/media/browser-journal-image-encoder";
 import { BrowserEphemeralMediaStager } from "@/lib/media/ephemeral-staging-client";
-import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { stableJson } from "@/lib/media/ephemeral-staging-crypto";
 
 const EMPTY_MEDIA_SNAPSHOT: LocalJournalMediaSnapshot = {
@@ -72,7 +71,6 @@ export interface LocalJournalPublicationInput {
   title: string;
   document: JournalDocumentV1;
   coverMediaAssetId: string | null;
-  disclosureAccepted: boolean;
   returnTo?: string;
 }
 
@@ -302,8 +300,6 @@ export function useLocalJournalComposer(input: {
           title: publicationInput.title,
           document,
           coverMediaAssetId: publicationInput.coverMediaAssetId,
-          disclosureAccepted: publicationInput.disclosureAccepted,
-          disclosureVersion: FIRST_PUBLICATION_DISCLOSURE_VERSION,
           returnTo,
         };
         const semanticKey = stableJson(semanticInput);

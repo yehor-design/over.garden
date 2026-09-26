@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { Pool } from "pg";
+import { acceptLegalDocuments } from "./legal-acceptance";
 
 /**
  * A seeded organism for the browser specs: a species with an accepted name,
@@ -228,6 +229,7 @@ export async function seedOrganismFixture(
      values ($1, $3, $2, true, now(), now())`,
     [ownerUserId, `${prefix}-${suffix}@example.test`, `${prefix} gardener`],
   );
+  await acceptLegalDocuments(pool, ownerUserId);
   await pool.query(
     `insert into spaces (id, owner_user_id, display_name) values ($1, $2, $3)`,
     [spaceId, ownerUserId, `${prefix} garden`],

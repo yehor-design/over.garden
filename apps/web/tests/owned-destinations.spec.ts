@@ -346,10 +346,6 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
       )
       .first();
     await editor.fill(retainedText);
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if (await disclosure.count()) await disclosure.check();
     await pool.query(
       "delete from plant_objects where space_id=$1 and owner_user_id=$2",
       [fixture.spaces[19].id, userId],

@@ -211,9 +211,6 @@ function ownerPage({
     },
     entries,
     gallery_media: [],
-    hasPriorPublicationDisclosure: entries.some(
-      (entry) => entry.first_publication_disclosed_at !== null,
-    ),
   };
 }
 

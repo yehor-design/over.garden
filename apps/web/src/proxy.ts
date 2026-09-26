@@ -109,6 +109,12 @@ import {
   publicTopicPath,
 } from "@/lib/garden/public-paths";
 import { legacySpaceJournalLocation } from "@/lib/garden/space-page";
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
+import {
+  LEGAL_ACCEPTANCE_DEFAULT_NEXT,
+  LEGAL_ACCEPTANCE_PATH,
+  legalAcceptanceHref,
+} from "@/lib/legal/legal-acceptance-href";
 import {
   publicJournalEntryNameKey,
   publicJournalEntryNumberKey,
@@ -885,6 +891,14 @@ export async function proxy(request: NextRequest) {
     );
   }
 
+  // ADR-0038 D2: a signed-in account without a receipt for the current terms
+  // meets the acceptance screen before any workspace page, decided here so
+  // the answer is a real redirect rather than a page that streamed first.
+  const legalAcceptanceGate = await getLegalAcceptanceGateResponse(request);
+  if (legalAcceptanceGate) {
+    return withAppRouteContract(legalAcceptanceGate, request, localization);
+  }
+
   // The first-publication disclosure became a section of the terms of use
   // (`OVE-526`): one 308 to it, in the reader's language, from the address
   // and anything below it. Before the not-found blocks below — the address
@@ -1655,6 +1669,68 @@ async function resolveMovedHandleEntry(handle: string, entryNumber: number) {
     publicJournalEntryNumberKey(current, entryNumber),
   );
   return lookup.status === "active" ? { handle: current, entryNumber } : null;
+}
+
+/** The workspace sections a person reaches only after accepting the terms. */
+const LEGAL_ACCEPTANCE_GATED_SECTIONS = ["/garden", "/account"] as const;
+
+/**
+ * The acceptance gate (ADR-0038 D2, `OVE-526`). Only a signed-in reader is
+ * asked anything: reading public pages never requires acceptance, and a
+ * guest on a workspace page goes on to the sign-in the page itself offers.
+ *
+ * - A workspace page for an account without a current receipt answers 307 to
+ *   the acceptance screen, carrying the address it asked for.
+ * - The acceptance screen for an account that has accepted answers 307 to
+ *   where it was going, so Back never lands on a question already answered.
+ *
+ * A session or a receipt that cannot be read lets the request through: the
+ * page is drawn, and every write it offers is still refused without a
+ * receipt (`resolveMutationScope`).
+ */
+async function getLegalAcceptanceGateResponse(
+  request: NextRequest,
+): Promise<NextResponse | null> {
+  if (request.method !== "GET" && request.method !== "HEAD") return null;
+  const { pathname, search } = request.nextUrl;
+  const isScreen = pathname === LEGAL_ACCEPTANCE_PATH;
+  const isGated = LEGAL_ACCEPTANCE_GATED_SECTIONS.some(
+    (section) => pathname === section || pathname.startsWith(`${section}/`),
+  );
+  if (!isScreen && !isGated) return null;
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  if (!cookieHeader.includes(`${SESSION_COOKIE_NAME}=`)) return null;
+
+  let accepted: boolean;
+  try {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth.api.getSession({ headers: request.headers });
+    const userId = session?.user?.id;
+    if (typeof userId !== "string" || userId.length === 0) return null;
+    const { hasCurrentLegalAcceptance } = await import(
+      "@/server/legal-acceptance"
+    );
+    accepted = await hasCurrentLegalAcceptance(userId);
+  } catch {
+    return null;
+  }
+
+  if (isGated && !accepted) {
+    return NextResponse.redirect(
+      new URL(legalAcceptanceHref(`${pathname}${search}`), request.nextUrl),
+      { status: 307 },
+    );
+  }
+  if (isScreen && accepted) {
+    const next = normalizeInternalReturnPath(
+      request.nextUrl.searchParams.get("next"),
+      LEGAL_ACCEPTANCE_DEFAULT_NEXT,
+    );
+    return NextResponse.redirect(new URL(next, request.nextUrl), {
+      status: 307,
+    });
+  }
+  return null;
 }
 
 async function resolvePublicProfileViewer(

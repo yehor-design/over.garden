@@ -224,6 +224,7 @@ async function main() {
         email,
         password,
         name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+        legalAccepted: true,
       }),
     });
     jar.addFromResponse(signup);

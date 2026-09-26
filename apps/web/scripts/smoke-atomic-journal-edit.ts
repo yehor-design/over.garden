@@ -656,8 +656,6 @@ function atomicPublication(mediaAssetIds: readonly string[]) {
     return {
       publishId,
       requestDigest: digest43(publishId),
-      disclosureAccepted: true,
-      disclosureVersion: "first-publication-v6",
       coverMediaAssetId: null,
       handoff: null,
     };
@@ -666,8 +664,6 @@ function atomicPublication(mediaAssetIds: readonly string[]) {
   return {
     publishId,
     requestDigest: digest43(publishId),
-    disclosureAccepted: true,
-    disclosureVersion: "first-publication-v6",
     coverMediaAssetId: mediaAssetIds[0]!,
     handoff: {
       stagingSessionId,

@@ -33,7 +33,8 @@ describe("OVE-347 atomic journal creation smoke", () => {
     for (const source of sources) {
       expect(source).toContain("useLocalJournalComposer");
       expect(source).toContain("local.publish({");
-      expect(source).toContain("LocalJournalPublicationDisclosure");
+      // No first-publication step since ADR-0038.
+      expect(source).not.toContain("LocalJournalPublicationDisclosure");
       expect(source).not.toMatch(
         /useOnlineJournalComposer|online-journal-submit|useInlineMediaSelection|\/api\/journal\/drafts|\/api\/media\/(?:uploads|process)/,
       );
@@ -144,7 +145,6 @@ describe("OVE-347 atomic journal creation smoke", () => {
     for (const locale of ["uk", "bg", "ru"] as const) {
       const copy = getAtomicJournalCreateCopy(locale);
       expect(copy.localOnly.length).toBeGreaterThan(30);
-      expect(copy.disclosure.length).toBeGreaterThan(30);
       expect(copy.cancelPublishing.length).toBeGreaterThan(5);
       expect(copy.photoFailed.length).toBeGreaterThan(20);
       expect(copy.photoEmpty).toMatch(/JPEG.*PNG.*WebP.*HEIC.*HEIF/i);

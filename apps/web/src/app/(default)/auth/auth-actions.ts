@@ -18,6 +18,9 @@ import {
   buildSignInHref,
 } from "@/lib/navigation/sign-in-href";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { LEGAL_ACCEPTED_BODY_FIELD } from "@/lib/auth/legal-acceptance";
+import { getLegalAcceptanceCopy } from "@/lib/legal/legal-acceptance-copy";
+import { legalAcceptanceHref } from "@/lib/legal/legal-acceptance-href";
 import {
   formatTrustTemplate,
   getLocalizedAuthClientErrorMessage,
@@ -121,19 +124,30 @@ export async function signUpAction(
 ): Promise<AuthFormState> {
   const locale = await getRequestInterfaceLocale();
   const copy = getTrustSurfaceCopy(locale).authPanel;
+  // ADR-0038 D2: no account without the ticked box. A browser that honours
+  // `required` never sends the form without it; this is for one that does.
+  if (field(formData, "legalAccepted") !== "on") {
+    return {
+      status: "error",
+      message: getLegalAcceptanceCopy(locale).signUpRequired,
+    };
+  }
+
+  // Better Auth refuses the sign-up without `legalAccepted` and writes the
+  // receipt in the transaction that creates the account. Its typed body does
+  // not name the field, and its schema passes extra fields through.
+  const body = {
+    email: field(formData, "email").trim(),
+    password: field(formData, "password"),
+    name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+    [LEGAL_ACCEPTED_BODY_FIELD]: true,
+    // The verification link signs the new gardener in and returns them to
+    // what they were doing before signing up, not to the home page.
+    callbackURL: buildEmailVerificationCallbackHref(safeNext(formData)),
+  };
 
   try {
-    await auth.api.signUpEmail({
-      body: {
-        email: field(formData, "email").trim(),
-        password: field(formData, "password"),
-        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-        // The verification link signs the new gardener in and returns them to
-        // what they were doing before signing up, not to the home page.
-        callbackURL: buildEmailVerificationCallbackHref(safeNext(formData)),
-      },
-      headers: await headers(),
-    });
+    await auth.api.signUpEmail({ body, headers: await headers() });
     // Deliberately the same wording whether the address was new or already had
     // an account: the response may not tell an enumerator which.
     return {
@@ -314,7 +328,10 @@ export async function startSocialSignInAction(
       body: {
         provider: "google",
         callbackURL,
-        newUserCallbackURL: callbackURL,
+        // A new account has accepted nothing yet (ADR-0038 D2): the
+        // acceptance screen first, then where the reader was going. An
+        // existing one without a current receipt meets it at the workspace.
+        newUserCallbackURL: legalAcceptanceHref(callbackURL),
         // A refusal at the provider comes back to this screen, which says
         // what happened, rather than to the destination, which knows
         // nothing about it (`OVE-504`, criterion 5).

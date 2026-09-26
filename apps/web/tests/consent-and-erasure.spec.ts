@@ -23,6 +23,7 @@ import {
   removeSyntheticGardener,
   SYNTHETIC_GARDENER_PASSWORD,
 } from "./helpers/synthetic-gardener";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * `OVE-505`: the consent notice, the privacy pages, and erasure as a member
@@ -107,6 +108,7 @@ async function createGardener(label: string): Promise<Gardener> {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   gardenerIds.push(id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")

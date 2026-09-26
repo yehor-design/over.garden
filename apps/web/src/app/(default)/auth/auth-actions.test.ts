@@ -157,7 +157,12 @@ describe("sign-in and sign-up actions", () => {
     );
     await signUpAction(
       idle,
-      form({ email: "b@example.test", password: "hunter2!!", next }),
+      form({
+        email: "b@example.test",
+        password: "hunter2!!",
+        next,
+        legalAccepted: "on",
+      }),
     );
 
     const callbackURL = `/auth/sign-in?next=${encodeURIComponent(next)}&verified=1`;
@@ -214,7 +219,12 @@ describe("sign-in and sign-up actions", () => {
 
     const fresh = await signUpAction(
       idle,
-      form({ email: "new@example.test", password: "hunter2!!", next: "/garden" }),
+      form({
+        email: "new@example.test",
+        password: "hunter2!!",
+        next: "/garden",
+        legalAccepted: "on",
+      }),
     );
 
     mocks.signUpEmail.mockRejectedValue(
@@ -224,7 +234,12 @@ describe("sign-in and sign-up actions", () => {
     );
     const existing = await signUpAction(
       idle,
-      form({ email: "old@example.test", password: "hunter2!!", next: "/garden" }),
+      form({
+        email: "old@example.test",
+        password: "hunter2!!",
+        next: "/garden",
+        legalAccepted: "on",
+      }),
     );
 
     // Enumeration resistance: the wording may not tell the two apart.
@@ -251,8 +266,39 @@ describe("sign-in and sign-up actions", () => {
           // A refusal at the provider comes back to the screen that can say
           // so, still carrying the destination (`OVE-504`).
           errorCallbackURL: "/auth/sign-in?next=%2Ffeed",
+          // A new account meets the terms first (ADR-0038 D2).
+          newUserCallbackURL: "/auth/terms?next=%2Ffeed",
           disableRedirect: true,
         }),
+      }),
+    );
+  });
+
+  it("refuses a sign-up without the ticked terms box, and sends the box with one", async () => {
+    const { signUpAction } = await import("./auth-actions");
+    const refused = await signUpAction(
+      idle,
+      form({ email: "c@example.test", password: "hunter2!!", next: "/garden" }),
+    );
+    expect(refused).toEqual({
+      status: "error",
+      message:
+        "Щоб створити акаунт, прийміть умови використання, політику приватності та правила cookies.",
+    });
+    expect(mocks.signUpEmail).not.toHaveBeenCalled();
+
+    await signUpAction(
+      idle,
+      form({
+        email: "c@example.test",
+        password: "hunter2!!",
+        next: "/garden",
+        legalAccepted: "on",
+      }),
+    );
+    expect(mocks.signUpEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ legalAccepted: true }),
       }),
     );
   });

@@ -28,6 +28,8 @@ export async function submitErasureRequestAction(
   const admission = await resolveMutationScope({
     expectedOwnerUserId: ownerUserIdFromFormData(formData),
     authoritative: true,
+    // Asking for erasure is a right, not a use of the product (ADR-0038).
+    legalAcceptance: "exempt",
   });
   if (admission.status === "rejected") {
     return { mutationScope: admission.code };

@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   listGardenSpaces: vi.fn(),
   loadGardenWorkspaceContext: vi.fn(),
   getMySpaceJournalTimeline: vi.fn(),
-  hasPriorPublicationDisclosure: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
   scheduleGardenWorkspaceActivationAnalytics: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
@@ -68,7 +67,6 @@ vi.mock("@/server/garden-workspace-after-response", () => ({
 
 vi.mock("@/server/journal-repository", () => ({
   getMySpaceJournalTimeline: mocks.getMySpaceJournalTimeline,
-  hasPriorPublicationDisclosure: mocks.hasPriorPublicationDisclosure,
 }));
 
 vi.mock("@/server/catalog-repository", () => ({
@@ -130,7 +128,6 @@ describe("/garden, the collection home (OVE-489)", () => {
     mocks.listGardenObjects.mockResolvedValue(objectsGroup());
     mocks.loadGardenWorkspaceContext.mockResolvedValue(workspaceContext());
     mocks.getMySpaceJournalTimeline.mockResolvedValue(spaceTimeline());
-    mocks.hasPriorPublicationDisclosure.mockResolvedValue(false);
   });
 
   it("leads with the actions and lists spaces and plants as facts, with Write on each", async () => {

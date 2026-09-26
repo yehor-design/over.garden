@@ -13,6 +13,10 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { HiddenField } from "@/components/ui/hidden-field";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  COOKIE_CHOICES_SECTION_ID,
+  LEGAL_DOCUMENT_PATHS,
+} from "@/lib/legal/legal-paths";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { listBlockedProfiles } from "@/server/owner-profile-repository";
 import type { RequestScope } from "@/server/request-scope";
@@ -46,6 +50,9 @@ const COPY = {
     dataTitle: "Ваші дані",
     privacy: "Приватність",
     privacyDescription: "Що OverGarden зберігає і хто що бачить.",
+    cookies: "Налаштування cookies",
+    cookiesDescription:
+      "Аналітика й маркетинг — два окремі вибори; змінити їх можна будь-коли.",
     erasure: "Видалення даних",
     erasureDescription:
       "Запит на видалення чи анонімізацію даних акаунта. Його розглядає оператор; сам запит нічого не видаляє.",
@@ -64,6 +71,9 @@ const COPY = {
     dataTitle: "Вашите данни",
     privacy: "Поверителност",
     privacyDescription: "Какво съхранява OverGarden и кой какво вижда.",
+    cookies: "Настройки за бисквитките",
+    cookiesDescription:
+      "Анализите и маркетингът са два отделни избора; можете да ги промените по всяко време.",
     erasure: "Изтриване на данни",
     erasureDescription:
       "Заявка за изтриване или анонимизиране на данните от акаунта. Разглежда я оператор; самата заявка не изтрива нищо.",
@@ -82,6 +92,9 @@ const COPY = {
     dataTitle: "Ваши данные",
     privacy: "Приватность",
     privacyDescription: "Что хранит OverGarden и кто что видит.",
+    cookies: "Настройки cookies",
+    cookiesDescription:
+      "Аналитика и маркетинг — два отдельных выбора; изменить их можно в любой момент.",
     erasure: "Удаление данных",
     erasureDescription:
       "Запрос на удаление или анонимизацию данных аккаунта. Его рассматривает оператор; сам запрос ничего не удаляет.",
@@ -209,6 +222,13 @@ export default async function AccountSettingsPage({
               href: "/privacy",
               label: copy.privacy,
               description: copy.privacyDescription,
+            },
+            {
+              // ADR-0038 D4: the two cookie choices, changed as easily as
+              // they were given.
+              href: `${LEGAL_DOCUMENT_PATHS.cookies}#${COOKIE_CHOICES_SECTION_ID}`,
+              label: copy.cookies,
+              description: copy.cookiesDescription,
             },
             {
               href: "/erasure",

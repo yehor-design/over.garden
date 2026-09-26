@@ -5,6 +5,7 @@ import { Pool } from "pg";
 
 import { getPublicSurfaceCopy } from "../src/lib/public-surface-localization";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * An entry's address end to end (OVE-464, ADR-0029 D9 as amended 2026-09-18),
@@ -266,6 +267,7 @@ async function seedEntryFixture(pool: Pool): Promise<EntryFixture> {
      values ($1, 'ove464 gardener', $2, true, now(), now())`,
     [ownerUserId, `ove464-${suffix}@example.test`],
   );
+  await acceptLegalDocuments(pool, ownerUserId);
   // Sign-up claims a handle; the spec reads the one it was given.
   const claimed = await pool.query<{ handle: string }>(
     `select normalized_handle as handle from user_handle_registry

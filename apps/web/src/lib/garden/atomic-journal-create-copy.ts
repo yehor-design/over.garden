@@ -30,8 +30,6 @@ export interface AtomicJournalCreateCopy {
    * decision is made rather than in a notice three sections away.
    */
   publishMeaning: string;
-  disclosure: string;
-  disclosureLink: string;
   photoEmpty: string;
   photoPreparing: string;
   photoReady: string;
@@ -63,9 +61,6 @@ const COPY: Record<PublicLocale, AtomicJournalCreateCopy> = {
     publishMeaning:
       "Запис одразу стає публічним і потрапляє в пошук. Чернеток немає.",
     publish: "Опублікувати",
-    disclosure:
-      "Я розумію, що цей запис і вибрані фото одразу стануть публічними.",
-    disclosureLink: "Що саме буде публічним",
     photoEmpty: "Необов’язково: JPEG, PNG, WebP, HEIC або HEIF до 50 МіБ.",
     photoPreparing: "Фото готується локально в цій вкладці…",
     photoReady: "Фінальний WebP готовий до публікації.",
@@ -92,9 +87,6 @@ const COPY: Record<PublicLocale, AtomicJournalCreateCopy> = {
     publishMeaning:
       "Записът веднага става публичен и влиза в търсенето. Няма чернови.",
     publish: "Публикувай",
-    disclosure:
-      "Разбирам, че този запис и избраните снимки веднага ще станат публични.",
-    disclosureLink: "Какво точно ще бъде публично",
     photoEmpty: "По избор: JPEG, PNG, WebP, HEIC или HEIF до 50 MiB.",
     photoPreparing: "Снимката се подготвя локално в този раздел…",
     photoReady: "Финалният WebP е готов за публикуване.",
@@ -122,9 +114,6 @@ const COPY: Record<PublicLocale, AtomicJournalCreateCopy> = {
     publishMeaning:
       "Запись сразу становится публичной и попадает в поиск. Черновиков нет.",
     publish: "Опубликовать",
-    disclosure:
-      "Я понимаю, что эта запись и выбранные фото сразу станут публичными.",
-    disclosureLink: "Что именно будет публичным",
     photoEmpty: "Необязательно: JPEG, PNG, WebP, HEIC или HEIF до 50 МиБ.",
     photoPreparing: "Фото готовится локально в этой вкладке…",
     photoReady: "Финальный WebP готов к публикации.",

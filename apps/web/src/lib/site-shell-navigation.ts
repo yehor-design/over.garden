@@ -1,3 +1,4 @@
+import { COOKIE_CHOICES_SECTION_ID } from "@/lib/legal/legal-paths";
 import {
   getInterfaceCopy,
   type InterfaceLocale,
@@ -303,9 +304,11 @@ export function getSiteShellNavigation(
         href: localizedPath(locale, "/privacy"),
       },
       {
+        // «Налаштування cookies» (ADR-0038 D4): the two choices, where the
+        // cookie rules end, so changing one is as easy as giving it.
         key: "cookies",
         label: copy.shell.cookies,
-        href: localizedPath(locale, "/cookies"),
+        href: `${localizedPath(locale, "/cookies")}#${COOKIE_CHOICES_SECTION_ID}`,
       },
       {
         key: "support",

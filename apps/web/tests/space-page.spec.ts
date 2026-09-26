@@ -207,10 +207,6 @@ test.describe("a space's own page", () => {
       composer.locator('[data-entry-composer-destination-name="true"]'),
     ).toHaveText("Теплиця");
     await typeInto(page, composer, "Провітрили теплицю після дощу");
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if ((await disclosure.count()) > 0) await disclosure.check();
     await composer
       .locator('[data-entry-composer-mentions="true"]')
       .getByRole("checkbox", { name: "Томат" })

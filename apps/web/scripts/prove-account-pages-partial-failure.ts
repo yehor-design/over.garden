@@ -72,7 +72,13 @@ async function signUp(
     `${baseUrl}/api/auth/sign-up/email`,
     {
       headers: { origin: baseUrl },
-      data: { email, password, name: PRIVATE_AUTH_COMPATIBILITY_NAME },
+      data: {
+        email,
+        password,
+        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+        // The sign-up form's ticked box (ADR-0038 D2).
+        legalAccepted: true,
+      },
     },
   );
   // Sign-up can answer 500 on a machine without an email provider after the

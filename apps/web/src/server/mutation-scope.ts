@@ -11,6 +11,7 @@ import {
   getCurrentSession,
   getSessionId,
 } from "@/server/auth-session";
+import { hasCurrentLegalAcceptance } from "@/server/legal-acceptance";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
 export interface AdmittedMutationScope {
@@ -21,7 +22,7 @@ export interface AdmittedMutationScope {
 export interface RejectedMutationScope {
   status: "rejected";
   code: MutationScopeCode;
-  statusCode: 401 | 409;
+  statusCode: 401 | 403 | 409;
 }
 
 export type MutationScopeResolution =
@@ -37,6 +38,12 @@ export interface ResolveMutationScopeInput {
   expectedOwnerUserId?: string | null;
   /** Bypass Better Auth's cookie cache for account-security mutations. */
   authoritative?: boolean;
+  /**
+   * Every signed-in write needs a receipt for the current terms (ADR-0038
+   * D2). `"exempt"` is for what a person must be able to do without
+   * accepting: protect or delete the account, and ask for erasure.
+   */
+  legalAcceptance?: "required" | "exempt";
 }
 
 /**
@@ -61,6 +68,12 @@ export async function resolveMutationScope(
   const expected = normalizeOwnerUserId(input.expectedOwnerUserId);
   if (expected && expected !== userId) {
     return rejected("session_account_changed");
+  }
+  if (input.legalAcceptance !== "exempt") {
+    // A receipt that cannot be read is not assumed: the write is refused,
+    // and the acceptance screen it points to reads the receipt again.
+    const accepted = await hasCurrentLegalAcceptance(userId).catch(() => false);
+    if (!accepted) return rejected("legal_acceptance_required");
   }
   return {
     status: "admitted",
@@ -93,6 +106,11 @@ function rejected(code: MutationScopeCode): RejectedMutationScope {
   return {
     status: "rejected",
     code,
-    statusCode: code === "session_required" ? 401 : 409,
+    statusCode:
+      code === "session_required"
+        ? 401
+        : code === "legal_acceptance_required"
+          ? 403
+          : 409,
   };
 }

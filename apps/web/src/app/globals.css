@@ -787,6 +787,18 @@ html[data-analytics-consent="undecided"] [data-meta-marketing-consent-banner] {
   display: none;
 }
 
+/* A page that asks the two cookie questions itself — the acceptance screen
+   (ADR-0038 D4) — is not asked over by the notice as well: the notice and the
+   room it keeps both go, decided by the stylesheet before the first paint. */
+html:has([data-cookie-choices-in-page]) {
+  /* Above the marketing rule's (0,2,1): no notice here, so no room. */
+  --consent-notice-room: 0px !important;
+}
+html:has([data-cookie-choices-in-page]) [data-analytics-consent-banner],
+html:has([data-cookie-choices-in-page]) [data-meta-marketing-consent-banner] {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    The focus ring is drawn. DESIGN.md §8, WCAG 2.4.7.
 

@@ -82,13 +82,6 @@ async function typeInto(page: Page, composer: Locator, text: string) {
   await page.keyboard.type(text);
 }
 
-async function acceptDisclosure(composer: Locator) {
-  const disclosure = composer.locator(
-    'input[name="publicationDisclosureAccepted"]',
-  );
-  if ((await disclosure.count()) > 0) await disclosure.check();
-}
-
 test.describe("the one entry composer", () => {
   let pool: Pool;
   test.beforeAll(() => {
@@ -167,7 +160,6 @@ test.describe("the one entry composer", () => {
       await expect(composer).toContainText("Балкон");
       await scanAccessibility(page, testInfo, "entry-composer-global");
 
-      await acceptDisclosure(composer);
       await composer.locator('[data-entry-composer-publish="true"]').click();
       await page.waitForURL(
         new RegExp(`/garden/objects/${garden.balconyTomato}`, "u"),
@@ -224,7 +216,6 @@ test.describe("the one entry composer", () => {
       ).toHaveCount(0);
 
       await typeInto(page, composer, "Слана тази нощ");
-      await acceptDisclosure(composer);
       // Publish with no mention: asked, not sent.
       await composer.locator('[data-entry-composer-publish="true"]').click();
       await expect(
@@ -288,7 +279,6 @@ test.describe("the one entry composer", () => {
       const composer = page.locator('[data-entry-composer="true"]');
       await waitForHydration(composer);
       await typeInto(page, composer, "Подвязал стебель");
-      await acceptDisclosure(composer);
 
       // The session ends while the gardener writes.
       await context.clearCookies();

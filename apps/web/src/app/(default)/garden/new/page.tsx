@@ -22,7 +22,6 @@ import { readCommunityWritingContext } from "@/server/community-repository";
 import { getEntryComposerCopy } from "@/lib/entry-composer-copy";
 import { resolveIllustration } from "@/lib/illustrations";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { hasPriorPublicationDisclosure } from "@/server/journal-repository";
 import {
   hasOwnedObjects,
   readOwnedDestination,
@@ -106,8 +105,7 @@ function composerSignInReturn(params: {
  * `returnTo`, the page it was opened from.
  *
  * Every read is settled (ADR-0023): a destination that cannot be read opens
- * the picker instead, and a failed disclosure read asks for the disclosure
- * rather than skipping it. A destination that is not there — a reminder
+ * the picker instead. A destination that is not there — a reminder
  * opened after its plant was deleted — opens the picker too, and says so
  * (`OVE-501`, criterion 2).
  */
@@ -174,7 +172,7 @@ export default async function GardenEntryComposerPage({
     : spaceId
       ? { kind: "space" as const, id: spaceId }
       : null;
-  const [destination, anything, disclosed, writingFor] = await Promise.all([
+  const [destination, anything, writingFor] = await Promise.all([
     target
       ? settleSection(() => readOwnedDestination(viewer.scope, target), {
           deadlineMs,
@@ -186,11 +184,6 @@ export default async function GardenEntryComposerPage({
       deadlineMs,
       surface: "entry-composer",
       section: "destinations",
-    }),
-    settleSection(() => hasPriorPublicationDisclosure(viewer.scope), {
-      deadlineMs,
-      surface: "entry-composer",
-      section: "disclosure",
     }),
     community
       ? settleSection(
@@ -288,9 +281,6 @@ export default async function GardenEntryComposerPage({
           destination?.status === "ready" ? destination.value : null
         }
         today={new Date().toISOString().slice(0, 10)}
-        requiresFirstPublicationDisclosure={
-          disclosed.status === "ready" ? !disclosed.value : true
-        }
         closeHref={closeHref}
         community={communityContext}
         destinationNotice={

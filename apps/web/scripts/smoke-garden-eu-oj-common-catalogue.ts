@@ -127,6 +127,7 @@ async function main() {
       email,
       password: TEST_PASSWORD,
       name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+      legalAccepted: true,
     });
     await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
       email,
@@ -447,7 +448,7 @@ async function authRequest(
   baseUrl: string,
   jar: CookieJar,
   path: string,
-  body: Record<string, string>,
+  body: Record<string, string | boolean>,
 ) {
   const response = await fetch(`${baseUrl}${path}`, {
     method: "POST",

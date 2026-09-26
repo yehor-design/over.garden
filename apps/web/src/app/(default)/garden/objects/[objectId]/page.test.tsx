@@ -62,14 +62,8 @@ vi.mock("./catalog-resolve-control", () => ({
 vi.mock("@/components/garden/entry-composer", () => ({
   EntryComposer: (props: {
     initialDestination: { kind: string; objectKind?: string } | null;
-    requiresFirstPublicationDisclosure: boolean;
   }) => (
-    <form
-      data-object-kind={props.initialDestination?.objectKind}
-      data-requires-first-publication-disclosure={String(
-        props.requiresFirstPublicationDisclosure,
-      )}
-    >
+    <form data-object-kind={props.initialDestination?.objectKind}>
       Follow-up composer
     </form>
   ),
@@ -365,7 +359,7 @@ describe("/garden/objects/[objectId]", () => {
       edges: [provenanceEdge()],
     });
     mocks.getPlantObjectPage.mockResolvedValue(
-      plantObjectPage([], false, {
+      plantObjectPage([], {
         sourceCredit: {
           sourceSlug: "eu_oj_eur_lex_common_catalogue",
           sourceName: "EU Official Journal / EUR-Lex Common Catalogue",
@@ -522,36 +516,6 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).not.toContain("entry-publish-");
   });
 
-  it("keeps first-publication disclosure on atomic composition only", async () => {
-    mocks.getPlantObjectPage.mockResolvedValueOnce(
-      plantObjectPage(
-        [
-          {
-            id: "entry-private",
-            title: "Later private note",
-            body: "Ready for another explicit publication.",
-            entryDate: "2026-07-12",
-          },
-        ],
-        true,
-      ),
-    );
-    const { default: PlantObjectReadbackPage } = await import("./page");
-
-    const html = await renderServerHtml(
-      await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: OBJECT_ID }),
-        searchParams: Promise.resolve({}),
-      }),
-    );
-
-    expect(html).toContain(
-      'data-requires-first-publication-disclosure="false"',
-    );
-    expect(html).not.toContain('name="publicationDisclosureAccepted"');
-    expect(html).not.toContain('data-auth-intent-control="publish"');
-  });
-
   it("renders its own shell and a bounded failure when the relation is missing", async () => {
     mocks.getPlantObjectPage.mockRejectedValue(
       missingRelationRejection("plant_objects"),
@@ -600,7 +564,6 @@ function plantObjectPage(
     lifecycleState?: "active" | "deleted_retention";
     publicGoneAt?: string | null;
   }>,
-  hasPriorPublicationDisclosure = false,
   options: {
     sourceCredit?: {
       sourceSlug: string;
@@ -631,7 +594,6 @@ function plantObjectPage(
       coarse_region_code: null,
       source_credit: options.sourceCredit ?? null,
     },
-    hasPriorPublicationDisclosure,
     entries: entries.map((entry) => ({
       id: entry.id,
       title: entry.title,

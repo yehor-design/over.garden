@@ -23,6 +23,7 @@ import { Pool } from "pg";
 
 import { assertLoopbackDatabaseEnvironment } from "../src/lib/local-runtime-safety";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import { LEGAL_BUNDLE_VERSION } from "../src/lib/legal/legal-documents";
 import { OWNER_BROWSER_FIXTURE } from "../tests/helpers/owner-fixture";
 
 async function main() {
@@ -56,6 +57,14 @@ async function main() {
         OWNER_BROWSER_FIXTURE.userId,
         password,
       ],
+    );
+    // The owner has accepted the current documents (ADR-0038 D2), as every
+    // account must before it writes.
+    await pool.query(
+      `insert into legal_acceptances (owner_user_id, bundle_version, source)
+       values ($1::uuid, $2::text, 'sign_up')
+       on conflict (owner_user_id, bundle_version) do nothing`,
+      [OWNER_BROWSER_FIXTURE.userId, LEGAL_BUNDLE_VERSION],
     );
     // The schema allows one owner. The fixture takes the seat on a local
     // database; production is never reachable from here (loopback guard).

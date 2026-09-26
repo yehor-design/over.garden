@@ -8,6 +8,7 @@ import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { TransportBoundary } from "@/components/transport-boundary";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { HiddenField } from "@/components/ui/hidden-field";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,9 @@ import { getAuthScreenCopy } from "@/lib/auth-screen-copy";
 import { AUTH_HELP_PATH } from "@/lib/auth/auth-recovery";
 import { announceSessionSignal } from "@/lib/auth/session-signal";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getLegalAcceptanceCopy } from "@/lib/legal/legal-acceptance-copy";
+import { LEGAL_DOCUMENT_PATHS } from "@/lib/legal/legal-paths";
+import { localizedPath } from "@/lib/public-localization";
 import {
   buildSignInHref,
   type AuthScreenNotice,
@@ -395,6 +399,8 @@ function CredentialForm({
         />
       </Field>
 
+      {isSignUp ? <LegalAcceptanceCheckbox locale={locale} /> : null}
+
       <SubmitButton
         busy={signedIn}
         pendingLabel={isSignUp ? screen.pending.signUp : screen.pending.signIn}
@@ -403,6 +409,45 @@ function CredentialForm({
         {isSignUp ? copy.createAccount : copy.signIn}
       </SubmitButton>
     </form>
+  );
+}
+
+/**
+ * The one acceptance, at sign-up (ADR-0038 D2): unticked, required, and
+ * linking the three documents it accepts. The documents open in a new tab so
+ * the address and password typed here stay where they are. The server checks
+ * the box as well (`signUpAction`, and Better Auth for any other caller).
+ */
+function LegalAcceptanceCheckbox({ locale }: { locale: InterfaceLocale }) {
+  const consent = getLegalAcceptanceCopy(locale).consent;
+  const documentLink = (key: keyof typeof LEGAL_DOCUMENT_PATHS, text: string) => (
+    <Link
+      href={localizedPath(locale, LEGAL_DOCUMENT_PATHS[key])}
+      target="_blank"
+      // A prefixed address from an unprefixed page: the proxy cannot see a
+      // prefetch (ADR-0029 D10).
+      prefetch={false}
+    >
+      {text}
+    </Link>
+  );
+  return (
+    <Checkbox
+      name="legalAccepted"
+      required
+      data-legal-acceptance-checkbox="true"
+      label={
+        <>
+          {consent.before}
+          {documentLink("terms", consent.terms)}
+          {consent.between}
+          {documentLink("privacy", consent.privacy)}
+          {consent.and}
+          {documentLink("cookies", consent.cookies)}
+          {consent.after}
+        </>
+      }
+    />
   );
 }
 

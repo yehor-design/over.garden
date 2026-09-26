@@ -199,6 +199,7 @@ export const SECTION_SUBPATHS: Readonly<Record<string, readonly string[]>> = {
     "reset-password",
     "sign-in",
     "sign-up",
+    "terms",
   ],
   blog: ["[slug]"],
   bookmarks: [],

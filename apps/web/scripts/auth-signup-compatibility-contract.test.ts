@@ -26,5 +26,10 @@ describe("auth smoke signup compatibility contract", () => {
       );
       expect(source).toContain("name: PRIVATE_AUTH_COMPATIBILITY_NAME");
     });
+
+    // ADR-0038 D2: `/sign-up/email` refuses a body without the ticked box.
+    it(`ticks the terms box in ${filename}`, () => {
+      expect(source).toContain("legalAccepted: true");
+    });
   }
 });

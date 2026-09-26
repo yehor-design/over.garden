@@ -25,6 +25,7 @@ import {
   type SyntheticGardener,
 } from "./helpers/synthetic-gardener";
 import { postPastRateLimit } from "./helpers/auth-rate-limit";
+import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
  * A community as a place to read and to add to (`OVE-500`).
@@ -148,6 +149,7 @@ async function account(prefix: string): Promise<SyntheticGardener> {
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
     [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
   );
+  await acceptLegalDocuments(pool, id);
   gardeners.push(id);
   await pool.query(
     `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
@@ -531,10 +533,6 @@ test.describe("a community as a place to read and to add to", () => {
     await options.first().click();
     await typeInto(page, "Базилік дав нове листя після пересадки.");
     await scanAccessibility(page, testInfo, "community-composer-uk-1280");
-    const disclosure = composer.locator(
-      'input[name="publicationDisclosureAccepted"]',
-    );
-    if ((await disclosure.count()) > 0) await disclosure.check();
     await composer.locator('[data-entry-composer-publish="true"]').click();
 
     // Back to the community's step, with the new entry offered first.

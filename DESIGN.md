@@ -571,10 +571,12 @@ The `<main>` is the **page's**, never the shell's. The shell renders the region
 it goes in (`#main-content`, the skip link's target) and would otherwise give
 every page two.
 
-The footer carries the links nothing else links — the three documents a person
-accepts, `/terms`, `/privacy` and `/cookies` (`OVE-526`; «Налаштування cookies»
-joins them with the acceptance step), then `/support` — and the one language
-control of §6. `/first-publication-disclosure` is a section of the terms now
+The footer carries the links nothing else links — the documents a person
+accepts, `/terms` and `/privacy`, then «Налаштування cookies», which opens the
+cookie rules at the reader's two choices (`/cookies#cookies-controls`,
+`OVE-526`), then `/support` — and the one language control of §6. The phone
+menu carries the privacy link and «Налаштування cookies» the same way, and
+account settings lists it under «Ваші дані». `/first-publication-disclosure` is a section of the terms now
 and answers one 308 to `/terms#terms-publishing`. It does
 **not** link the catalogue any more (§5.17). It does **not** carry a
 `thiings.co` credit; §2.9 records why.

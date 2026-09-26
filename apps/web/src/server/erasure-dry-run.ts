@@ -55,6 +55,7 @@ export interface ErasureDryRunCounts {
   authSessions: number;
   authAccounts: number;
   publicationDisclosures: number;
+  legalAcceptances: number;
   publicIdentityProfiles: number;
   currentHandleClaims: number;
   retiredHandleClaims: number;
@@ -114,6 +115,7 @@ function buildErasureDryRunDataClasses(
         sessions: counts.authSessions,
         accounts: counts.authAccounts,
         publication_disclosures: counts.publicationDisclosures,
+        legal_acceptances: counts.legalAcceptances,
       },
     },
     {
