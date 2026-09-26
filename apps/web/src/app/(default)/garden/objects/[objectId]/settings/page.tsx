@@ -13,7 +13,10 @@ import { EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE } from "@/lib/catal
 import { gardenObjectSectionPath } from "@/lib/garden/object-pages";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
+import {
+  getLivingObjectPassportCopy,
+  ownObjectIdentityText,
+} from "@/lib/living-object-passport";
 import {
   formatOwnerObjectTemplate,
   getOwnerObjectCopy,
@@ -148,7 +151,10 @@ async function ObjectSettingsSections({
           id: object.id,
           displayName: object.display_name,
           objectKind: object.object_kind,
-          species: object.catalog_canonical_name ?? object.variety_text,
+          species:
+            object.catalog_canonical_name ??
+            ownObjectIdentityText(object) ??
+            (object.variety_state === "selected" ? object.variety_text : null),
         }}
         space={{ id: page.space.id, displayName: page.space.display_name }}
       />
@@ -179,7 +185,7 @@ async function ObjectSettingsSections({
               locale={locale}
               objectId={object.id}
               objectKind={object.object_kind}
-              currentVarietyText={object.variety_text}
+              currentVarietyText={ownObjectIdentityText(object)}
               currentVarietyState={object.variety_state as VarietyState}
               action={resolvePlantObjectCatalogAction}
             />

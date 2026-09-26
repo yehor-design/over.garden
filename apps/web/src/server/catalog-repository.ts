@@ -133,8 +133,8 @@ export interface CatalogSearchMissInput {
 }
 
 export class CatalogTypeaheadDeadlineError extends Error {
-  constructor() {
-    super(`Catalog typeahead exceeded ${CATALOG_TYPEAHEAD_DEADLINE_MS} ms.`);
+  constructor(deadlineMs: number = CATALOG_TYPEAHEAD_DEADLINE_MS) {
+    super(`Catalog typeahead exceeded ${deadlineMs} ms.`);
     this.name = "CatalogTypeaheadDeadlineError";
   }
 }
@@ -524,19 +524,20 @@ export async function searchCatalogSuggestionsForTypeaheadResult(
 
 async function runWithinCatalogTypeaheadDeadline(
   statement: RawBuilder<CatalogTypeaheadSqlRow>,
+  deadlineMs: number = CATALOG_TYPEAHEAD_DEADLINE_MS,
 ): Promise<CatalogTypeaheadSqlRow[]> {
   return db.transaction().execute(async (trx) => {
     // `set local` ends with the transaction, so the pooled connection carries
     // nothing over. Acquiring the connection is not on the clock: a cold
     // instance's first connection is not a slow catalog.
     await sql`set local statement_timeout = ${sql.lit(
-      String(CATALOG_TYPEAHEAD_DEADLINE_MS),
+      String(deadlineMs),
     )}`.execute(trx);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_resolve, reject) => {
       timer = setTimeout(
-        () => reject(new CatalogTypeaheadDeadlineError()),
-        CATALOG_TYPEAHEAD_DEADLINE_MS,
+        () => reject(new CatalogTypeaheadDeadlineError(deadlineMs)),
+        deadlineMs,
       );
     });
     const read = statement.execute(trx).then((result) => result.rows);
@@ -549,6 +550,202 @@ async function runWithinCatalogTypeaheadDeadline(
       read.catch(() => undefined);
     }
   });
+}
+
+/**
+ * The deadline of the species step's read (OVE-524). Longer than the whole
+ * picker's, because the work under it is bounded by the standard base rather
+ * than by the query: the statement below reads the base's own names — 5,627
+ * for plants and 1,077 for animals on 2026-09-26 — and never the rest of the
+ * catalogue, so no query can make it long and a generous bound cannot let a
+ * slow statement pile up on the database.
+ *
+ * The bound exists for the first search. On 2026-09-25 the first three animal
+ * searches against production answered 503: the whole-catalogue statement on
+ * a fresh database backend (PgBouncer opening a server connection) spent
+ * 89.6 ms planning against a cold catalog cache and 277 ms executing, against
+ * 6 ms and 162–187 ms warm — over 400 ms before the network. The base-only
+ * statement runs in 4 ms warm and about 60 ms on a fresh backend, measured on
+ * production the next day through unpooled connections (one fresh backend
+ * each); the bound is the margin for a cold buffer cache on top of that.
+ */
+export const STANDARD_SPECIES_TYPEAHEAD_DEADLINE_MS = 1000;
+
+/**
+ * The species step's one statement (OVE-524, ADR-0035 D3): the standard base
+ * of the object's kind, searched by every name the base holds — everyday
+ * names, search words and Latin names, in all three languages — and nothing
+ * else. A species outside the base is found by nothing; the step's
+ * «Ввести свій варіант» takes it.
+ *
+ * The same match classes as the whole picker's (exact vernacular in the
+ * reader's locale, prefix vernacular in it, exact scientific, any prefix,
+ * fuzzy), ordered by class, then by how many people keep the species, then by
+ * similarity. A typo is forgiven in the reader's language and in Latin only,
+ * from three characters. The base is a few hundred species, so every name of
+ * it is scored from its stored trigram set: no index choice to get wrong, and
+ * the same work whatever was typed.
+ */
+export function buildStandardSpeciesTypeaheadStatement(input: {
+  normalizedQuery: string;
+  locale: PublicLocale;
+  objectKind: PlantObjectKind;
+  limit?: number;
+}): RawBuilder<CatalogTypeaheadSqlRow> {
+  const query = input.normalizedQuery;
+  const prefixPattern = `${escapeLikePattern(query)}%`;
+  const limit = sql.lit(
+    normalizeCatalogLimit(input.limit ?? MAX_CATALOG_SUGGESTIONS),
+  );
+  const locale = input.locale;
+  const threshold = sql.lit(CATALOG_TYPEAHEAD_TRIGRAM_THRESHOLD);
+  const fuzzy = sql.lit(
+    Array.from(query).length >= MIN_FUZZY_QUERY_LENGTH,
+  );
+  return sql<CatalogTypeaheadSqlRow>`
+    with q as (
+      select catalog_trigram_ints(show_trgm(${query})) as trigrams,
+             cardinality(show_trgm(${query})) as trigram_count
+    ),
+    base as materialized (
+      select b.catalog_item_id, b.popularity
+      from catalog_standard_species as b
+      join catalog_items as ci on ci.id = b.catalog_item_id
+      where b.object_kind = ${input.objectKind}
+        and ci.identity_state = 'active'
+        and ci.node_kind = 'taxon'
+    ),
+    scored as (
+      select n.catalog_item_id,
+             n.id as name_id,
+             n.display_name,
+             n.normalized_name,
+             n.name_type,
+             n.locale,
+             -- pg_trgm's CALCSML over the stored sets (migration 0065).
+             (icount(n.search_trigrams & q.trigrams)::float4
+               / (q.trigram_count + cardinality(n.search_trigrams)
+                  - icount(n.search_trigrams & q.trigrams))::float4) as similarity
+      from base
+      join catalog_item_names as n on n.catalog_item_id = base.catalog_item_id
+      cross join q
+    ),
+    classified as (
+      select s.catalog_item_id,
+             s.name_id,
+             s.display_name as matched_name,
+             s.similarity,
+             case
+               when s.normalized_name = ${query}
+                    and s.name_type = 'vernacular' and s.locale = ${locale} then 0
+               when s.normalized_name like ${prefixPattern}
+                    and s.name_type = 'vernacular' and s.locale = ${locale} then 1
+               when s.normalized_name = ${query}
+                    and s.name_type in ('scientific_accepted', 'scientific_synonym') then 2
+               when s.normalized_name like ${prefixPattern} then 3
+               when ${fuzzy}
+                    and s.locale in (${locale}, 'la')
+                    and s.similarity >= ${threshold} then 4
+             end as match_class
+      from scored as s
+    ),
+    ranked as (
+      select distinct on (c.catalog_item_id)
+             c.catalog_item_id,
+             c.matched_name,
+             c.similarity,
+             c.match_class
+      from classified as c
+      where c.match_class is not null
+      order by c.catalog_item_id, c.match_class, c.similarity desc, c.name_id
+    )
+    select ci.id,
+           ci.node_kind,
+           ci.public_slug,
+           null::text as species_slug,
+           coalesce(vernacular.display_name, ci.canonical_name) as display_name,
+           r.matched_name,
+           null::text as parent_display_name,
+           r.match_class,
+           base.popularity as base_popularity,
+           false as market,
+           r.similarity
+    from ranked as r
+    join base on base.catalog_item_id = r.catalog_item_id
+    join catalog_items as ci on ci.id = r.catalog_item_id
+    left join lateral (
+      select v.display_name
+      from catalog_item_names as v
+      where v.catalog_item_id = ci.id
+        and v.name_type = 'vernacular'
+        and v.locale = ${locale}
+      order by v.is_primary desc, v.weight desc, v.created_at, v.id
+      limit 1
+    ) as vernacular on true
+    order by r.match_class,
+             base.popularity desc,
+             r.similarity desc,
+             ci.canonical_name,
+             ci.id
+    limit ${limit}
+  `;
+}
+
+/** The species step's read: the standard base only, under its own deadline. */
+export async function searchStandardSpeciesForTypeahead(
+  query: string,
+  options: CatalogTypeaheadSearchOptions,
+  deps: CatalogTypeaheadSearchDeps = {},
+): Promise<CatalogTypeaheadSearchResult> {
+  const normalizedQuery = normalizeCatalogQuery(query);
+  if (normalizedQuery.length < MIN_CATALOG_QUERY_LENGTH) {
+    return { suggestions: [], state: "empty", databaseMs: 0 };
+  }
+  const locale = options.locale ?? "uk";
+  const statement = buildStandardSpeciesTypeaheadStatement({
+    normalizedQuery,
+    locale,
+    objectKind: options.objectKind,
+    limit: options.limit,
+  });
+  const startedAt = performance.now();
+  const rows = deps.runStatement
+    ? await deps.runStatement(statement)
+    : await runWithinCatalogTypeaheadDeadline(
+        statement,
+        STANDARD_SPECIES_TYPEAHEAD_DEADLINE_MS,
+      );
+  const databaseMs = Math.max(0, performance.now() - startedAt);
+  const suggestions = rows.map((row) => toCatalogSuggestion(row, locale));
+  return {
+    suggestions,
+    state: suggestions.length > 0 ? "ready" : "empty",
+    databaseMs,
+  };
+}
+
+/** A species of the standard base held for this kind, as the object's species. */
+export interface StandardSpecies {
+  id: string;
+  canonicalName: string;
+  kingdom: string | null;
+}
+
+export async function findStandardSpecies(
+  executor: QueryExecutor,
+  itemId: string,
+  objectKind: PlantObjectKind,
+): Promise<StandardSpecies | null> {
+  const row = await executor
+    .selectFrom("catalog_standard_species as base")
+    .innerJoin("catalog_items as ci", "ci.id", "base.catalog_item_id")
+    .select(["ci.id", "ci.canonical_name as canonicalName", "ci.kingdom"])
+    .where("base.catalog_item_id", "=", itemId)
+    .where("base.object_kind", "=", objectKind)
+    .where("ci.identity_state", "=", "active")
+    .where("ci.node_kind", "=", "taxon")
+    .executeTakeFirst();
+  return row ?? null;
 }
 
 function toCatalogSuggestion(

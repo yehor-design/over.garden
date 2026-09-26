@@ -4,6 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { CatalogKind, Database } from "@/db/schema";
+import { GARDENER_ENTRY_SOURCE } from "@/lib/catalog/gardener-entries";
 import {
   publicCatalogPermalinkPath,
   type CatalogAliasScheme,
@@ -78,6 +79,7 @@ export function buildCatalogItemAddressQuery(
       "catalog_items.public_slug as publicSlug",
       "catalog_items.identity_state as identityState",
       "catalog_items.created_by_user_id as createdByUserId",
+      "catalog_items.source as source",
       "catalog_items.merged_into_catalog_item_id as mergedIntoCatalogItemId",
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
     ])
@@ -200,10 +202,13 @@ export async function readPublicCatalogCanonicalAddress(
       currentId = item.mergedIntoCatalogItemId;
       continue;
     }
+    // A card a gardener made for themselves before 0055 has no address; a
+    // cultivar or breed a gardener added to a species' list (0086) is shared
+    // and has one, like any form.
     if (
       item.identityState !== "active" ||
       item.mergedIntoCatalogItemId !== null ||
-      item.createdByUserId !== null ||
+      (item.createdByUserId !== null && item.source !== GARDENER_ENTRY_SOURCE) ||
       !item.publicSlug
     ) {
       return null;

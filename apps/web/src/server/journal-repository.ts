@@ -26,6 +26,7 @@ import type {
   VarietyState,
 } from "@/db/schema";
 import type { Json } from "@/db/generated";
+import { GARDENER_ENTRY_SOURCE } from "@/lib/catalog/gardener-entries";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { ADDRESS_ORDINAL_MAXIMUM } from "@/lib/address/address-manifest";
@@ -57,6 +58,7 @@ import {
 } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import { readOwnedPhotos } from "@/server/owned-photo-repository";
 import {
   normalizeCatalogLabel,
   findSelectableCatalogItem,
@@ -347,12 +349,16 @@ export interface PlantObjectPage {
     catalog_species_slug: string | null;
     variety_text: PlantObject["variety_text"];
     variety_state: VarietyState;
+    /** The gardener's own species (0086), private to them. */
+    species_text: PlantObject["species_text"];
     location_visibility: PlantObject["location_visibility"];
     coarse_region_code: PlantObject["coarse_region_code"];
     source_credit: PlantObjectCatalogSourceCredit | null;
   };
   entries: JournalEntryReadback[];
   gallery_media: EntryMediaReadback[];
+  /** The object's own photo, its cover before any entry photo (OVE-524). */
+  object_photo: EntryMediaReadback | null;
 }
 
 export interface PlantObjectCatalogSourceCredit {
@@ -1494,15 +1500,14 @@ export async function createFirstPlantEntry(
           selectedCatalogItem?.catalogKind,
           selectedCatalogItem?.source,
         ),
-        // ADR-0026 D6: the own name is a label on the object, never a card.
+        // ADR-0026 D6: the own name is the object's own species (migration
+        // 0086), private to the gardener, never a card.
         catalog_item_id: selectedCatalogItem?.id ?? null,
-        variety_text:
-          selectedCatalogItem?.canonicalName ?? normalized.catalogLabel ?? null,
-        variety_state: selectedCatalogItem
-          ? "selected"
-          : normalized.catalogLabel
-            ? "free_text"
-            : "unknown",
+        variety_text: selectedCatalogItem?.canonicalName ?? null,
+        variety_state: selectedCatalogItem ? "selected" : "unknown",
+        species_text: selectedCatalogItem
+          ? null
+          : (normalized.catalogLabel ?? null),
         location_visibility: space.location_visibility,
         coarse_region_code: space.coarse_region_code,
       })
@@ -1591,6 +1596,7 @@ export async function createFirstPlantEntry(
           catalog_species_slug: selectedCatalogItem?.speciesSlug ?? null,
           variety_text: plantObject.variety_text,
           variety_state: plantObject.variety_state as VarietyState,
+          species_text: plantObject.species_text,
           location_visibility: plantObject.location_visibility,
           coarse_region_code: plantObject.coarse_region_code,
           source_credit: null,
@@ -2035,6 +2041,7 @@ export async function getPlantObjectPage(
     mentionsByEntryId,
     galleryMedia,
     sourceCredit,
+    objectPhotos,
   ] = await Promise.all([
     getProcessedMediaByEntryId(executor, scope, entryIds),
     getMentionedObjectsByEntryId(executor, scope, entryIds),
@@ -2042,7 +2049,13 @@ export async function getPlantObjectPage(
     objectRow.catalogItemId
       ? readPlantObjectCatalogSourceCredit(executor, objectRow.catalogItemId)
       : Promise.resolve(null),
+    readOwnedPhotos(executor, {
+      ownerUserId: scope.userId,
+      kind: "object",
+      ids: [objectRow.objectId],
+    }),
   ]);
+  const objectPhoto = objectPhotos.get(objectRow.objectId) ?? null;
 
   return {
     space: {
@@ -2063,6 +2076,7 @@ export async function getPlantObjectPage(
       catalog_species_slug: objectRow.catalogSpeciesSlug,
       variety_text: objectRow.varietyText,
       variety_state: objectRow.varietyState as VarietyState,
+      species_text: objectRow.speciesText,
       location_visibility: objectRow.objectLocationVisibility,
       coarse_region_code: objectRow.objectCoarseRegionCode,
       source_credit: sourceCredit,
@@ -2074,6 +2088,17 @@ export async function getPlantObjectPage(
       timelineRelation,
     })),
     gallery_media: galleryMedia,
+    object_photo: objectPhoto
+      ? {
+          id: objectPhoto.mediaAssetId,
+          derivativeKey: objectPhoto.derivativeKey,
+          publicUrl: getPublicDerivativeUrl(objectPhoto.derivativeKey),
+          focalX: 0.5,
+          focalY: 0.5,
+          intrinsicWidth: objectPhoto.width,
+          intrinsicHeight: objectPhoto.height,
+        }
+      : null,
   };
 }
 
@@ -2266,6 +2291,7 @@ export async function createPlantObjectJournalEntry(
           catalog_species_slug: target.catalogSpeciesSlug,
           variety_text: target.varietyText,
           variety_state: target.varietyState as VarietyState,
+          species_text: target.speciesText,
           location_visibility: target.objectLocationVisibility,
           coarse_region_code: target.objectCoarseRegionCode,
           source_credit: null,
@@ -2319,6 +2345,7 @@ export async function createPlantObjectJournalEntry(
         catalog_species_slug: target.catalogSpeciesSlug,
         variety_text: target.varietyText,
         variety_state: target.varietyState as VarietyState,
+        species_text: target.speciesText,
         location_visibility: target.objectLocationVisibility,
         coarse_region_code: target.objectCoarseRegionCode,
         source_credit: null,
@@ -2608,6 +2635,7 @@ export async function resolvePlantObjectCatalog(
         catalog_species_slug: selectedCatalogItem?.speciesSlug ?? null,
         variety_text: resolved.variety_text,
         variety_state: resolved.variety_state as VarietyState,
+        species_text: resolved.species_text,
         location_visibility: resolved.location_visibility,
         coarse_region_code: resolved.coarse_region_code,
         source_credit: null,
@@ -3461,17 +3489,20 @@ export function buildResolvePlantObjectCatalogQuery(
       object_kind: input.objectKind,
       variety_text: input.varietyText,
       variety_state: "selected",
+      // A catalogue match replaces an own species and its own cultivar.
+      species_text: null,
       updated_at: input.now,
     })
     .where("id", "=", input.plantObjectId)
     .where("owner_user_id", "=", scope.userId)
-    .where("variety_state", "in", ["unknown", "free_text"])
+    .where("variety_state", "in", [...RESOLVABLE_VARIETY_STATES])
     .returningAll();
 }
 
 /**
- * The own-name outcome on an existing object (ADR-0026 D6): the label lives
- * on the object, the link is cleared, and the state is `free_text`.
+ * The own-name outcome on an existing object (ADR-0026 D6): the name is the
+ * object's own species (migration 0086), private to the gardener; the link and
+ * any own cultivar text are cleared.
  */
 export function buildLabelPlantObjectCatalogQuery(
   executor: QueryExecutor,
@@ -3486,13 +3517,14 @@ export function buildLabelPlantObjectCatalogQuery(
     .updateTable("plant_objects")
     .set({
       catalog_item_id: null,
-      variety_text: input.catalogLabel,
-      variety_state: "free_text",
+      variety_text: null,
+      variety_state: "unknown",
+      species_text: input.catalogLabel,
       updated_at: input.now,
     })
     .where("id", "=", input.plantObjectId)
     .where("owner_user_id", "=", scope.userId)
-    .where("variety_state", "in", ["unknown", "free_text"])
+    .where("variety_state", "in", [...RESOLVABLE_VARIETY_STATES])
     .returningAll();
 }
 
@@ -3583,7 +3615,14 @@ export function buildPlantObjectPageObjectQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.identity_state", "=", "active")
-        .on("catalog_items.created_by_user_id", "is", null),
+        // A cultivar or breed a gardener added to a species' list (0086) is
+        // a shared form with a page, unlike a pre-0055 private card.
+        .on((eb) =>
+          eb.or([
+            eb("catalog_items.created_by_user_id", "is", null),
+            eb("catalog_items.source", "=", GARDENER_ENTRY_SOURCE),
+          ]),
+        ),
     )
     .select([
       "plant_objects.id as objectId",
@@ -3597,6 +3636,7 @@ export function buildPlantObjectPageObjectQuery(
       catalogSpeciesSlugSql("catalog_items").as("catalogSpeciesSlug"),
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
+      "plant_objects.species_text as speciesText",
       "plant_objects.location_visibility as objectLocationVisibility",
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "spaces.id as spaceId",
@@ -4837,11 +4877,7 @@ function normalizeCreateFirstPlantEntryInput(
     catalogItemId,
     catalogLabel: catalogLabel ? normalizeCatalogLabel(catalogLabel) : null,
     varietyText: null,
-    varietyState: (catalogItemId
-      ? "selected"
-      : catalogLabel
-        ? "free_text"
-        : "unknown") satisfies VarietyState,
+    varietyState: (catalogItemId ? "selected" : "unknown") satisfies VarietyState,
     title: normalizeJournalEntryTitle(input.title),
     body: content.body,
     contentDocument: content.document,
@@ -5164,12 +5200,15 @@ function normalizePublicSlug(value: string) {
 
 /**
  * An object without a catalog identity can be resolved any number of times:
- * unknown, or carrying the gardener's own name (ADR-0026 D5).
+ * unknown, or carrying the gardener's own species (with or without an own
+ * cultivar, migration 0086) or an old label (ADR-0026 D5).
  */
+const RESOLVABLE_VARIETY_STATES = ["unknown", "own", "free_text"] as const;
+
 function isResolvableVarietyState(
   value: string,
-): value is "unknown" | "free_text" {
-  return value === "unknown" || value === "free_text";
+): value is (typeof RESOLVABLE_VARIETY_STATES)[number] {
+  return (RESOLVABLE_VARIETY_STATES as readonly string[]).includes(value);
 }
 
 function isGonePublicEntry(row: {

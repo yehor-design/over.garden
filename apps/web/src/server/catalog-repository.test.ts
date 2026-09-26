@@ -16,12 +16,15 @@ import type { Database } from "@/db/schema";
 import {
   buildCatalogTypeaheadStatement,
   buildFindSelectableCatalogItemQuery,
+  buildStandardSpeciesTypeaheadStatement,
   buildUpsertCatalogSearchMissQuery,
   CATALOG_TYPEAHEAD_DEADLINE_MS,
   normalizeCatalogLabel,
   normalizeCatalogQuery,
   recordCatalogSearchMiss,
   searchCatalogSuggestionsForTypeaheadResult,
+  searchStandardSpeciesForTypeahead,
+  STANDARD_SPECIES_TYPEAHEAD_DEADLINE_MS,
 } from "./catalog-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -303,6 +306,99 @@ describe("catalog picker query", () => {
       ),
     ).rejects.toThrow(/statement timeout/u);
     expect(CATALOG_TYPEAHEAD_DEADLINE_MS).toBe(400);
+  });
+});
+
+describe("the species step's query (OVE-524)", () => {
+  it("reads the standard base of one kind and the base's own names, and nothing else of the catalogue", () => {
+    const compiled = buildStandardSpeciesTypeaheadStatement({
+      normalizedQuery: "курка",
+      locale: "uk",
+      objectKind: "animal",
+    }).compile(testDb);
+    // The work starts at the base, so it is bounded by the base, not by the
+    // query: no prefix or trigram scan over every name in the catalogue.
+    expect(compiled.sql).toMatch(
+      /base as materialized \(\s+select b\.catalog_item_id, b\.popularity\s+from catalog_standard_species as b/u,
+    );
+    expect(compiled.sql).toContain(
+      "join catalog_item_names as n on n.catalog_item_id = base.catalog_item_id",
+    );
+    expect(compiled.sql).not.toContain("n.normalized_name like");
+    expect(compiled.sql).not.toContain("n.normalized_name %");
+    expect(compiled.sql).toContain("ci.node_kind = 'taxon'");
+    expect(compiled.parameters).toContain("animal");
+    expect(compiled.parameters).toContain("курка%");
+  });
+
+  it("forgives a typo from three characters, in the reader's language and Latin only", () => {
+    const short = buildStandardSpeciesTypeaheadStatement({
+      normalizedQuery: "ку",
+      locale: "uk",
+      objectKind: "animal",
+    }).compile(testDb);
+    expect(short.sql).toContain("when false");
+    const long = buildStandardSpeciesTypeaheadStatement({
+      normalizedQuery: "курк",
+      locale: "bg",
+      objectKind: "animal",
+    }).compile(testDb);
+    expect(long.sql).toContain("when true");
+    expect(long.sql).toMatch(/s\.locale in \(\$\d+, 'la'\)/u);
+  });
+
+  it("has a deadline for the first search after a cold start, longer than the whole picker's", () => {
+    // Measured on production on 2026-09-26: the whole-catalogue statement on
+    // a fresh backend spent 89.6 ms planning and 277 ms executing; the base
+    // alone runs in about 60 ms on a fresh backend and 4 ms warm.
+    expect(STANDARD_SPECIES_TYPEAHEAD_DEADLINE_MS).toBe(1000);
+    expect(STANDARD_SPECIES_TYPEAHEAD_DEADLINE_MS).toBeGreaterThan(
+      CATALOG_TYPEAHEAD_DEADLINE_MS,
+    );
+  });
+
+  it("maps base rows to species suggestions with the species page as the path", async () => {
+    const result = await searchStandardSpeciesForTypeahead(
+      "Курка",
+      { objectKind: "animal", locale: "uk" },
+      {
+        runStatement: async () => [
+          sqlRow({
+            id: "00000000-0000-4000-8000-000000000201",
+            public_slug: "gallus-gallus-domesticus",
+            display_name: "курка",
+            matched_name: "Курка",
+            match_class: 0,
+          }),
+        ],
+      },
+    );
+    expect(result.suggestions).toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000000201",
+        displayName: "Курка",
+        matchedName: null,
+        kind: "species",
+        parentDisplayName: null,
+        publicPath: "/species/gallus-gallus-domesticus",
+      },
+    ]);
+  });
+
+  it("never reads for a query shorter than two characters", async () => {
+    let executed = 0;
+    const result = await searchStandardSpeciesForTypeahead(
+      "к",
+      { objectKind: "animal" },
+      {
+        runStatement: async () => {
+          executed += 1;
+          return [];
+        },
+      },
+    );
+    expect(executed).toBe(0);
+    expect(result.state).toBe("empty");
   });
 });
 

@@ -77,9 +77,13 @@ export type JournalContentClass =
 export type JournalSourceLanguage = "uk" | "bg";
 export type LocationVisibility = "region" | "hidden";
 export type { CoarseRegionCode } from "@/lib/garden/regions";
-// `user_added` stays in the plant_objects CHECK for historic rows only; since
-// migration 0055 (ADR-0026 D6) no writer produces it and no row carries it.
-export type VarietyState = "selected" | "unknown" | "free_text";
+// The object's catalogue link (migration 0086, OVE-524): `selected` points at
+// the most specific node chosen — the species, or its cultivar or breed
+// entry; `own` is an own cultivar text after an own species
+// (`plant_objects.species_text`); `unknown` is neither. `free_text` is the old
+// picker's label: no writer produces it, and it stays legal only for the
+// revert of a historic label link until the label ladder goes (29.15).
+export type VarietyState = "selected" | "unknown" | "own" | "free_text";
 export type CatalogKind = "plant_variety" | "species" | "breed";
 
 // The organism graph vocabulary (ADR-0026). Every set below is also a CHECK

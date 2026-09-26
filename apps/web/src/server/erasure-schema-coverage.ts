@@ -813,7 +813,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "created_by_user_id",
     kind: "soft_column",
     disposition: "anonymize",
-    rationale: "Nulled; provisional rows created by subject are deleted.",
+    rationale:
+      "Nulled. The retired pre-0055 private cards the subject created are deleted; a cultivar or breed the subject added to a species' list (0086) is a shared entry other gardeners' objects use, not the subject's content, so it stays with its creator cleared.",
     dryRunOwned: true,
     executionOwned: true,
   },

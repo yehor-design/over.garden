@@ -163,8 +163,15 @@ drop index if exists catalog_items_kind_status_idx;
 -- guarantee survives the column: `node_kind` is the same three values under
 -- different names.
 drop index if exists catalog_items_owner_normalized_locale_kind_uidx;
-create unique index if not exists catalog_items_owner_normalized_locale_node_uidx
-  on catalog_items (created_by_user_id, normalized_name, locale, node_kind);
+-- 0086 drops this index for shared gardener entries (one gardener may name a
+-- cultivar alike under two species); a replay after it leaves it dropped.
+do $$
+begin
+  if to_regprocedure('catalog_cultivar_key(text)') is null then
+    create unique index if not exists catalog_items_owner_normalized_locale_node_uidx
+      on catalog_items (created_by_user_id, normalized_name, locale, node_kind);
+  end if;
+end $$;
 
 alter table catalog_items
   drop constraint if exists catalog_items_catalog_kind_check,
@@ -188,9 +195,19 @@ alter table job_queue
 alter table plant_objects
   drop constraint if exists plant_objects_variety_state_check;
 
-alter table plant_objects
-  add constraint plant_objects_variety_state_check
-  check (variety_state in ('selected', 'free_text', 'unknown'));
+-- A replay over rows 0086 wrote (`own`) leaves the vocabulary to 0086, which
+-- adds it back wider.
+do $$
+begin
+  if not exists (
+    select 1 from plant_objects
+    where variety_state not in ('selected', 'free_text', 'unknown')
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_variety_state_check
+      check (variety_state in ('selected', 'free_text', 'unknown'));
+  end if;
+end $$;
 
 -- ----------------------------------------------------------------------
 -- 6. A topic signal named after the dropped column.

@@ -205,12 +205,14 @@ function ownerPage({
       catalog_species_slug: null,
       variety_text: null,
       variety_state: "unknown",
+      species_text: null,
       location_visibility: "hidden",
       coarse_region_code: null,
       source_credit: null,
     },
     entries,
     gallery_media: [],
+    object_photo: null,
   };
 }
 

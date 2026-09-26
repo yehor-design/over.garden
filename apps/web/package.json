@@ -51,6 +51,7 @@
     "catalog:registers:prove-database": "tsx scripts/prove-register-form-attachment.ts",
     "catalog:standard-species:prove-database": "tsx scripts/prove-standard-species-database.ts",
     "schema:owned-photos:prove-database": "tsx scripts/prove-owned-photo-database.ts",
+    "schema:object-species:prove-database": "tsx scripts/prove-object-species-database.ts",
     "catalog:standard-species:build": "tsx scripts/build-standard-species.ts",
     "catalog:standard-species:load": "tsx scripts/load-standard-species.ts",
     "catalog:registers:attach": "tsx scripts/attach-register-forms.ts",

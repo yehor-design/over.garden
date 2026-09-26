@@ -4,6 +4,7 @@ import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eli
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { GARDENER_ENTRY_SOURCE } from "@/lib/catalog/gardener-entries";
 import type {
   CatalogKind,
   Database,
@@ -24,6 +25,7 @@ import {
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import { publicRegionCode } from "@/lib/garden/regions";
+import { normalizeVariantLongEdges } from "@/lib/media/derivative-keys";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   readMediaVariantExtras,
@@ -372,7 +374,7 @@ export async function getPublicObjectPassportLookup(
     return { status: "not_found" };
   }
 
-  const [journalRows, galleryRows] = await Promise.all([
+  const [journalRows, galleryRows, objectPhoto] = await Promise.all([
     buildPublicObjectPassportTimelineQuery(
       executor,
       normalizedPlantObjectId,
@@ -381,6 +383,10 @@ export async function getPublicObjectPassportLookup(
       executor,
       normalizedPlantObjectId,
     ).execute(),
+    buildPublicObjectPassportPhotoQuery(
+      executor,
+      normalizedPlantObjectId,
+    ).executeTakeFirst(),
   ]);
   const mediaExtras = await readMediaVariantExtras(executor, [
     ...journalRows.flatMap((row) => (row.mediaId ? [row.mediaId] : [])),
@@ -395,6 +401,7 @@ export async function getPublicObjectPassportLookup(
       galleryRows,
       locale,
       mediaExtras,
+      objectPhoto ?? null,
     ),
   };
 }
@@ -498,7 +505,14 @@ export function buildPublicObjectPassportRootQuery(
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
         .on("catalog_items.identity_state", "=", "active")
-        .on("catalog_items.created_by_user_id", "is", null),
+        // A cultivar or breed a gardener added to a species' list (0086) is
+        // a shared form with a page, unlike a pre-0055 private card.
+        .on((eb) =>
+          eb.or([
+            eb("catalog_items.created_by_user_id", "is", null),
+            eb("catalog_items.source", "=", GARDENER_ENTRY_SOURCE),
+          ]),
+        ),
     )
     .leftJoin("user_handle_registry", (join) =>
       join
@@ -687,6 +701,43 @@ export function buildPublicObjectPassportGalleryQuery(
     .$narrowType<{ mediaDerivativeKey: string }>();
 }
 
+/**
+ * The object's own photo (ADR-0036 D1, OVE-524): its cover, before the first
+ * entry photo. It is shown exactly where the passport is — this query runs
+ * only for a passport the root query found public — and only by the owner's
+ * row, so a photo never outlives its object's ownership.
+ */
+export function buildPublicObjectPassportPhotoQuery(
+  executor: QueryExecutor,
+  plantObjectId: string,
+) {
+  return executor
+    .selectFrom("media_assets")
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "media_assets.plant_object_id")
+        .onRef("plant_objects.owner_user_id", "=", "media_assets.owner_user_id"),
+    )
+    .select([
+      "media_assets.id as mediaId",
+      "media_assets.derivative_key as mediaDerivativeKey",
+      "media_assets.focal_x as mediaFocalX",
+      "media_assets.focal_y as mediaFocalY",
+      "media_assets.intrinsic_width as mediaIntrinsicWidth",
+      "media_assets.intrinsic_height as mediaIntrinsicHeight",
+      "media_assets.placeholder_data_uri as mediaPlaceholderDataUri",
+      "media_assets.variant_long_edges as mediaVariantLongEdges",
+    ])
+    .where(publicMediaEligibilityPredicate())
+    .where("media_assets.plant_object_id", "=", plantObjectId)
+    .limit(1)
+    .$narrowType<{ mediaDerivativeKey: string }>();
+}
+
+export type PublicObjectPassportPhotoRow = Awaited<
+  ReturnType<ReturnType<typeof buildPublicObjectPassportPhotoQuery>["execute"]>
+>[number];
+
 export function serializePublicObjectPassportPage(
   root: PublicObjectPassportRootRow,
   journalRows: PublicObjectPassportTimelineRow[],
@@ -694,6 +745,8 @@ export function serializePublicObjectPassportPage(
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
   /** OVE-371 placeholder/variant columns, keyed by media asset id. */
   mediaExtras?: ReadonlyMap<string, MediaVariantExtras>,
+  /** The object's own photo, which is its cover when it has one (OVE-524). */
+  objectPhoto: PublicObjectPassportPhotoRow | null = null,
 ): PublicObjectPassportPage {
   // Every entry on a passport belongs to the object's owner, so one handle
   // addresses all of them (ADR-0029 D9).
@@ -771,7 +824,21 @@ export function serializePublicObjectPassportPage(
     variantLongEdges: mediaExtras?.get(media.mediaId)?.variantLongEdges ?? [],
   }));
   const galleryMediaPublicUrls = galleryMedia.map((media) => media.publicUrl);
-  const coverFromGallery = galleryMedia[0] ?? null;
+  const coverFromObject = objectPhoto
+    ? {
+        publicUrl: getPublicDerivativeUrl(objectPhoto.mediaDerivativeKey),
+        focalX: Number(objectPhoto.mediaFocalX ?? 0.5),
+        focalY: Number(objectPhoto.mediaFocalY ?? 0.5),
+        intrinsicWidth: objectPhoto.mediaIntrinsicWidth ?? null,
+        intrinsicHeight: objectPhoto.mediaIntrinsicHeight ?? null,
+        placeholderDataUri: objectPhoto.mediaPlaceholderDataUri ?? null,
+        variantLongEdges: normalizeVariantLongEdges(
+          objectPhoto.mediaVariantLongEdges,
+        ),
+      }
+    : null;
+  // The object's own photo first, then the first entry photo (OVE-524).
+  const coverFromGallery = coverFromObject ?? galleryMedia[0] ?? null;
   const coverFromJournal = serializedJournal.find(
     (entry) => entry.mediaPublicUrl,
   );
