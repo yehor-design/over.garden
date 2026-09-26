@@ -758,7 +758,9 @@ export function publicVarietyStateLabel(
   const copy = labels[locale];
 
   if (value === "selected") return copy.selected;
-  if (value === "free_text") return copy.freeText;
+  // An own species or cultivar (migration 0086) is, like the old label, a
+  // name the gardener kept without a catalogue match — never shown itself.
+  if (value === "free_text" || value === "own") return copy.freeText;
   if (value === "unknown") return copy.unknown;
   return copy.fallback;
 }

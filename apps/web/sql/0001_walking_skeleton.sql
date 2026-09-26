@@ -3037,11 +3037,17 @@ begin
       drop constraint plant_objects_variety_state_check;
   end if;
 
+  -- A replay over rows 0086 wrote (`own`) leaves the vocabulary to 0086,
+  -- which adds it back wider.
   if not exists (
     select 1
     from pg_constraint
     where conname = 'plant_objects_variety_state_check'
       and conrelid = 'plant_objects'::regclass
+  ) and not exists (
+    select 1
+    from plant_objects
+    where variety_state not in ('selected', 'unknown', 'user_added', 'free_text')
   ) then
     alter table plant_objects
       add constraint plant_objects_variety_state_check

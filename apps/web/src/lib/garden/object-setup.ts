@@ -1,35 +1,65 @@
 import type { PlantObjectKind } from "@/db/schema";
+import {
+  parseOwnedPhotoPayload,
+  type OwnedPhotoPayload,
+} from "@/lib/garden/owned-photo";
 
 /**
- * The standalone "add a plant or an animal" contract (`OVE-485`).
+ * The "add a plant or an animal" contract (`OVE-485`, the stepper of
+ * `OVE-524`).
  *
- * An owned object needs exactly what `plant_objects` requires: a kind, a name
- * and a space. A catalogue identity is optional — the existing permissive
- * rule: a pick links the shared organism, an own label is kept as free text,
- * and nothing at all is `unknown`. There is no "no space" choice because the
- * schema has none (`space_id` is not null).
+ * An owned object needs what `plant_objects` requires — a kind, a name and a
+ * space — and may carry a photo and two choices the gardener makes, stored as
+ * they were made (migration 0086):
+ *
+ *   * the species: not known, a species of the standard base, or the
+ *     gardener's own text;
+ *   * the cultivar or breed: not known; after a base species, an entry of
+ *     that species' list or a new name that becomes one; after an own
+ *     species, the gardener's own text.
+ *
+ * Nothing is guessed: no species comes from the object's name, and a
+ * cultivar is never asked without a species.
  *
  * As with a space, the client-made request id *is* the new object's id, so a
  * double press or a retry after a lost response reads back the first object.
  * Creating an object publishes nothing; the first entry is its own publication.
  */
 export const OBJECT_NAME_MAX_LENGTH = 120;
+/** An own species or cultivar text, and a new entry's name: 1–120 characters. */
+export const OBJECT_CHOICE_TEXT_MAX_LENGTH = 120;
+
+export type ObjectSpeciesChoice =
+  | { kind: "unknown" }
+  | { kind: "catalog"; catalogItemId: string }
+  | { kind: "own"; text: string };
+
+export type ObjectCultivarChoice =
+  | { kind: "unknown" }
+  | { kind: "entry"; catalogItemId: string }
+  | { kind: "new"; name: string }
+  | { kind: "own"; text: string };
 
 export interface ObjectSetupInput {
   requestId: string;
   objectKind: PlantObjectKind;
   displayName: string;
   spaceId: string;
-  catalogItemId: string | null;
-  /** The gardener's own label when they kept the name without a match. */
-  catalogLabel: string | null;
+  species: ObjectSpeciesChoice;
+  cultivar: ObjectCultivarChoice;
+  /** The photo the stepper staged (ADR-0036 D1), or null. */
+  photo: OwnedPhotoPayload | null;
   allowDuplicateName: boolean;
 }
 
 export type ObjectSetupFieldError =
   | "name_required"
   | "name_too_long"
-  | "space_required";
+  | "space_required"
+  | "text_required"
+  | "text_too_long";
+
+export type ObjectSetupField = "name" | "space" | "species" | "cultivar";
 
 export interface CreatedObject {
   id: string;
@@ -43,11 +73,14 @@ export type ObjectSetupResponse =
   | { status: "created"; object: CreatedObject; replayed: boolean }
   | {
       status: "invalid";
-      errors: Partial<Record<"name" | "space", ObjectSetupFieldError>>;
+      errors: Partial<Record<ObjectSetupField, ObjectSetupFieldError>>;
     }
   | { status: "duplicate_name"; existing: CreatedObject }
   | { status: "space_unavailable" }
+  /** The chosen species or cultivar is not selectable (any more). */
   | { status: "identity_unavailable" }
+  /** The staged photo could not be claimed: it expired or was already used. */
+  | { status: "photo_unavailable" }
   | { status: "conflict" }
   | { status: "unavailable"; digest: string };
 
@@ -61,6 +94,18 @@ export function normalizeObjectName(value: unknown): string {
   return typeof value === "string"
     ? value.normalize("NFC").replace(/\s+/gu, " ").trim()
     : "";
+}
+
+/** An own text or a new entry's name, or the error that says why it is not. */
+export function validateObjectChoiceText(
+  value: unknown,
+): { ok: true; text: string } | { ok: false; error: ObjectSetupFieldError } {
+  const text = normalizeObjectName(value);
+  if (!text) return { ok: false, error: "text_required" };
+  if ([...text].length > OBJECT_CHOICE_TEXT_MAX_LENGTH) {
+    return { ok: false, error: "text_too_long" };
+  }
+  return { ok: true, text };
 }
 
 export function validateObjectSetup(input: {
@@ -78,51 +123,109 @@ export function validateObjectSetup(input: {
 
 export class InvalidObjectSetupRequest extends Error {}
 
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function isBoundedString(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 1000;
+}
+
+/**
+ * The two choices as the request states them. A shape the stepper cannot
+ * send — a cultivar without a species, a list entry after an own species —
+ * is a malformed request, not a field error.
+ */
+function parseChoices(
+  species: unknown,
+  cultivar: unknown,
+  errors: Partial<Record<ObjectSetupField, ObjectSetupFieldError>>,
+): { species: ObjectSpeciesChoice; cultivar: ObjectCultivarChoice } {
+  const speciesValue =
+    species === undefined ? { kind: "unknown" } : readRecord(species);
+  const cultivarValue =
+    cultivar === undefined ? { kind: "unknown" } : readRecord(cultivar);
+  if (!speciesValue || !cultivarValue) throw new InvalidObjectSetupRequest();
+
+  let parsedSpecies: ObjectSpeciesChoice = { kind: "unknown" };
+  if (speciesValue.kind === "catalog") {
+    if (!isObjectSetupUuid(speciesValue.catalogItemId)) {
+      throw new InvalidObjectSetupRequest();
+    }
+    parsedSpecies = {
+      kind: "catalog",
+      catalogItemId: speciesValue.catalogItemId.toLowerCase(),
+    };
+  } else if (speciesValue.kind === "own") {
+    if (!isBoundedString(speciesValue.text))
+      throw new InvalidObjectSetupRequest();
+    const text = validateObjectChoiceText(speciesValue.text);
+    if (text.ok) parsedSpecies = { kind: "own", text: text.text };
+    else errors.species = text.error;
+  } else if (speciesValue.kind !== "unknown") {
+    throw new InvalidObjectSetupRequest();
+  }
+
+  let parsedCultivar: ObjectCultivarChoice = { kind: "unknown" };
+  if (cultivarValue.kind === "entry") {
+    if (speciesValue.kind !== "catalog") throw new InvalidObjectSetupRequest();
+    if (!isObjectSetupUuid(cultivarValue.catalogItemId)) {
+      throw new InvalidObjectSetupRequest();
+    }
+    parsedCultivar = {
+      kind: "entry",
+      catalogItemId: cultivarValue.catalogItemId.toLowerCase(),
+    };
+  } else if (cultivarValue.kind === "new" || cultivarValue.kind === "own") {
+    const expected = cultivarValue.kind === "new" ? "catalog" : "own";
+    if (speciesValue.kind !== expected) throw new InvalidObjectSetupRequest();
+    const raw =
+      cultivarValue.kind === "new" ? cultivarValue.name : cultivarValue.text;
+    if (!isBoundedString(raw)) throw new InvalidObjectSetupRequest();
+    const text = validateObjectChoiceText(raw);
+    if (!text.ok) errors.cultivar = text.error;
+    else
+      parsedCultivar =
+        cultivarValue.kind === "new"
+          ? { kind: "new", name: text.text }
+          : { kind: "own", text: text.text };
+  } else if (cultivarValue.kind !== "unknown") {
+    throw new InvalidObjectSetupRequest();
+  }
+  return { species: parsedSpecies, cultivar: parsedCultivar };
+}
+
 export function parseObjectSetupRequest(raw: unknown):
   | { ok: true; input: ObjectSetupInput }
   | {
       ok: false;
-      errors: Partial<Record<"name" | "space", ObjectSetupFieldError>>;
+      errors: Partial<Record<ObjectSetupField, ObjectSetupFieldError>>;
     } {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new InvalidObjectSetupRequest();
-  }
-  const value = raw as Record<string, unknown>;
+  const value = readRecord(raw);
+  if (!value) throw new InvalidObjectSetupRequest();
   if (!isObjectSetupUuid(value.requestId))
     throw new InvalidObjectSetupRequest();
   if (value.objectKind !== "plant" && value.objectKind !== "animal") {
     throw new InvalidObjectSetupRequest();
   }
-  if (
-    typeof value.displayName !== "string" ||
-    value.displayName.length > 1000
-  ) {
+  if (!isBoundedString(value.displayName)) {
     throw new InvalidObjectSetupRequest();
   }
-  if (
-    value.catalogItemId !== null &&
-    value.catalogItemId !== undefined &&
-    !isObjectSetupUuid(value.catalogItemId)
-  ) {
+  let photo: OwnedPhotoPayload | null;
+  try {
+    photo = parseOwnedPhotoPayload(value.photo);
+  } catch {
     throw new InvalidObjectSetupRequest();
   }
-  if (
-    value.catalogLabel !== null &&
-    value.catalogLabel !== undefined &&
-    (typeof value.catalogLabel !== "string" || value.catalogLabel.length > 1000)
-  ) {
-    throw new InvalidObjectSetupRequest();
-  }
-  const errors = validateObjectSetup({
-    displayName: value.displayName,
-    spaceId: value.spaceId,
-  });
+  const errors: Partial<Record<ObjectSetupField, ObjectSetupFieldError>> =
+    validateObjectSetup({
+      displayName: value.displayName,
+      spaceId: value.spaceId,
+    });
+  const choices = parseChoices(value.species, value.cultivar, errors);
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  const catalogItemId =
-    typeof value.catalogItemId === "string"
-      ? value.catalogItemId.toLowerCase()
-      : null;
-  const label = catalogItemId ? "" : normalizeObjectName(value.catalogLabel);
   return {
     ok: true,
     input: {
@@ -130,10 +233,9 @@ export function parseObjectSetupRequest(raw: unknown):
       objectKind: value.objectKind,
       displayName: normalizeObjectName(value.displayName),
       spaceId: (value.spaceId as string).toLowerCase(),
-      catalogItemId,
-      catalogLabel: label
-        ? [...label].slice(0, OBJECT_NAME_MAX_LENGTH).join("")
-        : null,
+      species: choices.species,
+      cultivar: choices.cultivar,
+      photo,
       allowDuplicateName: value.allowDuplicateName === true,
     },
   };

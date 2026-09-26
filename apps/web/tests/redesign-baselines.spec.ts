@@ -54,21 +54,22 @@ test("OVE-486: global Write opens the destination-aware composer", async ({
 });
 
 test("multiple spaces require an explicit destination", async ({ page }) => {
-  // Adding a plant or an animal asks for its space when there is more than
-  // one, and picks none by itself (ADR-0035 D1: nothing is chosen for the
-  // gardener).
+  // Adding a plant or an animal asks for its space first when there is more
+  // than one, and picks none by itself (ADR-0035 D1: nothing is chosen for
+  // the gardener; OVE-524: «Простір» is the stepper's first question).
   await page.goto("/garden/objects/new");
-  const flow = page.locator('[data-object-setup-flow="true"]');
-  await expect(flow).toBeVisible();
-  await waitForHydration(flow);
-  await flow.getByRole("button", { name: "Далі" }).click();
-  const name = flow.locator('[data-object-setup-section="name"]');
-  await name.getByRole("combobox").fill("Базилік");
-  await name.getByRole("button", { name: "Далі" }).click();
-  const space = flow.locator('[data-object-setup-section="space"]');
-  await expect(space).toHaveAttribute("data-state", "active");
-  await expect(space.locator('[data-owned-destination-picker="space"]')).toBeVisible();
-  await expect(space.locator("[data-destination-selection]")).toHaveCount(0);
+  const stepper = page.locator('[data-creation-stepper="true"]');
+  await expect(stepper).toBeVisible();
+  await waitForHydration(stepper);
+  await expect(stepper.getByRole("heading", { level: 1 })).toHaveText(
+    "Простір",
+  );
+  await expect(stepper.locator("[data-object-setup-space]")).toHaveCount(3);
+  await expect(stepper.locator('[data-choice-selected="true"]')).toHaveCount(0);
+  // «Далі» without a choice asks for one and stays.
+  await stepper.locator('[data-creation-primary="true"]').click();
+  await expect(stepper.getByRole("alert")).toHaveText("Виберіть простір.");
+  await expect(page).not.toHaveURL(/step=kind/u);
 });
 
 test("OVE-482: filter dismiss is named Close rather than Reset", async ({

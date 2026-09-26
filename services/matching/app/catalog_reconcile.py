@@ -704,6 +704,10 @@ select item.id::text as id,
 from catalog_items as item
 where item.identity_state = 'active'
   and item.created_by_user_id is null
+  -- A cultivar or breed a gardener added (migration 0086) is theirs to name
+  -- and the owner's to correct; its creator is cleared on account erasure,
+  -- so the source is what keeps it out.
+  and item.source <> 'gardener'
   and item.public_slug is not null
 order by item.created_at, item.id
 limit %s

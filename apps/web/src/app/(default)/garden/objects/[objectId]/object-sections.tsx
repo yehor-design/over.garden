@@ -76,8 +76,9 @@ export async function loadOwnerAuthorHandle(
   return settled.status === "ready" ? settled.value : null;
 }
 
+/** An object with no catalogue link: nothing known, an own species, an old label. */
 export function canResolveCatalogState(value: string) {
-  return value === "unknown" || value === "free_text";
+  return value === "unknown" || value === "own" || value === "free_text";
 }
 
 /**

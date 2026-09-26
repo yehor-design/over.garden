@@ -135,6 +135,9 @@ jobs:
       - name: Prove the space and object photo, its revocations and its rollback
         run: pnpm schema:owned-photos:prove-database
 
+      - name: Prove the species and cultivar choices, the shared entries, the cold first search and the rollback
+        run: pnpm schema:object-species:prove-database
+
       - name: Prove the catalog health figures, the retention window and its purge
         run: pnpm catalog:health:prove-database
 

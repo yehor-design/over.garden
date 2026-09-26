@@ -705,6 +705,7 @@ export function buildDetachOwnedPlantObjectsFromUserCatalogForErasureQuery(
       catalog_item_id: null,
       variety_text: null,
       variety_state: "unknown",
+      species_text: null,
       updated_at: now,
     })
     .where("owner_user_id", "=", requesterUserId);
@@ -955,6 +956,7 @@ export function buildAnonymizePlantObjectsForErasureQuery(
       catalog_item_id: null,
       variety_text: null,
       variety_state: "unknown",
+      species_text: null,
       location_visibility: "hidden",
       coarse_region_code: null,
       updated_at: input.now,

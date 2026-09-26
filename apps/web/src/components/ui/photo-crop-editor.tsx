@@ -175,7 +175,23 @@ function PhotoCropEditor({
   >("loading");
 
   const url = useMemo(() => URL.createObjectURL(file), [file]);
-  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  // The URL is let go a tick after the editor lets go of it, and not at all
+  // when the same URL is taken up again at once: React's development build
+  // unmounts and remounts every new component, and a URL revoked in between
+  // is a broken image (`ERR_FILE_NOT_FOUND`) whose «Готово» never enables.
+  const pendingRevoke = useRef<{ url: string; timer: number } | null>(null);
+  useEffect(() => {
+    if (pendingRevoke.current?.url === url) {
+      window.clearTimeout(pendingRevoke.current.timer);
+      pendingRevoke.current = null;
+    }
+    return () => {
+      pendingRevoke.current = {
+        url,
+        timer: window.setTimeout(() => URL.revokeObjectURL(url), 0),
+      };
+    };
+  }, [url]);
 
   useEffect(() => {
     const node = frameRef.current;

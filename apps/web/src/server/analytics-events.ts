@@ -432,6 +432,7 @@ function normalizeAnalyticsEventPropertyValue(
       if (
         value === "selected" ||
         value === "unknown" ||
+        value === "own" ||
         value === "free_text"
       ) {
         return value;

@@ -5,6 +5,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { CatalogKind, Database } from "@/db/schema";
 import { publicCatalogPermalinkPath } from "@/lib/catalog/addresses";
+import { GARDENER_ENTRY_SOURCE } from "@/lib/catalog/gardener-entries";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
@@ -134,7 +135,14 @@ function buildSpeciesItemQuery(
     ])
     .where("catalog_items.id", "=", catalogItemId)
     .where("catalog_items.identity_state", "=", "active")
-    .where("catalog_items.created_by_user_id", "is", null)
+    // A gardener's own pre-0055 card has no page; an entry a gardener added
+    // to a species' list (0086) is shared and has one, like any form.
+    .where((eb) =>
+      eb.or([
+        eb("catalog_items.created_by_user_id", "is", null),
+        eb("catalog_items.source", "=", GARDENER_ENTRY_SOURCE),
+      ]),
+    )
     .where("catalog_items.public_slug", "is not", null)
     .$narrowType<{ publicSlug: string; catalogKind: CatalogKind }>();
 }
@@ -312,7 +320,14 @@ export function listPublishedSpeciesSitemapEntries(
       "published_items.latestPublishedAt as lastModified",
     ])
     .where("catalog_items.identity_state", "=", "active")
-    .where("catalog_items.created_by_user_id", "is", null)
+    // A gardener's own pre-0055 card has no page; an entry a gardener added
+    // to a species' list (0086) is shared and has one, like any form.
+    .where((eb) =>
+      eb.or([
+        eb("catalog_items.created_by_user_id", "is", null),
+        eb("catalog_items.source", "=", GARDENER_ENTRY_SOURCE),
+      ]),
+    )
     .where("catalog_items.public_slug", "is not", null)
     .orderBy("catalog_items.public_slug", "asc")
     .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>()

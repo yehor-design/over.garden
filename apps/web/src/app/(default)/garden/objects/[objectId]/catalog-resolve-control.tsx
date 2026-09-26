@@ -88,6 +88,7 @@ export function CatalogResolveControl({
             state: localizedVarietyStateLabel(
               currentVarietyState,
               workspaceCopy,
+              Boolean(currentVarietyText),
             ),
           })}
         </p>
@@ -162,8 +163,11 @@ function proposalSentence(
 function localizedVarietyStateLabel(
   value: VarietyState,
   copy: GardenWorkspaceCopy,
+  hasOwnText: boolean,
 ) {
   if (value === "selected") return copy.composer.varietyStates.selected;
-  if (value === "free_text") return copy.composer.varietyStates.freeText;
+  if (value === "free_text" || value === "own" || hasOwnText) {
+    return copy.composer.varietyStates.freeText;
+  }
   return copy.composer.varietyStates.unknown;
 }

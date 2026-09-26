@@ -6,6 +6,7 @@ import {
   getLivingObjectPassportCopy,
   getLivingObjectPassportDomain,
   livingObjectIdentityStateLabel,
+  ownObjectIdentityText,
   type OwnerLivingObjectPassportPresentation,
 } from "@/lib/living-object-passport";
 import {
@@ -33,9 +34,12 @@ export function buildOwnerObjectPassportPresentation(
   const copy = getLivingObjectPassportCopy(locale);
   const object = page.plantObject;
   const domain = getLivingObjectPassportDomain(locale, object.object_kind);
+  const ownIdentity = ownObjectIdentityText(object);
   const identityValue =
     object.catalog_canonical_name ??
-    object.variety_text ??
+    ownIdentity ??
+    // A link whose node the join does not show still has its name beside it.
+    (object.variety_state === "selected" ? object.variety_text : null) ??
     copy.unknownIdentity;
   const timelineEntries = buildLivingObjectTimeline(
     page.entries.map((entry) => ({
@@ -132,6 +136,8 @@ export function buildOwnerObjectPassportPresentation(
         locale,
         object.variety_state,
         Boolean(object.catalog_item_id),
+        "owner",
+        ownIdentity !== null,
       ),
       catalogKind: object.catalogKind,
       catalogPath,
@@ -173,7 +179,20 @@ export function buildOwnerObjectPassportPresentation(
         ),
       },
     ],
-    cover: gallery[0] ?? null,
+    // The object's own photo is its cover; without one, the first entry
+    // photo is (OVE-524).
+    cover: page.object_photo
+      ? {
+          publicUrl: page.object_photo.media.publicUrl,
+          alt: object.display_name,
+          focalX: page.object_photo.media.focalX,
+          focalY: page.object_photo.media.focalY,
+          intrinsicWidth: page.object_photo.media.intrinsicWidth,
+          intrinsicHeight: page.object_photo.media.intrinsicHeight,
+          placeholderDataUri: page.object_photo.view.placeholderDataUri,
+          variantLongEdges: page.object_photo.variantLongEdges,
+        }
+      : (gallery[0] ?? null),
     gallery,
     timeline: {
       totalCount: page.entries.length,

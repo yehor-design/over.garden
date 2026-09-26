@@ -1,15 +1,26 @@
 import "server-only";
-import { sql, type Kysely } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
-import type { Database, PlantObjectKind } from "@/db/schema";
-import { resolveObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
+import type { Database, PlantObjectKind, VarietyState } from "@/db/schema";
 import type {
   CreatedObject,
   ObjectSetupInput,
 } from "@/lib/garden/object-setup";
-import { findSelectableCatalogItem } from "@/server/catalog-repository";
+import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { findStandardSpecies } from "@/server/catalog-repository";
+import type { ClaimedOwnedPhoto } from "@/server/media/owned-photo-handoff";
+import {
+  ownedPhotoView,
+  readOwnedPhotos,
+  writeOwnedPhoto,
+} from "@/server/owned-photo-repository";
 import type { RequestScope } from "@/server/request-scope";
+import {
+  findOrCreateSpeciesForm,
+  findSpeciesForm,
+} from "@/server/species-forms-repository";
 
 export type CreateOwnedObjectResult =
   | { status: "created"; object: CreatedObject; replayed: boolean }
@@ -17,6 +28,14 @@ export type CreateOwnedObjectResult =
   | { status: "space_unavailable" }
   | { status: "identity_unavailable" }
   | { status: "conflict" };
+
+/** The object's catalogue columns for the two choices (migration 0086). */
+interface ObjectIdentityColumns {
+  catalog_item_id: string | null;
+  variety_state: VarietyState;
+  variety_text: string | null;
+  species_text: string | null;
+}
 
 interface ObjectRow {
   id: string;
@@ -62,9 +81,18 @@ function readObject(executor: Kysely<Database>, id: string) {
 
 /**
  * Add one plant or animal to one of the gardener's spaces (`OVE-485`), with
- * the same identity rules the first-entry publication applies: a picked
- * organism is linked and named, an own label is kept as free text, nothing is
- * `unknown`; the location privacy is the space's.
+ * the species and the cultivar or breed stored as the gardener chose them
+ * (`OVE-524`, migration 0086) and the photo the stepper staged as its own;
+ * the location privacy is the space's.
+ *
+ *   * A species comes from the standard base, for the object's kind, and is
+ *     re-read here: a stale pick is `identity_unavailable`, never a guess.
+ *   * A cultivar or breed from the list must be an active form of that
+ *     species; a new name finds the species' entry with the same key or
+ *     becomes a shared entry (`findOrCreateSpeciesForm`).
+ *   * The object points at the most specific node chosen — the entry, else
+ *     the species — as every reader of its organism expects. Own texts stay
+ *     on the object and are private.
  *
  * The request id is the object id: the same intent submitted twice reads back
  * the first object, and an id somebody else holds is a conflict that says
@@ -77,6 +105,7 @@ export async function createOwnedObject(
   scope: RequestScope,
   input: ObjectSetupInput,
   executor: Kysely<Database> = db,
+  options: { photo?: ClaimedOwnedPhoto | null; locale?: InterfaceLocale } = {},
 ): Promise<CreateOwnedObjectResult> {
   return executor.transaction().execute(async (tx) => {
     await sql`set local statement_timeout = '1500ms'`.execute(tx);
@@ -104,25 +133,6 @@ export async function createOwnedObject(
       .executeTakeFirst();
     if (!space) return { status: "space_unavailable" };
 
-    const catalogItem = input.catalogItemId
-      ? await findSelectableCatalogItem(tx, input.catalogItemId, {
-          expectedObjectKind: input.objectKind,
-        })
-      : null;
-    if (input.catalogItemId && !catalogItem) {
-      return { status: "identity_unavailable" };
-    }
-    let objectKind: PlantObjectKind;
-    try {
-      objectKind = resolveObjectKindForCatalogSelection(
-        input.objectKind,
-        catalogItem?.catalogKind,
-        catalogItem?.source,
-      );
-    } catch {
-      return { status: "identity_unavailable" };
-    }
-
     if (!input.allowDuplicateName) {
       const sameName = await tx
         .selectFrom("plant_objects")
@@ -148,6 +158,13 @@ export async function createOwnedObject(
       }
     }
 
+    const identity = await resolveObjectIdentity(tx, {
+      input,
+      userId: scope.userId,
+      locale: options.locale ?? "uk",
+    });
+    if (!identity) return { status: "identity_unavailable" };
+
     await tx
       .insertInto("plant_objects")
       .values({
@@ -155,19 +172,20 @@ export async function createOwnedObject(
         owner_user_id: scope.userId,
         space_id: space.id,
         display_name: input.displayName,
-        object_kind: objectKind,
-        // ADR-0026 D6: the own name is a label on the object, never a card.
-        catalog_item_id: catalogItem?.id ?? null,
-        variety_text: catalogItem?.canonicalName ?? input.catalogLabel ?? null,
-        variety_state: catalogItem
-          ? "selected"
-          : input.catalogLabel
-            ? "free_text"
-            : "unknown",
+        object_kind: input.objectKind,
+        ...identity,
         location_visibility: space.location_visibility,
         coarse_region_code: space.coarse_region_code,
       })
       .execute();
+
+    if (options.photo) {
+      await writeOwnedPhoto(tx, {
+        ownerUserId: scope.userId,
+        owner: { kind: "object", id: input.requestId },
+        photo: options.photo,
+      });
+    }
 
     const created = await readObject(tx, input.requestId);
     if (!created) throw new Error("The created object could not be read back.");
@@ -175,6 +193,174 @@ export async function createOwnedObject(
       status: "created",
       object: toCreatedObject(created),
       replayed: false,
+    };
+  });
+}
+
+/**
+ * The catalogue columns for the two choices, or null when a chosen species or
+ * entry is not selectable. `variety_text` keeps the chosen node's name beside
+ * the link, as every `selected` object has.
+ */
+async function resolveObjectIdentity(
+  tx: Transaction<Database>,
+  input: { input: ObjectSetupInput; userId: string; locale: InterfaceLocale },
+): Promise<ObjectIdentityColumns | null> {
+  const { species, cultivar, objectKind } = input.input;
+  if (species.kind === "unknown") {
+    return {
+      catalog_item_id: null,
+      variety_state: "unknown",
+      variety_text: null,
+      species_text: null,
+    };
+  }
+  if (species.kind === "own") {
+    return {
+      catalog_item_id: null,
+      variety_state: cultivar.kind === "own" ? "own" : "unknown",
+      variety_text: cultivar.kind === "own" ? cultivar.text : null,
+      species_text: species.text,
+    };
+  }
+  const standard = await findStandardSpecies(
+    tx,
+    species.catalogItemId,
+    objectKind,
+  );
+  if (!standard) return null;
+  let node: { id: string; canonicalName: string } = standard;
+  if (cultivar.kind === "entry") {
+    const form = await findSpeciesForm(tx, {
+      speciesId: standard.id,
+      formId: cultivar.catalogItemId,
+      objectKind,
+    });
+    if (!form) return null;
+    node = form;
+  } else if (cultivar.kind === "new") {
+    node = await findOrCreateSpeciesForm(tx, {
+      species: standard,
+      objectKind,
+      name: cultivar.name,
+      locale: input.locale,
+      userId: input.userId,
+    });
+  }
+  return {
+    catalog_item_id: node.id,
+    variety_state: "selected",
+    variety_text: node.canonicalName,
+    species_text: null,
+  };
+}
+
+/**
+ * Whether the chosen species and list entry are selectable, read before a
+ * photo is claimed so a stale pick does not spend the staged photo. The
+ * write re-reads both in its own transaction.
+ */
+export async function isObjectIdentitySelectable(
+  input: Pick<ObjectSetupInput, "species" | "cultivar" | "objectKind">,
+  executor: Kysely<Database> = db,
+): Promise<boolean> {
+  if (input.species.kind !== "catalog") return true;
+  const standard = await findStandardSpecies(
+    executor,
+    input.species.catalogItemId,
+    input.objectKind,
+  );
+  if (!standard) return false;
+  if (input.cultivar.kind !== "entry") return true;
+  return (
+    (await findSpeciesForm(executor, {
+      speciesId: standard.id,
+      formId: input.cultivar.catalogItemId,
+      objectKind: input.objectKind,
+    })) !== null
+  );
+}
+
+/**
+ * What a retried intent reads back before a photo is claimed: the object this
+ * request id already created, "conflict" when somebody else holds the id, or
+ * null for a first attempt.
+ */
+export async function readOwnedObjectForReplay(
+  scope: RequestScope,
+  objectId: string,
+  executor: Kysely<Database> = db,
+): Promise<CreatedObject | "conflict" | null> {
+  const row = await readObject(executor, objectId);
+  if (!row) return null;
+  return row.owner_user_id === scope.userId ? toCreatedObject(row) : "conflict";
+}
+
+/**
+ * The gardener's oldest object with this name in this space, compared without
+ * case — the same-name question asked before a photo is claimed, so a
+ * gardener who then keeps the existing one leaves the staged photo unclaimed.
+ */
+export async function findOwnedObjectByName(
+  scope: RequestScope,
+  input: { spaceId: string; displayName: string },
+  executor: Kysely<Database> = db,
+): Promise<CreatedObject | null> {
+  const row = await executor
+    .selectFrom("plant_objects")
+    .select("id")
+    .where("owner_user_id", "=", scope.userId)
+    .where("space_id", "=", input.spaceId)
+    .where(
+      sql<string>`lower(display_name)`,
+      "=",
+      input.displayName.toLocaleLowerCase(),
+    )
+    .orderBy("created_at", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  if (!row) return null;
+  const existing = await readObject(executor, row.id);
+  return existing ? toCreatedObject(existing) : null;
+}
+
+export interface ObjectSetupSpace {
+  id: string;
+  displayName: string;
+  photo: OwnedPhotoView | null;
+}
+
+/** More spaces than anyone keeps; the step lists them all. */
+const OBJECT_SETUP_SPACE_LIMIT = 200;
+
+/**
+ * The stepper's «Простір» (OVE-524): every space of the gardener, each with
+ * its photo when it has one, newest first — the one just made in the space
+ * stepper leads.
+ */
+export async function listSpacesForObjectSetup(
+  scope: RequestScope,
+  executor: Kysely<Database> = db,
+): Promise<ObjectSetupSpace[]> {
+  const rows = await executor
+    .selectFrom("spaces")
+    .select(["id", "display_name as displayName"])
+    .where("owner_user_id", "=", scope.userId)
+    .orderBy("created_at", "desc")
+    .orderBy("id", "asc")
+    .limit(OBJECT_SETUP_SPACE_LIMIT)
+    .execute();
+  const photos = await readOwnedPhotos(executor, {
+    ownerUserId: scope.userId,
+    kind: "space",
+    ids: rows.map((row) => row.id),
+  });
+  return rows.map((row) => {
+    const photo = photos.get(row.id);
+    return {
+      id: row.id,
+      displayName: row.displayName,
+      photo: photo ? ownedPhotoView(photo) : null,
     };
   });
 }

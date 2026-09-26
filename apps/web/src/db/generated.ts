@@ -1000,6 +1000,7 @@ export interface PlantObjects {
   owner_user_id: string;
   public_slug: string | null;
   space_id: string;
+  species_text: string | null;
   updated_at: Generated<Timestamp>;
   variety_state: Generated<string>;
   variety_text: string | null;

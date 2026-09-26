@@ -43,25 +43,18 @@ test("owned corpus: 0/1/100/1000, complete cursor traversal, cross-user refusal,
     ]);
     const emptyPage = await context.newPage();
     await emptyPage.setViewportSize({ width: 320, height: 900 });
-    // Adding the first plant asks for its space; with none yet, the picker
-    // says so (the combined first-entry form is gone, ADR-0035 D1).
+    // Adding the first plant with no space yet makes the space first: the
+    // object stepper sends the gardener to the space stepper, which comes
+    // back with the new space chosen (`OVE-524`).
     await emptyPage.goto(`${baseURL}/garden/objects/new`);
-    const setup = emptyPage.locator('[data-object-setup-flow="true"]');
-    await waitForHydration(setup);
-    await setup.getByRole("button", { name: "Далі" }).click();
-    const setupName = setup.locator('[data-object-setup-section="name"]');
-    await setupName.getByRole("combobox").fill("Перша рослина");
-    await setupName.getByRole("button", { name: "Далі" }).click();
-    const emptyPicker = setup.locator(
-      '[data-object-setup-section="space"] [data-owned-destination-picker="space"]',
+    await emptyPage.waitForURL(/\/garden\/spaces\/new\?returnTo=/u);
+    const spaceStepper = emptyPage.locator('[data-creation-stepper="true"]');
+    await waitForHydration(spaceStepper);
+    await expect(spaceStepper.getByRole("heading", { level: 1 })).toHaveText(
+      "Як називається простір?",
     );
-    await waitForHydration(emptyPicker.getByRole("combobox"));
-    await emptyPicker.getByRole("combobox").click();
-    await expect(emptyPicker.getByRole("status")).toHaveText(
-      "У вас ще немає створених просторів.",
-    );
-    await emptyPicker.screenshot({
-      path: testInfo.outputPath("empty-space-picker.png"),
+    await emptyPage.screenshot({
+      path: testInfo.outputPath("empty-garden-space-first.png"),
     });
     await emptyPage.close();
     expect((await stranger.request.get(endpoint)).status()).toBe(401);
@@ -136,9 +129,16 @@ test("owned corpus: 0/1/100/1000, complete cursor traversal, cross-user refusal,
       "select n.catalog_item_id, n.display_name from catalog_item_names n join catalog_items c on c.id=n.catalog_item_id where c.identity_state='active' and length(n.display_name) between 5 and 100 order by n.id limit 1",
     );
     expect(synonym.rows).toHaveLength(1);
+    // A link is a `selected` object with the node's name beside it — the
+    // only shape migration 0086's CHECK lets a linked object take.
     await pool.query(
-      "update plant_objects set catalog_item_id=$1 where id=$2 and owner_user_id=$3",
-      [synonym.rows[0].catalog_item_id, late.id, userId],
+      "update plant_objects set catalog_item_id=$1, variety_state='selected', variety_text=$4, species_text=null where id=$2 and owner_user_id=$3",
+      [
+        synonym.rows[0].catalog_item_id,
+        late.id,
+        userId,
+        synonym.rows[0].display_name,
+      ],
     );
     let synonymCursor: string | null = null;
     let foundSynonym = false;

@@ -14,6 +14,11 @@ function Harness({ onClose = vi.fn() }: { onClose?: () => void }) {
         <button type="button">Стрічка</button>
       </nav>
       <div>
+        <section data-analytics-consent-banner="true" aria-label="Cookies">
+          <button type="button">Дозволити</button>
+        </section>
+      </div>
+      <div>
         <CreationStepper
           label="Новий простір"
           step={step}
@@ -99,6 +104,10 @@ describe("CreationStepper", () => {
     expect(
       screen.getByRole("navigation", { hidden: true }).closest("[inert]"),
     ).toBeTruthy();
+    // The cookie question stays answerable over the frame (ADR-0032 D7).
+    expect(
+      screen.getByRole("button", { name: "Дозволити" }).closest("[inert]"),
+    ).toBeNull();
     await user.click(screen.getByRole("textbox", { name: "Назва простору" }));
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Закрити" }));

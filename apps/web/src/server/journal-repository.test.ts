@@ -47,6 +47,7 @@ import {
   buildPublicProcessedMediaForEntryQuery,
   buildRelatedPublicJournalEntriesQuery,
   buildSpaceTimelineEntriesQuery,
+  buildLabelPlantObjectCatalogQuery,
   buildResolvePlantObjectCatalogQuery,
   buildUpdatePlantObjectLocationQuery,
   serializePublicJournalEntryPage,
@@ -305,8 +306,12 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
     expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = ');
     expect(compiled.sql).toContain('"spaces"."owner_user_id" = ');
+    // A gardener's shared cultivar or breed (0086) joins like any form.
+    expect(compiled.sql).toContain('"catalog_items"."source" = ');
+    expect(compiled.sql).toContain('"plant_objects"."species_text"');
     expect(compiled.parameters).toEqual([
       "active",
+      "gardener",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
@@ -575,10 +580,12 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"object_kind" = $2');
     expect(compiled.sql).toContain('"variety_text" = $3');
     expect(compiled.sql).toContain('"variety_state" = $4');
-    expect(compiled.sql).toContain('"updated_at" = $5');
-    expect(compiled.sql).toContain('"id" = $6');
-    expect(compiled.sql).toContain('"owner_user_id" = $7');
-    expect(compiled.sql).toContain('"variety_state" in ($8, $9)');
+    // A catalogue match replaces an own species (0086).
+    expect(compiled.sql).toContain('"species_text" = $5');
+    expect(compiled.sql).toContain('"updated_at" = $6');
+    expect(compiled.sql).toContain('"id" = $7');
+    expect(compiled.sql).toContain('"owner_user_id" = $8');
+    expect(compiled.sql).toContain('"variety_state" in ($9, $10, $11)');
     expect(compiled.sql).toContain("returning *");
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.parameters).toEqual([
@@ -586,12 +593,46 @@ describe("journal repository query contracts", () => {
       "plant",
       "Помідор чері",
       "selected",
+      null,
       now,
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
       "unknown",
+      "own",
       "free_text",
     ]);
+  });
+
+  it("keeps an own name as the object's own species, clearing the link and an own cultivar (0086)", () => {
+    const now = new Date("2026-06-26T12:00:00.000Z");
+    const compiled = buildLabelPlantObjectCatalogQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        plantObjectId: "00000000-0000-0000-0000-000000000003",
+        catalogLabel: "Помідор бабусин",
+        now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('"catalog_item_id" = $1');
+    expect(compiled.sql).toContain('"variety_text" = $2');
+    expect(compiled.sql).toContain('"variety_state" = $3');
+    expect(compiled.sql).toContain('"species_text" = $4');
+    expect(compiled.parameters).toEqual([
+      null,
+      null,
+      "unknown",
+      "Помідор бабусин",
+      now,
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "unknown",
+      "own",
+      "free_text",
+    ]);
+    // Nothing writes the old label state any more.
+    expect(compiled.parameters.slice(0, 5)).not.toContain("free_text");
   });
 
   it("updates object location only inside owner scope with coarse code", () => {

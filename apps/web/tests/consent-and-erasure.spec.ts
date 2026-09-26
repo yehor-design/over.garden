@@ -229,6 +229,7 @@ async function expectNoSidewaysScroll(page: Page, label: string) {
  */
 async function tabUntilChrome(page: Page, maxPresses = 150) {
   const covered: string[] = [];
+  const labels: string[] = [];
   let reached = 0;
   for (let press = 0; press < maxPresses; press += 1) {
     await page.keyboard.press("Tab");
@@ -264,10 +265,11 @@ async function tabUntilChrome(page: Page, maxPresses = 150) {
     if (!seen) continue;
     if (seen.inChrome) break;
     reached += 1;
+    labels.push(seen.label ?? "");
     if (seen.under.length)
       covered.push(`${seen.label} → ${seen.under.join(", ")}`);
   }
-  return { reached, covered };
+  return { reached, covered, labels };
 }
 
 /** Two painted frames: a sticky row settles where it sticks. */
@@ -637,15 +639,28 @@ test.describe("erasure, asked for and carried out (OVE-505)", () => {
     );
     const page = await phone.newPage();
 
-    // A setup flow keeps the tab bar, and its step's actions stick to the
-    // bottom of the screen: "Next" opened underneath the bar at 320 px.
+    // A setup flow is a full-screen stepper (DESIGN.md §5.24): the tab bar is
+    // gone under it, its "Next" sits at the bottom of the screen, and the
+    // notice floats above it — answerable, never on it. "Next" once opened
+    // underneath the bar at 320 px.
     await page.goto("/garden/objects/new", { waitUntil: "load" });
     await expect(page.locator(`${NOTICE}:visible`)).toHaveCount(1);
     const next = page.getByRole("button", { name: "Далі" }).first();
     await waitForHydration(next);
     expect(await underChrome(page, next), "Next at load").toEqual([]);
+    await expect(page.locator(TAB_BAR)).toBeHidden();
+    // Tab stays in the frame — from the close control, the answer, then
+    // "Next" — and then reaches the notice rather than the page under the
+    // frame. The walk starts at the close control: the stepper focuses its
+    // answer on opening, and a walk from wherever focus happened to be counts
+    // a different number of stops depending on when it began.
+    await page.locator("[data-creation-close]").focus();
     const walk = await tabUntilChrome(page);
-    expect(walk.reached).toBeGreaterThan(5);
+    expect(walk.reached, walk.labels.join(" | ")).toBeGreaterThanOrEqual(2);
+    expect(
+      walk.labels.some((label) => label.startsWith("BUTTON Далі")),
+      walk.labels.join(" | "),
+    ).toBe(true);
     expect(walk.covered, walk.covered.join(" | ")).toEqual([]);
     await scrollToTop(page);
     await page.screenshot({

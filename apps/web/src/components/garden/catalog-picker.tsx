@@ -442,15 +442,17 @@ export function CatalogPicker({
       return;
     }
     if (event.key === "Enter") {
+      // Enter takes only a row the gardener highlighted (OVE-524): the first
+      // result is never picked on their behalf. With the list open and no
+      // row highlighted, Enter does nothing — it does not submit a form
+      // around a half-typed name either.
       const option =
-        clampedActiveIndex >= 0
-          ? options[clampedActiveIndex]
-          : open
-            ? options[0]
-            : undefined;
+        clampedActiveIndex >= 0 ? options[clampedActiveIndex] : undefined;
       if (option) {
         event.preventDefault();
         choose(option);
+      } else if (open && options.length > 0) {
+        event.preventDefault();
       }
       return;
     }

@@ -514,7 +514,10 @@ export function buildCountCatalogProvisionalItemsQuery(
     .where("identity_state", "=", "retired");
 }
 
-/** Objects that carry the gardener's own name as a label (ADR-0026 D6). */
+/**
+ * Objects that carry the gardener's own words for what they are (ADR-0026
+ * D6): an own species or cultivar (migration 0086), or an old label.
+ */
 export function buildCountPlantObjectsOwnNameQuery(
   executor: QueryExecutor,
   requesterUserId: string,
@@ -523,7 +526,12 @@ export function buildCountPlantObjectsOwnNameQuery(
     .selectFrom("plant_objects")
     .select(sql<number>`count(*)`.as("count"))
     .where("owner_user_id", "=", requesterUserId)
-    .where("variety_state", "=", "free_text");
+    .where((eb) =>
+      eb.or([
+        eb("species_text", "is not", null),
+        eb("variety_state", "in", ["own", "free_text"]),
+      ]),
+    );
 }
 
 export function buildCountPendingJournalSearchJobsQuery(

@@ -436,20 +436,40 @@ export function getLivingObjectPassportDomain(
   return DOMAIN_COPY[locale][objectKind];
 }
 
+/**
+ * What the gardener called the object's organism in their own words, for
+ * their own eyes only (ADR-0026 D6): the own species (migration 0086), with an
+ * own cultivar after it, or an old picker's label. Null when the object has
+ * none — a catalogue link, or nothing at all.
+ */
+export function ownObjectIdentityText(object: {
+  species_text: string | null;
+  variety_state: VarietyState | string;
+  variety_text: string | null;
+}): string | null {
+  if (object.species_text) {
+    return object.variety_state === "own" && object.variety_text
+      ? `${object.species_text} · ${object.variety_text}`
+      : object.species_text;
+  }
+  return object.variety_state === "free_text" ? object.variety_text : null;
+}
+
 export function livingObjectIdentityStateLabel(
   locale: InterfaceLocale,
   varietyState: VarietyState,
   hasCatalogIdentity: boolean,
   audience: "owner" | "public" = "owner",
+  hasOwnIdentity: boolean = varietyState === "free_text",
 ) {
   const copy = getLivingObjectPassportCopy(locale);
   if (hasCatalogIdentity && varietyState === "selected") {
     return copy.catalogConfirmed;
   }
   if (hasCatalogIdentity) return copy.catalogPilot;
-  // The own name is the owner's label (ADR-0026 D6); a reader sees an
-  // identity that is still being settled, nothing about the label.
-  if (varietyState === "free_text" && audience === "owner") {
+  // The own name is the owner's (ADR-0026 D6); a reader sees an identity that
+  // is still being settled, nothing about the name.
+  if (hasOwnIdentity && audience === "owner") {
     return copy.catalogProvisional;
   }
   return copy.catalogUnknown;
