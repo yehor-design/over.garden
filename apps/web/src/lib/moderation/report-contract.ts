@@ -1,3 +1,9 @@
+import {
+  publicJournalEntryPath,
+  publicObjectPassportPath,
+  publicProfileBasePath,
+  publicTopicPath,
+} from "@/lib/garden/public-paths";
 import { stripLocalePrefix } from "@/lib/public-localization";
 
 /**
@@ -108,13 +114,13 @@ export function parseReportAddress(raw: unknown): ReportAddress | null {
 export function reportAddressPath(address: ReportAddress): string {
   switch (address.kind) {
     case "entry":
-      return `/@${address.handle}/post/${address.entryNumber}`;
+      return publicJournalEntryPath(address.handle, address.entryNumber);
     case "object":
-      return `/@${address.handle}/objects/${address.slug}`;
+      return publicObjectPassportPath(address.handle, address.slug);
     case "profile":
-      return `/@${address.handle}`;
+      return publicProfileBasePath(address.handle);
     case "topic":
-      return `/topics/${address.slug}`;
+      return publicTopicPath(address.slug);
   }
 }
 
