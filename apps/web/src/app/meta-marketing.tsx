@@ -29,7 +29,8 @@ const META_MARKETING_ALLOWED_EXACT_PATHS = new Set([
   "/blog",
   "/privacy",
   "/support",
-  "/first-publication-disclosure",
+  "/terms",
+  "/cookies",
 ]);
 const META_MARKETING_ALLOWED_PREFIXES = [
   "/answers/",

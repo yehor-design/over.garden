@@ -40,7 +40,8 @@ const INSTRUMENTED_PATHS = [
   { path: "/blog", localized: true },
   { path: "/privacy", localized: true },
   { path: "/support", localized: true },
-  { path: "/first-publication-disclosure", localized: true },
+  { path: "/terms", localized: true },
+  { path: "/cookies", localized: true },
 ] as const;
 
 async function selectLocale(context: BrowserContext, baseURL: string) {
@@ -212,7 +213,7 @@ test.describe("the editorial and reference surfaces", () => {
     if (!baseURL) throw new Error("Playwright baseURL is required");
     await selectLocale(context, baseURL);
 
-    for (const surface of ["/privacy", "/first-publication-disclosure"]) {
+    for (const surface of ["/terms", "/privacy", "/cookies"]) {
       const response = await page.goto(surface, { waitUntil: "load" });
       expect(response?.status(), surface).toBe(200);
       await page.waitForTimeout(800);
@@ -276,7 +277,8 @@ test.describe("the editorial and reference surfaces", () => {
       "/knowledge",
       "/privacy",
       "/support",
-      "/first-publication-disclosure",
+      "/terms",
+      "/cookies",
       "/sources/eppo",
     ].filter((surface): surface is string => Boolean(surface));
 

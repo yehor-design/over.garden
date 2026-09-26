@@ -4,9 +4,7 @@ import { notFound } from "next/navigation";
 import { AnalyticsPrivacyControls } from "@/app/google-analytics";
 import { MetaMarketingPrivacyControls } from "@/app/meta-marketing";
 import { LegalDocumentPage } from "@/components/public/legal-document-page";
-import { Link } from "@/components/ui/link";
 import { getLegalDocument } from "@/lib/legal/legal-documents";
-import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 import { isPublicLocale, PUBLIC_LOCALES } from "@/lib/public-localization";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import {
@@ -15,7 +13,7 @@ import {
 } from "@/server/public-surface-discovery";
 import { buildPublicSurfaceMetadata } from "@/server/public-surface-metadata";
 
-interface LocalizedPrivacyRouteProps {
+interface LocalizedCookiesRouteProps {
   params: Promise<{ locale: string }>;
 }
 
@@ -25,15 +23,15 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
-}: LocalizedPrivacyRouteProps): Promise<Metadata> {
+}: LocalizedCookiesRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const validLocale = isPublicLocale(localeParam);
   const locale = validLocale ? localeParam : "uk";
-  const document = getLegalDocument(locale, "privacy");
+  const document = getLegalDocument(locale, "cookies");
   return buildPublicSurfaceMetadata({
     discovery: validLocale
-      ? resolveNonCandidatePublicSurfaceDiscovery("privacy")
-      : resolveUnresolvedPublicSurfaceDiscovery("privacy"),
+      ? resolveNonCandidatePublicSurfaceDiscovery("cookies")
+      : resolveUnresolvedPublicSurfaceDiscovery("cookies"),
     locale,
     title: document.metadataTitle,
     description: document.metadataDescription,
@@ -42,50 +40,27 @@ export async function generateMetadata({
 }
 
 /**
- * The privacy policy (`OVE-526`), accepted once with the terms and the cookie
- * rules. Beneath the text: the reader's own choices (the consent notice links
- * to `#privacy-choices`) and where to ask.
+ * The cookie rules (`OVE-526`), with the choices themselves beneath the text:
+ * analytics and marketing, each its own switch, off until switched on.
  */
-export default async function LocalizedPrivacyNoticePage({
+export default async function LocalizedCookiesPage({
   params,
-}: LocalizedPrivacyRouteProps) {
+}: LocalizedCookiesRouteProps) {
   const { locale: localeParam } = await params;
   if (!isPublicLocale(localeParam)) notFound();
   const copy = getTrustSurfaceCopy(localeParam).privacy;
-
   return (
     <LegalDocumentPage
       locale={localeParam}
-      documentKey="privacy"
+      documentKey="cookies"
       extraSections={[
         {
-          id: "privacy-choices",
+          id: "cookies-controls",
           heading: copy.choicesTitle,
           body: (
             <div className="grid gap-4">
               <AnalyticsPrivacyControls locale={localeParam} />
               <MetaMarketingPrivacyControls locale={localeParam} />
-            </div>
-          ),
-        },
-        {
-          id: "privacy-contact",
-          heading: copy.contactTitle,
-          body: (
-            <div className="grid gap-4">
-              <p className="text-text-secondary">
-                {copy.contactBeforeEmail}
-                <Link href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</Link>
-                {copy.contactAfterEmail}
-              </p>
-              <ul className="flex list-none flex-wrap gap-4">
-                <li>
-                  <Link href="/erasure">{copy.erasureLink}</Link>
-                </li>
-                <li>
-                  <Link href="/support">{copy.supportLink}</Link>
-                </li>
-              </ul>
             </div>
           ),
         },

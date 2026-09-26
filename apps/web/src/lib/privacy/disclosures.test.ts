@@ -20,7 +20,7 @@ describe("MVP privacy disclosure constants", () => {
   it("keeps first-publication disclosure version explicit and copy bounded", () => {
     expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v6");
     expect(MVP_LEGAL_COPY_STATUS).toBe(
-      "founder_approved_mvp_lawyer_review_deferred",
+      "drafted_owner_approval_and_lawyer_review_pending",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
       "public and eligible for search-engine indexing",

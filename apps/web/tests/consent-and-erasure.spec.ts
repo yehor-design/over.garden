@@ -488,13 +488,14 @@ test.describe("consent: one question, two equal answers, never in the way (OVE-5
     await allow.click();
     await expect(analytics).toContainText("Дозволено");
     await expect(page.locator(`${NOTICE}:visible`)).toHaveCount(0);
-    // Reader-first order: what becomes public before who reviewed the text.
+    // Reader-first order: what becomes public, how long it is kept, the
+    // reader's own choices, and only then the version and its review note.
     const order = await page.evaluate(() =>
       [
         "privacy-public",
         "privacy-retention",
         "privacy-choices",
-        "privacy-about",
+        "privacy-version",
       ].map(
         (id) => document.getElementById(id)?.getBoundingClientRect().top ?? -1,
       ),
@@ -856,7 +857,8 @@ test.describe("erasure, asked for and carried out (OVE-505)", () => {
       ["owner", ownerContext, OWNER_PAGE],
       ["privacy", null, "/privacy"],
       ["support", null, "/support"],
-      ["disclosure", null, "/first-publication-disclosure"],
+      ["terms", null, "/terms"],
+      ["cookies", null, "/cookies"],
       ["erasure", null, "/erasure"],
     ];
     for (const locale of ["uk", "bg", "ru"] as const) {

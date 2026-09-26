@@ -347,7 +347,9 @@ describe("the footer the product has never had", () => {
     );
     expect(hrefs).toContain("/privacy");
     expect(hrefs).toContain("/support");
-    expect(hrefs).toContain("/first-publication-disclosure");
+    expect(hrefs).toContain("/terms");
+    expect(hrefs).toContain("/cookies");
+    expect(hrefs).not.toContain("/first-publication-disclosure");
     // One catalogue entrance in the footer, as in the rail (`OVE-451`).
     expect(hrefs).toContain("/catalog");
     expect(hrefs).not.toContain("/objects");

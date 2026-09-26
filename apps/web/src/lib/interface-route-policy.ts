@@ -246,7 +246,8 @@ export const INTERFACE_ROUTE_POLICIES = [
     mode: "localized-link",
     exactPaths: [
       "/privacy",
-      "/first-publication-disclosure",
+      "/terms",
+      "/cookies",
       "/support",
       "/blog",
     ],

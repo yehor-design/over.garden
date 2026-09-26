@@ -95,7 +95,9 @@ export interface InterfaceCopy {
     /** The footer, which the product had no `contentinfo` landmark for at all. */
     footerTagline: string;
     support: string;
-    firstPublicationDisclosure: string;
+    /** The three documents a person accepts once (`OVE-526`). */
+    terms: string;
+    cookies: string;
     sourcesTitle: string;
     sourcesDescription: string;
     openAccount: string;
@@ -201,7 +203,8 @@ const INTERFACE_COPY = {
       footerTagline:
         "Публічний журнал садівництва: кожен запис відкритий і може з’являтися в пошуку.",
       support: "Підтримка",
-      firstPublicationDisclosure: "Розкриття першої публікації",
+      terms: "Умови використання",
+      cookies: "Правила cookies",
       sourcesTitle: "Джерела даних",
       sourcesDescription:
         "Назви організмів — з Catalogue of Life; реєстрові дані — з EPPO Global Database. Світлини належать їхнім авторам.",
@@ -309,7 +312,8 @@ const INTERFACE_COPY = {
       footerTagline:
         "Публичен дневник за градинарство: всеки запис е отворен и може да се появява в търсачките.",
       support: "Поддръжка",
-      firstPublicationDisclosure: "Разкриване на първата публикация",
+      terms: "Условия за ползване",
+      cookies: "Правила за бисквитките",
       sourcesTitle: "Източници на данни",
       sourcesDescription:
         "Имената на организмите са от Catalogue of Life; регистровите данни са от EPPO Global Database. Снимките принадлежат на авторите си.",
@@ -416,7 +420,8 @@ const INTERFACE_COPY = {
       footerTagline:
         "Публичный журнал садоводства: каждая запись открыта и может появляться в поиске.",
       support: "Поддержка",
-      firstPublicationDisclosure: "Раскрытие первой публикации",
+      terms: "Условия использования",
+      cookies: "Правила cookies",
       sourcesTitle: "Источники данных",
       sourcesDescription:
         "Названия организмов — из Catalogue of Life; реестровые данные — из EPPO Global Database. Фотографии принадлежат их авторам.",

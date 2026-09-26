@@ -13,9 +13,10 @@ A gardener is more likely to publish and keep journaling when OverGarden explain
 
 ## Public User Copy Rules
 
-- `/privacy`, `/{locale}/privacy`, `/erasure`, `/first-publication-disclosure`, and `/support` must show founder-approved MVP copy, not placeholder or public-release-blocked pilot copy.
+- `/terms`, `/privacy` and `/cookies` (and their `/{locale}/` twins), `/erasure` and `/support` must show approved copy, not placeholder or public-release-blocked pilot copy. The three documents of ADR-0038 were drafted on 2026-09-26 and wait for the owner's approval and a lawyer's review (`MVP_LEGAL_COPY_STATUS`); their text and versions live in `apps/web/src/lib/legal/legal-documents.ts`.
+- `/first-publication-disclosure` is retired: its content is the `#terms-publishing` section of the terms and the "What is public" section of the privacy policy, and the address answers one 308 there.
 - The visible support/privacy contact is `support.overgarden@gmail.com`.
-- First-publication wording is versioned as `first-publication-v5`.
+- First-publication wording is versioned as `first-publication-v6` until ADR-0038's one acceptance replaces the first-publication checkbox.
 - Erasure intake wording is versioned as `erasure-request-mvp-v1`.
 - Legal, support, erasure, and diagnostic routes stay `noindex` unless a later public-surface SEO policy deliberately promotes them.
 - Lawyer review is deferred until after MVP learning; material copy changes must bump the relevant disclosure version.
@@ -79,10 +80,9 @@ Public support contact text may show `support.overgarden@gmail.com`; that except
 ## Implementation Pointers
 
 - Shared copy/constants: `apps/web/src/lib/privacy/disclosures.ts`
-- Public privacy notice: `apps/web/src/app/privacy/page.tsx`
-- Localized privacy notice: `apps/web/src/app/[locale]/privacy/page.tsx`
+- The three documents: `apps/web/src/lib/legal/legal-documents.ts`, drawn by `apps/web/src/components/public/legal-document-page.tsx`
+- Terms, privacy policy, cookie rules: `apps/web/src/app/[locale]/{terms,privacy,cookies}/page.tsx`, with the unprefixed twins under `apps/web/src/app/(default)/`
 - Erasure request page: `apps/web/src/app/erasure/page.tsx`
-- First-publication disclosure: `apps/web/src/app/first-publication-disclosure/page.tsx`
 - Support page: `apps/web/src/app/support/page.tsx`
 - Operator erasure workflow: `apps/web/src/app/garden/privacy/erasure-requests/page.tsx`
 - Media lifecycle consumer: `apps/web/src/server/media/media-lifecycle-consumer.ts`
@@ -94,7 +94,7 @@ Run the focused disclosure/page tests after changing policy copy:
 
 ```bash
 cd apps/web
-pnpm test src/lib/privacy/disclosures.test.ts src/app/privacy/page.test.tsx 'src/app/[locale]/privacy/page.test.tsx' src/app/erasure/page.test.tsx src/app/first-publication-disclosure/page.test.tsx src/app/support/page.test.tsx src/app/auth/help/page.test.tsx
+pnpm test src/lib/privacy/disclosures.test.ts 'src/app/(default)/privacy/page.test.tsx' 'src/app/[locale]/privacy/page.test.tsx' 'src/app/[locale]/terms/page.test.tsx' 'src/app/[locale]/cookies/page.test.tsx' 'src/app/(default)/erasure/page.test.tsx' 'src/app/(default)/support/page.test.tsx' 'src/app/(default)/auth/help/page.test.tsx'
 ```
 
 Before closing related Linear work, also run:

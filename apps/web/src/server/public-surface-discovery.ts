@@ -142,10 +142,16 @@ export const PUBLIC_SURFACE_DISCOVERY_INVENTORY = [
     "src/app/[locale]/privacy/page.tsx",
   ),
   inventory(
-    "first_publication_disclosure",
+    "terms",
     "missing",
     "non_candidate",
-    "src/app/[locale]/first-publication-disclosure/page.tsx",
+    "src/app/[locale]/terms/page.tsx",
+  ),
+  inventory(
+    "cookies",
+    "missing",
+    "non_candidate",
+    "src/app/[locale]/cookies/page.tsx",
   ),
   inventory(
     "authored_sitemap",

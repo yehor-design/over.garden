@@ -8,8 +8,9 @@ import type { SiteShellFooterLink } from "@/lib/site-shell-navigation";
 /**
  * The footer, and the `contentinfo` landmark the product did not have at all.
  *
- * `/privacy`, `/support` and `/first-publication-disclosure` were reachable
- * from nowhere: three pages that exist, answer, and were linked by nothing.
+ * `/privacy` and `/support` were reachable from nowhere once: pages that
+ * existed, answered, and were linked by nothing. The three documents a person
+ * accepts (`/terms`, `/privacy`, `/cookies`, `OVE-526`) are linked here.
  *
  * It is also the one home of the language control (DESIGN.md §6: exactly one
  * per rendered document). It sat in the header before, which put a language

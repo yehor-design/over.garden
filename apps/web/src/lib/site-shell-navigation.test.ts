@@ -141,18 +141,19 @@ describe("site shell navigation contract", () => {
     expect(isSiteShellComposerRoute("/garden/entries/abc-1")).toBe(false);
   });
 
-  it("names the footer's four links and localizes each one that has a twin", () => {
+  it("names the footer's five links and localizes each one that has a twin", () => {
     expect(
       getSiteShellNavigation("bg", false).footerLinks.map(
         ({ key, href }) => [key, href] as const,
       ),
     ).toEqual([
       ["catalogue", "/bg/catalog"],
+      ["terms", "/bg/terms"],
       ["privacy", "/bg/privacy"],
+      ["cookies", "/bg/cookies"],
       // `/support` has no prefixed twin: it renders in the reader's language
       // at its one address, and `/bg/support` is a 404.
       ["support", "/support"],
-      ["first-publication-disclosure", "/bg/first-publication-disclosure"],
     ]);
   });
 

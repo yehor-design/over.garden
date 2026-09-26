@@ -70,7 +70,9 @@ describe("public analytics consent", () => {
     expect(isGoogleAnalyticsRoute("/markets/ua")).toBe(true);
     expect(isGoogleAnalyticsRoute("/privacy")).toBe(true);
     expect(isGoogleAnalyticsRoute("/support")).toBe(true);
-    expect(isGoogleAnalyticsRoute("/first-publication-disclosure")).toBe(true);
+    expect(isGoogleAnalyticsRoute("/terms")).toBe(true);
+    expect(isGoogleAnalyticsRoute("/cookies")).toBe(true);
+    expect(isGoogleAnalyticsRoute("/first-publication-disclosure")).toBe(false);
     expect(isGoogleAnalyticsRoute("/garden")).toBe(false);
     expect(isGoogleAnalyticsRoute("/garden/objects/object-id")).toBe(false);
     expect(isGoogleAnalyticsRoute("/admin")).toBe(false);
@@ -83,7 +85,7 @@ describe("public analytics consent", () => {
   });
 
   it("keeps the instrumented set closed, whatever the pages look like", () => {
-    // These nine patterns are the only paths the product measures, and
+    // These ten patterns are the only paths the product measures, and
     // `OVE-453` redesigned every one of them. A silent analytics regression
     // here is invisible until a month of data is missing, so the set is
     // enumerated rather than sampled: a redesign that moved one of these
@@ -93,7 +95,8 @@ describe("public analytics consent", () => {
       "/blog",
       "/privacy",
       "/support",
-      "/first-publication-disclosure",
+      "/terms",
+      "/cookies",
       "/answers/yellow-tomato-leaves",
       "/blog/field-note",
       "/guides/start-a-living-plant-record",
