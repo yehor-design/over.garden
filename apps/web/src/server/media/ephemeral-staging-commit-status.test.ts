@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const database = vi.hoisted(() => ({
   selectFrom: vi.fn(),
   entry: null as Record<string, unknown> | null,
+  space: null as Record<string, unknown> | null,
+  object: null as Record<string, unknown> | null,
   media: [] as Array<Record<string, unknown>>,
+  mediaOwner: [] as Array<[string, unknown]>,
 }));
 
 vi.mock("@/db", () => ({
@@ -48,18 +51,30 @@ describe("ephemeral media commit-status boundary", () => {
         revoked_at: null,
       },
     ];
+    database.space = null;
+    database.object = null;
+    database.mediaOwner = [];
     database.selectFrom.mockImplementation((table: string) => {
-      if (table === "journal_entries") {
+      if (table === "journal_entries" || table === "spaces" || table === "plant_objects") {
+        const row =
+          table === "journal_entries"
+            ? database.entry
+            : table === "spaces"
+              ? database.space
+              : database.object;
         const chain = {
           select: () => chain,
           where: () => chain,
-          executeTakeFirst: async () => database.entry,
+          executeTakeFirst: async () => row,
         };
         return chain;
       }
       const chain = {
         select: () => chain,
-        where: () => chain,
+        where: (column: string, _op: string, value: unknown) => {
+          database.mediaOwner.push([column, value]);
+          return chain;
+        },
         orderBy: () => chain,
         execute: async () => database.media,
       };
@@ -130,6 +145,26 @@ describe("ephemeral media commit-status boundary", () => {
     );
 
     database.entry = null;
+    await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe("absent");
+  });
+
+  // A space's and a plant's or animal's own photo publish under their id
+  // (ADR-0036 D1): the row that exists is the commit, and the media is read
+  // by that owner, never by an entry.
+  it("reads a space's photo back by the space, and an object's by the object", async () => {
+    const input = fixture();
+    database.entry = null;
+    database.space = { id: PUBLISH_ID, owner_user_id: OWNER_ID };
+    await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe("committed");
+    expect(database.mediaOwner).toContainEqual(["space_id", PUBLISH_ID]);
+
+    database.space = null;
+    database.object = { id: PUBLISH_ID, owner_user_id: OWNER_ID };
+    database.mediaOwner = [];
+    await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe("committed");
+    expect(database.mediaOwner).toContainEqual(["plant_object_id", PUBLISH_ID]);
+
+    database.object = { id: PUBLISH_ID, owner_user_id: "00000000-0000-4000-8000-000000000099" };
     await expect(readEphemeralMediaCommitStatus(input)).resolves.toBe("absent");
   });
 

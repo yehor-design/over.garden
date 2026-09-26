@@ -49,7 +49,7 @@ describe("shouldGuardNavigation", () => {
   it("lets the page's own anchors and new tabs through", () => {
     // The same page with a hash is not leaving it.
     expect(
-      shouldGuardNavigation(anchor({ href: "#first-entry-composer" }), here),
+      shouldGuardNavigation(anchor({ href: "#follow-up-composer" }), here),
     ).toBe(false);
     expect(shouldGuardNavigation(anchor({ href: "/garden" }), here)).toBe(false);
     expect(

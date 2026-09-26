@@ -8,7 +8,6 @@ const root = path.resolve(process.cwd(), "src");
 describe("OVE-243 vertical inline-media integration", () => {
   it("routes every create composer through the shared atomic selection owner", () => {
     for (const file of [
-      "app/(default)/garden/first-entry-composer.tsx",
       "components/garden/entry-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");

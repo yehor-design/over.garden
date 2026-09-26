@@ -17,6 +17,8 @@ export interface SpacePageCopy {
     never: string;
     locationHidden: string;
     locationRegion: string;
+    /** The cover's `alt`: «Фото простору «{name}»». */
+    photoAlt: string;
   };
   actions: {
     label: string;
@@ -48,6 +50,11 @@ export interface SpacePageCopy {
   settings: {
     description: string;
     detailsTitle: string;
+    photoTitle: string;
+    photoSaving: string;
+    photoSaved: string;
+    photoRemoved: string;
+    photoFailed: string;
     name: string;
     nameHelp: string;
     location: string;
@@ -92,6 +99,7 @@ const uk: SpacePageCopy = {
     never: "Ще без записів",
     locationHidden: "Місце не показується",
     locationRegion: "Регіон: {region}",
+    photoAlt: "Фото простору «{name}»",
   },
   actions: {
     label: "Дії з простором",
@@ -135,6 +143,11 @@ const uk: SpacePageCopy = {
     description:
       "Назва і те, чи показувати регіон простору. Рослини, тварини й записи лишаються на місці.",
     detailsTitle: "Назва і місце",
+    photoTitle: "Фото",
+    photoSaving: "Зберігаємо фото…",
+    photoSaved: "Фото збережено.",
+    photoRemoved: "Фото прибрано.",
+    photoFailed: "Не вдалося зберегти фото. Спробуйте ще раз.",
     name: "Назва",
     nameHelp:
       "Нова назва з'явиться всюди, де показано цей простір, — зокрема на публічних сторінках його рослин і тварин.",
@@ -188,6 +201,7 @@ const bg: SpacePageCopy = {
     never: "Все още без записи",
     locationHidden: "Мястото не се показва",
     locationRegion: "Регион: {region}",
+    photoAlt: "Снимка на пространството „{name}“",
   },
   actions: {
     label: "Действия с пространството",
@@ -231,6 +245,11 @@ const bg: SpacePageCopy = {
     description:
       "Името и дали регионът на пространството се показва. Растенията, животните и записите остават на мястото си.",
     detailsTitle: "Име и място",
+    photoTitle: "Снимка",
+    photoSaving: "Запазваме снимката…",
+    photoSaved: "Снимката е запазена.",
+    photoRemoved: "Снимката е премахната.",
+    photoFailed: "Снимката не беше запазена. Опитайте отново.",
     name: "Име",
     nameHelp:
       "Новото име ще се появи навсякъде, където е показано пространството — включително на публичните страници на растенията и животните му.",
@@ -285,6 +304,7 @@ const ru: SpacePageCopy = {
     never: "Ещё без записей",
     locationHidden: "Место не показывается",
     locationRegion: "Регион: {region}",
+    photoAlt: "Фото пространства «{name}»",
   },
   actions: {
     label: "Действия с пространством",
@@ -328,6 +348,11 @@ const ru: SpacePageCopy = {
     description:
       "Название и то, показывать ли регион пространства. Растения, животные и записи остаются на месте.",
     detailsTitle: "Название и место",
+    photoTitle: "Фото",
+    photoSaving: "Сохраняем фото…",
+    photoSaved: "Фото сохранено.",
+    photoRemoved: "Фото убрано.",
+    photoFailed: "Не удалось сохранить фото. Попробуйте ещё раз.",
     name: "Название",
     nameHelp:
       "Новое название появится везде, где показано это пространство, — в том числе на публичных страницах его растений и животных.",

@@ -18,6 +18,7 @@ import {
   type OrganismFixture,
 } from "./helpers/organism-fixture";
 import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
+import { waitForHydration } from "./helpers/hydration";
 
 /**
  * Gates 7 and 8 of `DESIGN.md` §10: axe on the key screens, and a keyboard-only
@@ -180,21 +181,42 @@ async function focusedRing(page: Page) {
   });
 }
 
+/** One space and one plant in it, for the one composer to write about. */
+async function seedPlant(ownerUserId: string, name: string): Promise<string> {
+  const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
+  try {
+    const space = await pool.query<{ id: string }>(
+      `insert into spaces (owner_user_id, display_name) values ($1, $2) returning id::text as id`,
+      [ownerUserId, `Сад ${PREFIX}`],
+    );
+    const object = await pool.query<{ id: string }>(
+      `insert into plant_objects (owner_user_id, space_id, display_name, object_kind)
+       values ($1, $2, $3, 'plant') returning id::text as id`,
+      [ownerUserId, space.rows[0]!.id, name],
+    );
+    return object.rows[0]!.id;
+  } finally {
+    await pool.end();
+  }
+}
+
 /**
  * Publishes one entry through the composer, so `gate 7` has a public entry and
  * a public profile to scan. `gate 8` drives the same composer with the
  * keyboard alone; this one only needs the rows to exist.
  */
-async function publishFixtureEntry(page: Page, name: string): Promise<string> {
-  await page.goto("/garden", { waitUntil: "load" });
-  const composer = page.locator("#first-entry-composer");
+async function publishFixtureEntry(
+  page: Page,
+  ownerUserId: string,
+  name: string,
+): Promise<string> {
+  // A plant of the gardener's own to write about: the combined first-entry
+  // form is gone (ADR-0035 D1), and the one composer writes to what exists.
+  const objectId = await seedPlant(ownerUserId, name);
+  await page.goto(`/garden/new?object=${objectId}`, { waitUntil: "load" });
+  const composer = page.locator('[data-entry-composer="true"]');
   await expect(composer).toBeVisible({ timeout: 20_000 });
-  await composer.locator('input[name="plantName"]').fill(name);
-  await composer.locator('input[name="plantName"]').press("Escape");
-  const spaceName = composer.locator('input[name="spaceName"]');
-  if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
-    await spaceName.fill(`Сад ${PREFIX}`);
-  }
+  await waitForHydration(composer);
   const editor = composer
     .locator(
       '[data-structured-journal-composer="true"] [contenteditable="true"]',
@@ -223,14 +245,13 @@ async function publishFixtureEntry(page: Page, name: string): Promise<string> {
     // Scoped to the entry this call just published, not to "the newest one".
     // Playwright runs spec *files* in parallel, so another file publishing at
     // the same moment used to hand this one its slug — which failed here and
-    // looked like a defect in whatever was being reviewed.
+    // looked like a defect in whatever was being reviewed. The plant was made
+    // for this call, so its entry is exactly this one.
     const row = await pool.query<{ author_entry_number: number }>(
       `select author_entry_number from journal_entries
-       where author_entry_number is not null and title like $1::text
+       where author_entry_number is not null and plant_object_id = $1
        order by created_at desc limit 1`,
-      // The composer titles an entry "{plant name} - {date}", so the plant
-      // name this call passed is the prefix of exactly its own entry.
-      [`${name} - %`],
+      [objectId],
     );
     const entryNumber = row.rows[0]?.author_entry_number;
     if (!entryNumber) {
@@ -316,7 +337,11 @@ test.describe("gate 7 — axe on the key screens", () => {
       [gardenerId, handle, "Олена"],
     );
 
-    const entry = await publishFixtureEntry(page, `Перший запис ${handle}`);
+    const entry = await publishFixtureEntry(
+      page,
+      gardenerId,
+      `Перший запис ${handle}`,
+    );
 
     await scan(page, `/@${handle}`, "a public profile");
     await scan(page, `/@${handle}/${entry}`, "a public entry");
@@ -443,23 +468,12 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
       })
     ).id;
 
-    await page.goto("/garden", { waitUntil: "load" });
-    const composer = page.locator("#first-entry-composer");
-    await expect(composer).toBeVisible({ timeout: 20_000 });
-
-    const plantName = composer.locator('input[name="plantName"]');
-    await tabTo(page, plantName, "the plant name control");
     const name = `Помідор ${PREFIX}-${Date.now()}`;
-    await page.keyboard.type(name);
-    // The picker's listbox opens on typing and can cover the fields beneath
-    // it; Escape closes it and keeps what was typed.
-    await page.keyboard.press("Escape");
-
-    const spaceName = composer.locator('input[name="spaceName"]');
-    if ((await spaceName.count()) > 0) {
-      await tabTo(page, spaceName, "the space name control");
-      await page.keyboard.type(`Сад ${PREFIX}`);
-    }
+    const objectId = await seedPlant(gardenerId, name);
+    await page.goto(`/garden/new?object=${objectId}`, { waitUntil: "load" });
+    const composer = page.locator('[data-entry-composer="true"]');
+    await expect(composer).toBeVisible({ timeout: 20_000 });
+    await waitForHydration(composer);
 
     const editor = composer
       .locator(
@@ -495,8 +509,8 @@ test.describe("gate 8 — a keyboard-only path through the primary flows", () =>
     ).toBeLessThan(400);
 
     const persisted = await pool.query<{ id: string }>(
-      "select id::text as id from plant_objects where display_name = $1 limit 1",
-      [name],
+      "select id::text as id from journal_entries where plant_object_id = $1 limit 1",
+      [objectId],
     );
     expect(persisted.rows[0]?.id).toBeTruthy();
   });

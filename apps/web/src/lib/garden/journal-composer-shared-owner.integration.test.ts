@@ -8,7 +8,6 @@ const root = path.resolve(process.cwd(), "src");
 describe("shared journal composer integration", () => {
   it("routes every journal mode through one lazy Lexical owner", () => {
     for (const file of [
-      "app/(default)/garden/first-entry-composer.tsx",
       "components/garden/entry-composer.tsx",
       "app/(default)/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
     ]) {
@@ -28,7 +27,6 @@ describe("shared journal composer integration", () => {
 
   it("binds local-only create owners immediately without durable browser or server drafts", () => {
     for (const file of [
-      "app/(default)/garden/first-entry-composer.tsx",
       "components/garden/entry-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");

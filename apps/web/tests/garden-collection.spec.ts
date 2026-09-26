@@ -165,24 +165,24 @@ test.describe("My garden as a collection", () => {
       "src",
       /\/illustrations\/empty-garden\.webp/u,
     );
-    await expect(
-      setup.locator('[data-garden-setup-action="first-entry"]'),
-    ).toHaveAttribute("href", "#first-entry-composer");
-    await expect(page.locator("#first-entry-composer")).toBeVisible();
+    await expect(setup.locator("[data-garden-setup-action]")).toHaveText([
+      "Створити простір",
+      "Додати рослину чи тварину",
+    ]);
     await expect(page.locator('[data-garden-collection="true"]')).toHaveCount(
       0,
     );
     await scanAccessibility(page, testInfo, "setup-uk-1440");
     await capture(page, testInfo, "garden-0-objects-1440");
 
-    // One space, no plant yet: the space is listed, and the first plant is
-    // one form away on the same page.
+    // One space, no plant yet: the space is listed, and adding the first plant
+    // is a button away (ADR-0035 D1).
     await reseed(COLLECTION_PRESETS[1]);
     await openGarden(page);
     await expect(
       page.locator('[data-garden-collection-item="space"]'),
     ).toHaveCount(1);
-    await expect(page.locator("#first-entry-composer")).toBeVisible();
+    await expect(page.locator('[data-garden-new-object="true"]').first()).toBeVisible();
 
     // One plant in one space: read whole — no search, no orders.
     const one = await reseed(COLLECTION_PRESETS[2]);
@@ -193,7 +193,6 @@ test.describe("My garden as a collection", () => {
       "true",
     );
     await expect(page.locator('[data-garden-search="true"]')).toHaveCount(0);
-    await expect(page.locator("#first-entry-composer")).toHaveCount(0);
     const onlyObject = page.locator(`#garden-object-${one.objects[0]!.id}`);
     await expect(onlyObject).toContainText(one.spaces[0]!.name);
     await expect(onlyObject.locator("time")).toHaveCount(1);

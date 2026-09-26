@@ -65,7 +65,7 @@ describe("POST /auth/intent/start", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "/garden?authIntent=create_entry&authControl=composer-first-entry#first-entry-composer-composer-first-entry",
+      "/garden?authIntent=create_entry&authControl=composer-first-entry",
     );
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });

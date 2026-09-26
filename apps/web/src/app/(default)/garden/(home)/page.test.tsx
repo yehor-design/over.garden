@@ -84,23 +84,6 @@ vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: () => false,
 }));
 
-vi.mock("../first-entry-composer", () => ({
-  FirstEntryComposer: (props: {
-    initialSpace?: { id: string; displayName: string } | null;
-    requiresFirstPublicationDisclosure: boolean;
-  }) => (
-    <form
-      data-initial-space-id={props.initialSpace?.id ?? ""}
-      data-initial-space-name={props.initialSpace?.displayName ?? ""}
-      data-requires-first-publication-disclosure={String(
-        props.requiresFirstPublicationDisclosure,
-      )}
-    >
-      First entry composer
-    </form>
-  ),
-}));
-
 vi.mock("@/app/(default)/auth/sign-in-prompt", () => ({
   SignInPrompt: (props: {
     next?: string;
@@ -178,7 +161,7 @@ describe("/garden, the collection home (OVE-489)", () => {
     expect(html).not.toContain('data-garden-search="true"');
     // The returning gardener's home carries no editor.
     expect(html).not.toContain("First entry composer");
-    expect(html).not.toContain('id="first-entry-composer"');
+    expect(html).not.toContain("data-local-composer-kind");
     expect(
       mocks.scheduleGardenWorkspaceActivationAnalytics,
     ).not.toHaveBeenCalled();
@@ -274,7 +257,8 @@ describe("/garden, the collection home (OVE-489)", () => {
     expect(html).not.toContain('data-garden-setup="true"');
   });
 
-  it("treats an empty garden as setup, with the first-entry composer and no collection", async () => {
+  // ADR-0035 D1: the combined space + object + first entry form is gone.
+  it("treats an empty garden as setup: one picture, two buttons, no form and no collection", async () => {
     mocks.listGardenSpaces.mockResolvedValueOnce(
       spacesGroup({ items: [], total: 0, owned: 0 }),
     );
@@ -287,16 +271,14 @@ describe("/garden, the collection home (OVE-489)", () => {
     expect(html).toContain('data-garden-setup="true"');
     expect(html).toContain("Почніть свій сад");
     expect(html).toContain("/illustrations/empty-garden.webp");
-    expect(html).toContain('href="#first-entry-composer"');
-    expect(html).toContain("First entry composer");
-    expect(html).toContain('data-requires-first-publication-disclosure="true"');
+    expect(html).toContain("Створити простір");
+    expect(html).toContain("Додати рослину чи тварину");
+    expect(html).not.toContain("data-local-composer-kind");
     expect(html).not.toContain('data-garden-collection="true"');
-    expect(
-      mocks.scheduleGardenWorkspaceActivationAnalytics,
-    ).toHaveBeenCalledTimes(1);
+    expect(html).not.toMatch(/<form[^>]*data-entry-composer/u);
   });
 
-  it("offers the first-entry composer beside the spaces of a garden with no plant yet", async () => {
+  it("shows the collection of a garden with spaces and no plant yet, and no form", async () => {
     mocks.listGardenObjects.mockResolvedValueOnce(
       objectsGroup({ items: [], total: 0, owned: 0 }),
     );
@@ -304,31 +286,23 @@ describe("/garden, the collection home (OVE-489)", () => {
 
     expect(html).toContain('data-garden-collection="true"');
     expect(html).toContain("Рослин і тварин ще немає.");
-    expect(html).toContain("First entry composer");
-    // The one space is the composer's starting place.
-    expect(html).toContain(`data-initial-space-id="${SPACE_ID}"`);
-    expect(html.indexOf('data-garden-collection="true"')).toBeLessThan(
-      html.indexOf("First entry composer"),
-    );
+    expect(html).not.toContain("data-local-composer-kind");
   });
 
-  it("opens the first-entry composer above the collection for a reader who came to create", async () => {
-    mocks.hasPriorPublicationDisclosure.mockResolvedValueOnce(true);
+  it("sends a catalogue launch and a resumed object create on to object setup", async () => {
+    await expect(renderGarden({ catalog: "solanum-lycopersicum" })).rejects.toMatchObject({
+      digest: expect.stringContaining("/garden/objects/new?catalog=solanum-lycopersicum"),
+    });
+    await expect(renderGarden({ authIntent: "create_object" })).rejects.toMatchObject({
+      digest: expect.stringContaining("/garden/objects/new"),
+    });
+  });
+
+  it("does not treat an activation source as a request to create", async () => {
     const html = await renderGarden({ source: "direct-garden" });
 
-    expect(html).toContain("First entry composer");
-    expect(html).toContain(
-      'data-requires-first-publication-disclosure="false"',
-    );
-    expect(html.indexOf("First entry composer")).toBeLessThan(
-      html.indexOf('data-garden-collection="true"'),
-    );
-  });
-
-  it("does not treat an unrecognised return source as a request to create", async () => {
-    const html = await renderGarden({ source: "unknown" });
-
-    expect(html).not.toContain("First entry composer");
+    expect(html).toContain('data-garden-collection="true"');
+    expect(html).not.toContain("data-local-composer-kind");
   });
 
   it("keeps the spaces when the plants cannot be read, and never calls the garden empty", async () => {

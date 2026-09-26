@@ -12,6 +12,7 @@ import {
   type GardenSpacesGroup,
 } from "@/lib/garden/garden-collection";
 import type { RequestScope } from "@/server/request-scope";
+import { ownedPhotoView, readOwnedPhotos } from "@/server/owned-photo-repository";
 
 /**
  * The collection's two reads (`OVE-489`), one per group, each bounded by its
@@ -264,14 +265,23 @@ export async function listGardenSpaces(
       limit ${limit} offset ${lastPageOffset(offset, limit, total)}
     `.execute(tx);
 
+    const photos = await readOwnedPhotos(tx, {
+      ownerUserId: scope.userId,
+      kind: "space",
+      ids: rows.rows.map((row) => row.id),
+    });
     return {
-      items: rows.rows.map((row) => ({
-        kind: "space" as const,
-        id: row.id,
-        displayName: row.displayName,
-        objectCount: row.objectCount,
-        lastEntryDate: row.lastEntryDate,
-      })),
+      items: rows.rows.map((row) => {
+        const photo = photos.get(row.id);
+        return {
+          kind: "space" as const,
+          id: row.id,
+          displayName: row.displayName,
+          photo: photo ? ownedPhotoView(photo) : null,
+          objectCount: row.objectCount,
+          lastEntryDate: row.lastEntryDate,
+        };
+      }),
       total,
       owned,
     };

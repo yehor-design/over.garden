@@ -1,3 +1,5 @@
+import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
+
 /**
  * A space's own page in the workspace (`OVE-490`, IA: `/garden/spaces/[id]`).
  *
@@ -115,6 +117,8 @@ export interface SpaceHistoryPage {
 export interface OwnedSpaceSummary {
   id: string;
   displayName: string;
+  /** The space's own photo, its cover (ADR-0036 D1), when it has one. */
+  photo: OwnedPhotoView | null;
   locationVisibility: "hidden" | "region";
   coarseRegionCode: string | null;
   objectCount: number;

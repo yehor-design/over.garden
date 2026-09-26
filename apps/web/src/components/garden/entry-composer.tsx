@@ -674,7 +674,14 @@ export function EntryComposer({
       <LocalJournalComposerStatus
         state={local.state}
         lease={local.media.lease}
-        copy={{ ...atomicCopy, failed: failedCopy }}
+        copy={
+          // The chosen space or object vanished before Publish: say so, and
+          // that the text is still here (the combined first-entry form did,
+          // and this composer is its successor, ADR-0035 D1).
+          local.state.errorCode === "destination_unavailable"
+            ? { ...atomicCopy, failed: DESTINATION_COPY[locale].unavailable }
+            : { ...atomicCopy, failed: failedCopy }
+        }
         onCancelPublishing={local.cancelPublishing}
       />
       <UnpublishedWorkGuard

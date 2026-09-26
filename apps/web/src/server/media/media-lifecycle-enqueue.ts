@@ -21,6 +21,17 @@ import { readMediaVariantExtras } from "@/server/media/media-variant-schema";
 
 export type MediaLifecycleBucket = "public_derivative";
 
+/**
+ * Why stored bytes are revoked. `photo_removed` is a space's or a plant's or
+ * animal's own photo that was replaced, removed, or deleted with its owner
+ * (ADR-0036 D1).
+ */
+export type MediaRevokeReason =
+  | "journal_delete"
+  | "orphan"
+  | "erasure"
+  | "photo_removed";
+
 export interface MediaRevokeCandidate {
   mediaAssetId: string;
   bucket: MediaLifecycleBucket;
@@ -179,7 +190,7 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
     mediaAssetId?: string;
     bucket: MediaLifecycleBucket;
     objectKey: string;
-    reason: "journal_delete" | "orphan" | "erasure";
+    reason: MediaRevokeReason;
     journalEntryId?: string;
   },
 ) {
@@ -253,7 +264,7 @@ export async function enqueueMediaDerivativeRevokes(
   executor: QueryExecutor,
   input: {
     candidates: readonly MediaRevokeCandidate[];
-    reason: "journal_delete" | "orphan" | "erasure";
+    reason: MediaRevokeReason;
     journalEntryId?: string;
   },
 ): Promise<number> {

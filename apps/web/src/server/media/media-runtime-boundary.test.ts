@@ -16,7 +16,9 @@ describe("garden media native-runtime boundary", () => {
 
     expect(repository).not.toMatch(/processing_claim|quarantine|sharp/i);
     expect(storage).not.toMatch(/presign|quarantine|sharp/i);
-    expect(gardenPage).toContain('from "@/server/journal-repository"');
+    // The garden home holds no form since ADR-0035 D1; it must still never
+    // reach a server-side image processor.
+    expect(gardenPage).not.toMatch(/sharp|media\/processor|quarantine/iu);
     await expect(
       access(path.join(process.cwd(), "src/server/media/processor.ts")),
     ).rejects.toThrow();

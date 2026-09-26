@@ -126,9 +126,11 @@ const ACTION_ANCHORS: Record<AuthIntentAction, string> = {
   report: "profile-report",
   block: "profile-block",
   claim: "lineage-claim",
-  create_object: "first-entry-composer",
-  create_entry: "first-entry-composer",
-  save: "first-entry-composer",
+  // The combined first-entry form is gone (ADR-0035 D1): creating resumes on
+  // its own page — object setup, or the composer — with nothing to scroll to.
+  create_object: "",
+  create_entry: "",
+  save: "",
   publish: "entry-publish",
   contribute: "community-contribute",
 };
@@ -207,9 +209,9 @@ export function buildAuthIntentAnchor(
 ) {
   const normalizedAction = normalizeAction(action);
   const normalizedControl = normalizeControl(control ?? undefined);
-  return normalizedControl
-    ? `${ACTION_ANCHORS[normalizedAction]}-${normalizedControl}`
-    : ACTION_ANCHORS[normalizedAction];
+  const anchor = ACTION_ANCHORS[normalizedAction];
+  if (!anchor) return "";
+  return normalizedControl ? `${anchor}-${normalizedControl}` : anchor;
 }
 
 export function normalizeAuthIntentResumeAction(

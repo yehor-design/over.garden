@@ -315,6 +315,19 @@ function SpaceOverview({
       data-space-overview={space.id}
       className="grid gap-3"
     >
+      {space.photo ? (
+        // eslint-disable-next-line @next/next/no-img-element -- the stored WebP with its own srcset (ADR-0022 D2)
+        <img
+          src={space.photo.src}
+          srcSet={space.photo.srcSet ?? undefined}
+          sizes="(min-width: 48rem) 42rem, 100vw"
+          width={space.photo.width ?? undefined}
+          height={space.photo.height ?? undefined}
+          alt={template(copy.overview.photoAlt, { name: space.displayName })}
+          data-space-cover="true"
+          className="aspect-cover w-full rounded-lg bg-surface-sunken object-cover"
+        />
+      ) : null}
       <h2
         id="space-overview-heading"
         className="text-h2 break-words text-text-heading"

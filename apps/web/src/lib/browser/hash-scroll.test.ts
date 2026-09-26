@@ -6,8 +6,8 @@ describe("scheduleHashAnchorScroll", () => {
   it("scrolls a late-mounted anchor for an intent-resume hash", () => {
     const scrollIntoView = vi.fn();
     const cancelFrame = vi.fn();
-    const cleanup = scheduleHashAnchorScroll("first-entry-composer", {
-      hash: "#first-entry-composer",
+    const cleanup = scheduleHashAnchorScroll("follow-up-composer", {
+      hash: "#follow-up-composer",
       findAnchor: () => ({ scrollIntoView }) as unknown as HTMLElement,
       requestFrame: (callback) => {
         callback(0);

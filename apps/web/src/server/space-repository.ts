@@ -8,6 +8,8 @@ import type {
   SpaceLocationVisibility,
   SpaceSetupInput,
 } from "@/lib/garden/space-setup";
+import type { ClaimedOwnedPhoto } from "@/server/media/owned-photo-handoff";
+import { writeOwnedPhoto } from "@/server/owned-photo-repository";
 import type { RequestScope } from "@/server/request-scope";
 
 export type CreateOwnedSpaceResult =
@@ -49,9 +51,13 @@ export async function createOwnedSpace(
   scope: RequestScope,
   input: SpaceSetupInput,
   executor: Kysely<Database> = db,
+  options: {
+    /** The claimed photo the stepper chose (ADR-0036 D1), written with the space. */
+    photo?: ClaimedOwnedPhoto | null;
+  } = {},
 ): Promise<CreateOwnedSpaceResult> {
   return executor.transaction().execute(async (tx) => {
-    await sql`set local statement_timeout = '1500ms'`.execute(tx);
+    await sql`set local statement_timeout = '3000ms'`.execute(tx);
     await sql`select pg_advisory_xact_lock(hashtextextended(${`space-setup:${scope.userId}`}, 0))`.execute(
       tx,
     );
@@ -121,6 +127,13 @@ export async function createOwnedSpace(
         "owner_user_id",
       ])
       .executeTakeFirstOrThrow();
+    if (options.photo) {
+      await writeOwnedPhoto(tx, {
+        ownerUserId: scope.userId,
+        owner: { kind: "space", id: created.id },
+        photo: options.photo,
+      });
+    }
     return {
       status: "created",
       space: toCreatedSpace(created as SpaceRow),
@@ -128,3 +141,40 @@ export async function createOwnedSpace(
     };
   });
 }
+
+/** The gardener's own space with this id, if it exists: the replay check before a claim. */
+export async function readOwnedSpaceForReplay(
+  scope: RequestScope,
+  spaceId: string,
+  executor: Kysely<Database> = db,
+): Promise<CreatedSpace | "conflict" | null> {
+  const row = await executor
+    .selectFrom("spaces")
+    .select(["id", "display_name", "location_visibility", "coarse_region_code", "owner_user_id"])
+    .where("id", "=", spaceId)
+    .executeTakeFirst();
+  if (!row) return null;
+  return row.owner_user_id === scope.userId ? toCreatedSpace(row as SpaceRow) : "conflict";
+}
+
+/**
+ * The gardener's oldest space with this name, compared without case — the
+ * same-name question asked before a photo is claimed, so a gardener who then
+ * chooses the existing space leaves the staged photo unclaimed.
+ */
+export async function findOwnedSpaceByName(
+  scope: RequestScope,
+  displayName: string,
+  executor: Kysely<Database> = db,
+): Promise<CreatedSpace | null> {
+  const row = await executor
+    .selectFrom("spaces")
+    .select(["id", "display_name", "location_visibility", "coarse_region_code", "owner_user_id"])
+    .where("owner_user_id", "=", scope.userId)
+    .where(sql<string>`lower(display_name)`, "=", displayName.toLocaleLowerCase())
+    .orderBy("created_at", "asc")
+    .limit(1)
+    .executeTakeFirst();
+  return row ? toCreatedSpace(row as SpaceRow) : null;
+}
+

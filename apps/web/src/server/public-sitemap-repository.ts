@@ -127,7 +127,7 @@ export async function listPublicJournalEntrySitemapUrls(
 
   const imagesByEntryId = new Map<string, PublicSitemapImage[]>();
   for (const media of mediaRows) {
-    if (!media.derivativeKey) continue;
+    if (!media.derivativeKey || !media.entryId) continue;
     const images = imagesByEntryId.get(media.entryId) ?? [];
     images.push({
       url: getPublicDerivativeUrl(media.derivativeKey),

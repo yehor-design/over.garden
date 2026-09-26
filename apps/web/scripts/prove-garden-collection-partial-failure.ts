@@ -143,8 +143,10 @@ async function main() {
       .count();
     const setupClaimedDuringFailure =
       (await page.locator('[data-garden-setup="true"]').count()) > 0;
+    // The home holds no form since ADR-0035 D1; the object's button is the
+    // offer a failure must not replace with "your garden is empty".
     const composerOfferedDuringFailure =
-      (await page.locator("#first-entry-composer").count()) > 0;
+      (await page.locator('[data-garden-setup="true"]').count()) > 0;
     mkdirSync(out, { recursive: true });
     await page.screenshot({
       path: path.join(out, "garden-partial-failure-1440.png"),

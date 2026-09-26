@@ -43,9 +43,17 @@ test("owned corpus: 0/1/100/1000, complete cursor traversal, cross-user refusal,
     ]);
     const emptyPage = await context.newPage();
     await emptyPage.setViewportSize({ width: 320, height: 900 });
-    await emptyPage.goto(`${baseURL}/garden`);
-    const emptyPicker = emptyPage.locator(
-      '#first-entry-composer [data-owned-destination-picker="space"]',
+    // Adding the first plant asks for its space; with none yet, the picker
+    // says so (the combined first-entry form is gone, ADR-0035 D1).
+    await emptyPage.goto(`${baseURL}/garden/objects/new`);
+    const setup = emptyPage.locator('[data-object-setup-flow="true"]');
+    await waitForHydration(setup);
+    await setup.getByRole("button", { name: "Далі" }).click();
+    const setupName = setup.locator('[data-object-setup-section="name"]');
+    await setupName.getByRole("combobox").fill("Перша рослина");
+    await setupName.getByRole("button", { name: "Далі" }).click();
+    const emptyPicker = setup.locator(
+      '[data-object-setup-section="space"] [data-owned-destination-picker="space"]',
     );
     await waitForHydration(emptyPicker.getByRole("combobox"));
     await emptyPicker.getByRole("combobox").click();
@@ -251,10 +259,15 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
       await context.addCookies([
         { name: "overgarden_interface_locale", value: locale, url: baseURL! },
       ]);
-      // A thousand objects: the first-entry composer is an explicit create.
-      await page.goto(`${baseURL}/garden?source=direct-garden`);
-      const parent = page.locator(
-        '#first-entry-composer [data-owned-destination-picker="space"]',
+      // A thousand objects: a new plant from the one composer, whose space is
+      // chosen from twenty.
+      await page.goto(`${baseURL}/garden/new`);
+      const writer = page.locator('[data-entry-composer="true"]');
+      await waitForHydration(writer);
+      await writer.getByRole("combobox").first().fill("Retained plant name");
+      await writer.locator('[data-owned-destination-create="true"]').click();
+      const parent = writer.locator(
+        '[data-entry-composer-new-object="true"] [data-owned-destination-picker="space"]',
       );
       const input = parent.getByRole("combobox");
       await waitForHydration(input);
@@ -276,10 +289,8 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
         "data-destination-selection",
         `space:${fixture.spaces[19].id}`,
       );
-      const plantName = page.locator(
-        '#first-entry-composer input[name="plantName"]',
-      );
-      await plantName.fill("Retained plant name");
+      const plantName = writer.locator('input[name="newObjectName"]');
+      await expect(plantName).toHaveValue("Retained plant name");
       await page.route("**/api/garden/destinations?**", (route) =>
         route.fulfill({
           status: 503,
@@ -326,7 +337,7 @@ test("picker keyboard, explicit selection, 503 recovery, retained editor and loc
       }
       await scanAccessibility(page, testInfo, `picker-${locale}`);
     }
-    const composer = page.locator("#first-entry-composer");
+    const composer = page.locator('[data-entry-composer="true"]');
     const retainedText =
       "Запись остаётся после исчезновения выбранного пространства.";
     const editor = composer

@@ -50,6 +50,7 @@
     "catalog:health:prove-database": "tsx scripts/prove-catalog-health-database.ts",
     "catalog:registers:prove-database": "tsx scripts/prove-register-form-attachment.ts",
     "catalog:standard-species:prove-database": "tsx scripts/prove-standard-species-database.ts",
+    "schema:owned-photos:prove-database": "tsx scripts/prove-owned-photo-database.ts",
     "catalog:standard-species:build": "tsx scripts/build-standard-species.ts",
     "catalog:standard-species:load": "tsx scripts/load-standard-species.ts",
     "catalog:registers:attach": "tsx scripts/attach-register-forms.ts",

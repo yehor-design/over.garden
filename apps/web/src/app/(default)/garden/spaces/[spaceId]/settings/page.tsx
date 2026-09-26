@@ -33,6 +33,7 @@ import {
 import { SpaceSettingsShell } from "../space-shell";
 import { deleteSpaceAction, updateSpaceSettingsAction } from "./actions";
 import { SpaceDeleteControl } from "./space-delete-control";
+import { SpacePhotoSettings } from "./space-photo-settings";
 import { SpaceSettingsForm } from "./space-settings-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -167,6 +168,13 @@ async function SpaceSettingsSections({
   return (
     <div className="flex flex-col gap-10">
       <p className="text-body-sm text-text-muted">{copy.description}</p>
+      <Section
+        id="space-photo"
+        title={copy.photoTitle}
+        className="scroll-mt-20"
+      >
+        <SpacePhotoSettings locale={locale} space={space} />
+      </Section>
       <Section
         id="space-details"
         title={copy.detailsTitle}

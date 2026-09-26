@@ -83,10 +83,10 @@ export function GardenActions({ locale }: { locale: InterfaceLocale }) {
 }
 
 /**
- * A garden with nothing in it yet: the one picture, one sentence of what a
- * garden is made of, and the three ways to start, the fastest first — the
- * first-entry composer right below names a plant and its place in the same
- * form (FAST_ENTRY.md, "first-time gardener").
+ * A garden with nothing in it yet (ADR-0035 D1): the picture, one sentence of
+ * what a garden is made of, and exactly two ways to start — a space, or a
+ * plant or animal. Nothing is created for the gardener, and there is no form
+ * on this page.
  */
 export function GardenSetup({ locale }: { locale: InterfaceLocale }) {
   const copy = getGardenCollectionCopy(locale).setup;
@@ -99,14 +99,14 @@ export function GardenSetup({ locale }: { locale: InterfaceLocale }) {
       className="rounded-lg border border-border"
       action={
         <div className="flex flex-wrap justify-center gap-2">
-          <a
-            href="#first-entry-composer"
-            data-garden-setup-action="first-entry"
+          <Link
+            href="/garden/spaces/new"
+            data-garden-setup-action="add-space"
+            data-garden-new-space="true"
             className={buttonVariants()}
           >
-            <NotePencilIcon aria-hidden="true" />
-            {copy.firstEntry}
-          </a>
+            {copy.addSpace}
+          </Link>
           <Link
             href="/garden/objects/new"
             data-garden-setup-action="add-object"
@@ -114,14 +114,6 @@ export function GardenSetup({ locale }: { locale: InterfaceLocale }) {
             className={buttonVariants({ variant: "secondary" })}
           >
             {copy.addObject}
-          </Link>
-          <Link
-            href="/garden/spaces/new"
-            data-garden-setup-action="add-space"
-            data-garden-new-space="true"
-            className={buttonVariants({ variant: "secondary" })}
-          >
-            {copy.addSpace}
           </Link>
         </div>
       }
@@ -640,9 +632,21 @@ export function GardenItemRow({
       data-garden-collection-item={item.kind}
       className="scroll-mt-24 items-center"
       media={
-        <span className="flex size-10 items-center justify-center rounded-lg bg-surface-sunken text-text-muted">
-          <Icon aria-hidden="true" className="size-5" />
-        </span>
+        item.kind === "space" && item.photo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the stored WebP's smallest variant (ADR-0022 D2)
+          <img
+            src={item.photo.src}
+            srcSet={item.photo.srcSet ?? undefined}
+            sizes="40px"
+            alt=""
+            data-garden-space-photo="true"
+            className="size-10 rounded-lg bg-surface-sunken object-cover"
+          />
+        ) : (
+          <span className="flex size-10 items-center justify-center rounded-lg bg-surface-sunken text-text-muted">
+            <Icon aria-hidden="true" className="size-5" />
+          </span>
+        )
       }
       title={<span className="break-words">{item.displayName}</span>}
       href={gardenCollectionItemHref(item)}
