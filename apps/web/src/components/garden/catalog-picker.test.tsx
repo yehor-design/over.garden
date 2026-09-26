@@ -130,6 +130,35 @@ describe("CatalogPicker behaviour", () => {
     await act(async () => renderer.unmount());
   });
 
+  it("never picks a row the gardener did not highlight: Enter with the list open and nothing highlighted selects nothing (OVE-524)", async () => {
+    const selections: Array<CatalogPickerSelection | null> = [];
+    const renderer = await renderPicker({
+      fetchRows: async () => ({ rows: ROWS, availability: "ready" }),
+      onSelectionChange: (selection) => selections.push(selection),
+    });
+
+    await type(renderer, "томат");
+    expect(comboboxOf(renderer).props["aria-expanded"]).toBe(true);
+    let prevented = false;
+    await act(async () =>
+      comboboxOf(renderer).props.onKeyDown({
+        key: "Enter",
+        preventDefault: () => {
+          prevented = true;
+        },
+      }),
+    );
+    expect(selections).toEqual([]);
+    // Nor does it submit the form around a half-typed name.
+    expect(prevented).toBe(true);
+
+    await press(renderer, "ArrowDown");
+    await press(renderer, "Enter");
+    expect(selections).toEqual([{ kind: "item", row: ROWS[0] }]);
+
+    await act(async () => renderer.unmount());
+  });
+
   it("records a miss when the own name is chosen and when the field is left without a pick", async () => {
     const selections: Array<CatalogPickerSelection | null> = [];
     const misses: CatalogSearchMiss[] = [];

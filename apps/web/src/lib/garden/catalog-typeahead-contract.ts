@@ -6,6 +6,8 @@ import type {
 import type { PublicLocale } from "@/lib/public-localization";
 
 export const CATALOG_TYPEAHEAD_PUBLIC_PATH = "/api/public/catalog/typeahead";
+/** The object stepper's species search: the standard base only (OVE-524). */
+export const STANDARD_SPECIES_TYPEAHEAD_PUBLIC_PATH = "/api/public/catalog/species";
 export const CATALOG_TYPEAHEAD_MAX_QUERY_LENGTH = 120;
 export const CATALOG_TYPEAHEAD_MIN_QUERY_LENGTH = 2;
 /** A query this long that ends without a pick is worth recording as a miss. */
@@ -72,6 +74,12 @@ export function parseCatalogTypeaheadResponse(
     }
     if (isPublicPath(candidate.publicPath)) {
       row.publicPath = candidate.publicPath;
+    }
+    if (
+      isNonEmptyString(candidate.scientificName) &&
+      candidate.scientificName.length <= 200
+    ) {
+      row.scientificName = candidate.scientificName;
     }
     return [row];
   });

@@ -153,4 +153,6 @@ export interface FirstEntryCatalogSelection {
   matchedName?: string;
   parentDisplayName?: string;
   publicPath?: string;
+  /** A species' Latin name, shown under its everyday name (OVE-524). */
+  scientificName?: string;
 }

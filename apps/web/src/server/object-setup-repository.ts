@@ -7,10 +7,15 @@ import type {
   CreatedObject,
   ObjectSetupInput,
 } from "@/lib/garden/object-setup";
+import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { findStandardSpecies } from "@/server/catalog-repository";
 import type { ClaimedOwnedPhoto } from "@/server/media/owned-photo-handoff";
-import { writeOwnedPhoto } from "@/server/owned-photo-repository";
+import {
+  ownedPhotoView,
+  readOwnedPhotos,
+  writeOwnedPhoto,
+} from "@/server/owned-photo-repository";
 import type { RequestScope } from "@/server/request-scope";
 import {
   findOrCreateSpeciesForm,
@@ -317,6 +322,47 @@ export async function findOwnedObjectByName(
   if (!row) return null;
   const existing = await readObject(executor, row.id);
   return existing ? toCreatedObject(existing) : null;
+}
+
+export interface ObjectSetupSpace {
+  id: string;
+  displayName: string;
+  photo: OwnedPhotoView | null;
+}
+
+/** More spaces than anyone keeps; the step lists them all. */
+const OBJECT_SETUP_SPACE_LIMIT = 200;
+
+/**
+ * The stepper's «Простір» (OVE-524): every space of the gardener, each with
+ * its photo when it has one, newest first — the one just made in the space
+ * stepper leads.
+ */
+export async function listSpacesForObjectSetup(
+  scope: RequestScope,
+  executor: Kysely<Database> = db,
+): Promise<ObjectSetupSpace[]> {
+  const rows = await executor
+    .selectFrom("spaces")
+    .select(["id", "display_name as displayName"])
+    .where("owner_user_id", "=", scope.userId)
+    .orderBy("created_at", "desc")
+    .orderBy("id", "asc")
+    .limit(OBJECT_SETUP_SPACE_LIMIT)
+    .execute();
+  const photos = await readOwnedPhotos(executor, {
+    ownerUserId: scope.userId,
+    kind: "space",
+    ids: rows.map((row) => row.id),
+  });
+  return rows.map((row) => {
+    const photo = photos.get(row.id);
+    return {
+      id: row.id,
+      displayName: row.displayName,
+      photo: photo ? ownedPhotoView(photo) : null,
+    };
+  });
 }
 
 /** One of the gardener's spaces, for a flow the space setup handed back to. */

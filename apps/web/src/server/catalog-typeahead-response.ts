@@ -77,6 +77,9 @@ function serializeSuggestion(suggestion: CatalogSuggestion) {
       ? { parentDisplayName: suggestion.parentDisplayName }
       : {}),
     ...(suggestion.publicPath ? { publicPath: suggestion.publicPath } : {}),
+    ...(suggestion.scientificName
+      ? { scientificName: suggestion.scientificName }
+      : {}),
   };
 }
 

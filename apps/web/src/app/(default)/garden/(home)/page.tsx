@@ -102,16 +102,13 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     redirect(engagementPostAuthPath);
   }
   // The combined space + object + first entry form is gone (ADR-0035 D1).
-  // A catalogue launch and a resumed "add a plant or an animal" go to object
-  // setup, which reads the same `catalog` preselection.
+  // An old catalogue launch and a resumed "add a plant or an animal" go to the
+  // object stepper, which prefills nothing: only the gardener sets a species
+  // (OVE-524).
   const catalog = firstParam(params.catalog);
   const resumedAction = normalizeAuthIntentResumeAction(params.authIntent);
   if (catalog || resumedAction === "create_object") {
-    redirect(
-      catalog
-        ? `/garden/objects/new?catalog=${encodeURIComponent(catalog)}`
-        : "/garden/objects/new",
-    );
+    redirect("/garden/objects/new");
   }
 
   return (

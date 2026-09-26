@@ -280,9 +280,9 @@ describe("/garden, the collection home (OVE-489)", () => {
     expect(html).not.toContain("data-local-composer-kind");
   });
 
-  it("sends a catalogue launch and a resumed object create on to object setup", async () => {
+  it("sends an old catalogue launch and a resumed object create on to the stepper, prefilling nothing", async () => {
     await expect(renderGarden({ catalog: "solanum-lycopersicum" })).rejects.toMatchObject({
-      digest: expect.stringContaining("/garden/objects/new?catalog=solanum-lycopersicum"),
+      digest: expect.stringMatching(/;\/garden\/objects\/new;/u),
     });
     await expect(renderGarden({ authIntent: "create_object" })).rejects.toMatchObject({
       digest: expect.stringContaining("/garden/objects/new"),

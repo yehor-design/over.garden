@@ -183,12 +183,12 @@ export function buildOwnerObjectPassportPresentation(
     // photo is (OVE-524).
     cover: page.object_photo
       ? {
-          publicUrl: page.object_photo.publicUrl,
+          publicUrl: page.object_photo.media.publicUrl,
           alt: object.display_name,
-          focalX: page.object_photo.focalX,
-          focalY: page.object_photo.focalY,
-          intrinsicWidth: page.object_photo.intrinsicWidth,
-          intrinsicHeight: page.object_photo.intrinsicHeight,
+          focalX: page.object_photo.media.focalX,
+          focalY: page.object_photo.media.focalY,
+          intrinsicWidth: page.object_photo.media.intrinsicWidth,
+          intrinsicHeight: page.object_photo.media.intrinsicHeight,
         }
       : (gallery[0] ?? null),
     gallery,

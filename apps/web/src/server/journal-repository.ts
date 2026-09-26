@@ -27,6 +27,7 @@ import type {
 } from "@/db/schema";
 import type { Json } from "@/db/generated";
 import { GARDENER_ENTRY_SOURCE } from "@/lib/catalog/gardener-entries";
+import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 import { ADDRESS_ORDINAL_MAXIMUM } from "@/lib/address/address-manifest";
@@ -58,7 +59,10 @@ import {
 } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
 import { getPublicDerivativeUrl } from "@/lib/storage";
-import { readOwnedPhotos } from "@/server/owned-photo-repository";
+import {
+  ownedPhotoView,
+  readOwnedPhotos,
+} from "@/server/owned-photo-repository";
 import {
   normalizeCatalogLabel,
   findSelectableCatalogItem,
@@ -358,7 +362,7 @@ export interface PlantObjectPage {
   entries: JournalEntryReadback[];
   gallery_media: EntryMediaReadback[];
   /** The object's own photo, its cover before any entry photo (OVE-524). */
-  object_photo: EntryMediaReadback | null;
+  object_photo: { media: EntryMediaReadback; view: OwnedPhotoView } | null;
 }
 
 export interface PlantObjectCatalogSourceCredit {
@@ -2090,13 +2094,16 @@ export async function getPlantObjectPage(
     gallery_media: galleryMedia,
     object_photo: objectPhoto
       ? {
-          id: objectPhoto.mediaAssetId,
-          derivativeKey: objectPhoto.derivativeKey,
-          publicUrl: getPublicDerivativeUrl(objectPhoto.derivativeKey),
-          focalX: 0.5,
-          focalY: 0.5,
-          intrinsicWidth: objectPhoto.width,
-          intrinsicHeight: objectPhoto.height,
+          media: {
+            id: objectPhoto.mediaAssetId,
+            derivativeKey: objectPhoto.derivativeKey,
+            publicUrl: getPublicDerivativeUrl(objectPhoto.derivativeKey),
+            focalX: 0.5,
+            focalY: 0.5,
+            intrinsicWidth: objectPhoto.width,
+            intrinsicHeight: objectPhoto.height,
+          },
+          view: ownedPhotoView(objectPhoto),
         }
       : null,
   };

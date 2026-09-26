@@ -1,52 +1,82 @@
+import type { PlantObjectKind } from "@/db/schema";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
+type ByKind = Record<PlantObjectKind, string>;
+
+/**
+ * The words of the object stepper (OVE-524, DESIGN.md §5.24, §5.28): one
+ * question per screen — «Простір», «Рослина чи тварина?», a photo, the name,
+ * «Вид», «Сорт» / «Порода» — and «Додати». Defaults are answers, never hints:
+ * «Не знаю» is an option, a field carries no helper text, and a search field
+ * shows one short example.
+ */
 export interface ObjectSetupCopy {
   title: string;
-  intro: string;
   back: string;
+  close: string;
   stepOf: (step: number, total: number) => string;
-  change: string;
   next: string;
   previous: string;
+  add: string;
+  adding: string;
+  space: {
+    question: string;
+    listLabel: string;
+    addSpace: string;
+    required: string;
+    photoAlt: (name: string) => string;
+  };
   kind: {
     question: string;
     plant: string;
-    plantDescription: string;
     animal: string;
-    animalDescription: string;
-    summary: { plant: string; animal: string };
+  };
+  photo: {
+    question: ByKind;
+    alt: (name: string) => string;
+    skip: string;
   };
   name: {
-    question: { plant: string; animal: string };
+    question: ByKind;
     label: string;
-    hint: { plant: string; animal: string };
-    placeholder: { plant: string; animal: string };
+    placeholder: ByKind;
     required: string;
     tooLong: string;
-    keepWithoutMatch: string;
-    noMatch: string;
-    organism: (name: string) => string;
-    ownLabel: (name: string) => string;
-    sharedOrganismNote: string;
   };
-  space: {
+  species: {
     question: string;
-    hint: string;
-    required: string;
-    create: string;
-    sheetTitle: string;
-    close: string;
-    created: (name: string) => string;
+    searchLabel: string;
+    placeholder: ByKind;
+    listLabel: string;
+    unknown: string;
+    own: string;
+    ownLabel: string;
+    ownRequired: string;
+    tooLong: string;
+    searching: string;
+    empty: string;
+    unavailable: string;
+    resultCount: (count: number) => string;
+    clear: string;
   };
-  review: {
-    question: string;
-    willCreate: { plant: string; animal: string };
-    identity: string;
-    notIdentified: string;
-    space: string;
-    publishesNothing: string;
-    create: string;
-    creating: string;
+  cultivar: {
+    question: ByKind;
+    searchLabel: ByKind;
+    listLabel: ByKind;
+    unknown: string;
+    add: (name: string) => string;
+    ownLabel: ByKind;
+    ownRequired: string;
+    tooLong: string;
+    loading: string;
+    unavailable: string;
+    clear: string;
+  };
+  discard: {
+    title: string;
+    body: string;
+    keep: string;
+    leave: string;
   };
   duplicate: {
     title: (name: string, space: string) => string;
@@ -55,14 +85,8 @@ export interface ObjectSetupCopy {
     createAnyway: string;
   };
   result: {
-    created: (name: string, space: string) => string;
-    createdBody: string;
-    replayed: string;
-    write: string;
-    toGarden: string;
     failed: string;
     uncertain: string;
-    retry: string;
     conflict: string;
     signedOut: string;
     signIn: string;
@@ -73,154 +97,177 @@ export interface ObjectSetupCopy {
 
 const uk: ObjectSetupCopy = {
   title: "Нова рослина чи тварина",
-  intro:
-    "Додайте конкретну рослину чи тварину, про яку писатимете: кущ томата в теплиці, вулик, кота.",
   back: "До мого саду",
+  close: "Закрити",
   stepOf: (step, total) => `Крок ${step} з ${total}`,
-  change: "Змінити",
   next: "Далі",
   previous: "Назад",
+  add: "Додати",
+  adding: "Додаємо…",
+  space: {
+    question: "Простір",
+    listLabel: "Ваші простори",
+    addSpace: "Додати простір",
+    required: "Виберіть простір.",
+    photoAlt: (name) => `Фото простору «${name}»`,
+  },
   kind: {
-    question: "Кого ви додаєте?",
-    plant: "Рослину",
-    plantDescription: "Дерево, кущ, грядку, кімнатну рослину.",
-    animal: "Тварину",
-    animalDescription: "Курей, бджолину сім'ю, кота, козу.",
-    summary: { plant: "Рослина", animal: "Тварина" },
+    question: "Рослина чи тварина?",
+    plant: "Рослина",
+    animal: "Тварина",
+  },
+  photo: {
+    question: {
+      plant: "Додайте фото рослини",
+      animal: "Додайте фото тварини",
+    },
+    alt: (name) => `Фото «${name}»`,
+    skip: "Пропустити",
   },
   name: {
     question: {
-      plant: "Як називається ця рослина?",
-      animal: "Як називається ця тварина?",
+      plant: "Вкажіть ім'я рослини",
+      animal: "Вкажіть ім'я тварини",
     },
-    label: "Назва",
-    hint: {
-      plant:
-        "Так, як ви її називаєте. Можна обрати вид чи сорт із каталогу або залишити свою назву.",
-      animal:
-        "Так, як ви її називаєте. Можна обрати вид чи породу з каталогу або залишити свою назву.",
-    },
-    placeholder: { plant: "Томат Черокі", animal: "Кури на подвір'ї" },
-    required: "Введіть назву.",
-    tooLong: "Назва має бути не довшою за 120 символів.",
-    keepWithoutMatch: "Залишити без відповідності",
-    noMatch: "Без відповідності в каталозі — її можна додати пізніше.",
-    organism: (name) => `Вид у каталозі: ${name}`,
-    ownLabel: (name) => `Ваша назва: ${name}`,
-    sharedOrganismNote:
-      "Каталог описує вид загалом, а не вашу рослину чи тварину.",
+    label: "Ім'я",
+    placeholder: { plant: "Бабусині помідори", animal: "Рябка" },
+    required: "Вкажіть ім'я.",
+    tooLong: "Ім'я має бути не довшим за 120 символів.",
   },
-  space: {
-    question: "У якому просторі?",
-    hint: "Будь-який із ваших просторів — або новий.",
-    required: "Оберіть простір.",
-    create: "Створити новий простір",
-    sheetTitle: "Новий простір",
-    close: "Закрити",
-    created: (name) => `Простір «${name}» створено й вибрано.`,
+  species: {
+    question: "Вид",
+    searchLabel: "Пошук виду",
+    placeholder: { plant: "Наприклад, помідор", animal: "Наприклад, курка" },
+    listLabel: "Вид",
+    unknown: "Не знаю",
+    own: "Ввести свій варіант",
+    ownLabel: "Ваш варіант",
+    ownRequired: "Введіть свій варіант або виберіть «Не знаю».",
+    tooLong: "Не довше за 120 символів.",
+    searching: "Шукаємо…",
+    empty: "У переліку такого немає. Можна ввести свій варіант.",
+    unavailable:
+      "Пошук зараз недоступний. Можна ввести свій варіант або вибрати «Не знаю».",
+    resultCount: (count) => `Знайдено: ${count}`,
+    clear: "Очистити пошук",
   },
-  review: {
-    question: "Перевірте й додайте",
-    willCreate: {
-      plant: "Буде додано рослину",
-      animal: "Буде додано тварину",
-    },
-    identity: "Вид у каталозі",
-    notIdentified: "Ще не визначено",
-    space: "Простір",
-    publishesNothing:
-      "Додавання нічого не публікує. Перший запис про неї ви опублікуєте окремо.",
-    create: "Додати",
-    creating: "Додаємо…",
+  cultivar: {
+    question: { plant: "Сорт", animal: "Порода" },
+    searchLabel: { plant: "Пошук сорту", animal: "Пошук породи" },
+    listLabel: { plant: "Сорт", animal: "Порода" },
+    unknown: "Не знаю",
+    add: (name) => `Додати «${name}»`,
+    ownLabel: { plant: "Ваш варіант сорту", animal: "Ваш варіант породи" },
+    ownRequired: "Введіть свій варіант або виберіть «Не знаю».",
+    tooLong: "Не довше за 120 символів.",
+    loading: "Завантажуємо перелік…",
+    unavailable:
+      "Перелік зараз недоступний. Можна вибрати «Не знаю» або додати свій.",
+    clear: "Очистити пошук",
+  },
+  discard: {
+    title: "Вийти з додавання?",
+    body: "Ваші відповіді й фото не збережуться.",
+    keep: "Продовжити",
+    leave: "Вийти",
   },
   duplicate: {
     title: (name, space) => `У просторі «${space}» уже є «${name}»`,
-    body: "Можна відкрити наявну або додати ще одну з такою самою назвою.",
+    body: "Можна відкрити наявну або додати ще одну з таким самим ім'ям.",
     openExisting: "Відкрити наявну",
     createAnyway: "Додати ще одну",
   },
   result: {
-    created: (name, space) => `«${name}» додано в простір «${space}»`,
-    createdBody:
-      "Записів про неї ще немає. Нічого не опубліковано, доки ви не опублікуєте запис.",
-    replayed: "Цей запит уже додав її раніше — другої не з'явилося.",
-    write: "Написати перший запис",
-    toGarden: "До мого саду",
-    failed: "Не вдалося додати. Ваші відповіді збережено на цій сторінці.",
+    failed: "Не вдалося додати. Ваші відповіді збережено — спробуйте ще раз.",
     uncertain:
-      "Не вдалося дізнатися, чи додано. Повторіть — той самий запит не створить другу.",
-    retry: "Повторити",
-    conflict: "Цей запит уже використано. Оновіть сторінку й спробуйте ще раз.",
-    signedOut:
-      "Сесія завершилася. Увійдіть знову — відповіді залишаться на сторінці до перезавантаження.",
+      "Не вдалося дізнатися, чи додано. Спробуйте ще раз — другої не з'явиться.",
+    conflict: "Цей запит уже використано. Почніть додавання заново.",
+    signedOut: "Сеанс завершився. Увійдіть знову, щоб додати.",
     signIn: "Увійти",
-    spaceUnavailable: "Цей простір більше недоступний. Оберіть інший.",
+    spaceUnavailable: "Цього простору вже немає. Виберіть інший.",
     identityUnavailable:
-      "Цей вид зараз не можна прив'язати. Оберіть інший або залиште свою назву.",
+      "Вибраного виду чи сорту вже немає в переліку. Виберіть знову.",
   },
 };
 
 const bg: ObjectSetupCopy = {
   title: "Ново растение или животно",
-  intro:
-    "Добавете конкретното растение или животно, за което ще пишете: храст домати в оранжерията, кошер, котка.",
   back: "Към моята градина",
+  close: "Затвори",
   stepOf: (step, total) => `Стъпка ${step} от ${total}`,
-  change: "Промени",
   next: "Напред",
   previous: "Назад",
+  add: "Добави",
+  adding: "Добавяме…",
+  space: {
+    question: "Пространство",
+    listLabel: "Вашите пространства",
+    addSpace: "Добави пространство",
+    required: "Изберете пространство.",
+    photoAlt: (name) => `Снимка на пространството „${name}“`,
+  },
   kind: {
-    question: "Какво добавяте?",
+    question: "Растение или животно?",
     plant: "Растение",
-    plantDescription: "Дърво, храст, леха, стайно растение.",
     animal: "Животно",
-    animalDescription: "Кокошки, пчелно семейство, котка, коза.",
-    summary: { plant: "Растение", animal: "Животно" },
+  },
+  photo: {
+    question: {
+      plant: "Добавете снимка на растението",
+      animal: "Добавете снимка на животното",
+    },
+    alt: (name) => `Снимка на „${name}“`,
+    skip: "Пропусни",
   },
   name: {
     question: {
-      plant: "Как се казва това растение?",
-      animal: "Как се казва това животно?",
+      plant: "Посочете името на растението",
+      animal: "Посочете името на животното",
     },
     label: "Име",
-    hint: {
-      plant:
-        "Така, както вие го наричате. Можете да изберете вид или сорт от каталога или да запазите свое име.",
-      animal:
-        "Така, както вие го наричате. Можете да изберете вид или порода от каталога или да запазите свое име.",
-    },
-    placeholder: { plant: "Домат Чероки", animal: "Кокошки в двора" },
-    required: "Въведете име.",
+    placeholder: { plant: "Бабините домати", animal: "Шарка" },
+    required: "Посочете име.",
     tooLong: "Името трябва да е до 120 знака.",
-    keepWithoutMatch: "Запази без съответствие",
-    noMatch: "Без съответствие в каталога — може да се добави по-късно.",
-    organism: (name) => `Вид в каталога: ${name}`,
-    ownLabel: (name) => `Вашето име: ${name}`,
-    sharedOrganismNote:
-      "Каталогът описва вида изобщо, а не вашето растение или животно.",
   },
-  space: {
-    question: "В кое пространство?",
-    hint: "Което и да е от вашите пространства — или ново.",
-    required: "Изберете пространство.",
-    create: "Създай ново пространство",
-    sheetTitle: "Ново пространство",
-    close: "Затвори",
-    created: (name) => `Пространството „${name}“ е създадено и избрано.`,
+  species: {
+    question: "Вид",
+    searchLabel: "Търсене на вид",
+    placeholder: { plant: "Например, домат", animal: "Например, кокошка" },
+    listLabel: "Вид",
+    unknown: "Не знам",
+    own: "Въведете свой вариант",
+    ownLabel: "Вашият вариант",
+    ownRequired: "Въведете свой вариант или изберете „Не знам“.",
+    tooLong: "До 120 знака.",
+    searching: "Търсим…",
+    empty: "В списъка няма такъв. Можете да въведете свой вариант.",
+    unavailable:
+      "Търсенето в момента не работи. Можете да въведете свой вариант или да изберете „Не знам“.",
+    resultCount: (count) => `Намерени: ${count}`,
+    clear: "Изчисти търсенето",
   },
-  review: {
-    question: "Проверете и добавете",
-    willCreate: {
-      plant: "Ще бъде добавено растение",
-      animal: "Ще бъде добавено животно",
+  cultivar: {
+    question: { plant: "Сорт", animal: "Порода" },
+    searchLabel: { plant: "Търсене на сорт", animal: "Търсене на порода" },
+    listLabel: { plant: "Сорт", animal: "Порода" },
+    unknown: "Не знам",
+    add: (name) => `Добави „${name}“`,
+    ownLabel: {
+      plant: "Вашият вариант на сорта",
+      animal: "Вашият вариант на породата",
     },
-    identity: "Вид в каталога",
-    notIdentified: "Още не е определен",
-    space: "Пространство",
-    publishesNothing:
-      "Добавянето не публикува нищо. Първия запис за него ще публикувате отделно.",
-    create: "Добави",
-    creating: "Добавяме…",
+    ownRequired: "Въведете свой вариант или изберете „Не знам“.",
+    tooLong: "До 120 знака.",
+    loading: "Зареждаме списъка…",
+    unavailable:
+      "Списъкът в момента не е достъпен. Можете да изберете „Не знам“ или да добавите свой.",
+    clear: "Изчисти търсенето",
+  },
+  discard: {
+    title: "Да излезете ли от добавянето?",
+    body: "Отговорите и снимката няма да се запазят.",
+    keep: "Продължи",
+    leave: "Излез",
   },
   duplicate: {
     title: (name, space) => `В пространството „${space}“ вече има „${name}“`,
@@ -229,116 +276,110 @@ const bg: ObjectSetupCopy = {
     createAnyway: "Добави още едно",
   },
   result: {
-    created: (name, space) =>
-      `„${name}“ е добавено в пространството „${space}“`,
-    createdBody:
-      "Още няма записи за него. Нищо не е публикувано, докато не публикувате запис.",
-    replayed: "Тази заявка вече го е добавила — второ не се появи.",
-    write: "Напиши първия запис",
-    toGarden: "Към моята градина",
-    failed:
-      "Не успяхме да добавим. Отговорите ви са запазени на тази страница.",
+    failed: "Добавянето не успя. Отговорите ви са запазени — опитайте отново.",
     uncertain:
-      "Не успяхме да разберем дали е добавено. Опитайте отново — същата заявка няма да създаде второ.",
-    retry: "Опитай отново",
-    conflict:
-      "Тази заявка вече е използвана. Презаредете страницата и опитайте отново.",
-    signedOut:
-      "Сесията изтече. Влезте отново — отговорите остават на страницата до презареждане.",
+      "Не успяхме да разберем дали е добавено. Опитайте отново — второ няма да се появи.",
+    conflict: "Тази заявка вече е използвана. Започнете добавянето отначало.",
+    signedOut: "Сесията изтече. Влезте отново, за да добавите.",
     signIn: "Вход",
-    spaceUnavailable: "Това пространство вече не е достъпно. Изберете друго.",
+    spaceUnavailable: "Това пространство вече го няма. Изберете друго.",
     identityUnavailable:
-      "Този вид не може да се свърже сега. Изберете друг или запазете свое име.",
+      "Избраният вид или сорт вече не е в списъка. Изберете отново.",
   },
 };
 
 const ru: ObjectSetupCopy = {
   title: "Новое растение или животное",
-  intro:
-    "Добавьте конкретное растение или животное, о котором будете писать: куст томата в теплице, улей, кота.",
-  back: "К моему саду",
+  back: "В мой сад",
+  close: "Закрыть",
   stepOf: (step, total) => `Шаг ${step} из ${total}`,
-  change: "Изменить",
   next: "Далее",
   previous: "Назад",
+  add: "Добавить",
+  adding: "Добавляем…",
+  space: {
+    question: "Пространство",
+    listLabel: "Ваши пространства",
+    addSpace: "Добавить пространство",
+    required: "Выберите пространство.",
+    photoAlt: (name) => `Фото пространства «${name}»`,
+  },
   kind: {
-    question: "Кого вы добавляете?",
+    question: "Растение или животное?",
     plant: "Растение",
-    plantDescription: "Дерево, куст, грядку, комнатное растение.",
     animal: "Животное",
-    animalDescription: "Кур, пчелиную семью, кота, козу.",
-    summary: { plant: "Растение", animal: "Животное" },
+  },
+  photo: {
+    question: {
+      plant: "Добавьте фото растения",
+      animal: "Добавьте фото животного",
+    },
+    alt: (name) => `Фото «${name}»`,
+    skip: "Пропустить",
   },
   name: {
     question: {
-      plant: "Как называется это растение?",
-      animal: "Как называется это животное?",
+      plant: "Укажите имя растения",
+      animal: "Укажите имя животного",
     },
-    label: "Название",
-    hint: {
-      plant:
-        "Так, как вы его называете. Можно выбрать вид или сорт из каталога или оставить своё название.",
-      animal:
-        "Так, как вы его называете. Можно выбрать вид или породу из каталога или оставить своё название.",
-    },
-    placeholder: { plant: "Томат Чероки", animal: "Куры во дворе" },
-    required: "Введите название.",
-    tooLong: "Название должно быть не длиннее 120 символов.",
-    keepWithoutMatch: "Оставить без соответствия",
-    noMatch: "Без соответствия в каталоге — его можно добавить позже.",
-    organism: (name) => `Вид в каталоге: ${name}`,
-    ownLabel: (name) => `Ваше название: ${name}`,
-    sharedOrganismNote:
-      "Каталог описывает вид в целом, а не ваше растение или животное.",
+    label: "Имя",
+    placeholder: { plant: "Бабушкины помидоры", animal: "Рябушка" },
+    required: "Укажите имя.",
+    tooLong: "Имя должно быть не длиннее 120 символов.",
   },
-  space: {
-    question: "В каком пространстве?",
-    hint: "Любое из ваших пространств — или новое.",
-    required: "Выберите пространство.",
-    create: "Создать новое пространство",
-    sheetTitle: "Новое пространство",
-    close: "Закрыть",
-    created: (name) => `Пространство «${name}» создано и выбрано.`,
+  species: {
+    question: "Вид",
+    searchLabel: "Поиск вида",
+    placeholder: { plant: "Например, помидор", animal: "Например, курица" },
+    listLabel: "Вид",
+    unknown: "Не знаю",
+    own: "Ввести свой вариант",
+    ownLabel: "Ваш вариант",
+    ownRequired: "Введите свой вариант или выберите «Не знаю».",
+    tooLong: "Не длиннее 120 символов.",
+    searching: "Ищем…",
+    empty: "В списке такого нет. Можно ввести свой вариант.",
+    unavailable:
+      "Поиск сейчас недоступен. Можно ввести свой вариант или выбрать «Не знаю».",
+    resultCount: (count) => `Найдено: ${count}`,
+    clear: "Очистить поиск",
   },
-  review: {
-    question: "Проверьте и добавьте",
-    willCreate: {
-      plant: "Будет добавлено растение",
-      animal: "Будет добавлено животное",
-    },
-    identity: "Вид в каталоге",
-    notIdentified: "Ещё не определён",
-    space: "Пространство",
-    publishesNothing:
-      "Добавление ничего не публикует. Первую запись о нём вы опубликуете отдельно.",
-    create: "Добавить",
-    creating: "Добавляем…",
+  cultivar: {
+    question: { plant: "Сорт", animal: "Порода" },
+    searchLabel: { plant: "Поиск сорта", animal: "Поиск породы" },
+    listLabel: { plant: "Сорт", animal: "Порода" },
+    unknown: "Не знаю",
+    add: (name) => `Добавить «${name}»`,
+    ownLabel: { plant: "Ваш вариант сорта", animal: "Ваш вариант породы" },
+    ownRequired: "Введите свой вариант или выберите «Не знаю».",
+    tooLong: "Не длиннее 120 символов.",
+    loading: "Загружаем список…",
+    unavailable:
+      "Список сейчас недоступен. Можно выбрать «Не знаю» или добавить свой.",
+    clear: "Очистить поиск",
+  },
+  discard: {
+    title: "Выйти из добавления?",
+    body: "Ваши ответы и фото не сохранятся.",
+    keep: "Продолжить",
+    leave: "Выйти",
   },
   duplicate: {
     title: (name, space) => `В пространстве «${space}» уже есть «${name}»`,
-    body: "Можно открыть существующее или добавить ещё одно с таким же названием.",
+    body: "Можно открыть существующее или добавить ещё одно с таким же именем.",
     openExisting: "Открыть существующее",
     createAnyway: "Добавить ещё одно",
   },
   result: {
-    created: (name, space) => `«${name}» добавлено в пространство «${space}»`,
-    createdBody:
-      "Записей о нём ещё нет. Ничего не опубликовано, пока вы не опубликуете запись.",
-    replayed: "Этот запрос уже добавил его раньше — второго не появилось.",
-    write: "Написать первую запись",
-    toGarden: "К моему саду",
-    failed: "Не удалось добавить. Ваши ответы сохранены на этой странице.",
+    failed: "Не удалось добавить. Ваши ответы сохранены — попробуйте ещё раз.",
     uncertain:
-      "Не удалось узнать, добавлено ли. Повторите — тот же запрос не создаст второе.",
-    retry: "Повторить",
-    conflict:
-      "Этот запрос уже использован. Обновите страницу и попробуйте снова.",
-    signedOut:
-      "Сессия завершилась. Войдите снова — ответы на странице останутся до перезагрузки.",
+      "Не удалось узнать, добавлено ли. Попробуйте ещё раз — второго не появится.",
+    conflict: "Этот запрос уже использован. Начните добавление заново.",
+    signedOut: "Сеанс завершился. Войдите снова, чтобы добавить.",
     signIn: "Войти",
-    spaceUnavailable: "Это пространство больше недоступно. Выберите другое.",
+    spaceUnavailable: "Этого пространства уже нет. Выберите другое.",
     identityUnavailable:
-      "Этот вид сейчас нельзя привязать. Выберите другой или оставьте своё название.",
+      "Выбранного вида или сорта уже нет в списке. Выберите снова.",
   },
 };
 

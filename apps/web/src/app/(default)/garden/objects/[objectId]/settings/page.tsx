@@ -33,6 +33,7 @@ import {
 import { CatalogResolveControl } from "../catalog-resolve-control";
 import { LocationPrivacyControl } from "../location-privacy-control";
 import { ObjectSubpageShell } from "../object-shell";
+import { ObjectPhotoSettings } from "./object-photo-settings";
 import {
   canResolveCatalogState,
   loadOwnedObject,
@@ -195,6 +196,19 @@ async function ObjectSettingsSections({
         </div>
 
         <SourceCredit page={page} locale={locale} />
+
+        {/* Last, so nothing above it moves when it appears: it needs the
+            photo editor, and without JavaScript it is not offered. */}
+        <div id="passport-photo" className="min-w-0">
+          <ObjectPhotoSettings
+            locale={locale}
+            object={{
+              id: object.id,
+              displayName: object.display_name,
+              photo: page.object_photo?.view ?? null,
+            }}
+          />
+        </div>
       </div>
     </>
   );

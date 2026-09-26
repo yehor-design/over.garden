@@ -101,6 +101,8 @@ describe("public object passport repository query contracts", () => {
       "public",
       "active",
       "active",
+      // A gardener's shared cultivar or breed (0086) joins like any form.
+      "gardener",
       "current",
       "active",
       plantObjectId,

@@ -81,6 +81,8 @@ export interface CatalogSuggestion {
   kind: CatalogPickerKind;
   parentDisplayName: string | null;
   publicPath: string | null;
+  /** A species' Latin name, for the species step's row (OVE-524). */
+  scientificName?: string | null;
 }
 
 export interface SelectableCatalogItem {
@@ -151,6 +153,8 @@ interface CatalogTypeaheadSqlRow {
   base_popularity: number;
   market: boolean;
   similarity: number;
+  /** The species step's statement only: the accepted Latin name. */
+  scientific_name?: string | null;
 }
 
 interface CatalogTypeaheadSearchDeps {
@@ -669,7 +673,16 @@ export function buildStandardSpeciesTypeaheadStatement(input: {
            r.match_class,
            base.popularity as base_popularity,
            false as market,
-           r.similarity
+           r.similarity,
+           -- The Latin name under the everyday one, without authorship.
+           coalesce((
+             select accepted.display_name
+             from catalog_item_names as accepted
+             where accepted.catalog_item_id = ci.id
+               and accepted.name_type = 'scientific_accepted'
+             order by accepted.is_primary desc, accepted.created_at, accepted.id
+             limit 1
+           ), ci.canonical_name) as scientific_name
     from ranked as r
     join base on base.catalog_item_id = r.catalog_item_id
     join catalog_items as ci on ci.id = r.catalog_item_id
@@ -775,6 +788,9 @@ function toCatalogSuggestion(
           speciesSlug: row.species_slug,
         })
       : null,
+    ...(row.scientific_name !== undefined
+      ? { scientificName: row.scientific_name }
+      : {}),
   };
 }
 
