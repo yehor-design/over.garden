@@ -60,9 +60,7 @@ describe("public surface discovery adapter", () => {
       "terms",
       "cookies",
       "authored_sitemap",
-      "variety_sitemap",
       "topic_sitemap",
-      "public_variety_repository",
       "public_topic_repository",
     ]);
     expect(new Set(ids).size).toBe(ids.length);
@@ -83,26 +81,26 @@ describe("public surface discovery adapter", () => {
     ).toBe(true);
   });
 
-  it("carries an organism's first-hand flag into the decision and nothing else's (ADR-0026 D9)", () => {
+  it("carries a species page's publication into the decision and nothing else's (OVE-519)", () => {
     const sourceOnly = resolvePublicSurfaceDiscovery(
       richSource({
         consumerId: "catalog_evidence",
         canonicalPath: "/species/solanum-lycopersicum",
-        organism: { hasFirstHandContent: false },
+        organism: { published: false },
       }),
     );
-    expect(sourceOnly.candidateInput.hasFirstHandContent).toBe(false);
-    expect(sourceOnly.decision.reasons).toEqual(["organism_without_first_hand_content"]);
+    expect(sourceOnly.candidateInput.published).toBe(false);
+    expect(sourceOnly.decision.reasons).toEqual(["organism_unpublished"]);
     expect(
       resolvePublicSurfaceDiscovery(
         richSource({
           consumerId: "catalog_evidence",
           canonicalPath: "/species/solanum-lycopersicum",
-          organism: { hasFirstHandContent: true },
+          organism: { published: true },
         }),
       ).decision.isIndexable,
     ).toBe(true);
-    expect(resolvePublicSurfaceDiscovery(richSource()).candidateInput.hasFirstHandContent).toBeNull();
+    expect(resolvePublicSurfaceDiscovery(richSource()).candidateInput.published).toBeNull();
   });
 
   it("marks a listing with nothing on it noindex and a non-candidate route noindex", () => {

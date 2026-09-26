@@ -26,6 +26,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/server/indexnow-announcer", () => ({
   announcePublicUrlsToIndexNow: vi.fn(),
 }));
+vi.mock("@/server/indexnow-public-addresses", () => ({
+  announceSpeciesPagesOfObject: vi.fn(),
+}));
 
 vi.mock("@/server/author-handle-repository", () => ({
   getPublicAuthorHandle: vi.fn().mockResolvedValue("yehor"),

@@ -1,4 +1,5 @@
 import { PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE } from "@/server/public-journal-directory-query";
+import { matchPublicCatalogAddressPath } from "@/lib/catalog/addresses";
 import { CATALOG_BROWSE_PATH } from "@/lib/public-catalog-browse";
 import { stripLocalePrefix } from "@/lib/public-localization";
 import { matchPublicProfilePath } from "@/lib/public-profile-lifecycle";
@@ -136,7 +137,10 @@ export function paginatedListingRobotsTag(
   if (matchPublicProfilePath(pathname) !== null) {
     return requestedListingPage(search) === null ? null : "noindex, follow";
   }
-  if (isCursorListing(pathname)) {
+  // A species page's later portions (`OVE-519`) and the home feed's: the
+  // canonical is the first portion, so a `?cursor=` address is followed and
+  // kept out of the index.
+  if (isCursorListing(pathname) || matchPublicCatalogAddressPath(pathname)) {
     return requestedListingCursor(search) === null ? null : "noindex, follow";
   }
   if (paginatedListingPageSize(pathname) === null) return null;

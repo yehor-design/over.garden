@@ -131,6 +131,38 @@ describe("a listing's query twin (ADR-0032 D5)", () => {
     ).toBe(true);
   });
 
+  it("sends a species page's later portion to its twin at every shape of its address (OVE-519)", () => {
+    for (const prefix of ["", "/uk", "/bg", "/ru"]) {
+      for (const [address, twin] of [
+        ["/species/solanum-lycopersicum", "/q/species/solanum-lycopersicum"],
+        [
+          "/species/solanum-lycopersicum/de-barao",
+          "/q/species/solanum-lycopersicum/de-barao",
+        ],
+        ["/variety/orphan-form", "/q/variety/orphan-form"],
+        ["/breed/carpathian-bee", "/q/breed/carpathian-bee"],
+      ] as const) {
+        expect(publicQueryTwinPath(`${prefix}${address}`, "?cursor=abc")).toBe(
+          twin,
+        );
+        // The page reads nothing else, and keeps the static document.
+        expect(
+          publicQueryTwinPath(`${prefix}${address}`, "?utm_source=mail"),
+        ).toBeNull();
+        expect(
+          publicQueryTwinPath(`${prefix}${address}`, "?page=2"),
+        ).toBeNull();
+      }
+      // A register hub is not an organism's address and keeps its own query.
+      expect(
+        publicQueryTwinPath(
+          `${prefix}/species/solanum-lycopersicum/register`,
+          "?cursor=abc",
+        ),
+      ).toBeNull();
+    }
+  });
+
   it("recognises the reserved segment with and without a locale", () => {
     for (const address of ["/q", "/q/journals", "/uk/q", "/bg/q/journals"]) {
       expect(isPublicQueryTwinPath(address), address).toBe(true);

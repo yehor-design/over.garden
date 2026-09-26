@@ -25,8 +25,9 @@ export const PUBLIC_LAUNCH_JOURNAL_CALLERS = [
   // themselves (counted under "feed").
   ["profile", "public-profile-repository.ts", 7],
   ["lineage", "public-lineage-repository.ts", 3],
-  ["variety", "public-variety-repository.ts", 3],
-  ["organism-card", "public-organism-card-query.ts", 1],
+  // The species page's «Записи» is the feed's read, narrowed (counted under
+  // "feed"); the publication rule applies the policy to its own entries.
+  ["catalog-publication", "catalog-publication.ts", 1],
   ["social-readback", "social-readback-repository.ts", 2],
   ["community", "community-repository.ts", 8],
   ["engagement", "engagement-repository.ts", 4],

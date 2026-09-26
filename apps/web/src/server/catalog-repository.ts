@@ -18,7 +18,6 @@ import type { PublicLocale } from "@/lib/public-localization";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 const MAX_CATALOG_QUERY_LENGTH = 120;
-const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_CATALOG_SUGGESTIONS = 8;
 const MIN_CATALOG_QUERY_LENGTH = 2;
 const MIN_CATALOG_SEARCH_MISS_LENGTH = 3;
@@ -659,24 +658,6 @@ export async function findSelectableCatalogItem(
   return toSelectableCatalogItem(row, options);
 }
 
-export async function findSelectableCatalogItemByPublicSlug(
-  publicSlug: string,
-  executor: QueryExecutor = db,
-  options: FindSelectableCatalogItemOptions = {},
-): Promise<SelectableCatalogItem | null> {
-  const normalizedSlug = normalizeCatalogPublicSlug(publicSlug);
-  if (!normalizedSlug) return null;
-
-  const row = await buildFindSelectableCatalogItemByPublicSlugQuery(
-    executor,
-    normalizedSlug,
-  ).executeTakeFirst();
-
-  if (!row) return null;
-
-  return toSelectableCatalogItem(row, options);
-}
-
 function toSelectableCatalogItem(
   row: {
     id: string;
@@ -745,30 +726,6 @@ export function buildFindSelectableCatalogItemQuery(
     .where("created_by_user_id", "is", null);
 }
 
-export function buildFindSelectableCatalogItemByPublicSlugQuery(
-  executor: QueryExecutor,
-  publicSlug: string,
-) {
-  return executor
-    .selectFrom("catalog_items")
-    .select([
-      "id",
-      "canonical_name as canonicalName",
-      "public_slug as publicSlug",
-      catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
-      catalogKindSql("catalog_items").as("catalogKind"),
-      "locale",
-      "source",
-      standardKindSql("catalog_items").as("standardKind"),
-    ])
-    .where("public_slug", "=", publicSlug)
-    .where("public_slug", "is not", null)
-    .where("identity_state", "=", "active")
-    .where("created_by_user_id", "is", null)
-    .$narrowType<{ publicSlug: string }>();
-}
-
-
 /**
  * The query in the form the stored names carry: the shared normalizer, capped
  * at the length the search-miss table accepts.
@@ -796,17 +753,6 @@ export function normalizeCatalogItemId(value: string | null | undefined) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed.slice(0, 200) : null;
-}
-
-export function normalizeCatalogPublicSlug(value: string | null | undefined) {
-  if (typeof value !== "string") return null;
-
-  const normalized = value.trim();
-  if (!normalized || normalized.length > MAX_CATALOG_PUBLIC_SLUG_LENGTH) {
-    return null;
-  }
-
-  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized) ? normalized : null;
 }
 
 function normalizeCatalogLimit(limit: number) {

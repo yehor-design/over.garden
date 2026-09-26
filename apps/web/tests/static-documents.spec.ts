@@ -267,6 +267,15 @@ async function photographTheSpeciesEntry(
       `${ORGANISM_PREFIX}: expected one species entry to photograph, found ${photographed.rowCount}`,
     );
   }
+  // The species page lists its entries newest first (`OVE-519`): the
+  // photographed entry is made the newest, so its card is the first one.
+  await pool.query(
+    `update journal_entries as entry set published_at = now()
+       from plant_objects as object
+      where object.id = entry.plant_object_id
+        and entry.owner_user_id = $1::uuid and object.catalog_item_id = $2::uuid`,
+    [organism.ownerUserId, organism.speciesId],
+  );
 }
 
 /**
@@ -791,7 +800,7 @@ test.describe("a public page is a static document", () => {
     }
   });
 
-  test("an organism card is in the served bytes", async ({ request }) => {
+  test("a species page is in the served bytes", async ({ request }) => {
     const path = `/species/${fixture.organism.speciesSlug}`;
     for (const attempt of [1, 2]) {
       const { status, html } = await getDocument(request, path);
@@ -803,7 +812,12 @@ test.describe("a public page is a static document", () => {
       );
       expect(served.skeleton, `request ${attempt}: no skeleton`).toBe(false);
       expect(served.heading?.hidden, `request ${attempt}: <h1>`).toBe(false);
-      expect(served.visibleText.length).toBeGreaterThan(900);
+      // Its text and its entries, not a shell waiting for them (`OVE-519`).
+      expect(served.visibleText).toContain(
+        "Записи про цю рослину від людей, які ведуть її журнал на Overgarden.",
+      );
+      expect(served.visibleText).toContain("Перше суцвіття");
+      expect(served.visibleText.length).toBeGreaterThan(600);
     }
   });
 

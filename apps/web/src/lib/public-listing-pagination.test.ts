@@ -193,4 +193,19 @@ describe("a species' register, searched or paged (OVE-497)", () => {
       paginatedListingRobotsTag("/ru", new URLSearchParams({ cursor: "abc" })),
     ).toBe("noindex, follow");
   });
+
+  it("keeps a species page's later portions out of the index and followed (OVE-519)", () => {
+    for (const path of [
+      "/species/solanum-lycopersicum",
+      "/bg/species/solanum-lycopersicum/de-barao",
+      "/ru/variety/orphan-form",
+      "/breed/carpathian-bee",
+    ]) {
+      expect(paginatedListingRobotsTag(path, new URLSearchParams())).toBeNull();
+      expect(
+        paginatedListingRobotsTag(path, new URLSearchParams({ cursor: "abc" })),
+        path,
+      ).toBe("noindex, follow");
+    }
+  });
 });

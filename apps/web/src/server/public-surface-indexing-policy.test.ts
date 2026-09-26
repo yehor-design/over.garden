@@ -41,29 +41,29 @@ describe("public surface indexability (ADR-0022, D3)", () => {
     ).toBe(true);
   });
 
-  it("keeps an organism card without first-hand content reachable but noindex (ADR-0026 D9)", () => {
+  it("keeps an unpublished species page reachable but noindex (OVE-519)", () => {
     const organism = candidate({
       surfaceKind: "variety_aggregation",
       canonicalPath: "/species/solanum-lycopersicum",
       equivalentLocales: ["uk", "bg", "ru"],
     });
     expect(
-      evaluatePublicSurfaceIndexability({ ...organism, hasFirstHandContent: false }),
+      evaluatePublicSurfaceIndexability({ ...organism, published: false }),
     ).toMatchObject({
       value: "noindex",
       sitemapEligible: false,
       robots: { index: false, follow: false },
-      reasons: ["organism_without_first_hand_content"],
+      reasons: ["organism_unpublished"],
     });
     expect(
-      evaluatePublicSurfaceIndexability({ ...organism, hasFirstHandContent: true }).isIndexable,
+      evaluatePublicSurfaceIndexability({ ...organism, published: true }).isIndexable,
     ).toBe(true);
     expect(
-      evaluatePublicSurfaceIndexability({ ...organism, hasFirstHandContent: null }).isIndexable,
+      evaluatePublicSurfaceIndexability({ ...organism, published: null }).isIndexable,
     ).toBe(true);
     // The rule is the organism card's alone.
     expect(
-      evaluatePublicSurfaceIndexability(candidate({ hasFirstHandContent: false })).isIndexable,
+      evaluatePublicSurfaceIndexability(candidate({ published: false })).isIndexable,
     ).toBe(true);
   });
 

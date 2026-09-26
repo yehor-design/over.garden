@@ -185,54 +185,66 @@ function EntryCard({
       className={cn("grid gap-3 p-4 sm:p-5", className)}
       {...props}
     >
-      {/* 1. Who and when. */}
+      {/* 1. Who and when: «name · date» on one line, as Threads writes
+          «name · 18h» — the name gives way and truncates, the date never
+          moves. The row used to wrap, and a long name pushed the date onto a
+          second line the moment the typeface arrived: a 22 px shift of
+          everything below it, the photograph included (CLS 0.13 on a phone,
+          `OVE-519`). A publication day that differs has a line of its own,
+          so nothing here wraps by the width of a font. */}
       <div
         data-entry-card-byline="true"
-        className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-caption text-text-muted"
+        className="grid min-w-0 gap-y-1 text-caption text-text-muted"
       >
-        {author ? (
-          <Link
-            href={author.href}
-            variant="muted"
-            // The prefix lives in the link's name, not in a visually hidden
-            // span beside the name: Chromium drops the space between an
-            // out-of-flow span and the text after it, and Orca read
-            // «АвторОлена» as one word (`OVE-478`). The visible name stays at
-            // the start of what is heard after the prefix (WCAG 2.5.3).
-            aria-label={
-              authorPrefix
-                ? `${authorPrefix} ${author.displayName}`
-                : undefined
-            }
-            className="inline-flex min-h-11 min-w-0 items-center gap-2 text-body-sm font-medium text-text"
-          >
-            {/* The picture is the name's, which follows it: announcing its
-                initials as well would read the author twice. */}
-            <span aria-hidden="true" className="contents">
-              <Avatar
-                src={author.avatarUrl}
-                name={author.displayName}
-                size="sm"
-              />
-            </span>
-            <span className="truncate">{author.displayName}</span>
-          </Link>
-        ) : null}
-        {author ? <span aria-hidden="true">·</span> : null}
-        <time dateTime={dateTime} className="tabular-nums">
-          {dateLabel}
-        </time>
-        {published ? (
-          <>
-            <span aria-hidden="true">·</span>
-            <time
-              dateTime={published.dateTime}
-              data-entry-card-published="true"
-              className="tabular-nums"
+        <div className="flex min-w-0 items-center gap-x-2">
+          {author ? (
+            <Link
+              href={author.href}
+              variant="muted"
+              // The prefix lives in the link's name, not in a visually hidden
+              // span beside the name: Chromium drops the space between an
+              // out-of-flow span and the text after it, and Orca read
+              // «АвторОлена» as one word (`OVE-478`). The visible name stays
+              // at the start of what is heard after the prefix (WCAG 2.5.3).
+              aria-label={
+                authorPrefix
+                  ? `${authorPrefix} ${author.displayName}`
+                  : undefined
+              }
+              className="inline-flex min-h-11 min-w-0 items-center gap-2 text-body-sm font-medium text-text"
             >
-              {published.label}
-            </time>
-          </>
+              {/* The picture is the name's, which follows it: announcing its
+                  initials as well would read the author twice. */}
+              <span aria-hidden="true" className="contents">
+                <Avatar
+                  src={author.avatarUrl}
+                  name={author.displayName}
+                  size="sm"
+                />
+              </span>
+              <span className="truncate">{author.displayName}</span>
+            </Link>
+          ) : null}
+          {author ? (
+            <span aria-hidden="true" className="shrink-0">
+              ·
+            </span>
+          ) : null}
+          <time
+            dateTime={dateTime}
+            className="shrink-0 whitespace-nowrap tabular-nums"
+          >
+            {dateLabel}
+          </time>
+        </div>
+        {published ? (
+          <time
+            dateTime={published.dateTime}
+            data-entry-card-published="true"
+            className="tabular-nums"
+          >
+            {published.label}
+          </time>
         ) : null}
       </div>
 

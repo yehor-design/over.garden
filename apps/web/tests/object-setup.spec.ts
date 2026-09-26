@@ -3,12 +3,7 @@ import { Pool } from "pg";
 import { expect, test, type Page } from "playwright/test";
 
 import { waitForHydration } from "./helpers/hydration";
-import {
-  cleanupOrganismFixture,
-  requiredLocalDatabaseUrl,
-  seedOrganismFixture,
-  type OrganismFixture,
-} from "./helpers/organism-fixture";
+import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import {
   expectReflow,
   scanAccessibility,
@@ -19,8 +14,8 @@ import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 /**
  * Adding a plant or an animal is its own short setup (`OVE-485`): kind, name
  * (the catalogue search), space, review — with nothing lost between steps or
- * across a space created on the way, one object per intent, and a catalogue
- * launch that offers the gardener's own objects of that organism first.
+ * across a space created on the way, and one object per intent. A species
+ * page launches nothing since `OVE-519`.
  *
  * Every outcome is read back from the database.
  */
@@ -57,12 +52,10 @@ async function spacesOf(pool: Pool, userId: string) {
 
 async function openFlow(page: Page, query = "") {
   await page.goto(`/garden/objects/new${query}`, { waitUntil: "load" });
-  const flow = page.locator(
-    '[data-object-setup-flow="true"], [data-object-setup-matches="true"]',
-  );
-  await expect(flow.first()).toBeVisible({ timeout: 20_000 });
-  await waitForHydration(flow.first());
-  return page.locator('[data-object-setup-flow="true"]');
+  const flow = page.locator('[data-object-setup-flow="true"]');
+  await expect(flow).toBeVisible({ timeout: 20_000 });
+  await waitForHydration(flow);
+  return flow;
 }
 
 test.describe("object setup", () => {
@@ -262,99 +255,6 @@ test.describe("object setup", () => {
       });
     } finally {
       if (userId) await cleanupCollection(pool, userId);
-      await context.close();
-    }
-  });
-
-  test("from the catalogue: the gardener's own tomato first, then a linked second one", async ({
-    browser,
-    baseURL,
-    request,
-  }) => {
-    const context = await browser.newContext();
-    let userId: string | null = null;
-    let fixture: OrganismFixture | null = null;
-    try {
-      fixture = await seedOrganismFixture(pool, "ove485-organism");
-      userId = (
-        await signInSyntheticGardener({
-          baseURL: baseURL!,
-          context,
-          pool,
-          prefix: "ove485-catalog",
-        })
-      ).id;
-      const spaceId = randomUUID();
-      await pool.query(
-        "insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Теплиця')",
-        [spaceId, userId],
-      );
-      const existingId = randomUUID();
-      await pool.query(
-        `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, catalog_item_id, variety_state)
-         values ($1, $2, $3, 'Мій томат', 'plant', $4, 'selected')`,
-        [existingId, userId, spaceId, fixture.speciesId],
-      );
-
-      // The organism's card sends a gardener here, by its public slug.
-      const card = await request.get(`/species/${fixture.speciesSlug}`, {
-        headers: { accept: "text/html" },
-      });
-      const cardHtml = await card.text();
-      expect(cardHtml).toContain(
-        `href="/garden/objects/new?catalog=${fixture.speciesSlug}"`,
-      );
-
-      await context.addCookies([
-        { name: LOCALE_COOKIE, value: "bg", url: baseURL! },
-      ]);
-      const page = await context.newPage();
-      await openFlow(page, `?catalog=${fixture.speciesSlug}`);
-      const matches = page.locator('[data-object-setup-matches="true"]');
-      await expect(matches).toBeVisible();
-      await expect(matches).toContainText("Мій томат");
-      await expect(matches).toContainText("Теплиця");
-      await expect(
-        matches.getByRole("link", { name: /Пиши: Мій томат/u }),
-      ).toHaveAttribute(
-        "href",
-        `/garden/objects/${existingId}#follow-up-composer`,
-      );
-
-      await matches.locator('[data-object-setup-add-another="true"]').click();
-      const flow = page.locator('[data-object-setup-flow="true"]');
-      await expect(flow).toBeVisible();
-      // Kind and name are answered by the organism; the space is next.
-      await expect(
-        flow.locator('[data-object-setup-section="space"]'),
-      ).toHaveAttribute("data-state", "active");
-      const spaceSection = flow.locator('[data-object-setup-section="space"]');
-      await spaceSection.getByRole("combobox").fill("Теплиця");
-      await spaceSection
-        .getByRole("option", { name: /Теплиця/u })
-        .first()
-        .click();
-      await spaceSection.getByRole("button", { name: "Напред" }).click();
-      await flow.locator('[data-object-setup-submit="true"]').click();
-      const result = page.locator('[data-object-setup-result="created"]');
-      await expect(result).toBeVisible();
-
-      const created = (await objectsOf(pool, userId)).find(
-        (row) => row.id === existingId,
-      );
-      expect(created).toBeTruthy();
-      const second = (await objectsOf(pool, userId)).find(
-        (row) => row.id !== existingId,
-      );
-      expect(second).toMatchObject({
-        id: await result.getAttribute("data-object-id"),
-        catalog_item_id: fixture.speciesId,
-        variety_state: "selected",
-        space_id: spaceId,
-      });
-    } finally {
-      if (userId) await cleanupCollection(pool, userId);
-      if (fixture) await cleanupOrganismFixture(pool, fixture);
       await context.close();
     }
   });

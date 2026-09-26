@@ -14,13 +14,12 @@ import {
  * against a production build and a real database:
  *
  *   1. a species at `/species/{slug}` and a form at `/species/{slug}/{form}`
- *      answer 200 in every locale, with `Taxon` JSON-LD (`@id` permalink,
- *      `scientificName`, `taxonRank`, `parentTaxon`, `sameAs`,
- *      `dateModified`), a `BreadcrumbList` and uk/bg/ru `hreflang`; a form
- *      without entries and without a species renders at its legacy
- *      `/variety/{slug}` address, `noindex` because nothing first-hand was
- *      published on it (ADR-0026 D9), with no JSON-LD and no engagement
- *      panel;
+ *      answer 200 in every locale, with `Taxon` JSON-LD that names only what
+ *      the page shows (`@id` permalink, its names, a form's `parentTaxon`,
+ *      the listed entries — no rank, no `sameAs`, `OVE-519`) and uk/bg/ru
+ *      `hreflang`; a form without entries and without a species renders at
+ *      its legacy `/variety/{slug}` address, `noindex` because it is not
+ *      published, with no JSON-LD and its empty state;
  *   2. the old `/variety/{slug}` path, the permalink `/id/{uuid}`, the EPPO
  *      alias, a wrong route family and every historical slug answer HTTP 308
  *      to the canonical path, keeping the locale prefix, on GET and HEAD;
@@ -77,29 +76,25 @@ test.describe("OVE-388 organism addresses", () => {
       const speciesGraph = jsonLdGraph(speciesHtml);
       const speciesTaxon = nodeOfType(speciesGraph, "Taxon");
       expect(speciesTaxon).toMatchObject({
+        name: "Помідор",
         scientificName: "Solanum lycopersicum",
-        taxonRank: "species",
-        dateModified: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/u),
       });
       expect(String(speciesTaxon["@id"])).toMatch(
         new RegExp(`/id/${fixture.speciesId}$`, "u"),
       );
+      // Nothing the page does not show (`OVE-519`): not the rank, not the
+      // EPPO code this species holds, not a trail the page does not draw.
       expect(speciesTaxon).not.toHaveProperty("parentTaxon");
-      if (fixture.eppo.seeded) {
-        expect(speciesTaxon.sameAs).toEqual([
-          "https://gd.eppo.int/taxon/LYPES",
-        ]);
-      }
+      expect(speciesTaxon).not.toHaveProperty("taxonRank");
+      expect(speciesTaxon).not.toHaveProperty("sameAs");
+      expect(
+        speciesGraph.some((node) => node["@type"] === "BreadcrumbList"),
+      ).toBe(false);
       expect(nodeOfType(speciesGraph, "WebPage")).toMatchObject({
         mainEntity: { "@id": speciesTaxon["@id"] },
       });
-      const speciesCrumbs = breadcrumbItems(speciesGraph);
-      expect(speciesCrumbs).toHaveLength(2);
-      expect(String(speciesCrumbs[1]!.item)).toMatch(
-        new RegExp(`${escapeRegExp(speciesPath)}$`, "u"),
-      );
 
-      // The form under its species: parentTaxon and a three-step trail.
+      // The form under its species, which it links: parentTaxon.
       const form = await get(request, formPath);
       expect(form.status()).toBe(200);
       const formHtml = await form.text();
@@ -107,7 +102,8 @@ test.describe("OVE-388 organism addresses", () => {
       expect(formHtml).toMatch(canonicalLink(formPath));
       const formGraph = jsonLdGraph(formHtml);
       const formTaxon = nodeOfType(formGraph, "Taxon");
-      expect(formTaxon).toMatchObject({ taxonRank: "cultivar" });
+      expect(formTaxon).toMatchObject({ name: "Де Барао" });
+      expect(formTaxon).not.toHaveProperty("taxonRank");
       expect(String(formTaxon["@id"])).toMatch(
         new RegExp(`/id/${fixture.formId}$`, "u"),
       );
@@ -118,13 +114,11 @@ test.describe("OVE-388 organism addresses", () => {
       expect(
         (formTaxon.parentTaxon as { name: string; url: string }).url,
       ).toMatch(new RegExp(`${escapeRegExp(speciesPath)}$`, "u"));
-      expect(breadcrumbItems(formGraph)).toHaveLength(3);
 
       // A form without a species and without entries: rendered at its legacy
       // address, which is its canonical until a species exists; reachable but
-      // noindex, with no JSON-LD, because its content comes only from
-      // sources (ADR-0026 D9); no engagement panel, since nothing public can
-      // be liked yet.
+      // noindex, with no JSON-LD, because no public entry publishes it
+      // (`OVE-519`), and its empty state where the entries would be.
       const orphanPath = `/variety/${fixture.orphanSlug}`;
       const orphan = await get(request, orphanPath);
       expect(orphan.status()).toBe(200);
@@ -132,7 +126,8 @@ test.describe("OVE-388 organism addresses", () => {
       expect(orphanHtml).toContain("Сирота");
       expect(orphanHtml).toMatch(/name="robots" content="noindex, nofollow"/u);
       expect(orphanHtml).not.toContain('type="application/ld+json"');
-      expect(orphanHtml).not.toContain('data-organism-section="experience"');
+      expect(orphanHtml).toContain('data-species-published="false"');
+      expect(orphanHtml).toContain("Публічних записів ще немає.");
       await expectRedirect(
         request,
         baseURL,
@@ -147,8 +142,8 @@ test.describe("OVE-388 organism addresses", () => {
       expect(localizedHtml).toMatch(/<html[^>]*lang="bg"/u);
       expect(localizedHtml).toMatch(canonicalLink(`/bg${speciesPath}`));
       expect(
-        String(breadcrumbItems(jsonLdGraph(localizedHtml))[0]!.item),
-      ).toMatch(/\/bg$/u);
+        String(nodeOfType(jsonLdGraph(localizedHtml), "Taxon").url),
+      ).toMatch(new RegExp(`/bg${escapeRegExp(speciesPath)}$`, "u"));
 
       // 2. Permanent redirects: legacy path, permalink, alias, wrong family.
       await expectRedirect(
@@ -368,13 +363,6 @@ function nodeOfType(graph: Record<string, unknown>[], type: string) {
   const node = graph.find((candidate) => candidate["@type"] === type);
   if (!node) throw new Error(`No ${type} node in the JSON-LD graph.`);
   return node;
-}
-
-function breadcrumbItems(graph: Record<string, unknown>[]) {
-  return nodeOfType(graph, "BreadcrumbList").itemListElement as {
-    position: number;
-    item: string;
-  }[];
 }
 
 function escapeRegExp(value: string) {

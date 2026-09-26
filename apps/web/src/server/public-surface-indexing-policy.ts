@@ -34,17 +34,16 @@ export type PublicSurfaceCandidateState =
  * ADR-0022, D3: every live public page is indexable. The only refusals are a
  * page that is not a public candidate (workspace, auth, operator, a record
  * that is gone), a listing with nothing on it, a load that could not resolve
- * the page at all, a canonical path that does not match the locale, or an
- * organism card whose content comes only from sources (ADR-0026 D9): it is
- * reachable but `noindex` until a gardener publishes on it or the owner
- * marks it indexable.
+ * the page at all, a canonical path that does not match the locale, or a
+ * species page that is not published (`OVE-519`): it is reachable but
+ * `noindex` while no public entry is about it or one of its forms.
  */
 export type PublicSurfaceIndexReason =
   | "not_public_candidate"
   | "empty_listing"
   | "candidate_input_unresolved"
   | "non_equivalent_locale"
-  | "organism_without_first_hand_content"
+  | "organism_unpublished"
   | "workspace_route_noindex"
   | "auth_route_noindex"
   | "operator_route_noindex";
@@ -67,10 +66,11 @@ export interface PublicSurfaceCandidateInput {
   equivalentLocales: readonly PublicLocale[] | null;
   surfaceKind: PublicSurfaceKind;
   /**
-   * Organism cards only (ADR-0026 D9): true once `first_hand_content_at` is
-   * set or `indexable_override` is true; null for every other surface.
+   * Species pages only: the publication rule (`catalog-publication.ts`,
+   * `OVE-519`) — true while a public entry is about the organism or one of
+   * its forms; null for every other surface.
    */
-  hasFirstHandContent?: boolean | null;
+  published?: boolean | null;
 }
 
 export interface PublicSurfaceIndexState {
@@ -131,9 +131,9 @@ export function evaluatePublicSurfaceIndexability(
   }
   if (
     input.surfaceKind === "variety_aggregation" &&
-    input.hasFirstHandContent === false
+    input.published === false
   ) {
-    reasons.push("organism_without_first_hand_content");
+    reasons.push("organism_unpublished");
   }
 
   return reasons.length === 0 ? indexable() : noindex(reasons);

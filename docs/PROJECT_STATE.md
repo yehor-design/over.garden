@@ -180,6 +180,41 @@ erasure, found by email as well. Space pages and catalogue photographs join the
 same form with their own tasks. The owner has not yet approved the reasons,
 the report page or the list's design.
 
+A species page is its name, the Latin name under it, a short text and
+«Записи» since `OVE-519` (ADR-0034 D5–D7, `DESIGN.md` §5.18): every public
+entry about the species and its cultivars or breeds, newest first, drawn with
+the feed's card in portions of twenty (a later portion at `?cursor=`, rendered
+from the page's `/q` twin, `noindex, follow`, and a cursor past the end is a
+404 from the proxy). The text is the placeholder «Записи про цю рослину від
+людей, які ведуть її журнал на Overgarden.» («тварину», «сорт», «породу» and «вид»
+variants, and bg/ru translations — all but the two approved Ukrainian lines
+wait for the owner) until the owner writes a description (`OVE-522`); the
+collage (`OVE-528`) has its place under it. Sections, counts, relations,
+sources, identifiers, the rail, the editors' note, «Додати в мій сад» with its
+`?catalog=` launch of object setup, and the owner's card controls are gone —
+merges stay in the queue. A page is **published** while at least one public
+entry is about an object whose species is it or one of its forms: one rule
+(`apps/web/src/server/catalog-publication.ts`) that the page, its list, the
+sitemap, IndexNow and the hidden catalogue read, replacing the
+`first_hand_content_at` clock that no deletion cleared and the owner's
+`indexable_override`. An unpublished page answers 200 with its header and «Публічних
+записів ще немає.», `noindex` and out of the sitemap. The title is the two
+names, the meta description is the visible text, `og:image` is the newest
+photograph, and the JSON-LD names the organism by its shown names and the
+listed entries, with no rank and no `sameAs`. In the production database the
+rule publishes two pages (`apis-mellifera`, `solanum-lycopersicum`); two
+pages the old clock kept indexable have no public entry left and become
+`noindex`. `indexable_override` is read by nothing now, and a follow-up
+migration drops it once a deployment of `main` is live; `first_hand_content_at`
+stays while the queue's apply and merge functions (`0056`) write and read it.
+For DESIGN.md §9 the feed's shared entry card keeps «name · date» on one line
+(the name truncates; a differing publication day has its own line under it):
+the row used to wrap when Google Sans replaced the
+fallback, a layout shift of 0.13 on a species page and 0.11 on the home feed,
+now 0.0003 on both. LCP stays at 2.56 s against 2.0 s, the site-wide gap (the
+first paint alone is 2.03 s under the budget's throttling). Like everything
+since the pause, it waits for a deployment.
+
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),
 32 executable tasks with OVE-475 first and OVE-478 integration/release last. Threads leads visual design; vc.ru supplies

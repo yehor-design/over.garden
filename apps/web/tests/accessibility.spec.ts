@@ -295,7 +295,7 @@ test.describe("gate 7 — axe on the key screens", () => {
     await scanBothWidths(page, "/feed", "the followed feed, signed out");
     await scan(page, "/journals", "the journals directory");
     await scan(page, "/objects", "the catalogue front door");
-    await scan(page, `/species/${fixture.speciesSlug}`, "an organism card");
+    await scan(page, `/species/${fixture.speciesSlug}`, "a species page");
     await scan(page, "/communities", "communities");
     await scan(page, "/auth/sign-in", "sign in");
   });

@@ -69,7 +69,10 @@ import {
   resolveMutationScope,
 } from "@/server/mutation-scope";
 import { publicEntryChangeTags } from "@/lib/public-cache-tags";
-import { announceJournalEntry } from "@/server/indexnow-public-addresses";
+import {
+  announceJournalEntry,
+  announceSpeciesPagesOfObject,
+} from "@/server/indexnow-public-addresses";
 import { revalidatePublicCacheTags } from "@/server/public-cache-revalidation";
 import { getPublicAuthorHandle } from "@/server/author-handle-repository";
 
@@ -321,6 +324,11 @@ async function createEntry(request: Request, scope: RequestScope) {
       ownerUserId: scope.userId,
       entryNumber: result.entry.author_entry_number,
     });
+    // And the species pages it is on: the first public entry is what
+    // publishes one (`OVE-519`).
+    announceSpeciesPagesOfObject(
+      "plantObject" in result ? result.plantObject.id : null,
+    );
     return Response.json(response);
   } catch (error) {
     const code = safeAtomicErrorCode(error);

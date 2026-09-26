@@ -250,10 +250,8 @@ describe("the catalogue's one door", () => {
       /data-catalog-result-count="true"[^>]*aria-live="polite"/u,
     );
   });
-  it("names the species a form belongs to, and offers what a gardener keeps to their garden", () => {
-    // `OVE-496`: a cultivar called "Де Барао" says nothing on its own, and a
-    // plant or an animal found here can be added through object setup, which
-    // first offers the objects of that organism the gardener already keeps.
+  it("names the species a form belongs to, and offers nothing to add", () => {
+    // `OVE-496`: a cultivar called "Де Барао" says nothing on its own.
     const html = render(normalizePublicCatalogBrowseRequest({ q: "де" }), {
       cards: [
         card({
@@ -279,11 +277,9 @@ describe("the catalogue's one door", () => {
     expect(html).toContain(
       '<span data-catalog-card-species="true">Сорт виду «томат»</span>',
     );
-    expect(html).toMatch(
-      /<a href="\/garden\/objects\/new\?catalog=de-barao" data-catalog-add-to-garden="true" rel="nofollow" aria-label="Додати в мій сад: Де Барао"/u,
-    );
-    // Nobody keeps a fungus in a garden here.
-    expect(html).not.toContain("catalog=cantharellus-cibarius");
+    // «Додати в мій сад» is gone from every organism (`OVE-519`).
+    expect(html).not.toContain("data-catalog-add-to-garden");
+    expect(html).not.toContain("/garden/objects/new");
     // A species is its own species.
     expect(
       render(normalizePublicCatalogBrowseRequest({ q: "solanum" }), {

@@ -73,7 +73,7 @@ export const BROWSER_GATE_SPECS = [
   "entry-reading.spec.ts",
   "catalog.spec.ts",
   "catalog-door.spec.ts",
-  "organism-card.spec.ts",
+  "species-page.spec.ts",
   "organism-pages.spec.ts",
   "knowledge-pages.spec.ts",
   "reading-pages.spec.ts",

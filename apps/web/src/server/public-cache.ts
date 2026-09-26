@@ -47,10 +47,7 @@ import {
 } from "@/server/public-topic-repository";
 import type { PublicCatalogAddressRequest } from "@/lib/catalog/addresses";
 import { resolvePublicCatalogAddress } from "@/server/public-catalog-address-repository";
-import {
-  getPublicVarietyPage,
-  getPublicVarietyPageByCatalogItemId,
-} from "@/server/public-variety-repository";
+import { getSpeciesPage, listSpeciesEntries } from "@/server/species-page";
 
 /**
  * The cached public reads (ADR-0022, D4). Every function here is a
@@ -351,33 +348,37 @@ export async function readPublicObjectPassportPage(
   return getPublicObjectPassportPage(plantObjectId, undefined, locale);
 }
 
-export async function readPublicVarietyPage(
-  publicSlug: string,
-  expectedCatalogKind: Parameters<typeof getPublicVarietyPage>[1],
-  locale: PublicLocale,
-) {
-  "use cache";
-  cacheLife("hours");
-  cacheTag(PUBLIC_CACHE_TAGS.catalog);
-  const page = await getPublicVarietyPage(
-    publicSlug,
-    expectedCatalogKind,
-    undefined,
-    locale,
-  );
-  if (page) cacheTag(publicCacheTag.organism(page.catalog.catalogItemId));
-  return page;
-}
-
-/** One organism's card by its permanent identity (ADR-0026 D8, D9). */
-export async function readPublicVarietyPageByCatalogItemId(
+/**
+ * A species page by its permanent identity (`OVE-519`): its names, whether it
+ * is published, and the first portion of «Записи».
+ *
+ * `catalog` is what every entry change revalidates when the entry is about an
+ * object (`publicEntryChangeTags`), and a gardener's rename too
+ * (`publicProfileChangeTags`), so publishing, unpublishing, deleting or
+ * erasing an entry reaches this page, its species' page and its forms' pages
+ * at once — none of them knows which of the others an entry is on. The
+ * organism's own tag is what a merge or a slug change drops.
+ */
+export async function readSpeciesPage(
   catalogItemId: string,
   locale: PublicLocale,
 ) {
   "use cache";
   cacheLife("hours");
   cacheTag(PUBLIC_CACHE_TAGS.catalog, publicCacheTag.organism(catalogItemId));
-  return getPublicVarietyPageByCatalogItemId(catalogItemId, undefined, locale);
+  return getSpeciesPage(catalogItemId, locale);
+}
+
+/** A later portion of a species page's «Записи», under the same tags. */
+export async function readSpeciesEntries(
+  catalogItemId: string,
+  cursor: string,
+  locale: PublicLocale,
+) {
+  "use cache";
+  cacheLife("hours");
+  cacheTag(PUBLIC_CACHE_TAGS.catalog, publicCacheTag.organism(catalogItemId));
+  return listSpeciesEntries(catalogItemId, cursor, locale);
 }
 
 /**

@@ -24,8 +24,9 @@ import { config as loadEnv } from "dotenv";
  *     ever published working;
  *   * an address nothing resolves answers 404 with `noindex` — decided in the
  *     proxy, because a page that streams its shell first can only answer 200;
- *   * the species page carries `Taxon` JSON-LD with `sameAs` and a visible
- *     source attribution — D9 and the licence obligation;
+ *   * a published species page carries `Taxon` JSON-LD that names only what
+ *     the page shows — no `sameAs`, no source attribution — and its
+ *     indexability agrees with its graph (`OVE-519`);
  *   * the picker answers 50 queries with a P95 under 100 ms — D7's budget;
  *   * the deployed worker's handler set equals the manifest — the contract
  *     that decides whether a queued job can ever be claimed;
@@ -171,38 +172,38 @@ async function main() {
 
   // 3. What an organism page has to say about itself.
   //
-  // ADR-0026 D9 makes the graph conditional: a card whose content comes only
-  // from sources is reachable but `noindex` until a gardener publishes on it,
-  // and a `noindex` page carries no JSON-LD by construction. So the page under
-  // test is not necessarily the page that can answer this — the catalog
-  // sitemap lists exactly the organism pages that are indexable, and the first
-  // of those is the honest subject. An empty sitemap is a fact about the data,
-  // not a failure of the code, and is reported as `pending`.
+  // A species page is published while a public entry is about it or one of
+  // its forms (`OVE-519`), and an unpublished page carries no JSON-LD by
+  // construction. So the page under test is not necessarily the page that can
+  // answer this — the catalog sitemap lists exactly the published pages, and
+  // the first of those is the honest subject. An empty sitemap is a fact
+  // about the data, not a failure of the code, and is reported as `pending`.
   const indexablePath = await firstIndexableOrganismPath(options.base);
   if (indexablePath) {
     const indexable = await request(options.base, indexablePath);
     const taxon = findTaxonNode(await indexable.text());
-    const sameAs = Array.isArray(taxon?.sameAs) ? taxon.sameAs : [];
     checks.push({
       area: "identity",
-      check: `${indexablePath} carries Taxon JSON-LD with sameAs`,
-      class: taxon && sameAs.length > 0 ? "pass" : "fail",
+      check: `${indexablePath} carries Taxon JSON-LD naming only what it shows`,
+      class:
+        taxon && !("sameAs" in taxon) && !("taxonRank" in taxon)
+          ? "pass"
+          : "fail",
       detail: taxon
-        ? `${sameAs.length} sameAs, taxonRank ${String(taxon.taxonRank ?? "absent")}`
+        ? `sameAs ${"sameAs" in taxon ? "present" : "absent"}, taxonRank ${"taxonRank" in taxon ? "present" : "absent"}`
         : "no Taxon node in the page's JSON-LD",
     });
   } else {
     checks.push({
       area: "identity",
-      check: "an indexable organism page carries Taxon JSON-LD with sameAs",
+      check: "a published species page carries Taxon JSON-LD naming only what it shows",
       class: "pending",
-      detail:
-        "the catalog sitemap is empty: no organism has first-hand content yet (D9)",
+      detail: "the catalog sitemap is empty: no species page is published yet",
     });
   }
-  // The invariant, not the state: whichever way D9 decides for this page, the
-  // page and its graph must agree. Naming it "is noindex" would be a check
-  // that quietly starts asserting the opposite the day the owner marks a card.
+  // The invariant, not the state: whichever way the publication rule decides,
+  // the page and its graph must agree. Naming it "is noindex" would be a check
+  // that quietly starts asserting the opposite the day an entry is published.
   checks.push({
     area: "identity",
     check: "the page's indexability and its JSON-LD agree",
@@ -217,17 +218,26 @@ async function main() {
         : "indexable"
     } and ${/application\/ld\+json/u.test(speciesHtml) ? "carries" : "carries no"} JSON-LD`,
   });
-  const attributions = [
-    ...speciesHtml.matchAll(/data-organism-attribution="([^"]+)"/gu),
-  ].map((match) => match[1]!);
+  // Source data stays in the database and is never shown (`OVE-519`). The
+  // page is its `<main>`: the site's footer credits the catalogue's sources
+  // on every page, and is not this page's content.
+  const speciesMain = speciesHtml.slice(
+    speciesHtml.indexOf("<main"),
+    speciesHtml.indexOf("</main>"),
+  );
+  const sourceMarkers = [
+    "Catalogue of Life",
+    "Wikidata",
+    "EPPO Global Database",
+  ].filter((marker) => speciesMain.includes(marker));
   checks.push({
-    area: "licence",
-    check: "species page shows a source attribution",
-    class: attributions.length > 0 ? "pass" : "fail",
+    area: "identity",
+    check: "species page shows no source data",
+    class: sourceMarkers.length === 0 ? "pass" : "fail",
     detail:
-      attributions.length > 0
-        ? `${attributions.length} source(s): ${[...new Set(attributions)].join(", ")}`
-        : "none rendered",
+      sourceMarkers.length === 0
+        ? "none rendered"
+        : `rendered: ${sourceMarkers.join(", ")}`,
   });
 
   // 4. The picker's budget, measured twice, because the two numbers answer
@@ -440,9 +450,9 @@ async function measureTypeahead(base: string, mode: "spread" | "warm") {
 /**
  * The first organism page the catalog sitemap lists.
  *
- * The sitemap is built from the same indexing decision the page uses, so it is
- * the one place that already knows which organism pages carry first-hand
- * content — no second rule to keep in step.
+ * The sitemap is built from the same publication rule the page uses, so it is
+ * the one place that already knows which species pages are published — no
+ * second rule to keep in step.
  */
 async function firstIndexableOrganismPath(base: string) {
   const response = await request(base, "/sitemaps/catalog.xml");

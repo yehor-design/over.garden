@@ -160,6 +160,15 @@ async function photographTheSpeciesEntry(
     throw new Error(
       `${ORGANISM_PREFIX}: expected one species entry, found ${photographed.rowCount}`,
     );
+  // The species page lists its entries newest first (`OVE-519`): the
+  // photographed entry is made the newest, so its card is the first one.
+  await pool.query(
+    `update journal_entries as entry set published_at = now()
+       from plant_objects as object
+      where object.id = entry.plant_object_id
+        and entry.owner_user_id = $1::uuid and object.catalog_item_id = $2::uuid`,
+    [organism.ownerUserId, organism.speciesId],
+  );
   await putLocalMediaObject(key, photograph.body);
 }
 

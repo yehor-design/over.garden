@@ -24,6 +24,7 @@ import {
   catalogSpeciesSlugSql,
 } from "@/server/catalog-address-sql";
 import { catalogKindSql } from "@/server/catalog-kind-sql";
+import { publishedCatalogItemsQuery } from "@/server/catalog-publication";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -41,11 +42,11 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
  * - **A slug makes a row addressable; a merged row is a redirect** (ADR-0026
  *   D8). Both predicates are constant on every statement here, which is why
  *   the index is partial on exactly them.
- * - **Listing an organism does not make it indexable.** A source-only node
- *   stays `noindex` until a gardener publishes on it or the owner marks it
- *   (ADR-0026 D9). `hasFirstHandContent` is carried on the card so the page
- *   can say so; nothing here changes the indexing decision, which
- *   `public-surface-indexing-policy` owns.
+ * - **Listing an organism does not make it indexable.** A page is published
+ *   while a public entry is about it or one of its forms (`OVE-519`), and
+ *   `noindex` otherwise. `hasFirstHandContent` is that rule, carried on the
+ *   card so the page can say so — read from `catalog-publication.ts`, never
+ *   from a copy of it.
  */
 
 export interface CatalogBrowseKingdomSummary {
@@ -124,6 +125,14 @@ async function withoutJit<T>(
   });
 }
 
+/** The row is a published species page: the publication rule, from the `with`. */
+const publishedCatalogItem = sql<boolean>`(
+  catalog_items.id in (
+    select ${sql.ref("published_catalog_items.catalogItemId")}
+    from published_catalog_items
+  )
+)`;
+
 /**
  * The rows any catalogue view may show, before the reader's own filters.
  *
@@ -139,7 +148,11 @@ function catalogBrowseBase(
   } = {},
 ) {
   const initial = request.initial;
+  // The published items, once per statement: as small as the number of
+  // organisms anybody wrote about, and read by the `grown` view, its count,
+  // the card's flag and the "written" order below.
   return executor
+    .with("published_catalog_items", (qc) => publishedCatalogItemsQuery(qc))
     .selectFrom("catalog_items")
     .where("catalog_items.public_slug", "is not", null)
     .where("catalog_items.merged_into_catalog_item_id", "is", null)
@@ -163,12 +176,7 @@ function catalogBrowseBase(
         ),
     )
     .$if(request.grown && options.ignore !== "grown", (query) =>
-      query.where((eb) =>
-        eb.or([
-          eb("catalog_items.first_hand_content_at", "is not", null),
-          eb("catalog_items.indexable_override", "=", true),
-        ]),
-      ),
+      query.where(publishedCatalogItem),
     )
     .$if(initial === "#" && options.ignore !== "letter", (query) =>
       query.where(
@@ -262,8 +270,7 @@ async function readCatalogBrowsePage(
       "catalog_items.kingdom as kingdom",
       "catalog_items.registered_ua as registeredUa",
       "catalog_items.registered_eu as registeredEu",
-      "catalog_items.first_hand_content_at as firstHandContentAt",
-      "catalog_items.indexable_override as indexableOverride",
+      publishedCatalogItem.as("published"),
       catalogKindSql("catalog_items").as("catalogKind"),
       catalogSpeciesSlugSql("catalog_items").as("speciesSlug"),
       catalogSpeciesNameSql("catalog_items", locale).as("speciesName"),
@@ -304,17 +311,17 @@ async function readCatalogBrowsePage(
           sql<boolean>`(catalog_items.rank is not distinct from 'species')`,
           "desc",
         )
-        .orderBy(
-          sql<boolean>`(
-            catalog_items.first_hand_content_at is not null
-            or catalog_items.indexable_override is true
-          )`,
-          "desc",
-        );
+        .orderBy(publishedCatalogItem, "desc");
     })
     .$if(request.sort === "written", (query) =>
       query
-        .orderBy("catalog_items.first_hand_content_at", "desc")
+        .orderBy(
+          sql`(
+            select ${sql.ref("published_catalog_items.latestPublishedAt")}
+            from published_catalog_items
+            where ${sql.ref("published_catalog_items.catalogItemId")} = catalog_items.id
+          ) desc nulls last`,
+        )
         .orderBy("catalog_items.canonical_name", "asc"),
     )
     .$if(request.sort !== "written", (query) =>
@@ -340,8 +347,7 @@ async function readCatalogBrowsePage(
         ...(row.registeredUa ? (["ua"] as const) : []),
         ...(row.registeredEu ? (["eu"] as const) : []),
       ],
-      hasFirstHandContent:
-        row.firstHandContentAt !== null || row.indexableOverride === true,
+      hasFirstHandContent: row.published === true,
       speciesName: row.speciesName ?? null,
       publicSlug: row.publicSlug!,
       path: publicCatalogEvidencePath({
@@ -414,15 +420,10 @@ export async function countCatalogBrowseFacets(
       ),
       withoutJit(executor, (trx) =>
         catalogBrowseBase(trx, request, { ignore: "grown" })
-          .select(({ fn, eb }) =>
+          .select(({ fn }) =>
             fn
               .count<string>("catalog_items.id")
-              .filterWhere(
-                eb.or([
-                  eb("catalog_items.first_hand_content_at", "is not", null),
-                  eb("catalog_items.indexable_override", "=", true),
-                ]),
-              )
+              .filterWhere(publishedCatalogItem)
               .as("grown"),
           )
           .executeTakeFirst(),
@@ -526,7 +527,7 @@ export async function listCatalogBrowseKingdoms(
 /**
  * The organisms a gardener has actually written about.
  *
- * These are the indexable cards (ADR-0026 D9), and they are not a second
+ * These are the published pages (`OVE-519`), and they are not a second
  * query: they are the catalogue's own `grown=1` view, which is the point of
  * merging the doors — `/objects` listed them and `/species` did not, and there
  * was no way to say so in one place.

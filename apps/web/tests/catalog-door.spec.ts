@@ -11,16 +11,11 @@ import {
 } from "playwright/test";
 import { Pool } from "pg";
 
-import { hashPassword } from "better-auth/crypto";
-
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { waitForHydration } from "./helpers/hydration";
 import { requiredLocalDatabaseUrl } from "./helpers/organism-fixture";
 import { scanAccessibility } from "./helpers/redesign-accessibility";
-import {
-  removeSyntheticGardener,
-  SYNTHETIC_GARDENER_PASSWORD,
-} from "./helpers/synthetic-gardener";
+import { removeSyntheticGardener } from "./helpers/synthetic-gardener";
 import { acceptLegalDocuments } from "./helpers/legal-acceptance";
 
 /**
@@ -165,10 +160,26 @@ test.beforeAll(async ({ browser, baseURL }) => {
     });
   }
 
-  // The spearmint has been written about.
+  // The spearmint has been written about: one public entry about a
+  // gardener's spearmint is what publishes it (`OVE-519`).
+  const author = await createAuthor();
+  const spaceId = randomUUID();
+  const objectId = randomUUID();
   await pool.query(
-    `update catalog_items set first_hand_content_at = now() where id = $1::uuid`,
-    [organisms.spicata.id],
+    `insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Балкон ове')`,
+    [spaceId, author],
+  );
+  await pool.query(
+    `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, catalog_item_id, variety_state)
+     values ($1, $2, $3, 'Моя м''ята', 'plant', $4, 'selected')`,
+    [objectId, author, spaceId, organisms.spicata.id],
+  );
+  await pool.query(
+    `insert into journal_entries (owner_user_id, space_id, plant_object_id, title, body, entry_scope,
+       visibility, lifecycle_state, published_at, public_slug, client_mutation_id)
+     values ($1, $2, $3, 'М''ята відросла', 'Після зрізання м''ята відросла за тиждень.', 'object',
+             'public', 'active', now(), $4, $4)`,
+    [author, spaceId, objectId, `${PREFIX}-mint-${objectId.slice(0, 8)}`],
   );
 
   // And the cached door is told, the way production tells it: a card intent,
@@ -201,6 +212,7 @@ test.afterAll(async () => {
   for (const context of contexts) await context.close().catch(() => {});
   if (!pool) return;
   for (const [table, column] of [
+    ["journal_entries", "owner_user_id"],
     ["plant_objects", "owner_user_id"],
     ["spaces", "owner_user_id"],
   ] as const) {
@@ -559,14 +571,8 @@ test.describe("the catalogue's door (OVE-496)", () => {
         '[data-catalog-card-species="true"]',
       ),
     ).toHaveText("Сорт виду «м'ята перцева»");
-    await expect(
-      row(page, organisms.numbered).locator(
-        '[data-catalog-add-to-garden="true"]',
-      ),
-    ).toHaveAttribute(
-      "href",
-      `/garden/objects/new?catalog=${organisms.numbered.slug}`,
-    );
+    // Nothing is offered to add from here (`OVE-519`).
+    await expect(page.locator("[data-catalog-add-to-garden]")).toHaveCount(0);
   });
 
   test("a search that finds nothing among plants says where it would", async ({
@@ -581,12 +587,9 @@ test.describe("the catalogue's door (OVE-496)", () => {
     await expect(everywhere).toHaveText("Шукати в усьому каталозі (1)");
     await everywhere.click();
     await expect(row(page, organisms.bee)).toBeVisible();
-    // A fungus is found, and offered to nobody's garden.
+    // A fungus is found too.
     await searchFromDoor(page, "ru", "лисичка желтая ове", "");
     await expect(row(page, organisms.chanterelle)).toBeVisible();
-    await expect(
-      row(page, organisms.chanterelle).locator("[data-catalog-add-to-garden]"),
-    ).toHaveCount(0);
     // ё typed as ё finds the same.
     await searchFromDoor(page, "ru", "лисичка жёлтая ове", "");
     await expect(row(page, organisms.chanterelle)).toBeVisible();
@@ -663,99 +666,6 @@ test.describe("the catalogue's door (OVE-496)", () => {
     );
   });
 
-  test("from the catalogue: write about the mint you keep, then add the one you do not", async ({
-    browser,
-    baseURL,
-  }) => {
-    test.setTimeout(120_000);
-    passwordHash ??= hashPassword(SYNTHETIC_GARDENER_PASSWORD);
-    const gardener = await createGardener("member");
-    const spaceId = randomUUID();
-    await pool.query(
-      `insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Балкон ове')`,
-      [spaceId, gardener.id],
-    );
-    const ownedId = randomUUID();
-    await pool.query(
-      `insert into plant_objects (id, owner_user_id, space_id, display_name, object_kind, catalog_item_id, variety_state)
-       values ($1, $2, $3, 'Моя м''ята', 'plant', $4, 'selected')`,
-      [ownedId, gardener.id, spaceId, organisms.spicata.id],
-    );
-
-    const context = await readerContext(browser, baseURL!);
-    const page = await context.newPage();
-    await page.goto("/auth/sign-in?next=%2Fcatalog", { waitUntil: "load" });
-    const signIn = page
-      .locator("form")
-      .filter({ has: page.locator('input[name="password"]') });
-    await waitForHydration(signIn.locator('button[type="submit"]'));
-    await signIn.locator('input[name="email"]').fill(gardener.email);
-    await signIn
-      .locator('input[name="password"]')
-      .fill(SYNTHETIC_GARDENER_PASSWORD);
-    await signIn.locator('button[type="submit"]').click();
-    await page.waitForURL("**/catalog", { timeout: 30_000 });
-
-    // The mint they keep: the catalogue hands them to their own object first.
-    await searchFromDoor(page, "uk", "м'ята колосиста");
-    await row(page, organisms.spicata)
-      .locator('[data-catalog-add-to-garden="true"]')
-      .click();
-    await page.waitForURL(
-      `**/garden/objects/new?catalog=${organisms.spicata.slug}`,
-    );
-    const matches = page.locator('[data-object-setup-matches="true"]');
-    await expect(matches).toContainText("Моя м'ята");
-    const write = matches.getByRole("link", { name: /Моя м'ята/u });
-    await expect(write).toHaveAttribute(
-      "href",
-      `/garden/objects/${ownedId}#follow-up-composer`,
-    );
-    await page.screenshot({
-      path: path.join(SCREENSHOTS, "catalogue-to-owned-object.png"),
-    });
-    await write.click();
-    await page.waitForURL(`**/garden/objects/${ownedId}**`);
-
-    // The mint they do not keep: added, linked to the cultivar they found.
-    await searchFromDoor(page, "uk", organisms.numbered.name);
-    await row(page, organisms.numbered)
-      .locator('[data-catalog-add-to-garden="true"]')
-      .click();
-    await page.waitForURL(
-      `**/garden/objects/new?catalog=${organisms.numbered.slug}`,
-    );
-    const flow = page.locator('[data-object-setup-flow="true"]');
-    await expect(flow).toBeVisible();
-    await waitForHydration(flow);
-    const spaceSection = flow.locator('[data-object-setup-section="space"]');
-    await expect(spaceSection).toHaveAttribute("data-state", "active");
-    await spaceSection.getByRole("combobox").fill("Балкон");
-    await spaceSection
-      .getByRole("option", { name: /Балкон ове/u })
-      .first()
-      .click();
-    await spaceSection.getByRole("button", { name: "Далі" }).click();
-    await flow.locator('[data-object-setup-submit="true"]').click();
-    const result = page.locator('[data-object-setup-result="created"]');
-    await expect(result).toBeVisible();
-    const createdId = await result.getAttribute("data-object-id");
-    const created = await pool.query<{
-      catalog_item_id: string;
-      space_id: string;
-      variety_state: string;
-    }>(
-      `select catalog_item_id::text, space_id::text, variety_state
-         from plant_objects where id = $1::uuid and owner_user_id = $2::uuid`,
-      [createdId, gardener.id],
-    );
-    expect(created.rows[0]).toEqual({
-      catalog_item_id: organisms.numbered.id,
-      space_id: spaceId,
-      variety_state: "selected",
-    });
-  });
-
   test("axe finds nothing on the door and a result list, in UK, BG and RU at 320 and 1280 px", async ({
     browser,
     baseURL,
@@ -808,22 +718,19 @@ test.describe("the catalogue's door (OVE-496)", () => {
   });
 });
 
-let passwordHash: Promise<string> | null = null;
-
-async function createGardener(label: string) {
+/** A gardener who writes, with the handle sign-up's trigger claims for them. */
+async function createAuthor() {
   const id = randomUUID();
-  const email = `${PREFIX}-${label}-${id}@example.test`;
   await pool.query(
     `insert into "user" (id, email, "emailVerified", name, "createdAt", "updatedAt")
      values ($1::uuid, $2::text, true, $3::text, now(), now())`,
-    [id, email, PRIVATE_AUTH_COMPATIBILITY_NAME],
+    [
+      id,
+      `${PREFIX}-author-${id}@example.test`,
+      PRIVATE_AUTH_COMPATIBILITY_NAME,
+    ],
   );
   await acceptLegalDocuments(pool, id);
   gardenerIds.push(id);
-  await pool.query(
-    `insert into account (id, "accountId", "providerId", "userId", password, "createdAt", "updatedAt")
-     values ($1::uuid, $2::text, 'credential', $2::uuid, $3::text, now(), now())`,
-    [randomUUID(), id, await passwordHash!],
-  );
-  return { id, email };
+  return id;
 }

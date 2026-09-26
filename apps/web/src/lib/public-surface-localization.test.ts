@@ -14,8 +14,8 @@ describe("public surface localization", () => {
     expect(getPublicSurfaceCopy("ru").passport.title).toBe(
       "Публичный паспорт живого объекта",
     );
-    expect(getPublicSurfaceCopy("bg").sourceCredits.versionLabel).toBe(
-      "Версия",
+    expect(getPublicSurfaceCopy("bg").organism.notFound).toBe(
+      "Организмът не е намерен",
     );
   });
 

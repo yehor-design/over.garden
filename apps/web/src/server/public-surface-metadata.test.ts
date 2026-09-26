@@ -252,9 +252,10 @@ describe("public surface metadata", () => {
         name: "Де Барао",
         taxon: {
           id: permalink,
-          scientificName: "Solanum lycopersicum",
-          taxonRank: "cultivar",
-          sameAs: [],
+          parentTaxon: {
+            name: "Помідор",
+            url: "https://over.garden/species/solanum-lycopersicum",
+          },
         },
         subjectOf: [{ id: `${entryUrl}#article`, url: entryUrl }],
       },

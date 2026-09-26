@@ -29,7 +29,7 @@ import {
 } from "@/server/analytics-events";
 import { buildListOperatorErasureRequestsQuery } from "@/server/erasure-request-repository";
 import { buildCountJournalEntriesQuery } from "@/server/erasure-dry-run-repository";
-import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
+import { buildSpeciesPageMetadata } from "@/server/species-page-metadata";
 import { scopedToUser } from "@/server/request-scope";
 import { parseCatalogTypeaheadResponse } from "@/lib/garden/catalog-typeahead-contract";
 import { buildJournalEntrySearchDocumentContractFixture } from "@/server/search/documents";
@@ -42,7 +42,7 @@ import {
   poisonedTypeaheadHit,
   publicJournalEntryPage,
   publicJournalSearchRow,
-  publicVarietyPage,
+  publicSpeciesPage,
 } from "./journey-fixture";
 import {
   POISON,
@@ -240,33 +240,35 @@ function renderPublicJournalEntry(
   );
 }
 
-describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
-  it("publishes only the organism's bounded facts: a Taxon keyed by its permalink, no entry text", () => {
-    const jsonLd = buildPublicVarietyJsonLd(publicVarietyPage());
+describe("OVE-40 privacy invariant sweep — species page JSON-LD", () => {
+  it("names the organism by its shown names and the entries by `@id` alone: no entry text", () => {
+    const { jsonLd } = buildSpeciesPageMetadata(publicSpeciesPage(), "uk");
     expect(jsonLd).not.toBeNull();
     if (!jsonLd) return;
 
-    expectPublicPayloadIsClean("variety JSON-LD", jsonLd);
+    expectPublicPayloadIsClean("species page JSON-LD", jsonLd);
     const graph = jsonLd["@graph"] as Array<Record<string, unknown>>;
     const taxon = graph.find((node) => node["@type"] === "Taxon");
     expect(taxon).toMatchObject({
       "@id": expect.stringContaining(`/id/${JOURNEY.catalogItemId}`),
       name: JOURNEY.catalogCanonicalName,
-      taxonRank: "cultivar",
     });
+    // Nothing the page does not show (`OVE-519`).
+    expect(taxon).not.toHaveProperty("taxonRank");
+    expect(taxon).not.toHaveProperty("sameAs");
     expect(taxon).not.toHaveProperty("hasPart");
-    expect(graph.some((node) => node["@type"] === "BreadcrumbList")).toBe(true);
     const serialized = JSON.stringify(jsonLd);
     expect(serialized).not.toContain(JOURNEY.safeBody);
     expect(serialized).not.toContain(JOURNEY.safeTitle);
   });
 
-  it("returns a graph for thin variety pages: every live page is indexable (ADR-0022, D3)", () => {
-    expect(
-      buildPublicVarietyJsonLd(
-        publicVarietyPage({ entryCount: 1, aggregateBodyLength: 50 }),
-      ),
-    ).toMatchObject({ "@context": "https://schema.org" });
+  it("carries no poison a gardener's visible words hold into the graph", () => {
+    const { jsonLd } = buildSpeciesPageMetadata(
+      publicSpeciesPage({ poisonVisibleText: true }),
+      "uk",
+    );
+    expect(jsonLd).not.toBeNull();
+    if (jsonLd) expectPublicPayloadIsClean("species page JSON-LD", jsonLd);
   });
 });
 

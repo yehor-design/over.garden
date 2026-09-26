@@ -68,6 +68,7 @@ const mocks = vi.hoisted(() => ({
     canonicalPath: "/species/solanum-lycopersicum",
   }),
   getSession: vi.fn().mockResolvedValue(null),
+  isSpeciesCursorBeyondTheEnd: vi.fn().mockResolvedValue(false),
 }));
 
 vi.mock("@/lib/auth", () => ({
@@ -103,6 +104,10 @@ vi.mock("@/server/community-repository", () => ({
 
 vi.mock("@/server/public-catalog-address-repository", () => ({
   resolvePublicCatalogAddress: mocks.resolvePublicCatalogAddress,
+}));
+
+vi.mock("@/server/species-page", () => ({
+  isSpeciesCursorBeyondTheEnd: mocks.isSpeciesCursorBeyondTheEnd,
 }));
 
 vi.mock("@/server/public-topic-repository", () => ({
@@ -1933,6 +1938,39 @@ describe("organism addresses (ADR-0026 D8)", () => {
     );
     const failed = await responseFor("/species/solanum-lycopersicum", document);
     expect(failed.status).toBe(200);
+  });
+
+  it("bounds a species page's later portions: a real 404 past the end, the twin and noindex, follow for one that exists (OVE-519)", async () => {
+    mocks.isSpeciesCursorBeyondTheEnd.mockResolvedValueOnce(true);
+    const beyond = await responseFor(
+      "/species/solanum-lycopersicum?cursor=spent",
+      document,
+    );
+    expect(beyond.status).toBe(404);
+    expect(mocks.isSpeciesCursorBeyondTheEnd).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+      "spent",
+    );
+
+    mocks.isSpeciesCursorBeyondTheEnd.mockResolvedValueOnce(false);
+    const portion = await responseFor(
+      "/bg/species/solanum-lycopersicum?cursor=next",
+      document,
+    );
+    expect(portion.status).toBe(200);
+    expect(portion.headers.get("X-Robots-Tag")).toBe("noindex, follow");
+    expect(portion.headers.get("x-middleware-rewrite")).toContain(
+      "/bg/q/species/solanum-lycopersicum?cursor=next",
+    );
+
+    // The page itself is the static document, and asks nothing.
+    mocks.isSpeciesCursorBeyondTheEnd.mockClear();
+    const first = await responseFor("/species/solanum-lycopersicum", document);
+    expect(first.headers.get("X-Robots-Tag")).toBeNull();
+    expect(first.headers.get("x-middleware-rewrite") ?? "").not.toContain(
+      "/q/",
+    );
+    expect(mocks.isSpeciesCursorBeyondTheEnd).not.toHaveBeenCalled();
   });
 
   /**

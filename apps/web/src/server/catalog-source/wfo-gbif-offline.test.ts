@@ -81,13 +81,4 @@ describe("WFO and GBIF never run on a request path", () => {
         .length,
     ).toBe(0);
   });
-
-  it("still links to a WFO taxon and a GBIF species, which are URLs and not calls", async () => {
-    const addresses = await readFile(
-      join(WEB_SOURCE, "lib", "catalog", "addresses.ts"),
-      "utf8",
-    );
-    expect(addresses).toContain("https://www.worldfloraonline.org/taxon/");
-    expect(addresses).toContain("https://www.gbif.org/species/");
-  });
 });

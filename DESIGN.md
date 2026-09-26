@@ -1386,6 +1386,12 @@ followed feed, the journals directory, a community, a profile (`OVE-492`):
 - **Who and when first.** The author's avatar and name, then the date, lead
   the card; an entry with no public author starts at the date — a card never
   invents a person, and an editorial item is not given one.
+- **Who and when are one line** (`OVE-519`), as Threads writes «name · 18h»:
+  the name gives way and truncates, the date never moves. A row that wrapped
+  pushed the date onto a second line when the typeface arrived, and moved the
+  photograph below it (CLS 0.13 on a phone). A publication day that differs
+  from the entry's date is a line of its own under it, so nothing in the
+  byline wraps by the width of a font.
 - **The date is the publication day** (ADR-0040 D3, `OVE-535`). An entry is
   dated by the day it was published, in `Europe/Kyiv`, set by the server; a
   gardener never chooses it. So a card carries one date and no second

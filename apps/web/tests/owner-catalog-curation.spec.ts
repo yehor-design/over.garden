@@ -35,8 +35,8 @@ import { acceptLegalDocuments } from "./helpers/legal-acceptance";
  *   4. an accept with no JavaScript at all: a multipart POST to the Server
  *      Action endpoint, exactly as a browser without scripts would send it;
  *   5. the sources page enqueuing exactly one refresh per idempotency key;
- *   6. the card's own controls: rendered for the owner and for nobody else,
- *      renamed and then undone over plain HTTP.
+ *   6. the species page carries no owner control, for the owner too: the
+ *      page is what a guest sees (`OVE-519`), and decisions live here.
  *
  * On (4), what is proven is the endpoint, not the visibility of the control:
  * every page here renders inside a streamed Suspense boundary, and with
@@ -79,7 +79,7 @@ interface Fixture {
 test.use({ trace: "off" });
 
 test.describe("OVE-391 owner curation", () => {
-  test("decides by keyboard, undoes, accepts without JavaScript and edits the card", async ({
+  test("decides by keyboard, undoes, accepts without JavaScript, and leaves the species page to readers", async ({
     baseURL,
     context,
     page,
@@ -290,49 +290,18 @@ test.describe("OVE-391 owner curation", () => {
       await page.waitForTimeout(2_000);
       expect(await readRefreshJobCount(pool)).toBe(1);
 
-      // 6. The card's own controls: the owner sees them, a visitor does not,
-      // and a rename posted without JavaScript is audited and undoable.
+      // 6. The species page carries no owner control, for the owner either
+      // (`OVE-519`): rename, pin, mark indexable, merge and undo are gone
+      // from it, and merges stay in the queue above.
       const cardPath = `/species/${fixture.speciesSlug}`;
-      const guestCard = await (
-        await fetch(`${baseURL}${cardPath}`, {
-          headers: { accept: "text/html" },
-        })
-      ).text();
-      expect(guestCard).not.toContain('data-owner-card-controls="true"');
-
-      const ownerCard = await (
-        await fetch(`${baseURL}${cardPath}`, {
-          headers: { accept: "text/html", cookie },
-        })
-      ).text();
-      for (const marker of [
-        'data-owner-card-rename="true"',
-        'data-owner-card-pin="true"',
-        'data-owner-card-merge="true"',
-        'data-owner-card-audit="true"',
-      ]) {
-        expect(ownerCard, marker).toContain(marker);
+      const guestHeaders: Record<string, string> = { accept: "text/html" };
+      for (const headers of [guestHeaders, { ...guestHeaders, cookie }]) {
+        const html = await (
+          await fetch(`${baseURL}${cardPath}`, { headers })
+        ).text();
+        expect(html).toContain('data-species-page="true"');
+        expect(html).not.toContain("data-owner-card-");
       }
-
-      const renamed = `Помідор власника ${fixture.suffix}`;
-      const renameStatus = await postProgressiveForm(
-        baseURL,
-        cardPath,
-        cookie,
-        readProgressiveForm(ownerCard, 'data-owner-card-rename="true"', {
-          displayName: renamed,
-          reason: "browser proof",
-        }),
-      );
-      expect(
-        [200, 303].includes(renameStatus),
-        `rename answered ${renameStatus}`,
-      ).toBe(true);
-      await expect
-        .poll(() => readPrimaryName(pool, fixture!.speciesId), {
-          timeout: 20_000,
-        })
-        .toBe(renamed);
 
       // 7. Axe on all three owner pages, and a visitor gets none of the
       // owner's data from any of them (`OVE-459` AC7).
@@ -358,26 +327,6 @@ test.describe("OVE-391 owner curation", () => {
         expect(guest, path).not.toContain(marker);
       }
 
-      const auditedCard = await (
-        await fetch(`${baseURL}${cardPath}`, {
-          headers: { accept: "text/html", cookie },
-        })
-      ).text();
-      const undoStatus = await postProgressiveForm(
-        baseURL,
-        cardPath,
-        cookie,
-        readProgressiveForm(auditedCard, "data-owner-card-undo="),
-      );
-      expect(
-        [200, 303].includes(undoStatus),
-        `undo answered ${undoStatus}`,
-      ).toBe(true);
-      await expect
-        .poll(() => readPrimaryName(pool, fixture!.speciesId), {
-          timeout: 20_000,
-        })
-        .not.toBe(renamed);
     } finally {
       if (fixture) await cleanupFixture(pool, fixture);
       await pool.end().catch(() => undefined);
@@ -1791,15 +1740,6 @@ async function readObject(pool: Pool, id: string) {
     [id],
   );
   return result.rows[0] ?? null;
-}
-
-async function readPrimaryName(pool: Pool, catalogItemId: string) {
-  const result = await pool.query<{ display_name: string }>(
-    `select display_name from catalog_item_names
-     where catalog_item_id = $1::uuid and is_primary limit 1`,
-    [catalogItemId],
-  );
-  return result.rows[0]?.display_name ?? null;
 }
 
 async function readOwnerActionCount(pool: Pool, catalogItemId: string) {

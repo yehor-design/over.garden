@@ -28,7 +28,6 @@ import {
   catalogLabelForSelection,
   type CatalogPickerSelection,
 } from "@/lib/garden/catalog-typeahead-contract";
-import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   gardenObjectWritePath,
   validateObjectSetup,
@@ -42,12 +41,6 @@ import { getObjectSetupCopy } from "@/lib/object-setup-copy";
 
 type Step = "kind" | "name" | "space" | "review";
 const STEPS: readonly Step[] = ["kind", "name", "space", "review"];
-
-export interface OwnedMatch {
-  id: string;
-  displayName: string;
-  spaceName: string;
-}
 
 type Outcome =
   | { kind: "idle" }
@@ -67,57 +60,33 @@ type Outcome =
  * with "Change"; nothing typed or picked is lost by moving between them, or by
  * creating a space on the way (the space flow opens in a sheet over this one).
  *
- * Launched from the catalogue, the organism is already chosen, and the
- * gardener's own objects of that organism come first: writing about the
- * tomato they have must not start a second one (criterion 4).
- *
  * "Add" writes one object and says so. It publishes nothing: the first entry
  * is its own publication, from the object's page.
  */
 export function ObjectSetupFlow({
   locale,
-  initialSelection = null,
-  initialObjectKind = "plant",
   initialSpace = null,
-  matches = [],
   returnTo = null,
 }: {
   locale: InterfaceLocale;
-  /** The organism a catalogue launch names. */
-  initialSelection?: FirstEntryCatalogSelection | null;
-  initialObjectKind?: PlantObjectKind;
   /** A space handed back by space setup, already chosen. */
   initialSpace?: { id: string; displayName: string } | null;
-  /** The gardener's own objects of the launched organism. */
-  matches?: readonly OwnedMatch[];
   returnTo?: string | null;
 }) {
   const copy = getObjectSetupCopy(locale);
   const pickerCopy = getGardenWorkspaceCopy(locale).composer;
-  const launchedWithOrganism = Boolean(initialSelection);
-  const [showFlow, setShowFlow] = useState(matches.length === 0);
-  const [objectKind, setObjectKind] =
-    useState<PlantObjectKind>(initialObjectKind);
-  const [name, setName] = useState(initialSelection?.displayName ?? "");
+  const [objectKind, setObjectKind] = useState<PlantObjectKind>("plant");
+  const [name, setName] = useState("");
   const [selection, setSelection] = useState<CatalogPickerSelection | null>(
-    initialSelection ? { kind: "item", row: initialSelection } : null,
+    null,
   );
   const [space, setSpace] = useState<{
     id: string;
     displayName: string;
   } | null>(initialSpace);
-  const [step, setStep] = useState<Step>(
-    launchedWithOrganism ? (initialSpace ? "review" : "space") : "kind",
-  );
+  const [step, setStep] = useState<Step>("kind");
   const [reached, setReached] = useState<Set<Step>>(
-    () =>
-      new Set<Step>(
-        launchedWithOrganism
-          ? initialSpace
-            ? ["kind", "name", "space", "review"]
-            : ["kind", "name", "space"]
-          : ["kind"],
-      ),
+    () => new Set<Step>(["kind"]),
   );
   const [errors, setErrors] = useState<ReturnType<typeof validateObjectSetup>>(
     {},
@@ -328,61 +297,6 @@ export function ObjectSetupFlow({
           </div>
         )}
       </div>
-    );
-  }
-
-  if (!showFlow) {
-    return (
-      <section
-        data-object-setup-matches="true"
-        aria-labelledby="object-setup-matches-title"
-        className="grid gap-3 rounded-lg border border-border p-4 sm:p-5"
-      >
-        <h2
-          id="object-setup-matches-title"
-          className="text-h3 text-text-heading"
-        >
-          {copy.matches.title(initialSelection?.displayName ?? name)}
-        </h2>
-        <p className="text-body-sm text-text-muted">{copy.matches.body}</p>
-        <ul className="grid gap-2">
-          {matches.map((match) => (
-            <li
-              key={match.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
-            >
-              <span className="min-w-0 text-body-sm">
-                <span className="font-medium text-text">
-                  {match.displayName}
-                </span>{" "}
-                <span className="text-text-muted">
-                  {copy.matches.inSpace(match.spaceName)}
-                </span>
-              </span>
-              <Link
-                href={gardenObjectWritePath(match.id)}
-                className={buttonVariants({ size: "sm" })}
-                aria-label={`${copy.matches.write}: ${match.displayName}, ${copy.matches.inSpace(match.spaceName)}`}
-              >
-                {copy.matches.write}
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <div>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              moved.current = true;
-              setShowFlow(true);
-            }}
-            data-object-setup-add-another="true"
-          >
-            {copy.matches.addAnother}
-          </Button>
-        </div>
-      </section>
     );
   }
 

@@ -95,38 +95,6 @@ export function publicCatalogPermalinkPath(catalogItemId: string): string {
   return `/id/${encodeURIComponent(catalogItemId)}`;
 }
 
-/** Where each external identifier scheme is published (D9 `sameAs`). */
-export function catalogIdentifierUrl(
-  scheme: string,
-  value: string,
-): string | null {
-  const encoded = encodeURIComponent(value);
-  switch (scheme) {
-    case "col":
-      return `https://www.catalogueoflife.org/data/taxon/${encoded}`;
-    case "gbif":
-      return `https://www.gbif.org/species/${encoded}`;
-    case "eppo":
-      return `https://gd.eppo.int/taxon/${encoded}`;
-    case "wikidata":
-      return `https://www.wikidata.org/wiki/${encoded}`;
-    case "wfo":
-      return `https://www.worldfloraonline.org/taxon/${encoded}`;
-    default:
-      return null;
-  }
-}
-
-/** The schema.org `taxonRank` a node carries; forms are cultivars/breeds. */
-export function schemaTaxonRank(input: {
-  nodeKind: "taxon" | "cultivar" | "breed" | string;
-  rank: string | null;
-}): string {
-  if (input.nodeKind === "cultivar") return "cultivar";
-  if (input.nodeKind === "breed") return "breed";
-  return input.rank ?? "species";
-}
-
 export function isCatalogAliasScheme(value: string): value is CatalogAliasScheme {
   return (CATALOG_ALIAS_SCHEMES as readonly string[]).includes(value);
 }

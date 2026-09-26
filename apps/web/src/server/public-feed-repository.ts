@@ -28,6 +28,7 @@ import {
   type MediaVariantExtras,
 } from "@/server/media/media-variant-schema";
 import { publicAuthorHandleSql } from "@/server/author-handle-sql";
+import { catalogItemObjectCondition } from "@/server/catalog-publication";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -50,6 +51,12 @@ export interface PublicFeedRequest {
   cursor: PublicFeedCursor | null;
   kind: PublicFeedKind;
   topic: string | null;
+  /**
+   * The entries about one catalogue item (`OVE-519`): objects linked to it,
+   * or to one of its forms, by a selection. A species page's «Записи» is this
+   * list, and the clause is the publication rule's own.
+   */
+  catalog?: { catalogItemId: string } | null;
 }
 
 export interface PublicFeedMedia {
@@ -384,6 +391,12 @@ export function buildPublicFeedEntriesQuery(
             "eligible",
           ),
       ),
+    );
+  }
+
+  if (input.catalog) {
+    query = query.where(
+      catalogItemObjectCondition("plant_objects", input.catalog.catalogItemId),
     );
   }
 

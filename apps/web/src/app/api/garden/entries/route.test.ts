@@ -36,6 +36,7 @@ const mocks = vi.hoisted(() => ({
 // to IndexNow from a unit test; the announcer has tests of its own.
 vi.mock("@/server/indexnow-public-addresses", () => ({
   announceJournalEntry: vi.fn(),
+  announceSpeciesPagesOfObject: vi.fn(),
 }));
 
 vi.mock("@/server/author-handle-repository", () => ({

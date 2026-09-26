@@ -251,8 +251,14 @@ test.describe("the three-column shell", () => {
     // Walk forward and record which region each stop belongs to. The order of
     // first appearance is the contract; the number of stops inside a region is
     // the page's business.
+    //
+    // The budget is not the contract either. `/journals` lists whatever the
+    // shared gate database holds — five stops a card, and another spec's seed
+    // put 28 cards there — so 120 presses ran out before the footer on a page
+    // with no trap in it (`OVE-519`). A trap never reaches the footer, however
+    // many presses it is given.
     const order: string[] = [];
-    for (let step = 0; step < 120; step += 1) {
+    for (let step = 0; step < 400; step += 1) {
       await page.keyboard.press("Tab");
       const region = await page.evaluate(() => {
         const active = document.activeElement as HTMLElement | null;

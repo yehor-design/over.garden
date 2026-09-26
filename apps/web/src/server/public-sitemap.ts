@@ -26,7 +26,7 @@ import {
   getPublicTopicAggregationPage,
   listPublicKnowledgeTopics,
 } from "@/server/public-topic-repository";
-import { listIndexablePublicVarietySitemapEntries } from "@/server/public-variety-repository";
+import { listPublishedSpeciesSitemapEntries } from "@/server/species-page";
 
 export type PublicSitemapChunkId =
   | "authored"
@@ -110,8 +110,9 @@ export async function buildPublicSitemapChunk(
     // An organism card is self-canonical in each of the three route families
     // (ADR-0029 D10), so all three are canonical URLs and all three belong
     // here. Listing only the unprefixed one left two thirds of the catalog's
-    // canonicals discoverable by `hreflang` alone.
-    return (await listIndexablePublicVarietySitemapEntries()).flatMap(
+    // canonicals discoverable by `hreflang` alone. A page is here exactly
+    // while it is published (`OVE-519`), dated by its newest entry.
+    return (await listPublishedSpeciesSitemapEntries()).flatMap(
       (entry) => {
         const path = publicCatalogEvidencePath({
           catalogKind: entry.catalogKind,

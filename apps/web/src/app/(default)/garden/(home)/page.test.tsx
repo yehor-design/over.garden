@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
   listGardenSpaces: vi.fn(),
   loadGardenWorkspaceContext: vi.fn(),
   getMySpaceJournalTimeline: vi.fn(),
-  findSelectableCatalogItemByPublicSlug: vi.fn(),
   scheduleGardenWorkspaceActivationAnalytics: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   railModules: vi.fn(),
@@ -69,11 +68,6 @@ vi.mock("@/server/journal-repository", () => ({
   getMySpaceJournalTimeline: mocks.getMySpaceJournalTimeline,
 }));
 
-vi.mock("@/server/catalog-repository", () => ({
-  findSelectableCatalogItemByPublicSlug:
-    mocks.findSelectableCatalogItemByPublicSlug,
-}));
-
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
@@ -121,7 +115,6 @@ describe("/garden, the collection home (OVE-489)", () => {
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.scheduleGardenWorkspaceActivationAnalytics.mockReturnValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.listGardenSpaces.mockResolvedValue(spacesGroup());
