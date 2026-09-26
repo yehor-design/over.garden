@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081`, `0082`, `0083` and `0084` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081`, `0082`, `0083` and `0084` applied 2026-09-26; `0080` and `0085` not yet applied (each waits for a deployment of `main`: the deployed release still reads what they drop). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03

@@ -204,9 +204,11 @@ photograph, and the JSON-LD names the organism by its shown names and the
 listed entries, with no rank and no `sameAs`. In the production database the
 rule publishes two pages (`apis-mellifera`, `solanum-lycopersicum`); two
 pages the old clock kept indexable have no public entry left and become
-`noindex`. `indexable_override` is read by nothing now, and a follow-up
-migration drops it once a deployment of `main` is live; `first_hand_content_at`
-stays while the queue's apply and merge functions (`0056`) write and read it.
+`noindex`. Migration `0085` drops `indexable_override`, which nothing reads
+any more (one row held `true`, a page published by its entries anyway); it is
+on `main` and is applied once a deployment of `main` is live, like `0080`.
+`first_hand_content_at` stays while the queue's apply and merge functions
+(`0056`) write and read it.
 For DESIGN.md §9 the feed's shared entry card keeps «name · date» on one line
 (the name truncates; a differing publication day has its own line under it):
 the row used to wrap when Google Sans replaced the
