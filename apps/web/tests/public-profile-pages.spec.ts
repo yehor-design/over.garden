@@ -30,9 +30,10 @@ import {
  * - who the gardener is — name, handle, a long bio in their own line breaks,
  *   region and languages in the reader's language, counts in words — then
  *   two views, **Entries** and **Objects**, at 1440, 390 and 320;
- * - many-page data: 23 entries are three pages of ten and 14 objects are two
- *   pages of twelve, every page a real link, page two kept out of the index
- *   and a page past the end a 404;
+ * - many-portion data (`OVE-518`): 33 entries and 24 objects are portions of
+ *   twenty, appended in place by «Показати ще», which is also a real link to
+ *   the next portion's address — kept out of the index, and a portion past
+ *   the end a 404;
  * - an entry is the feed's own card; an object is a journal, and says so;
  * - the owner sees an edit link, another member follows, a guest follows
  *   through sign-in — and none of them sees a settings form;
@@ -49,8 +50,9 @@ const PHONE = { width: 390, height: 844 } as const;
 const NARROW = { width: 320, height: 640 } as const;
 const PREFIX = "ove494";
 const DISPLAY_NAME = "Оксана · сад над Дністром";
-const ENTRY_COUNT = 23;
-const OBJECT_COUNT = 14;
+/** Seven more for the first object, one per object, two about the space. */
+const OBJECT_COUNT = 24;
+const ENTRY_COUNT = 7 + OBJECT_COUNT + 2;
 const SCREENSHOTS = path.join(
   process.cwd(),
   "..",
@@ -312,8 +314,8 @@ test("a guest reads who the gardener is, then every entry, a page at a time", as
   ]);
   await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
 
-  // Page one: the ten newest, as the feed's card, author first.
-  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(0, 10));
+  // The first portion: the twenty newest, as the feed's card, author first.
+  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(0, 20));
   const firstCard = page
     .locator('[data-profile-entries="true"]:visible [data-slot="entry-card"]')
     .first();
@@ -322,44 +324,40 @@ test("a guest reads who the gardener is, then every entry, a page at a time", as
     firstCard.locator('[data-entry-card-byline="true"]').getByRole("link"),
   ).toHaveAccessibleName(/^Автор \S/u);
   await expect(firstCard).toContainText("Обговорення");
-  const pagination = page.getByRole("navigation", { name: "Сторінки записів" });
-  await expect(pagination).toContainText("Сторінка 1 з 3");
+  // «Показати ще» (`OVE-518`): a real link to the next portion's address.
+  const more = page.locator(
+    '[data-profile-entries="true"]:visible ~ [data-show-more] [data-show-more-link]',
+  );
+  await expect(more).toHaveText("Показати ще");
+  const nextHref = await more.getAttribute("href");
+  expect(nextHref).toBe(`/@${gardener.handle}?page=2`);
   await page.screenshot({
     path: path.join(SCREENSHOTS, "profile-guest-1440.png"),
   });
 
-  // Page two, by the real link: ten more, out of the index, canonical intact.
-  const [second] = await Promise.all([
-    page.waitForResponse(
-      (candidate) =>
-        candidate.url().endsWith(`/@${gardener.handle}?page=2`) &&
-        candidate.request().resourceType() === "document",
+  // Scrolling to it appends the rest in place: the address stays the page's.
+  await more.scrollIntoViewIfNeeded();
+  await expect(
+    page.locator(
+      '[data-profile-entries="true"]:visible [data-slot="entry-card"] h3',
     ),
-    pagination.getByRole("link", { name: "Старіші" }).click(),
-  ]);
-  expect(second.status()).toBe(200);
-  expect(second.headers()["x-robots-tag"]).toBe("noindex, follow");
-  await expect(page).toHaveURL(
-    new RegExp(`/@${gardener.handle}\\?page=2$`, "u"),
-  );
-  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(10, 20));
+  ).toHaveCount(ENTRY_COUNT, { timeout: 15_000 });
+  expect(await visibleEntryTitles(page)).toEqual(entryTitles);
+  await expect(page).toHaveURL(new RegExp(`/@${gardener.handle}$`, "u"));
+
+  // The link's address is a page of its own: the rest, out of the index,
+  // canonical intact, and nothing after it.
+  const second = await page.goto(nextHref!);
+  expect(second?.status()).toBe(200);
+  expect(second?.headers()["x-robots-tag"]).toBe("noindex, follow");
+  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(20));
   expect(await page.getAttribute('link[rel="canonical"]', "href")).toMatch(
     new RegExp(`/@${gardener.handle}$`, "u"),
   );
-
-  // Page three holds the last three, and there is no page four.
-  await page
-    .getByRole("navigation", { name: "Сторінки записів" })
-    .getByRole("link", { name: "Старіші" })
-    .click();
-  await expect(page).toHaveURL(new RegExp(`\\?page=3$`, "u"));
-  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(20));
   await expect(
-    page
-      .getByRole("navigation", { name: "Сторінки записів" })
-      .getByRole("button", { name: "Старіші" }),
-  ).toBeDisabled();
-  const beyond = await page.goto(`/@${gardener.handle}?page=4`);
+    page.locator('[data-profile-entries="true"]:visible ~ [data-show-more]'),
+  ).toHaveCount(0);
+  const beyond = await page.goto(`/@${gardener.handle}?page=3`);
   expect(beyond?.status()).toBe(404);
 
   // Every entry was reached once.
@@ -367,7 +365,7 @@ test("a guest reads who the gardener is, then every entry, a page at a time", as
   await context.close();
 });
 
-test("objects are journals, twelve to a page, each one opening its passport", async ({
+test("objects are journals, twenty to a portion, each one opening its passport", async ({
   browser,
   baseURL,
 }) => {
@@ -392,21 +390,21 @@ test("objects are journals, twelve to a page, each one opening its passport", as
   await page.goto(`/@${gardener.handle}?tab=objects`);
   // The newest journal first: the first object has the newest entries.
   const names = await visibleObjectNames(page);
-  expect(names).toHaveLength(12);
+  expect(names).toHaveLength(20);
   expect(names[0]).toBe(objectNames[0]);
   const journal = page.locator("[data-profile-object-journal]:visible");
   await expect(journal.first()).toContainText("Журнал: 8 записів");
   await expect(journal.nth(1)).toContainText("Журнал: 1 запис");
   await expect(journal.first()).toContainText("Останній запис");
 
-  const objectsPages = page.getByRole("navigation", {
-    name: "Сторінки об’єктів",
-  });
-  await expect(objectsPages).toContainText("Сторінка 1 з 2");
-  await objectsPages.getByRole("link", { name: "Наступні" }).click();
-  await expect(page).toHaveURL(new RegExp(`\\?tab=objects&page=2$`, "u"));
+  const objectsMore = page.locator(
+    '[data-profile-objects="true"]:visible ~ [data-show-more] [data-show-more-link]',
+  );
+  const objectsNext = await objectsMore.getAttribute("href");
+  expect(objectsNext).toBe(`/@${gardener.handle}?tab=objects&page=2`);
+  await page.goto(objectsNext!);
   const rest = await visibleObjectNames(page);
-  expect(rest).toHaveLength(OBJECT_COUNT - 12);
+  expect(rest).toHaveLength(OBJECT_COUNT - 20);
   expect(new Set([...names, ...rest]).size).toBe(OBJECT_COUNT);
 
   // An object's card opens its passport, the journal it names.
@@ -434,10 +432,10 @@ test("the document reads without a script, and every list is in it", async ({
   const html = await response!.text();
 
   // What a crawler and a reader without scripts get: the gardener, the first
-  // ten entries, and the first twelve objects in the (hidden) second panel.
+  // twenty entries, and the first twenty objects in the (hidden) second panel.
   await expect(page.locator("h1:visible")).toHaveText(DISPLAY_NAME);
-  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(0, 10));
-  for (const name of objectNames.slice(0, 12)) expect(html).toContain(name);
+  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(0, 20));
+  for (const name of objectNames.slice(0, 20)) expect(html).toContain(name);
   // The next page is a real link, not a button waiting for a bundle.
   expect(html).toContain(`href="/@${gardener.handle}?page=2"`);
   expect(html).toContain('data-public-profile="v3"');
@@ -452,13 +450,13 @@ test("the document reads without a script, and every list is in it", async ({
   expect(objects.status()).toBe(200);
   const objectsHtml = await objects.text();
   expect(objectsHtml).toContain('data-profile-tab="objects"');
-  for (const name of objectNames.slice(0, 12)) {
+  for (const name of objectNames.slice(0, 20)) {
     expect(objectsHtml).toContain(name);
   }
   // An old link to the retired "about" tab loses the parameter at the proxy,
   // so it is the static document itself: the entries, readable as they are.
   await page.goto(`/@${gardener.handle}?tab=about`);
-  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(0, 10));
+  expect(await visibleEntryTitles(page)).toEqual(entryTitles.slice(0, 20));
   await context.close();
 });
 
@@ -635,9 +633,9 @@ test("Bulgarian and Russian read their own words", async ({
   const context = await readerContext(browser, baseURL!, "guest");
   const page = await context.newPage();
   await page.setViewportSize(PHONE);
-  for (const [prefix, entries, objects, status, region] of [
-    ["/bg", "Записи", "Обекти", "Страница 1 от 3", "Украйна"],
-    ["/ru", "Записи", "Объекты", "Страница 1 из 3", "Украина"],
+  for (const [prefix, entries, objects, more, region] of [
+    ["/bg", "Записи", "Обекти", "Покажи още", "Украйна"],
+    ["/ru", "Записи", "Объекты", "Показать ещё", "Украина"],
   ] as const) {
     const response = await page.goto(`${prefix}/@${gardener.handle}`);
     expect(response?.status(), prefix).toBe(200);
@@ -650,16 +648,12 @@ test("Bulgarian and Russian read their own words", async ({
         '[data-slot="profile-header"]:visible [data-profile-region]',
       ),
     ).toContainText(region);
-    await expect(
-      page.locator('nav[data-slot="pagination"]:visible').first(),
-    ).toContainText(status);
-    // A page link keeps the reader's language.
-    expect(
-      await page
-        .locator('nav[data-slot="pagination"]:visible a[rel="next"]')
-        .first()
-        .getAttribute("href"),
-    ).toBe(`${prefix}/@${gardener.handle}?page=2`);
+    // «Показати ще» in the reader's language, to an address that keeps it.
+    const link = page.locator("[data-show-more-link]:visible").first();
+    await expect(link).toHaveText(more);
+    expect(await link.getAttribute("href")).toBe(
+      `${prefix}/@${gardener.handle}?page=2`,
+    );
   }
   // The `/uk` prefix folds to the canonical unprefixed address, page and all.
   const folded = await page.request.get(`/uk/@${gardener.handle}?page=2`, {

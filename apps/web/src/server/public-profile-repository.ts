@@ -30,6 +30,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import type { PublicProjectionQualityClass } from "@/lib/public-projection-quality";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   evaluatePublicIdentity,
@@ -58,8 +59,9 @@ const MAX_PROFILE_LINKS = 5;
  * object is reachable from the profile by paging, where the profile used to
  * stop at sixteen entries and twelve objects with no way past them.
  */
-export const PUBLIC_PROFILE_ENTRY_PAGE_SIZE = 10;
-export const PUBLIC_PROFILE_OBJECT_PAGE_SIZE = 12;
+/** Portions of twenty, like every long list (DESIGN.md §5.26). */
+export const PUBLIC_PROFILE_ENTRY_PAGE_SIZE = LIST_PORTION_SIZE;
+export const PUBLIC_PROFILE_OBJECT_PAGE_SIZE = LIST_PORTION_SIZE;
 /** The same ceiling the interface route policy puts on `?page=`. */
 export const PUBLIC_PROFILE_MAX_PAGE = 1_000;
 

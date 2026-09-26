@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
-import { GardenItemRow } from "@/components/garden/garden-collection";
+import { GardenItemRows } from "@/components/garden/garden-item-row";
 import {
   WorkspaceMissingRecord,
   WorkspaceSectionError,
@@ -13,7 +13,7 @@ import { GearIcon } from "@/components/icons/Gear";
 import { NotePencilIcon } from "@/components/icons/NotePencil";
 import { PlusIcon } from "@/components/icons/Plus";
 import { buttonVariants } from "@/components/ui/button";
-import { Pagination } from "@/components/ui/pagination";
+import { ShowMoreList } from "@/components/ui/show-more-list";
 import { Section } from "@/components/ui/section";
 import {
   formatLastEntry,
@@ -33,12 +33,11 @@ import {
   SPACE_OBJECTS_PREVIEW_SIZE,
   SPACE_HISTORY_PREVIEW_SIZE,
   type OwnedSpaceSummary,
-  type SpaceHistoryEntry,
   type SpaceHistoryPage,
   type SpacePageRequest,
 } from "@/lib/garden/space-page";
-import { formatGardenWorkspaceDate } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getShowMoreCopy } from "@/lib/show-more";
 import {
   formatSpacePageTemplate as template,
   getSpacePageCopy,
@@ -60,7 +59,12 @@ import {
   type WorkspaceSection,
 } from "@/server/workspace-failure";
 
+import {
+  loadGardenGroupPortion,
+  loadSpaceHistoryPortion,
+} from "../../garden-portion-actions";
 import { SaveProgressMoment } from "../../save-progress-moment";
+import { SpaceHistoryRow } from "./space-history-row";
 import { SpaceShell } from "./space-shell";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -515,25 +519,48 @@ function SpaceObjects({
       }
     >
       {items.length > 0 ? (
-        <ul className="grid" data-space-objects-list="true">
-          {items.map((item) => (
-            <GardenItemRow
-              key={item.id}
-              item={item}
-              locale={locale}
-              today={today}
-              showSpace={false}
-              writeHref={`/garden/new?${new URLSearchParams({
+        <ShowMoreList
+          as="ul"
+          className="grid"
+          data-space-objects-list="true"
+          copy={getShowMoreCopy(locale)}
+          next={
+            !preview && page < pages
+              ? {
+                  token: String(page + 1),
+                  href: gardenSpacePath(
+                    space.id,
+                    { view: "objects", page: page + 1 },
+                    "space-objects",
+                  ),
+                }
+              : null
+          }
+          load={loadGardenGroupPortion.bind(null, {
+            locale,
+            kind: "object",
+            q: "",
+            sort: "recent",
+            spaceId: space.id,
+          })}
+        >
+          <GardenItemRows
+            items={items}
+            locale={locale}
+            today={today}
+            showSpace={false}
+            writeHrefFor={(item) =>
+              `/garden/new?${new URLSearchParams({
                 object: item.id,
                 returnTo: gardenSpacePath(
                   space.id,
                   request,
                   gardenCollectionItemAnchor(item),
                 ),
-              }).toString()}`}
-            />
-          ))}
-        </ul>
+              }).toString()}`
+            }
+          />
+        </ShowMoreList>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-body-sm text-text-muted">{copy.objects.empty}</p>
@@ -546,33 +573,6 @@ function SpaceObjects({
           </Link>
         </div>
       )}
-      {!preview && pages > 1 ? (
-        <Pagination
-          label={copy.pagination.label}
-          data-space-pagination="objects"
-          previousHref={
-            page > 1
-              ? gardenSpacePath(
-                  space.id,
-                  { view: "objects", page: page - 1 },
-                  "space-objects",
-                )
-              : null
-          }
-          previousLabel={copy.pagination.previous}
-          nextHref={
-            page < pages
-              ? gardenSpacePath(
-                  space.id,
-                  { view: "objects", page: page + 1 },
-                  "space-objects",
-                )
-              : null
-          }
-          nextLabel={copy.pagination.next}
-          status={template(copy.pagination.page, { page, pages })}
-        />
-      ) : null}
     </Section>
   );
 }
@@ -642,9 +642,26 @@ function SpaceHistory({
           answers 308 to this page and the browser keeps the fragment). */}
       <span id="space-journal" aria-hidden="true" />
       {history.entries.length > 0 ? (
-        <ol
+        <ShowMoreList
           className="divide-y divide-border border-y border-border"
           data-space-history-list="true"
+          copy={getShowMoreCopy(locale)}
+          next={
+            !preview && page < pages
+              ? {
+                  token: String(page + 1),
+                  href: gardenSpacePath(
+                    space.id,
+                    { view: "history", page: page + 1 },
+                    "space-history",
+                  ),
+                }
+              : null
+          }
+          load={loadSpaceHistoryPortion.bind(null, {
+            locale,
+            spaceId: space.id,
+          })}
         >
           {history.entries.map((entry) => (
             <SpaceHistoryRow
@@ -659,7 +676,7 @@ function SpaceHistory({
               )}
             />
           ))}
-        </ol>
+        </ShowMoreList>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
           <p className="text-body-sm text-text-muted">{copy.history.empty}</p>
@@ -672,103 +689,6 @@ function SpaceHistory({
           </Link>
         </div>
       )}
-      {!preview && pages > 1 ? (
-        <Pagination
-          label={copy.pagination.label}
-          data-space-pagination="history"
-          previousHref={
-            page > 1
-              ? gardenSpacePath(
-                  space.id,
-                  { view: "history", page: page - 1 },
-                  "space-history",
-                )
-              : null
-          }
-          previousLabel={copy.pagination.previous}
-          nextHref={
-            page < pages
-              ? gardenSpacePath(
-                  space.id,
-                  { view: "history", page: page + 1 },
-                  "space-history",
-                )
-              : null
-          }
-          nextLabel={copy.pagination.next}
-          status={template(copy.pagination.page, { page, pages })}
-        />
-      ) : null}
     </Section>
-  );
-}
-
-/**
- * One entry, once, under its one address, and labelled with what it is about:
- * the space itself, or the plant or animal it was written for (criterion 2).
- */
-function SpaceHistoryRow({
-  copy,
-  entry,
-  locale,
-  returnTo,
-}: {
-  copy: SpacePageCopy;
-  entry: SpaceHistoryEntry;
-  locale: InterfaceLocale;
-  returnTo: string;
-}) {
-  const editHref = `/garden/entries/${encodeURIComponent(entry.id)}/edit?${new URLSearchParams(
-    { returnTo },
-  ).toString()}`;
-  return (
-    <li
-      id={`space-entry-${entry.id}`}
-      data-space-history-entry={entry.id}
-      data-space-history-about={entry.about.kind}
-      className="flex min-w-0 scroll-mt-24 flex-wrap items-start justify-between gap-x-4 gap-y-2 py-4"
-    >
-      <div className="grid min-w-0 flex-1 basis-60 gap-1">
-        <p className="text-h4 break-words text-text-heading">
-          {entry.publicPath ? (
-            <Link
-              href={entry.publicPath}
-              className="rounded-sm underline-offset-4 outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
-            >
-              {entry.title}
-            </Link>
-          ) : (
-            entry.title
-          )}
-        </p>
-        <p className="text-caption text-text-muted">
-          {entry.about.kind === "space" ? (
-            copy.history.aboutSpace
-          ) : (
-            <Link
-              href={`/garden/objects/${encodeURIComponent(entry.about.objectId)}`}
-              className="underline-offset-4 hover:underline"
-            >
-              {template(copy.history.aboutObject, {
-                name: entry.about.displayName,
-              })}
-            </Link>
-          )}
-          {" · "}
-          <time dateTime={entry.entryDate}>
-            {formatGardenWorkspaceDate(locale, entry.entryDate)}
-          </time>
-          {entry.publicPath ? null : ` · ${copy.history.notPublic}`}
-        </p>
-      </div>
-      <Link
-        href={editHref}
-        aria-label={template(copy.history.editLabel, { title: entry.title })}
-        data-space-history-edit={entry.id}
-        className={buttonVariants({ variant: "secondary", size: "sm" })}
-      >
-        {copy.history.edit}
-      </Link>
-    </li>
   );
 }

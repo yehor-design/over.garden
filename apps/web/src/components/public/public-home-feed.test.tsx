@@ -75,10 +75,6 @@ const copy: PublicHomeFeedCopy = {
   discuss: "Обговорення",
   publishedBy: "Автор",
   safeRegion: "Регіон",
-  loadMore: "Наступна сторінка",
-  firstPage: "До початку стрічки",
-  paginationLabel: "Сторінки стрічки",
-  endOfFeed: "Усі доступні записи переглянуто",
   emptyTitle: "Тут поки немає публічних записів",
   emptyBody:
     "Змініть фільтр або перейдіть до перевірених матеріалів OverGarden.",
@@ -390,16 +386,18 @@ describe("the public home feed", () => {
     expect(html).not.toContain("data-signed-in-only");
   });
 
-  it("paginates with real links and says when the feed is exhausted", () => {
+  it("ends with «Показати ще», a real link to the next portion, and with nothing after the last (OVE-518)", () => {
     const more = render({
       request: { cursor: null, kind: "animal", topic: "winter-care" },
     });
     const end = render({ feed: { ...page, nextCursor: null } });
 
-    expect(more).toContain(
-      'href="/?cursor=eyJ2ZXJzaW9uIjoxfQ&amp;kind=animal&amp;topic=winter-care"',
+    expect(more).toMatch(
+      /<a href="\/\?cursor=eyJ2ZXJzaW9uIjoxfQ&amp;kind=animal&amp;topic=winter-care"[^>]*data-show-more-link="true"[^>]*>Показати ще<\/a>/u,
     );
-    expect(end).toContain("Усі доступні записи переглянуто");
+    // No "previous" and no page count: a Threads list has neither.
+    expect(more).not.toContain('data-slot="pagination"');
+    expect(end).not.toContain("data-show-more-link");
   });
 
   it("tells the two empty states apart", () => {

@@ -96,10 +96,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       removeFilter: "Прибрати фільтр",
       topicFilterLabel: "Перевірені теми",
       ...entryCardFeedLabels("uk"),
-      loadMore: "Наступна сторінка",
-      firstPage: "До початку стрічки",
-      paginationLabel: "Сторінки стрічки",
-      endOfFeed: "Усі доступні записи переглянуто",
       emptyTitle: "Тут поки немає публічних записів",
       emptyBody:
         "Змініть фільтр або перейдіть до перевірених матеріалів OverGarden. Реєстрація для читання не потрібна.",
@@ -139,10 +135,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       removeFilter: "Премахни филтъра",
       topicFilterLabel: "Проверени теми",
       ...entryCardFeedLabels("bg"),
-      loadMore: "Следваща страница",
-      firstPage: "Към началото на емисията",
-      paginationLabel: "Страници на емисията",
-      endOfFeed: "Прегледахте всички налични записи",
       emptyTitle: "Все още няма публични записи тук",
       emptyBody:
         "Сменете филтъра или отворете проверените материали на OverGarden. За четене не е нужна регистрация.",
@@ -183,10 +175,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       removeFilter: "Убрать фильтр",
       topicFilterLabel: "Проверенные темы",
       ...entryCardFeedLabels("ru"),
-      loadMore: "Следующая страница",
-      firstPage: "К началу ленты",
-      paginationLabel: "Страницы ленты",
-      endOfFeed: "Все доступные записи просмотрены",
       emptyTitle: "Здесь пока нет публичных записей",
       emptyBody:
         "Измените фильтр или откройте проверенные материалы OverGarden. Для чтения регистрация не нужна.",

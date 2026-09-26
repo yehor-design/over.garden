@@ -279,9 +279,11 @@ describe("public journal directory", () => {
     expect(html).toContain(
       'href="/ru/journals?q=%D0%B2%D1%96%D0%B4%D0%BD%D0%BE%D0%B2%D0%BB%D0%B5%D0%BD%D0%BD%D1%8F&amp;catalog=visual-domestic-shorthair',
     );
-    expect(html).toContain("Показать больше журналов");
-    expect(html).toContain("Страница 2 из 3");
-    expect(html).toContain("page=3");
+    // The next portion is a real link that keeps every filter (OVE-518).
+    expect(html).toMatch(
+      /<a href="[^"]*page=3"[^>]*data-show-more-link="true"[^>]*>Показать ещё<\/a>/u,
+    );
+    expect(html).not.toContain('data-slot="pagination"');
   });
 
   it("tells the two empty states apart, and settles a failure into a class", () => {

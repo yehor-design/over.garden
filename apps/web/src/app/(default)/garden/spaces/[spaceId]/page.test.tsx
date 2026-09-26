@@ -163,9 +163,12 @@ describe("/garden/spaces/[spaceId] (OVE-490)", () => {
       { view: "history", page: 2 },
       "gardener",
     );
-    expect(html).toContain("Сторінка 2 з 3");
-    expect(html).toContain(
-      `href="/garden/spaces/${SPACE_ID}?view=history&amp;page=3#space-history"`,
+    // The next portion of the history, as a real link (OVE-518).
+    expect(html).toMatch(
+      new RegExp(
+        `<a href="/garden/spaces/${SPACE_ID}\\?view=history&amp;page=3#space-history"[^>]*data-show-more-link="true"`,
+        "u",
+      ),
     );
   });
 

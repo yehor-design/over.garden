@@ -1,9 +1,5 @@
 import Link from "next/link";
-import { MapPinIcon as MapPin } from "@/components/icons/MapPin";
-import { ChatCircleIcon as MessageCircle } from "@/components/icons/ChatCircle";
-import { PawPrintIcon as PawPrint } from "@/components/icons/PawPrint";
 import { MagnifyingGlassIcon as Search } from "@/components/icons/MagnifyingGlass";
-import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import {
   SiteShellContextRailModules,
@@ -14,35 +10,30 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { EntryCard } from "@/components/ui/entry-card";
 import { ErrorState } from "@/components/ui/error-state";
 import { Field } from "@/components/ui/field";
 import { FilterBar, type FilterBarFacet } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
-import { Pagination } from "@/components/ui/pagination";
+import { ShowMoreList } from "@/components/ui/show-more-list";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getFilterBarChromeCopy } from "@/lib/filter-bar-copy";
-import { entryCardDates, getEntryCardCopy } from "@/lib/entry-card-dates";
-import { entryCardMedia } from "@/lib/entry-card-media";
 import { resolveIllustration } from "@/lib/illustrations";
 import { firstPhotographIndex } from "@/lib/media/first-photograph";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import type { PublicJournalDirectoryCopy } from "@/lib/public-journal-directory-copy";
-import {
-  contentLanguageAttribute,
-  localizedPath,
-  type PublicLocale,
-} from "@/lib/public-localization";
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { serializePublicSurfaceJsonLd } from "@/lib/public-surface-json-ld";
+import { getShowMoreCopy } from "@/lib/show-more";
 import { isKindTopicSlug, localizeTopicLabel } from "@/lib/system-topic-labels";
 import type {
-  PublicJournalDirectoryCard,
   PublicJournalDirectoryFacets,
   PublicJournalDirectoryPage,
   PublicJournalDirectoryRequest,
 } from "@/server/public-journal-directory-repository";
 import type { WorkspaceFailureDescription } from "@/server/workspace-failure";
+import { loadJournalDirectoryPortion } from "@/app/[locale]/journals/journal-directory-portion-actions";
+import { DirectoryResultItems } from "@/components/public/public-journal-directory-card";
 
 export { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 
@@ -51,11 +42,6 @@ export type PublicJournalDirectoryState =
   | "empty"
   | "loading"
   | "error";
-
-const KIND_ICONS = {
-  plant: <Sprout aria-hidden="true" className="size-4" />,
-  animal: <PawPrint aria-hidden="true" className="size-4" />,
-} as const;
 
 /**
  * The journals directory, as the faceted pattern rather than as a form.
@@ -263,52 +249,40 @@ export function PublicJournalDirectory({
 
       {state === "ready" ? (
         <>
-          <ol className="grid list-none gap-4">
-            {page.cards.map((card, index) => (
-              <li key={card.publicPath} className="min-w-0">
-                <DirectoryResultCard
-                  locale={locale}
-                  copy={copy}
-                  request={page.request}
-                  card={card}
-                  priority={index === firstPhotograph}
-                />
-              </li>
-            ))}
-          </ol>
-          {/* One page of results needs no navigation: two disabled edges with
-              "Сторінка 1 з 1" between them is three controls saying the same
-              nothing, and at 375 px they wrap into three columns of two words
-              each. The count above already says how many there are. */}
-          {page.hasPreviousPage || page.hasNextPage ? (
-            <Pagination
-              label={copy.paginationLabel}
-              previousLabel={copy.previousPage}
-              previousHref={
-                page.hasPreviousPage
-                  ? buildPublicJournalDirectoryHref(locale, {
-                      ...page.request,
-                      page: Math.max(1, page.request.page - 1),
-                    })
-                  : null
-              }
-              nextLabel={copy.loadMore}
-              nextHref={
-                page.hasNextPage
-                  ? buildPublicJournalDirectoryHref(locale, {
+          <ShowMoreList
+            className="grid list-none gap-4"
+            data-journal-directory-list="true"
+            copy={getShowMoreCopy(locale)}
+            next={
+              page.hasNextPage
+                ? {
+                    token: String(page.request.page + 1),
+                    href: buildPublicJournalDirectoryHref(locale, {
                       ...page.request,
                       page: page.request.page + 1,
-                    })
-                  : null
-              }
-              status={formatPageLabel(
-                copy.pageLabel,
-                page.request.page,
-                page.totalPages,
-                locale,
-              )}
+                    }),
+                  }
+                : null
+            }
+            load={loadJournalDirectoryPortion.bind(null, {
+              locale,
+              q: page.request.query,
+              kind: page.request.kind,
+              catalog: page.request.catalog,
+              topic: page.request.topic,
+              season: page.request.season,
+              region: page.request.region,
+              sort: page.request.sort,
+            })}
+          >
+            <DirectoryResultItems
+              locale={locale}
+              copy={copy}
+              request={page.request}
+              cards={page.cards}
+              priorityIndex={firstPhotograph}
             />
-          ) : null}
+          </ShowMoreList>
         </>
       ) : null}
 
@@ -374,104 +348,6 @@ function buildFilterFacets(
       })),
     },
   ];
-}
-
-function DirectoryResultCard({
-  locale,
-  copy,
-  request,
-  card,
-  priority,
-}: {
-  locale: PublicLocale;
-  copy: PublicJournalDirectoryCopy;
-  request: PublicJournalDirectoryRequest;
-  card: PublicJournalDirectoryCard;
-  priority: boolean;
-}) {
-  const directoryHref = buildPublicJournalDirectoryHref(locale, request);
-  const entryHref = addDirectoryReturnTo(card.publicPath, directoryHref);
-  // The observation date, with its season; publication only when it fell on
-  // another day — the same meaning the feed's cards give a date (OG-UX-016).
-  const dates = entryCardDates(locale, card.entryDate, card.publishedAt);
-
-  return (
-    <EntryCard
-      id={card.publicPath}
-      href={entryHref}
-      title={card.title}
-      headingLevel={3}
-      contentLanguage={
-        contentLanguageAttribute(card.sourceLanguage, locale).lang
-      }
-      subject={{
-        label: card.object.displayName,
-        href: card.object.publicPath,
-        // One plant, not the filter's "plants": the kind word every other
-        // card of an entry uses.
-        kindLabel: getEntryCardCopy(locale).kinds[card.object.kind],
-        icon: KIND_ICONS[card.object.kind],
-        // `undefined`, not an empty fragment: a fragment is truthy, and the
-        // card drew its separator with nothing after it.
-        meta: card.safeRegionCode ? (
-          <>
-            <MapPin aria-hidden="true" className="size-4" />
-            {`${copy.safeRegion} ${card.safeRegionCode}`}
-          </>
-        ) : undefined,
-      }}
-      dateTime={dates.dateTime}
-      dateLabel={`${dates.dateLabel} · ${copy.seasons[card.season]}`}
-      published={dates.published}
-      excerpt={card.excerpt}
-      readMoreLabel={
-        card.excerptTruncated ? getEntryCardCopy(locale).readMore : undefined
-      }
-      media={entryCardMedia(card.media)}
-      author={
-        card.author
-          ? {
-              displayName: card.author.displayName,
-              href: card.author.profilePath,
-              avatarUrl: card.author.avatarUrl,
-            }
-          : null
-      }
-      authorPrefix={copy.publishedBy}
-      topics={card.topics.map((topic) => ({
-        label: localizeTopicLabel(locale, topic.slug, topic.label),
-        href: buildPublicJournalDirectoryHref(locale, {
-          ...request,
-          topic: topic.slug,
-          page: 1,
-        }),
-      }))}
-      engagement={
-        <>
-          {card.object.catalogPath ? (
-            <Link
-              href={card.object.catalogPath}
-              className={buttonVariants({ variant: "ghost", size: "sm" })}
-            >
-              {card.object.identityLabel}
-            </Link>
-          ) : (
-            <span className="text-caption text-text-muted">
-              {card.object.identityLabel ?? copy.identityPending}
-            </span>
-          )}
-          <Link
-            href={`${card.publicPath}#comments`}
-            className={buttonVariants({ variant: "ghost", size: "sm" })}
-          >
-            <MessageCircle aria-hidden="true" />
-            {copy.discuss}
-          </Link>
-        </>
-      }
-      priority={priority}
-    />
-  );
 }
 
 function DirectoryLoading({ label }: { label: string }) {
@@ -705,19 +581,4 @@ function defaultRequest(): PublicJournalDirectoryRequest {
     sort: "recent",
     page: 1,
   };
-}
-
-function addDirectoryReturnTo(publicPath: string, directoryHref: string) {
-  const params = new URLSearchParams({ from: directoryHref });
-  return `${publicPath}?${params.toString()}`;
-}
-
-function formatPageLabel(
-  label: string,
-  page: number,
-  totalPages: number,
-  locale: PublicLocale,
-) {
-  const joiner = { uk: "з", bg: "от", ru: "из" }[locale];
-  return `${label} ${page} ${joiner} ${totalPages}`;
 }

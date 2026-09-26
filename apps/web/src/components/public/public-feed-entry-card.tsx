@@ -153,6 +153,41 @@ export function PublicFeedEntryCard({
   );
 }
 
+/**
+ * A portion of a listing's entries as its list items, the same whether the
+ * page rendered the first portion or «Показати ще» fetched a later one
+ * (DESIGN.md §5.26). Only the first portion's first photograph is a priority
+ * image; a later portion never is.
+ */
+export function PublicFeedEntryItems({
+  locale,
+  copy,
+  entries,
+  priorityIndex = -1,
+  returnTo,
+  headingLevel,
+}: {
+  locale: PublicLocale;
+  copy: PublicFeedCardLabels;
+  entries: readonly PublicFeedCardEntry[];
+  priorityIndex?: number;
+  returnTo?: string;
+  headingLevel?: 2 | 3;
+}) {
+  return entries.map((entry, index) => (
+    <li key={entry.id} className="min-w-0">
+      <PublicFeedEntryCard
+        locale={locale}
+        copy={copy}
+        entry={entry}
+        priority={index === priorityIndex}
+        returnTo={returnTo}
+        headingLevel={headingLevel}
+      />
+    </li>
+  ));
+}
+
 export function buildPublicFeedHref(
   locale: PublicLocale,
   input: {

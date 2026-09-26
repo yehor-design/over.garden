@@ -209,8 +209,9 @@ describe("/garden, the collection home (OVE-489)", () => {
     expect(html).toContain('name="q"');
     expect(html).toContain('aria-current="page"');
     expect(html).toContain("Спершу нещодавні записи");
-    expect(html).toContain("Сторінка 1 з 2");
-    expect(html).toContain('href="/garden?page=2#garden-collection"');
+    expect(html).toMatch(
+      /<a href="\/garden\?page=2#garden-collection"[^>]*data-show-more-link="true"/u,
+    );
     expect(html).toContain("У саду — простори: 1, рослини й тварини: 40");
   });
 

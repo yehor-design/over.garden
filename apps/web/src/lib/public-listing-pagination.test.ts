@@ -1,16 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  isCursorListing,
   paginatedListingPageSize,
   paginatedListingRobotsTag,
+  requestedListingCursor,
   requestedListingPage,
 } from "./public-listing-pagination";
 
 describe("bounded listing pagination (ADR-0029 D3)", () => {
   it("knows which listings paginate, prefixed or not", () => {
-    expect(paginatedListingPageSize("/journals")).toBe(8);
-    expect(paginatedListingPageSize("/bg/journals")).toBe(8);
-    expect(paginatedListingPageSize("/ru/journals/")).toBe(8);
+    // Portions of twenty, like every long list (`OVE-518`).
+    expect(paginatedListingPageSize("/journals")).toBe(20);
+    expect(paginatedListingPageSize("/bg/journals")).toBe(20);
+    expect(paginatedListingPageSize("/ru/journals/")).toBe(20);
     // `/objects` was the second catalogue door and now 308s to the one
     // (`OVE-451`); the catalogue bounds its own pages, because it knows its
     // own count and the journal-entry bound would 404 page two of 1 694.
@@ -19,7 +22,13 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
   });
 
   it("says nothing about a page that is not a listing", () => {
-    for (const path of ["/", "/bg", "/feed", "/journal/polyv", "/topics/plants"]) {
+    for (const path of [
+      "/",
+      "/bg",
+      "/feed",
+      "/journal/polyv",
+      "/topics/plants",
+    ]) {
       expect(paginatedListingPageSize(path), path).toBeNull();
     }
   });
@@ -37,7 +46,9 @@ describe("bounded listing pagination (ADR-0029 D3)", () => {
       ).toBeNull();
     }
     expect(requestedListingPage(new URLSearchParams({ page: "2" }))).toBe(2);
-    expect(requestedListingPage(new URLSearchParams({ page: "999" }))).toBe(999);
+    expect(requestedListingPage(new URLSearchParams({ page: "999" }))).toBe(
+      999,
+    );
   });
 
   /**
@@ -108,7 +119,9 @@ describe("a filtered view of the catalogue's one door (OVE-451)", () => {
   });
 
   it("leaves the one door itself alone", () => {
-    expect(paginatedListingRobotsTag("/catalog", new URLSearchParams())).toBeNull();
+    expect(
+      paginatedListingRobotsTag("/catalog", new URLSearchParams()),
+    ).toBeNull();
     expect(
       paginatedListingRobotsTag("/catalog", new URLSearchParams("kingdom=")),
     ).toBeNull();
@@ -154,5 +167,30 @@ describe("a species' register, searched or paged (OVE-497)", () => {
         new URLSearchParams("page=2"),
       ),
     ).toBeNull();
+  });
+
+  it("keeps a cursor listing's later portions out of the index and followed (OVE-518)", () => {
+    expect(isCursorListing("/")).toBe(true);
+    expect(isCursorListing("/bg")).toBe(true);
+    expect(isCursorListing("/journals")).toBe(false);
+    expect(requestedListingCursor(new URLSearchParams())).toBeNull();
+    expect(
+      requestedListingCursor(new URLSearchParams({ cursor: "" })),
+    ).toBeNull();
+    expect(
+      requestedListingCursor(new URLSearchParams({ cursor: "eyJ2Ijox" })),
+    ).toBe("eyJ2Ijox");
+    // The home feed's first portion is the indexable document; every later
+    // one is followed and not indexed.
+    expect(paginatedListingRobotsTag("/", new URLSearchParams())).toBeNull();
+    expect(
+      paginatedListingRobotsTag("/", new URLSearchParams({ kind: "plant" })),
+    ).toBeNull();
+    expect(
+      paginatedListingRobotsTag("/", new URLSearchParams({ cursor: "abc" })),
+    ).toBe("noindex, follow");
+    expect(
+      paginatedListingRobotsTag("/ru", new URLSearchParams({ cursor: "abc" })),
+    ).toBe("noindex, follow");
   });
 });

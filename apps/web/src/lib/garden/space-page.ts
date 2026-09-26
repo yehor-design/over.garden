@@ -1,4 +1,5 @@
 import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 
 /**
  * A space's own page in the workspace (`OVE-490`, IA: `/garden/spaces/[id]`).
@@ -16,7 +17,7 @@ import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
 
 export const SPACE_OBJECTS_PREVIEW_SIZE = 6;
 export const SPACE_HISTORY_PREVIEW_SIZE = 10;
-export const SPACE_HISTORY_PAGE_SIZE = 20;
+export const SPACE_HISTORY_PAGE_SIZE = LIST_PORTION_SIZE;
 const MAX_PAGE = 10_000;
 
 export type SpacePageView = "overview" | "objects" | "history";

@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 import type {
   Database,
@@ -27,8 +28,9 @@ import { catalogKindSql } from "@/server/catalog-kind-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export const FOLLOWED_FEED_PAGE_SIZE = 12;
-export const NOTIFICATION_PAGE_SIZE = 12;
+/** Portions of twenty, like every long list (DESIGN.md §5.26). */
+export const FOLLOWED_FEED_PAGE_SIZE = LIST_PORTION_SIZE;
+export const NOTIFICATION_PAGE_SIZE = LIST_PORTION_SIZE;
 const MAX_PAGE_SIZE = 30;
 const MAX_NOTIFICATION_CANDIDATES = 60;
 const STALE_JOURNAL_DAYS = 14;

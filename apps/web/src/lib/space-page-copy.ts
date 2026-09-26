@@ -46,7 +46,6 @@ export interface SpacePageCopy {
     edit: string;
     editLabel: string;
   };
-  pagination: { label: string; previous: string; next: string; page: string };
   settings: {
     description: string;
     detailsTitle: string;
@@ -132,12 +131,6 @@ const uk: SpacePageCopy = {
     notPublic: "Без публічної адреси",
     edit: "Редагувати",
     editLabel: "Редагувати «{title}»",
-  },
-  pagination: {
-    label: "Сторінки",
-    previous: "Попередні",
-    next: "Наступні",
-    page: "Сторінка {page} з {pages}",
   },
   settings: {
     description:
@@ -235,12 +228,6 @@ const bg: SpacePageCopy = {
     edit: "Редактирай",
     editLabel: "Редактирай „{title}“",
   },
-  pagination: {
-    label: "Страници",
-    previous: "Предишни",
-    next: "Следващи",
-    page: "Страница {page} от {pages}",
-  },
   settings: {
     description:
       "Името и дали регионът на пространството се показва. Растенията, животните и записите остават на мястото си.",
@@ -337,12 +324,6 @@ const ru: SpacePageCopy = {
     notPublic: "Без публичного адреса",
     edit: "Редактировать",
     editLabel: "Редактировать «{title}»",
-  },
-  pagination: {
-    label: "Страницы",
-    previous: "Предыдущие",
-    next: "Следующие",
-    page: "Страница {page} из {pages}",
   },
   settings: {
     description:

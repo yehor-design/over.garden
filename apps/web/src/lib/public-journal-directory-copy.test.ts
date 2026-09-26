@@ -14,7 +14,6 @@ describe("public journal directory copy", () => {
     });
     expect(copy.seasons.summer).toBe("Літо");
     expect(copy.sorts.relevance).toBe("За відповідністю");
-    expect(copy.loadMore).toBe("Показати більше журналів");
     expect(copy.degradedSearchTitle).toBe("Пошук тимчасово обмежений");
     // The faceted bar's own copy: the filter button carries the active count
     // and the result count is pluralised here, because `FilterBar` carries no

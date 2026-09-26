@@ -41,6 +41,7 @@ export const BROWSER_GATE_SPECS = [
   "auth-provider-retirement.spec.ts",
   // The page families.
   "journals-directory.spec.ts",
+  "show-more.spec.ts",
   "journal-entry.spec.ts",
   "journal-notion-composer.spec.ts",
   "publication-notice.spec.ts",

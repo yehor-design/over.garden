@@ -20,8 +20,6 @@ describe("public profile copy", () => {
       expect(copy.follow).toBeTruthy();
       expect(copy.report).toBeTruthy();
       expect(copy.block).toBeTruthy();
-      expect(copy.pageStatus).toContain("{page}");
-      expect(copy.pageStatus).toContain("{count}");
     },
   );
 

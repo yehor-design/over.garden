@@ -18,6 +18,7 @@ import {
   searchProjectionQuality,
   type PublicProjectionQualityClass,
 } from "@/lib/public-projection-quality";
+import { LIST_PORTION_SIZE } from "@/lib/show-more";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { localizeTopicLabel } from "@/lib/system-topic-labels";
@@ -30,8 +31,9 @@ import { publicAuthorHandleSql } from "@/server/author-handle-sql";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export const PUBLIC_FEED_PAGE_SIZE = 8;
-const MAX_PUBLIC_FEED_PAGE_SIZE = 20;
+/** A portion of the feed (DESIGN.md §5.26): twenty, like every long list. */
+export const PUBLIC_FEED_PAGE_SIZE = LIST_PORTION_SIZE;
+const MAX_PUBLIC_FEED_PAGE_SIZE = LIST_PORTION_SIZE;
 const MAX_PUBLIC_FEED_MEDIA_PER_ENTRY = 3;
 const MAX_PUBLIC_FEED_EXCERPT_LENGTH = 320;
 const PUBLIC_FEED_CURSOR_VERSION = 1 as const;
