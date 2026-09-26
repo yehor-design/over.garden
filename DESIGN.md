@@ -1731,7 +1731,9 @@ reference — Airbnb's listing flow and Typeform — drawn entirely in Threads'
 visual language (its type, spacing, controls and sheet chrome).
 
 - **One question per screen.** The question is the screen's `h1`; the answer
-  control is directly beneath it and takes focus when the step opens.
+  control is directly beneath it. The first step opens with its answer
+  focused, so typing starts at once; every later step change moves focus to
+  the new question, so a screen reader announces where the gardener is.
 - **The frame.** A progress bar with «Крок N з M» as text (never colour
   alone), «Назад» and «Далі» at the bottom, and a close control at the top.
   The last step's button names the result: «Створити» for a space, «Додати»

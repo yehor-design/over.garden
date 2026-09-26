@@ -158,8 +158,18 @@ alter table media_assets
   drop column if exists quality_evaluated_at;
 
 alter table media_assets
-  alter column journal_entry_id set not null,
   alter column derivative_key set not null;
+
+-- `0082` lets a photo belong to a space or an object instead, so on a replay
+-- over such rows this would refuse the whole migration. It is guarded rather
+-- than dropped: on a first install, where no such row can exist, it still
+-- runs, and `0082` relaxes it again.
+do $$
+begin
+  if not exists (select 1 from media_assets where journal_entry_id is null) then
+    alter table media_assets alter column journal_entry_id set not null;
+  end if;
+end $$;
 
 alter table journal_entries
   alter column visibility set default 'public',

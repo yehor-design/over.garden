@@ -323,10 +323,19 @@ test.describe("the command palette", () => {
     const slashGardenerId = gardener.id;
 
     try {
-      await page.goto("/garden", { waitUntil: "load" });
+      const space = await pool.query<{ id: string }>(
+        `insert into spaces (owner_user_id, display_name) values ($1, 'Балкон') returning id::text as id`,
+        [slashGardenerId],
+      );
+      const plant = await pool.query<{ id: string }>(
+        `insert into plant_objects (owner_user_id, space_id, display_name, object_kind)
+         values ($1, $2, 'Томат', 'plant') returning id::text as id`,
+        [slashGardenerId, space.rows[0]!.id],
+      );
+      await page.goto(`/garden/new?object=${plant.rows[0]!.id}`, { waitUntil: "load" });
       const editor = page
         .locator(
-          '#first-entry-composer [data-structured-journal-composer="true"] [contenteditable="true"]',
+          '[data-entry-composer="true"] [data-structured-journal-composer="true"] [contenteditable="true"]',
         )
         .first();
       await expect(editor).toBeVisible({ timeout: 20_000 });

@@ -896,11 +896,13 @@ export interface MediaAssets {
   id: Generated<string>;
   intrinsic_height: number | null;
   intrinsic_width: number | null;
-  journal_entry_id: string;
+  journal_entry_id: string | null;
   owner_user_id: string;
   placeholder_data_uri: string | null;
+  plant_object_id: string | null;
   public_unreachable_at: Timestamp | null;
   revoked_at: Timestamp | null;
+  space_id: string | null;
   updated_at: Generated<Timestamp>;
   upload_generation: number | null;
   usage_role: Generated<string>;

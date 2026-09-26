@@ -1,3 +1,4 @@
+import type { OwnedPhotoView } from "@/lib/garden/owned-photo";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
 /**
@@ -56,6 +57,8 @@ export interface GardenCollectionSpaceItem {
   kind: "space";
   id: string;
   displayName: string;
+  /** The space's own photo (ADR-0036 D1), when it has one. */
+  photo?: OwnedPhotoView | null;
   objectCount: number;
   /**
    * The newest active entry written here: about the space itself or about

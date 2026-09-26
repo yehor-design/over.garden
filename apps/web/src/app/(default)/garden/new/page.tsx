@@ -248,9 +248,18 @@ export default async function GardenEntryComposerPage({
           description={copy.empty.body}
           action={
             <div className="flex flex-wrap justify-center gap-2">
+              {community ? null : (
+                <Link
+                  href="/garden/spaces/new?returnTo=%2Fgarden%2Fnew"
+                  className={buttonVariants({})}
+                  data-entry-composer-empty-action="space"
+                >
+                  {copy.empty.addSpace}
+                </Link>
+              )}
               <Link
                 href={addObjectHref}
-                className={buttonVariants({})}
+                className={buttonVariants(community ? {} : { variant: "secondary" })}
                 data-entry-composer-empty-action="object"
               >
                 {copy.empty.addObject}
@@ -263,15 +272,7 @@ export default async function GardenEntryComposerPage({
                 >
                   {copy.community.back}
                 </Link>
-              ) : (
-                <Link
-                  href="/garden#first-entry-composer"
-                  className={buttonVariants({ variant: "secondary" })}
-                  data-entry-composer-empty-action="first-entry"
-                >
-                  {copy.empty.firstEntry}
-                </Link>
-              )}
+              ) : null}
             </div>
           }
         />

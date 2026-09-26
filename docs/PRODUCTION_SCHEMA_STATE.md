@@ -2,7 +2,7 @@
 
 Status: living record of what is applied in the production database.
 Owner: whoever applies a migration updates this page in the same pull request.
-Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
+Last inventory: 2026-09-26; `0073` and `0074` applied 2026-09-13; `0076` and `0077` applied 2026-09-19; `0078` and `0079` applied 2026-09-21; `0081` and `0082` applied 2026-09-26; `0080` not yet applied (it waits for a deployment of `main`). Divergences noted 2026-09-04, 2026-09-05 and 2026-09-11.
 
 `docs/MIGRATION_ALLOCATION.md` reserves migration numbers. It says nothing about
 what production actually runs. This page closes that gap, because on 2026-09-03
@@ -1249,4 +1249,30 @@ the addresses it gave stay: an address once public is never taken back.
 
 Post-apply production inventory returned `status: applied`, `absent: []` for
 0081. No historical migrations were replayed by this change.
+
+## `0082`, photos of spaces and of plants and animals — applied 2026-09-26
+
+`0082_ove523_space_and_object_photos.sql` was applied through
+`scripts/apply-reviewed-migration.ts` with the current Vercel production
+configuration: one transaction, `digitalocean_managed`, `defaultdb`, nine
+statements, 222 ms. SQL SHA-256:
+`49a4883e94e651136b0514769af6386616b18332aa52cc0f8da9db95cd1d568b`.
+
+`media_assets.journal_entry_id` is no longer `not null`; two nullable owners
+join it, `space_id` and `plant_object_id` (FKs `ON DELETE CASCADE`), and
+`media_assets_single_owner_check` requires exactly one of the three. Two
+partial unique indexes keep one live photo per space and per object. Before
+the apply all 15 production rows had an entry, so the check held from the
+first statement; nothing was backfilled. The only code path that deletes a
+space (`deleteEmptySpace`) queues the photo's files for revocation before the
+cascade removes its row; account erasure lists every owned photo by
+`owner_user_id` before it deletes any, as it did for entry photos.
+
+Rollback `sql/rollback/0082_….down.sql` refuses while any space or object
+photo is live, then drops the indexes, the check and the two columns and
+restores `not null`. `0038`'s `not null` is guarded so a replay leaves space
+and object photos alone (`prove-migration-reapply --passes 3`: no failures).
+
+Post-apply production inventory returned `status: applied`, `absent: []` for
+0082. No historical migrations were replayed by this change.
 

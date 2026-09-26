@@ -46,7 +46,6 @@ test.describe("OVE-417 Notion-shaped composer", () => {
     test.setTimeout(180_000);
     const origin = requiredBaseUrl(baseURL);
     const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
-    const suffix = randomUUID().slice(0, 8);
     let userId = "";
 
     try {
@@ -56,8 +55,11 @@ test.describe("OVE-417 Notion-shaped composer", () => {
         pool,
       });
 
-      await page.goto(`${origin}/garden`);
-      const composer = page.locator("#first-entry-composer");
+      // The one composer writes to a plant of the gardener's own (the
+      // combined first-entry form is gone, ADR-0035 D1).
+      const plantId = await seedPlant(pool, userId, `Помідор ${randomUUID().slice(0, 8)}`);
+      await page.goto(`${origin}/garden/new?object=${plantId}`);
+      const composer = page.locator('[data-entry-composer="true"]');
       const canvas = composer.locator("[data-lexical-journal-canvas]");
       await expect(canvas).toBeVisible();
       await expect(
@@ -168,13 +170,6 @@ test.describe("OVE-417 Notion-shaped composer", () => {
       ).toHaveCount(1);
 
       // 8. Publish, and read the blocks back from the page a reader sees.
-      const nameField = composer.locator('input[name="plantName"]');
-      await nameField.fill(`Помідор ${suffix}`);
-      await nameField.press("Escape");
-      const spaceName = composer.locator('input[name="spaceName"]');
-      if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
-        await spaceName.fill(`Сад ${suffix}`);
-      }
       const disclosure = composer.locator(
         'input[name="publicationDisclosureAccepted"]',
       );
@@ -255,8 +250,11 @@ test.describe("OVE-458 the composer a keyboard can finish", () => {
         pool,
       });
 
-      await page.goto(`${origin}/garden`);
-      const composer = page.locator("#first-entry-composer");
+      // The one composer writes to a plant of the gardener's own (the
+      // combined first-entry form is gone, ADR-0035 D1).
+      const plantId = await seedPlant(pool, userId, `Помідор ${randomUUID().slice(0, 8)}`);
+      await page.goto(`${origin}/garden/new?object=${plantId}`);
+      const composer = page.locator('[data-entry-composer="true"]');
       const canvas = composer.locator("[data-lexical-journal-canvas]");
       await expect(canvas).toBeVisible();
       await expect(
@@ -398,7 +396,7 @@ test.describe("OVE-458 the composer a keyboard can finish", () => {
       const guard = page.locator('[data-unpublished-work-guard="true"]');
       await expect(guard).toBeVisible();
       await expect(guard).toContainText(/чернеток немає/u);
-      expect(new URL(page.url()).pathname).toBe("/garden");
+      expect(new URL(page.url()).pathname).toBe("/garden/new");
       await page.getByRole("button", { name: "Залишитися" }).click();
       await expect(guard).toBeHidden();
       await expect(blocks.first()).toHaveText("Перший");
@@ -516,3 +514,18 @@ function requiredLocalDatabaseUrl() {
   }
   return url;
 }
+
+/** A space and a plant in it, owned by the gardener the test signed in. */
+async function seedPlant(pool: Pool, userId: string, name: string): Promise<string> {
+  const space = await pool.query<{ id: string }>(
+    `insert into spaces (owner_user_id, display_name) values ($1, 'Сад') returning id::text as id`,
+    [userId],
+  );
+  const plant = await pool.query<{ id: string }>(
+    `insert into plant_objects (owner_user_id, space_id, display_name, object_kind)
+     values ($1, $2, $3, 'plant') returning id::text as id`,
+    [userId, space.rows[0]!.id, name],
+  );
+  return plant.rows[0]!.id;
+}
+

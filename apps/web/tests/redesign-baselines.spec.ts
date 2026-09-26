@@ -54,15 +54,21 @@ test("OVE-486: global Write opens the destination-aware composer", async ({
 });
 
 test("multiple spaces require an explicit destination", async ({ page }) => {
-  // A returning gardener's home is the collection (OVE-489); the first-entry
-  // composer opens there on an explicit create.
-  await page.goto("/garden?source=direct-garden");
-  const composer = page.locator("#first-entry-composer");
-  await expect(
-    composer.locator('[data-owned-destination-picker="space"]'),
-  ).toBeVisible();
-  await expect(composer.locator("[data-destination-selection]")).toHaveCount(0);
-  await expect(composer.locator('input[name="spaceId"]')).toHaveCount(0);
+  // Adding a plant or an animal asks for its space when there is more than
+  // one, and picks none by itself (ADR-0035 D1: nothing is chosen for the
+  // gardener).
+  await page.goto("/garden/objects/new");
+  const flow = page.locator('[data-object-setup-flow="true"]');
+  await expect(flow).toBeVisible();
+  await waitForHydration(flow);
+  await flow.getByRole("button", { name: "Далі" }).click();
+  const name = flow.locator('[data-object-setup-section="name"]');
+  await name.getByRole("combobox").fill("Базилік");
+  await name.getByRole("button", { name: "Далі" }).click();
+  const space = flow.locator('[data-object-setup-section="space"]');
+  await expect(space).toHaveAttribute("data-state", "active");
+  await expect(space.locator('[data-owned-destination-picker="space"]')).toBeVisible();
+  await expect(space.locator("[data-destination-selection]")).toHaveCount(0);
 });
 
 test("OVE-482: filter dismiss is named Close rather than Reset", async ({

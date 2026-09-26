@@ -76,33 +76,18 @@ export async function verifyCommitStatusRequest(
 export async function readEphemeralMediaCommitStatus(
   input: EphemeralMediaCommitStatusRequest,
 ): Promise<EphemeralMediaCommitStatus> {
-  const entry = await db
-    .selectFrom("journal_entries")
-    .select([
-      "id",
-      "owner_user_id",
-      "published_at",
-      "lifecycle_state",
-      "visibility",
-    ])
-    .where("id", "=", input.publishId)
-    .executeTakeFirst();
-  if (!entry) return "absent";
+  const publication = await readPublication(input.publishId);
+  if (!publication) return "absent";
   const secret = requireStrongSecret(
     process.env.EPHEMERAL_MEDIA_COMMIT_STATUS_SECRET,
   );
   const ownerSubjectHash = await deriveEphemeralMediaOwnerSubjectHash(
     secret,
-    entry.owner_user_id,
+    publication.ownerUserId,
   );
   if (ownerSubjectHash !== input.ownerSubjectHash) return "absent";
-  if (
-    !entry.published_at ||
-    entry.lifecycle_state !== "active" ||
-    entry.visibility !== "public"
-  )
-    return "indeterminate";
-  const media = await db
+  if (!publication.committed) return "indeterminate";
+  let mediaQuery = db
     .selectFrom("media_assets")
     .select([
       "id",
@@ -113,10 +98,15 @@ export async function readEphemeralMediaCommitStatus(
       "intrinsic_height",
       "derivative_key",
       "revoked_at",
-    ])
-    .where("journal_entry_id", "=", entry.id)
-    .orderBy("id", "asc")
-    .execute();
+    ]);
+  mediaQuery =
+    publication.kind === "entry"
+      ? mediaQuery.where("journal_entry_id", "=", publication.id)
+      : publication.kind === "space"
+        ? mediaQuery.where("space_id", "=", publication.id)
+        : mediaQuery.where("plant_object_id", "=", publication.id);
+  const media = await mediaQuery.orderBy("id", "asc").execute();
+  const entry = { owner_user_id: publication.ownerUserId };
   const mediaById = new Map(media.map((row) => [row.id, row]));
   const variantExtras = await readMediaVariantExtras(
     db,
@@ -154,6 +144,63 @@ export async function readEphemeralMediaCommitStatus(
   })
     ? "committed"
     : "indeterminate";
+}
+
+/**
+ * What a publish id names. A journal entry publishes its photos under its own
+ * id; a space and a plant or animal publish their one photo under theirs
+ * (ADR-0036 D1). An entry counts as committed once it is published, active and
+ * public; a space or an object once its row exists.
+ */
+async function readPublication(publishId: string): Promise<
+  | {
+      kind: "entry" | "space" | "object";
+      id: string;
+      ownerUserId: string;
+      committed: boolean;
+    }
+  | null
+> {
+  const entry = await db
+    .selectFrom("journal_entries")
+    .select([
+      "id",
+      "owner_user_id",
+      "published_at",
+      "lifecycle_state",
+      "visibility",
+    ])
+    .where("id", "=", publishId)
+    .executeTakeFirst();
+  if (entry) {
+    return {
+      kind: "entry",
+      id: entry.id,
+      ownerUserId: entry.owner_user_id,
+      committed: Boolean(
+        entry.published_at &&
+          entry.lifecycle_state === "active" &&
+          entry.visibility === "public",
+      ),
+    };
+  }
+  const space = await db
+    .selectFrom("spaces")
+    .select(["id", "owner_user_id"])
+    .where("id", "=", publishId)
+    .executeTakeFirst();
+  if (space) {
+    return { kind: "space", id: space.id, ownerUserId: space.owner_user_id, committed: true };
+  }
+  const object = await db
+    .selectFrom("plant_objects")
+    .select(["id", "owner_user_id"])
+    .where("id", "=", publishId)
+    .executeTakeFirst();
+  if (object) {
+    return { kind: "object", id: object.id, ownerUserId: object.owner_user_id, committed: true };
+  }
+  return null;
 }
 
 function isCommitStatusRequest(

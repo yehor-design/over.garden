@@ -202,13 +202,21 @@ describe("GardenCollection", () => {
     expect(unknown).toContain('data-section-failure="query_timeout"');
   });
 
-  it("sets up an empty garden with one picture and the first action first", () => {
-    const html = renderToStaticMarkup(<GardenSetup locale="ru" />);
+  // ADR-0035 D1: exactly two ways to start, and no form on the page.
+  it("sets up an empty garden with one picture and exactly two buttons", () => {
+    const html = renderToStaticMarkup(<GardenSetup locale="uk" />);
     expect(html).toContain('data-screen-state="empty-first-run"');
     expect(html).toContain("/illustrations/empty-garden.webp");
-    expect(html.indexOf("Написать первую запись")).toBeLessThan(
-      html.indexOf("Добавить растение или животное"),
+    const actions = [...html.matchAll(/data-garden-setup-action="([a-z-]+)"/gu)].map(
+      (match) => match[1],
     );
-    expect(html).toContain('href="#first-entry-composer"');
+    expect(actions).toEqual(["add-space", "add-object"]);
+    expect(html.indexOf("Створити простір")).toBeLessThan(
+      html.indexOf("Додати рослину чи тварину"),
+    );
+    expect(html).toContain('href="/garden/spaces/new"');
+    expect(html).toContain('href="/garden/objects/new"');
+    expect(html).not.toContain("data-local-composer-kind");
+    expect(html).not.toContain("<form");
   });
 });

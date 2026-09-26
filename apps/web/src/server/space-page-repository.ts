@@ -15,6 +15,13 @@ import {
 } from "@/lib/garden/space-page";
 import type { SpaceLocationVisibility } from "@/lib/garden/space-setup";
 import type { RequestScope } from "@/server/request-scope";
+import type { ClaimedOwnedPhoto } from "@/server/media/owned-photo-handoff";
+import {
+  ownedPhotoView,
+  readOwnedPhotos,
+  takeBackOwnedPhotos,
+  writeOwnedPhoto,
+} from "@/server/owned-photo-repository";
 
 /**
  * The reads and writes of a space's own page (`OVE-490`). Every statement
@@ -74,8 +81,16 @@ export async function readSpacePageSummary(
     `.execute(tx);
     const row = result.rows[0];
     if (!row) return null;
+    const photo = (
+      await readOwnedPhotos(tx, {
+        ownerUserId: scope.userId,
+        kind: "space",
+        ids: [row.id],
+      })
+    ).get(row.id);
     return {
       ...row,
+      photo: photo ? ownedPhotoView(photo) : null,
       locationVisibility:
         row.locationVisibility === "region" ? "region" : "hidden",
     };
@@ -298,6 +313,11 @@ export async function deleteEmptySpace(
     if (blockers.objectCount > 0 || blockers.entryCount > 0) {
       return { status: "not_empty", blockers };
     }
+    // The photo's row would go with the space; its stored files would not.
+    await takeBackOwnedPhotos(tx, {
+      ownerUserId: scope.userId,
+      owner: { kind: "space", id: spaceId },
+    });
     await sql`
       delete from spaces
       where id = ${spaceId}::uuid and owner_user_id = ${scope.userId}::uuid
@@ -305,3 +325,34 @@ export async function deleteEmptySpace(
     return { status: "deleted" };
   });
 }
+
+export type SpacePhotoChangeResult = { status: "saved" } | { status: "missing" };
+
+/**
+ * Give a space its photo, replacing the one it had, or take it away
+ * (`photo: null`). The space row is locked first, so a delete of the space in
+ * the meantime either commits before (and this finds it missing) or waits.
+ */
+export async function changeSpacePhoto(
+  scope: RequestScope,
+  input: { spaceId: string; photo: ClaimedOwnedPhoto | null },
+  executor: Kysely<Database> = db,
+): Promise<SpacePhotoChangeResult> {
+  return bounded(executor, async (tx) => {
+    const locked = await sql<{ id: string }>`
+      select id from spaces
+      where id = ${input.spaceId}::uuid and owner_user_id = ${scope.userId}::uuid
+      for update
+    `.execute(tx);
+    if (!locked.rows[0]) return { status: "missing" };
+    const owner = { kind: "space" as const, id: input.spaceId };
+    if (input.photo) {
+      await writeOwnedPhoto(tx, { ownerUserId: scope.userId, owner, photo: input.photo });
+    } else {
+      await takeBackOwnedPhotos(tx, { ownerUserId: scope.userId, owner });
+    }
+    await sql`update spaces set updated_at = now() where id = ${input.spaceId}::uuid`.execute(tx);
+    return { status: "saved" };
+  });
+}
+

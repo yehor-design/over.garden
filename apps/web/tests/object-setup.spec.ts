@@ -110,30 +110,30 @@ test.describe("object setup", () => {
       await name.fill("Томат на підвіконні");
       await nameSection.getByRole("button", { name: "Далі" }).click();
 
-      // No space yet: create one without leaving the flow.
+      // No space yet: the space stepper, then back here with the new space
+      // selected (`?space=`, ADR-0035 D1).
       const spaceSection = flow.locator('[data-object-setup-section="space"]');
       await expect(spaceSection).toHaveAttribute("data-state", "active");
       await spaceSection
         .locator('[data-object-setup-new-space="true"]')
         .click();
-      const sheet = page.locator('[data-slot="sheet-content"]');
-      const spaceFlow = sheet.locator('[data-space-setup-flow="create"]');
-      await expect(spaceFlow).toBeVisible();
-      await spaceFlow.getByLabel("Назва простору").fill("Підвіконня");
+      await page.waitForURL("**/garden/spaces/new?returnTo=**");
+      const stepper = page.locator('[data-creation-stepper="true"]');
+      await waitForHydration(stepper);
+      await stepper.getByLabel("Назва простору").fill("Підвіконня");
       await page.keyboard.press("Enter");
-      await spaceFlow.getByRole("button", { name: "Далі" }).click();
-      await spaceFlow.getByRole("button", { name: "Створити простір" }).click();
-      await expect(sheet).toHaveCount(0);
-      await expect(
-        flow.locator('[data-object-setup-notice="true"]'),
-      ).toContainText("Підвіконня");
-      // The name survived the nested setup.
-      await expect(
-        flow.locator('[data-object-setup-summary="name"]'),
-      ).toContainText("Томат на підвіконні");
+      await stepper.getByRole("button", { name: "Пропустити" }).click();
+      await page.waitForURL(/\/garden\/objects\/new\?space=/u);
+      const back = await openFlow(page, new URL(page.url()).search);
+      await back.getByRole("button", { name: "Далі" }).click();
+      const renamed = back.locator('[data-object-setup-section="name"]');
+      await renamed.getByRole("combobox").fill("Томат на підвіконні");
+      await renamed.getByRole("button", { name: "Далі" }).click();
+      const chosen = back.locator('[data-object-setup-section="space"]');
+      await expect(chosen).toContainText("Підвіконня");
 
-      await spaceSection.getByRole("button", { name: "Далі" }).click();
-      const review = flow.locator('[data-object-setup-section="review"]');
+      await chosen.getByRole("button", { name: "Далі" }).click();
+      const review = back.locator('[data-object-setup-section="review"]');
       await expect(review).toHaveAttribute("data-state", "active");
       await expect(review.locator("[data-object-setup-review]")).toContainText(
         "Ще не визначено",
@@ -472,7 +472,7 @@ test.describe("object setup", () => {
     }
   });
 
-  test("a nested space closed half-way writes nothing, and My garden offers the flow", async ({
+  test("a space stepper left half-way writes nothing and returns here, and My garden offers the flow", async ({
     browser,
     baseURL,
   }) => {
@@ -502,25 +502,35 @@ test.describe("object setup", () => {
         .getByRole("button", { name: "Далі" })
         .click();
       await flow.locator('[data-object-setup-new-space="true"]').click();
-      const sheet = page.locator('[data-slot="sheet-content"]');
-      await sheet.getByLabel("Назва простору").fill("Недороблений");
+      await page.waitForURL("**/garden/spaces/new?returnTo=**");
+      const stepper = page.locator('[data-creation-stepper="true"]');
+      await waitForHydration(stepper);
+      await stepper.getByLabel("Назва простору").fill("Недороблений");
+      // Leaving asks first, then returns to this flow with nothing written.
       await page.keyboard.press("Escape");
-      await expect(sheet).toHaveCount(0);
+      await page
+        .locator('[data-space-setup-discard="true"]')
+        .getByRole("button", { name: "Вийти" })
+        .click();
+      await page.waitForURL(/\/garden\/objects\/new$/u);
       expect(await spacesOf(pool, userId)).toHaveLength(0);
-      // The flow is where it was, with the name kept.
-      await expect(
-        flow.locator('[data-object-setup-section="space"]'),
-      ).toHaveAttribute("data-state", "active");
-      await expect(
-        flow.locator('[data-object-setup-summary="name"]'),
-      ).toContainText("Малина");
+      const back = await openFlow(page);
+      await back.getByRole("button", { name: "Далі" }).click();
+      await back
+        .locator('[data-object-setup-section="name"]')
+        .getByRole("combobox")
+        .fill("Малина");
+      await back
+        .locator('[data-object-setup-section="name"]')
+        .getByRole("button", { name: "Далі" })
+        .click();
       // Next without a space: an error, not a request.
-      await flow
+      await back
         .locator('[data-object-setup-section="space"]')
         .getByRole("button", { name: "Далі" })
         .click();
       await expect(
-        flow.locator('[data-object-setup-error="space"]'),
+        back.locator('[data-object-setup-error="space"]'),
       ).toBeVisible();
       expect(await objectsOf(pool, userId)).toHaveLength(0);
 

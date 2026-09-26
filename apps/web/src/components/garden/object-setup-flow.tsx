@@ -3,24 +3,23 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckCircleIcon as CheckCircle } from "@/components/icons/CheckCircle";
 
-import { CatalogPicker } from "@/components/garden/catalog-picker";
+import { recordCatalogPickEventAction } from "@/app/(default)/garden/catalog-pick-event-actions";
+import { recordCatalogSearchMissAction } from "@/app/(default)/garden/catalog-search-miss-actions";
+import {
+  CatalogPicker,
+  type CatalogPickOutcome,
+  type CatalogSearchMiss,
+} from "@/components/garden/catalog-picker";
 import { OwnedDestinationPicker } from "@/components/garden/owned-destination-picker";
 import {
   openStep,
   ProgressiveActions,
   ProgressiveStep,
 } from "@/components/garden/progressive-steps";
-import { SpaceSetupFlow } from "@/components/garden/space-setup-flow";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
 import { Link } from "@/components/ui/link";
 import { RadioCard } from "@/components/ui/radio-card";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import type { PlantObjectKind } from "@/db/schema";
 import { ownerScopeHeaders } from "@/lib/auth/session-signal";
 import { objectKindAfterPickerSelection } from "@/lib/garden/catalog-object-kind";
@@ -125,7 +124,6 @@ export function ObjectSetupFlow({
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
-  const [spaceSheetOpen, setSpaceSheetOpen] = useState(false);
   const [requestId] = useState(() => crypto.randomUUID());
   const headingRefs = useRef<Record<Step, HTMLHeadingElement | null>>({
     kind: null,
@@ -174,6 +172,27 @@ export function ObjectSetupFlow({
       return false;
     }
     return true;
+  };
+
+  // What the picker learns about naming (OVE-398): a search that found
+  // nothing, and how an attempt ended. Measurements only — a failure to record
+  // one never reaches the gardener.
+  const reportSearchMiss = (miss: CatalogSearchMiss) => {
+    void recordCatalogSearchMissAction({
+      query: miss.query,
+      locale,
+      objectKind,
+    }).catch(() => undefined);
+  };
+  const reportPickOutcome = (outcome: CatalogPickOutcome) => {
+    void recordCatalogPickEventAction({
+      outcome: outcome.outcome,
+      queryLength: outcome.queryLength,
+      msToPick: outcome.msToPick,
+      locale,
+      objectKind,
+      catalogItemId: outcome.catalogItemId,
+    }).catch(() => undefined);
   };
 
   const updateSelection = (next: CatalogPickerSelection | null) => {
@@ -471,6 +490,8 @@ export function ObjectSetupFlow({
               }}
               selection={selection}
               onSelectionChange={updateSelection}
+              onSearchMiss={reportSearchMiss}
+              onPickOutcome={reportPickOutcome}
             />
             {errors.name ? (
               <p
@@ -556,42 +577,17 @@ export function ObjectSetupFlow({
             </p>
           ) : null}
           <div>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setSpaceSheetOpen(true)}
+            {/* The space stepper, then back here with the new space
+                selected (`?space=`, ADR-0035 D1): the object step keeps its
+                own address, so nothing typed here is carried over the trip. */}
+            <Link
+              href={`/garden/spaces/new?returnTo=${encodeURIComponent("/garden/objects/new")}`}
               data-object-setup-new-space="true"
+              className={buttonVariants({ variant: "secondary" })}
             >
               {copy.space.create}
-            </Button>
+            </Link>
           </div>
-          <Sheet open={spaceSheetOpen} onOpenChange={setSpaceSheetOpen}>
-            <SheetContent
-              side="bottom"
-              closeLabel={copy.space.close}
-              className="max-h-svh overflow-y-auto"
-            >
-              <SheetHeader>
-                <SheetTitle>{copy.space.sheetTitle}</SheetTitle>
-              </SheetHeader>
-              <div className="px-4 pb-4">
-                <SpaceSetupFlow
-                  locale={locale}
-                  mode="create"
-                  onCancel={() => setSpaceSheetOpen(false)}
-                  onCreated={(created) => {
-                    setSpace({
-                      id: created.id,
-                      displayName: created.displayName,
-                    });
-                    setErrors({});
-                    setNotice(copy.space.created(created.displayName));
-                    setSpaceSheetOpen(false);
-                  }}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
           <ProgressiveActions>
             <Button type="button" variant="ghost" onClick={() => open("name")}>
               {copy.previous}

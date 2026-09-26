@@ -5,6 +5,12 @@ import path from "node:path";
 import { expect, test, type BrowserContext, type Page } from "playwright/test";
 import { signInSyntheticGardener } from "./helpers/synthetic-gardener";
 import { WCAG_AA_TAGS } from "./helpers/redesign-accessibility";
+import { waitForHydration } from "./helpers/hydration";
+import { buildAtomicTextJournalCreateRequest } from "../scripts/atomic-journal-text-request";
+import {
+  ATOMIC_JOURNAL_CREATE_PROTOCOL,
+  ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER,
+} from "../src/lib/garden/entry-contracts";
 import { Pool } from "pg";
 
 /**
@@ -73,6 +79,13 @@ test.describe("OVE-387 catalog picker", () => {
         pool,
       });
       await selectLocale(context, baseURL, "uk");
+      // The picker is object setup's name step (the combined first-entry form
+      // is gone, ADR-0035 D1); the gardener's one space is preselected.
+      const spaceId = randomUUID();
+      await pool.query(
+        "insert into spaces (id, owner_user_id, display_name) values ($1, $2, 'Сад OVE-387')",
+        [spaceId, userId],
+      );
 
       // The organism card before any first-hand content (ADR-0026 D9):
       // reachable, noindex, nothing but the fact paragraph.
@@ -87,7 +100,7 @@ test.describe("OVE-387 catalog picker", () => {
       expect(beforeHtml).not.toContain('data-organism-section="experience"');
 
       // Outcome 1: a species, picked by keyboard alone.
-      await openComposer(page);
+      await openComposer(page, spaceId);
       const combobox = pickerCombobox(page);
       await combobox.focus();
       await page.keyboard.type("томат");
@@ -196,7 +209,7 @@ test.describe("OVE-387 catalog picker", () => {
       await page.goto("/garden");
 
       // Outcome 2: a form, with its species implied in the row.
-      await openComposer(page);
+      await openComposer(page, spaceId);
       await pickerCombobox(page).fill("де барао");
       const cultivarOption = pickerListbox(page)
         .locator('[data-catalog-option="cultivar"]')
@@ -224,7 +237,7 @@ test.describe("OVE-387 catalog picker", () => {
       expect(second?.catalog_item_id).not.toBe(fixture.homonymId);
 
       // Outcome 3: the gardener's own name, which matches nothing.
-      await openComposer(page);
+      await openComposer(page, spaceId);
       const ownName = `Моя рідкісна ягода ${fixture.suffix}`;
       await pickerCombobox(page).fill(ownName);
       const ownNameOption = pickerListbox(page).locator(
@@ -260,7 +273,7 @@ test.describe("OVE-387 catalog picker", () => {
           body: JSON.stringify({ suggestions: [], state: "unavailable" }),
         }),
       );
-      await openComposer(page);
+      await openComposer(page, spaceId);
       const offlineName = `Без каталогу ${fixture.suffix}`;
       await pickerCombobox(page).fill(offlineName);
       await expect(
@@ -339,91 +352,86 @@ test.describe("OVE-387 catalog picker", () => {
 /** The picker's own combobox: the page has native selects with that role too. */
 function pickerCombobox(page: Page) {
   return page.locator(
-    '#first-entry-composer [data-catalog-picker="true"] [role="combobox"]',
+    '[data-object-setup-section="name"] [data-catalog-picker="true"] [role="combobox"]',
   );
 }
 
 function pickerListbox(page: Page) {
   return page.locator(
-    '#first-entry-composer [data-catalog-picker="true"] [role="listbox"]',
+    '[data-object-setup-section="name"] [data-catalog-picker="true"] [role="listbox"]',
   );
 }
 
-async function openComposer(page: Page) {
-  // An explicit create: once the gardener has an object, the home is the
-  // collection and the first-entry composer opens only when asked (OVE-489).
-  const response = await page.goto("/garden?source=direct-garden");
+async function openComposer(page: Page, spaceId: string) {
+  const response = await page.goto(`/garden/objects/new?space=${spaceId}`);
   expect(response?.status()).toBe(200);
-  const composer = page.locator("#first-entry-composer");
-  await expect(composer).toBeVisible({ timeout: 15_000 });
-  await composer.scrollIntoViewIfNeeded();
-  // The name field is the picker, so nothing has to be opened to reach it.
-  // It used to sit under a closed "More details", which is how the graph went
-  // unnoticed in the product for a week.
+  const flow = page.locator('[data-object-setup-flow="true"]');
+  await expect(flow).toBeVisible({ timeout: 15_000 });
+  await waitForHydration(flow);
+  // Plant is the kind's default; the name step is the picker.
+  await flow.getByRole("button", { name: "Далі" }).click();
   await expect(pickerCombobox(page)).toBeVisible({ timeout: 10_000 });
 }
 
 /**
- * Publishes the composer. `plantName` renames the object first; `null` keeps
- * whatever the picker already holds, which is what the own-name outcome needs
- * — the name field *is* the picker, so renaming after declaring an own name
- * would be declaring a different one.
+ * Adds the object and publishes its first entry. `plantName` renames the
+ * object first; `null` keeps whatever the picker already holds, which is what
+ * the own-name outcome needs — the name field *is* the picker, so renaming
+ * after declaring an own name would be declaring a different one.
  */
 async function publishEntry(
   page: Page,
   plantName: string | null,
   body: string,
 ) {
-  const composer = page.locator("#first-entry-composer");
-  const nameField = composer.locator('input[name="plantName"]');
+  const nameField = pickerCombobox(page);
   if (plantName !== null) {
     // Typing opens the picker's listbox, and the list can cover the fields
     // below it on a narrow viewport; Escape closes it and keeps the text.
     await nameField.fill(plantName);
     await nameField.press("Escape");
   }
-  // The object is read back by the name it is actually published under, which
-  // is whatever the field holds — the picker fills it on a pick, and keeps the
+  // The object is read back by the name it is actually added under, which is
+  // whatever the field holds — the picker fills it on a pick, and keeps the
   // gardener's own name when there is none.
   const publishedName = await nameField.inputValue();
-  // A gardener without a space names the first one; the field is required.
-  const spaceName = composer.locator('input[name="spaceName"]');
-  if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
-    await spaceName.fill("Сад OVE-387");
-  }
-  const editor = composer
-    .locator(
-      '[data-structured-journal-composer="true"] [contenteditable="true"]',
-    )
-    .first();
-  await editor.click();
-  await page.keyboard.type(body);
-  const disclosure = composer.locator(
-    'input[name="publicationDisclosureAccepted"]',
-  );
-  if ((await disclosure.count()) > 0) await disclosure.check();
-  const [response] = await Promise.all([
-    page.waitForResponse(
-      (candidate) =>
-        candidate.url().includes("/api/garden/entries") &&
-        candidate.request().method() === "POST",
-      { timeout: 30_000 },
-    ),
-    composer.getByRole("button", { name: /Опублікувати/u }).click(),
-  ]);
-  // The composer navigates as soon as the publish answers, and the body of a
-  // response whose page has moved on is not always retrievable; it is read
-  // only to explain a failure.
+  const flow = page.locator('[data-object-setup-flow="true"]');
+  await flow
+    .locator('[data-object-setup-section="name"]')
+    .getByRole("button", { name: "Далі" })
+    .click();
+  await flow
+    .locator('[data-object-setup-section="space"]')
+    .getByRole("button", { name: "Далі" })
+    .click();
+  await flow.locator('[data-object-setup-submit="true"]').click();
+  const result = page.locator('[data-object-setup-result="created"]');
+  await expect(result).toBeVisible({ timeout: 20_000 });
+  const objectId = await result.getAttribute("data-object-id");
+  if (!objectId) throw new Error(`Object "${publishedName}" was not created.`);
+
+  // Its first entry, through the real endpoint: publishing is what sets the
+  // species' first-hand clock this spec reads on the organism card.
+  const origin = new URL(page.url()).origin;
+  const response = await page.request.post(`${origin}/api/garden/entries`, {
+    headers: {
+      origin,
+      [ATOMIC_JOURNAL_CREATE_PROTOCOL_HEADER]: ATOMIC_JOURNAL_CREATE_PROTOCOL,
+    },
+    data: buildAtomicTextJournalCreateRequest({
+      publishId: randomUUID(),
+      context: {
+        target: "plant_object_entry",
+        plantObjectId: objectId,
+        entryDate: new Date().toISOString().slice(0, 10),
+      },
+      title: `${publishedName} — перший запис`,
+      text: body,
+    }),
+  });
   if (response.status() >= 400) {
-    const body = await response.text().catch(() => "(body unavailable)");
-    throw new Error(`Publish answered ${response.status()}: ${body}`);
+    throw new Error(`Publish answered ${response.status()}: ${await response.text()}`);
   }
-  await page
-    .waitForURL(
-      (url) => !url.pathname.endsWith("/garden") || url.search.length > 0,
-      { timeout: 30_000 },
-    )
-    .catch(() => undefined);
   const pool = new Pool({ connectionString: requiredLocalDatabaseUrl() });
   try {
     const row = await pool.query<{
@@ -433,8 +441,8 @@ async function publishEntry(
       catalog_item_id: string | null;
     }>(
       `select id::text as id, variety_state, variety_text, catalog_item_id::text as catalog_item_id
-       from plant_objects where display_name = $1 order by created_at desc limit 1`,
-      [publishedName],
+       from plant_objects where id = $1`,
+      [objectId],
     );
     if (!row.rows[0]) {
       throw new Error(`Object "${publishedName}" was not persisted.`);
@@ -471,7 +479,7 @@ async function runAxeOnComposer(page: Page) {
         };
       }
     ).axe;
-    const composer = document.querySelector("#first-entry-composer");
+    const composer = document.querySelector('[data-object-setup-flow="true"]');
     if (!composer) throw new Error("composer missing");
     const result = await axe.run(composer, {
       runOnly: { type: "tag", values: tags },
@@ -799,6 +807,7 @@ async function selectLocale(
 }
 
 async function cleanupSyntheticUser(pool: Pool, userId: string) {
+  await pool.query("delete from spaces where owner_user_id = $1::uuid", [userId]);
   await pool.query('delete from public."user" where id = $1::uuid', [userId]);
 }
 

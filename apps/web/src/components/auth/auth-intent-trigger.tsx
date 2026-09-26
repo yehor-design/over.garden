@@ -42,8 +42,7 @@ interface AuthIntentTriggerProps {
  * must not have the stand-in focused on return, or Enter starts signing in
  * again (`OVE-504`). The return path is the resume href the intent contract
  * builds, so `create_entry` lands on the composer at
- * `/garden?authIntent=create_entry#first-entry-composer` and
- * `useScrollToHashOnMount` puts it in front of them. Sending them to `/garden`
+ * `/garden/new?authIntent=create_entry`. Sending them to `/garden`
  * bare would make signing in cost one press and then another — the same extra
  * step the header's hard-coded `/garden` used to cost before the form.
  */

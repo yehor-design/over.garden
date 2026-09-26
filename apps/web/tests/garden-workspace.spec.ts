@@ -87,7 +87,7 @@ test.beforeEach(async ({ context, baseURL }) => {
 });
 
 test.describe("the workspace a gardener works in", () => {
-  test("an empty garden opens on setup: one picture, one sentence, the first action", async ({
+  test("an empty garden opens on setup: one picture, one sentence, two buttons and no form", async ({
     page,
   }) => {
     const response = await page.goto("/garden", { waitUntil: "load" });
@@ -97,9 +97,16 @@ test.describe("the workspace a gardener works in", () => {
     // a garden starts instead of printing empty sections.
     const setup = page.locator('[data-garden-setup="true"]');
     await expect(setup).toBeVisible();
+    // ADR-0035 D1: «Створити простір» and «Додати рослину чи тварину», and
+    // nothing to fill in on this page.
+    await expect(setup.locator("[data-garden-setup-action]")).toHaveCount(2);
     await expect(
-      setup.locator('[data-garden-setup-action="first-entry"]'),
-    ).toHaveAttribute("href", "#first-entry-composer");
+      setup.locator('[data-garden-setup-action="add-space"]'),
+    ).toHaveAttribute("href", "/garden/spaces/new");
+    await expect(
+      setup.locator('[data-garden-setup-action="add-object"]'),
+    ).toHaveAttribute("href", "/garden/objects/new");
+    await expect(page.locator("main form")).toHaveCount(0);
     await expect(page.locator('[data-garden-collection="true"]')).toHaveCount(
       0,
     );
@@ -109,14 +116,23 @@ test.describe("the workspace a gardener works in", () => {
     );
   });
 
-  test("adding an object shows its path before its form", async ({ page }) => {
-    await page.goto("/garden", { waitUntil: "load" });
-    const steps = page.locator('[data-garden-creation-steps="true"]');
-    await expect(steps).toBeVisible();
-    // An ordered list, so a screen reader announces "1 of 3" rather than
-    // reading three sentences with no relationship between them.
-    expect(await steps.evaluate((node) => node.tagName)).toBe("OL");
-    await expect(steps.locator("li")).toHaveCount(3);
+  test("creating says where the gardener is and how much is left", async ({
+    page,
+  }) => {
+    // The stepper names its step in words and as a progress bar (DESIGN.md
+    // §5.24), so a screen reader hears "Крок 1 з 2" rather than a bare form.
+    await page.goto("/garden/spaces/new", { waitUntil: "load" });
+    const stepper = page.locator('[data-creation-stepper="true"]');
+    await expect(stepper).toBeVisible();
+    await expect(stepper.locator("[data-creation-progress]")).toHaveText(
+      "Крок 1 з 2",
+    );
+    const progress = stepper.getByRole("progressbar", { name: "Крок 1 з 2" });
+    await expect(progress).toHaveAttribute("aria-valuenow", "1");
+    await expect(progress).toHaveAttribute("aria-valuemax", "2");
+    await expect(stepper.getByRole("heading", { level: 1 })).toHaveText(
+      "Як називається простір?",
+    );
   });
 
   test("the lineage surfaces say what they are before asking for anything", async ({
@@ -242,7 +258,9 @@ test.describe("before the bundle runs", () => {
       const page = await context.newPage();
 
       for (const address of [
-        "/garden",
+        // «Мій сад» itself has no form since ADR-0035 D1; the space
+        // stepper's name step is the garden's own form.
+        "/garden/spaces/new",
         "/garden/profile",
         "/garden/lineage/claims",
       ]) {

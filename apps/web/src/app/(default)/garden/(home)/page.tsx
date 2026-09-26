@@ -8,48 +8,36 @@ import { PlantIcon as Sprout } from "@/components/icons/Plant";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { buttonVariants } from "@/components/ui/button";
-import { Section } from "@/components/ui/section";
 import {
   GardenActions,
   GardenCollection,
   GardenSetup,
 } from "@/components/garden/garden-collection";
 import {
-  activationSurfaceKindForSource,
-  normalizeActivationSourceParam,
-} from "@/lib/garden/activation";
-import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import {
   GARDEN_COLLECTION_SIMPLE_LIMIT,
   isDefaultGardenCollectionRequest,
   normalizeGardenCollectionRequest,
 } from "@/lib/garden/garden-collection";
 import { getGardenCollectionCopy } from "@/lib/garden-collection-copy";
-import { pickerKindForCatalogKind } from "@/lib/garden/catalog-object-kind";
-import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { localizedPath } from "@/lib/public-localization";
 import {
   getLocalizedOAuthErrorMessage,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
 import { WorkspaceSectionError } from "@/components/garden/workspace-state";
-import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import {
   GARDEN_COLLECTION_GROUP_QUERY_COUNT,
   listGardenObjects,
   listGardenSpaces,
 } from "@/server/garden-collection-repository";
 import { loadGardenWorkspaceContext } from "@/server/garden-workspace-repository";
-import { scheduleGardenWorkspaceActivationAnalytics } from "@/server/garden-workspace-after-response";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
-import { hasPriorPublicationDisclosure } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveWorkspaceViewer } from "@/server/workspace-access";
 import {
@@ -61,7 +49,6 @@ import {
   GardenHomeSectionsSkeleton,
   GardenHomeShell,
 } from "./garden-home-shell";
-import { FirstEntryComposer } from "../first-entry-composer";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
 import { GardenWorkspaceServiceState } from "../garden-workspace-service-state";
 
@@ -114,6 +101,18 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   if (engagementPostAuthPath && engagementPostAuthPath !== "/garden") {
     redirect(engagementPostAuthPath);
   }
+  // The combined space + object + first entry form is gone (ADR-0035 D1).
+  // A catalogue launch and a resumed "add a plant or an animal" go to object
+  // setup, which reads the same `catalog` preselection.
+  const catalog = firstParam(params.catalog);
+  const resumedAction = normalizeAuthIntentResumeAction(params.authIntent);
+  if (catalog || resumedAction === "create_object") {
+    redirect(
+      catalog
+        ? `/garden/objects/new?catalog=${encodeURIComponent(catalog)}`
+        : "/garden/objects/new",
+    );
+  }
 
   return (
     <>
@@ -127,7 +126,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             locale={locale}
             params={params}
             scope={viewer.scope}
-            userId={viewer.userId}
           />
         </Suspense>
       </GardenHomeShell>
@@ -146,24 +144,16 @@ async function GardenHomeSections({
   locale,
   params,
   scope,
-  userId,
 }: {
   locale: InterfaceLocale;
   params: GardenSearchParams;
   scope: ReturnType<typeof scopedToUser>;
-  userId: string;
 }) {
   const request = normalizeGardenCollectionRequest(params);
   const groupDeadlineMs = workspaceSectionDeadlineMs(
     GARDEN_COLLECTION_GROUP_QUERY_COUNT,
   );
-  const [
-    spaces,
-    objects,
-    context,
-    priorPublicationDisclosure,
-    initialCatalogItem,
-  ] = await Promise.all([
+  const [spaces, objects, context] = await Promise.all([
     settleSection(() => listGardenSpaces(scope, request), {
       deadlineMs: groupDeadlineMs,
       surface: "garden-home",
@@ -181,8 +171,6 @@ async function GardenHomeSections({
       surface: "garden-home",
       section: "context",
     }),
-    settledOrNull(() => hasPriorPublicationDisclosure(scope)),
-    settledOrNull(() => resolveInitialCatalogSelection(params)),
   ]);
 
   const spacesValue = spaces.status === "ready" ? spaces.value : null;
@@ -195,52 +183,8 @@ async function GardenHomeSections({
     isDefaultGardenCollectionRequest(request) &&
     ownedTotal !== null &&
     ownedTotal <= GARDEN_COLLECTION_SIMPLE_LIMIT;
-  // The first-entry composer names a new plant and its first entry in one
-  // form. It is for a gardener with no plant or animal yet, and for a reader
-  // who came here to create one (a catalogue pick, a resumed sign-in, an
-  // activation link) — never the returning gardener's home (IA: setup only on
-  // explicit create).
-  const explicitCreate =
-    Boolean(initialCatalogItem) || isExplicitCreateRequest(params);
-  const firstObject = objectsValue?.owned === 0;
-  const showComposer = setup || firstObject || explicitCreate;
-
-  const activationSource = normalizeActivationSourceParam(params.source, {
-    hasResolvedCatalogSelection: Boolean(initialCatalogItem),
-  });
   const today = new Date().toISOString().slice(0, 10);
   const collectionCopy = getGardenCollectionCopy(locale);
-
-  if (showComposer) {
-    scheduleGardenWorkspaceActivationAnalytics(scope, {
-      eventName: "activation_started",
-      properties: {
-        activation_source: activationSource,
-        source_surface_kind: activationSurfaceKindForSource(activationSource),
-        actor_class: "real_self_serve",
-      },
-    });
-  }
-
-  const composer = showComposer ? (
-    <GardenWriteTools
-      today={today}
-      locale={locale}
-      activationSource={activationSource}
-      initialCatalogItem={initialCatalogItem}
-      initialSpace={
-        spacesValue?.owned === 1 && spacesValue.items[0]
-          ? {
-              id: spacesValue.items[0].id,
-              displayName: spacesValue.items[0].displayName,
-            }
-          : null
-      }
-      enableServerPersistence
-      ownerUserId={userId}
-      requiresFirstPublicationDisclosure={!priorPublicationDisclosure}
-    />
-  ) : null;
 
   return (
     <div
@@ -263,18 +207,14 @@ async function GardenHomeSections({
             ? context.value.inbox.value
             : null
         }
-        showPublicationNotice={showComposer}
+        showPublicationNotice={false}
       />
 
       {setup ? (
-        <>
-          <GardenSetup locale={locale} />
-          {composer}
-        </>
+        <GardenSetup locale={locale} />
       ) : (
         <>
           <GardenActions locale={locale} />
-          {explicitCreate ? composer : null}
           <GardenCollection
             locale={locale}
             request={request}
@@ -283,43 +223,10 @@ async function GardenHomeSections({
             objects={objects}
             simple={simple}
           />
-          {explicitCreate ? null : composer}
         </>
       )}
     </div>
   );
-}
-
-/**
- * A reader who came to `/garden` to create: a first-entry activation link
- * (`?source=`), or a sign-in that resumes creating an object.
- */
-function isExplicitCreateRequest(params: GardenSearchParams): boolean {
-  const source = firstParam(params.source).replaceAll("_", "-");
-  if (
-    source === "homepage" ||
-    source === "direct-garden" ||
-    source === "public-variety"
-  ) {
-    return true;
-  }
-  const authIntent = normalizeAuthIntentResumeAction(params.authIntent);
-  return authIntent === "create_object" || authIntent === "save";
-}
-
-/**
- * A read whose failure is genuinely nothing to show. A catalog preselection
- * that cannot be resolved leaves the composer empty, which is where a gardener
- * who typed no preselection already starts; it does not deserve a panel. It
- * still goes through `settleSection`, so the class is classified and the read
- * is bounded rather than silently swallowed by a bare `catch`.
- */
-async function settledOrNull<T>(load: () => Promise<T>): Promise<T | null> {
-  const settled = await settleSection(load, {
-    deadlineMs: workspaceSectionDeadlineMs(2),
-    record: false,
-  });
-  return settled.status === "ready" ? settled.value : null;
 }
 
 /**
@@ -426,114 +333,6 @@ function GuestGardenEntry({
       </div>
     </main>
   );
-}
-
-/**
- * The first-entry composer: a new plant or animal, its place and its first
- * entry, published together. It is its own section with its own address,
- * `#first-entry-composer`, which setup, `/garden/new` and a resumed sign-in
- * link to.
- */
-function GardenWriteTools({
-  ownerUserId,
-  today,
-  locale,
-  activationSource,
-  initialCatalogItem,
-  initialSpace,
-  enableServerPersistence,
-  requiresFirstPublicationDisclosure,
-}: {
-  ownerUserId: string;
-  today: string;
-  locale: InterfaceLocale;
-  activationSource: Parameters<
-    typeof FirstEntryComposer
-  >[0]["activationSource"];
-  initialCatalogItem: FirstEntryCatalogSelection | null;
-  initialSpace: { id: string; displayName: string } | null;
-  enableServerPersistence: boolean;
-  requiresFirstPublicationDisclosure: boolean;
-}) {
-  const copy = getGardenWorkspaceCopy(locale);
-  return (
-    <Section
-      id="first-entry-composer"
-      title={copy.page.creation.title}
-      description={copy.page.creation.description}
-      className="scroll-mt-20 border-t border-border pt-8"
-    >
-      {/* The path, before the form (`OVE-457` criterion 5). Adding an object
-          was a bare form with three unlabelled jobs inside it; a gardener
-          could not tell where they were or how much was left. The result at
-          the end is `SaveProgressMoment`, which the save redirects to. */}
-      <ol
-        data-garden-creation-steps="true"
-        aria-label={copy.page.creation.stepsLabel}
-        className="grid gap-2 sm:grid-cols-3"
-      >
-        {copy.page.creation.steps.map((step, index) => (
-          <li
-            key={step}
-            className="flex min-w-0 items-start gap-2 rounded-md border border-border bg-surface-sunken px-3 py-2 text-body-sm text-text-secondary"
-          >
-            <span
-              aria-hidden="true"
-              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-action-subtle text-caption font-medium text-action-subtle-text tabular-nums"
-            >
-              {index + 1}
-            </span>
-            <span className="min-w-0">{step}</span>
-          </li>
-        ))}
-      </ol>
-      <div id="write-access">
-        <FirstEntryComposer
-          ownerUserId={ownerUserId}
-          locale={locale}
-          key={initialCatalogItem?.id ?? "first-entry"}
-          today={today}
-          initialClientMutationId={crypto.randomUUID()}
-          initialSpace={initialSpace}
-          initialCatalogItem={initialCatalogItem}
-          activationSource={activationSource}
-          enableServerPersistence={enableServerPersistence}
-          requiresFirstPublicationDisclosure={
-            requiresFirstPublicationDisclosure
-          }
-        />
-      </div>
-    </Section>
-  );
-}
-
-async function resolveInitialCatalogSelection(
-  searchParams: GardenSearchParams,
-): Promise<FirstEntryCatalogSelection | null> {
-  const publicSlug = firstParam(searchParams.catalog);
-  if (!publicSlug) return null;
-  const item = await findSelectableCatalogItemByPublicSlug(
-    publicSlug,
-    undefined,
-    {
-      standardBaseOnly: true,
-    },
-  );
-  if (!item) return null;
-  return {
-    id: item.id,
-    displayName: item.canonicalName,
-    kind: pickerKindForCatalogKind(item.catalogKind),
-    ...(item.publicSlug
-      ? {
-          publicPath: publicCatalogEvidencePath({
-            catalogKind: item.catalogKind,
-            publicSlug: item.publicSlug,
-            speciesSlug: item.speciesSlug,
-          }),
-        }
-      : {}),
-  };
 }
 
 function engagementAuthPrompt(

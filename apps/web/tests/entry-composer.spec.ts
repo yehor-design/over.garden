@@ -331,8 +331,8 @@ test.describe("the one entry composer", () => {
         page.locator('[data-entry-composer-empty-action="object"]'),
       ).toHaveAttribute("href", "/garden/objects/new");
       await expect(
-        page.locator('[data-entry-composer-empty-action="first-entry"]'),
-      ).toBeVisible();
+        page.locator('[data-entry-composer-empty-action="space"]'),
+      ).toHaveAttribute("href", "/garden/spaces/new?returnTo=%2Fgarden%2Fnew");
 
       const garden = await seedGarden(pool, userId);
       await page.goto(`/garden/objects/${garden.greenhouseTomato}`, {

@@ -227,7 +227,9 @@ describe("auth intent contract", () => {
           returnTo: "/garden",
         }),
       ),
-    ).toBe("/garden?authIntent=create_object#first-entry-composer");
+    // No combined first-entry form to scroll to (ADR-0035 D1): `/garden`
+    // sends a resumed "add a plant or an animal" on to object setup.
+    ).toBe("/garden?authIntent=create_object");
     expect(
       buildAuthIntentResumeHref(
         normalizeAuthIntentDraft({

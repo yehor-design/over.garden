@@ -32,7 +32,7 @@ const ACTIONS: CommandPaletteResult[] = [
     id: "actions:new-entry",
     label: "Новий запис",
     detail: null,
-    href: "/garden#first-entry-composer",
+    href: "/garden/new",
     language: null,
   },
 ];

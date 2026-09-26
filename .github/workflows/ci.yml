@@ -132,6 +132,9 @@ jobs:
       - name: Prove the standard species base, its re-run, its rollback and the base-only picker
         run: pnpm catalog:standard-species:prove-database
 
+      - name: Prove the space and object photo, its revocations and its rollback
+        run: pnpm schema:owned-photos:prove-database
+
       - name: Prove the catalog health figures, the retention window and its purge
         run: pnpm catalog:health:prove-database
 

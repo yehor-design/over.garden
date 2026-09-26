@@ -1,4 +1,7 @@
-import type { Metadata } from "next";
+import { randomUUID } from "node:crypto";
+
+import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 
 import { SpaceSetupFlow } from "@/components/garden/space-setup-flow";
 import { WorkspaceSectionError } from "@/components/garden/workspace-state";
@@ -7,7 +10,15 @@ import { getSpaceSetupCopy } from "@/lib/space-setup-copy";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { resolveWorkspaceViewer } from "@/server/workspace-access";
 import { SignInPrompt } from "@/app/(default)/auth/sign-in-prompt";
+import { createSpaceFormAction } from "./actions";
 import { GARDEN_SPACE_SETUP_PATH, SpaceSetupShell } from "./space-setup-shell";
+
+/**
+ * The stepper keeps its primary button above a phone's keyboard: with
+ * `resizes-content` the keyboard shrinks the layout viewport the frame fills
+ * (DESIGN.md §5.24).
+ */
+export const viewport: Viewport = { interactiveWidget: "resizes-content" };
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestInterfaceLocale();
@@ -18,10 +29,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Create a space on its own (`OVE-484`). Reached from My garden and from
- * object setup; `returnTo` hands the new space's id back to the caller. The
- * composer's nested create uses the same flow in `propose` mode and writes
- * nothing until Publish.
+ * Create a space (`OVE-484`, `OVE-523`): the full-screen stepper — name, an
+ * optional photo, «Створити». Reached from My garden and from object setup;
+ * `returnTo` hands the new space's id back to the caller.
  */
 export default async function GardenSpaceSetupPage({
   searchParams,
@@ -59,9 +69,14 @@ export default async function GardenSpaceSetupPage({
       </SpaceSetupShell>
     );
   }
+  // The intent's id, made per render; the tab keeps the first one it saw.
+  await connection();
   return (
-    <SpaceSetupShell locale={locale}>
-      <SpaceSetupFlow locale={locale} mode="create" returnTo={returnTo} />
-    </SpaceSetupShell>
+    <SpaceSetupFlow
+      locale={locale}
+      requestId={randomUUID()}
+      returnTo={returnTo}
+      formAction={createSpaceFormAction}
+    />
   );
 }

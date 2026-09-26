@@ -227,15 +227,20 @@ test.describe("an entry keeps the language it was written in", () => {
     gardenerId = gardener.id;
 
     const title = `Домати след смяна на режима ${PREFIX}`;
-    await page.goto("/garden", { waitUntil: "load" });
-    const composer = page.locator("#first-entry-composer");
+    // A plant of the gardener's own: the one composer writes to what exists
+    // (ADR-0035 D1 removed the combined first-entry form).
+    const space = await pool.query<{ id: string }>(
+      `insert into spaces (owner_user_id, display_name) values ($1, $2) returning id::text as id`,
+      [gardener.id, `Градина ${PREFIX}`],
+    );
+    const plant = await pool.query<{ id: string }>(
+      `insert into plant_objects (owner_user_id, space_id, display_name, object_kind)
+       values ($1, $2, $3, 'plant') returning id::text as id`,
+      [gardener.id, space.rows[0]!.id, `Домат ${PREFIX}`],
+    );
+    await page.goto(`/garden/new?object=${plant.rows[0]!.id}`, { waitUntil: "load" });
+    const composer = page.locator('[data-entry-composer="true"]');
     await expect(composer).toBeVisible({ timeout: 20_000 });
-    await composer.locator('input[name="plantName"]').fill(`Домат ${PREFIX}`);
-    await composer.locator('input[name="plantName"]').press("Escape");
-    const spaceName = composer.locator('input[name="spaceName"]');
-    if ((await spaceName.count()) > 0 && !(await spaceName.inputValue())) {
-      await spaceName.fill(`Градина ${PREFIX}`);
-    }
     const editor = composer
       .locator(
         '[data-structured-journal-composer="true"] [contenteditable="true"]',

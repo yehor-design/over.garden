@@ -86,6 +86,20 @@ everything else. Measured against the production database: every 2026-09-25
 probe word finds its species first, and the picker's statement stays within
 its earlier timings. Receipt: `docs/STANDARD_SPECIES_BASE_PROOF_2026-09.md`.
 
+A space is created in a full-screen stepper since `OVE-523` (ADR-0035 D1,
+`DESIGN.md` §5.24–5.25): «Як називається простір?», then an optional photo
+cropped and turned in the browser before the WebP encode and staged at once,
+then «Створити»; the region is no longer asked (a new space's is hidden). The
+stepper frame (`components/ui/creation-stepper.tsx`), the crop editor and the
+photo upload are shared, for `OVE-524` to reuse. A space's photo is also
+added, replaced and removed in its settings, and shows on its page and its row
+in «Мій сад». Migration `0082` lets a photo belong to exactly one entry, space
+or plant/animal; it is applied to production. The combined first-entry form is
+gone from «Мій сад»: an empty garden offers «Створити простір» and «Додати
+рослину чи тварину», and a sign-in with the `create_entry` intent resumes in
+the composer at `/garden/new`. Like everything since the pause, it is on
+`main` and waits for a deployment.
+
 **Complete product redesign, shipped (accepted 2026-09-21; integrated and
 released by OVE-478 on 2026-09-24).** The program is OVE-474 (coordination),
 32 executable tasks with OVE-475 first and OVE-478 integration/release last. Threads leads visual design; vc.ru supplies

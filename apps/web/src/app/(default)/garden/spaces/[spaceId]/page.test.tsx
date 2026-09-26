@@ -229,6 +229,7 @@ function summary(
   return {
     id: SPACE_ID,
     displayName: "Теплиця",
+    photo: null,
     locationVisibility: "region",
     coarseRegionCode: "UA-32",
     objectCount: 2,

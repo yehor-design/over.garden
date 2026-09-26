@@ -3,6 +3,10 @@ import {
   normalizeCoarseRegionCode,
 } from "@/lib/garden/regions";
 import { normalizeJournalComposerReturnTo } from "@/lib/garden/journal-composer-return";
+import {
+  parseOwnedPhotoPayload,
+  type OwnedPhotoPayload,
+} from "@/lib/garden/owned-photo";
 
 /**
  * The standalone "create a space" contract (`OVE-484`).
@@ -27,6 +31,8 @@ export interface SpaceSetupInput {
   coarseRegionCode: string | null;
   /** The gardener saw the same-name warning and chose a second space anyway. */
   allowDuplicateName: boolean;
+  /** The photo the stepper staged (ADR-0036 D1), or null. */
+  photo: OwnedPhotoPayload | null;
 }
 
 export type SpaceSetupFieldError =
@@ -50,6 +56,8 @@ export type SpaceSetupResponse =
     }
   | { status: "duplicate_name"; existing: CreatedSpace }
   | { status: "conflict" }
+  /** The staged photo could not be claimed: it expired or was already used. */
+  | { status: "photo_unavailable" }
   | { status: "unavailable"; digest: string };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,6 +121,12 @@ export function parseSpaceSetupRequest(
   ) {
     throw new InvalidSpaceSetupRequest();
   }
+  let photo: OwnedPhotoPayload | null;
+  try {
+    photo = parseOwnedPhotoPayload(value.photo);
+  } catch {
+    throw new InvalidSpaceSetupRequest();
+  }
   const errors = validateSpaceSetup({
     displayName: value.displayName,
     locationVisibility: value.locationVisibility,
@@ -130,6 +144,7 @@ export function parseSpaceSetupRequest(
           ? normalizeCoarseRegionCode(String(value.coarseRegionCode))
           : null,
       allowDuplicateName: value.allowDuplicateName === true,
+      photo,
     },
   };
 }
